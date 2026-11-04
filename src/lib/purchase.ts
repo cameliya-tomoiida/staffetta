@@ -52,7 +52,7 @@ export function addDays(date: string, days: number): string {
 function newDraft(kind: "product" | "material", supplierId: string, deliveryId: string, date: string): PurchaseOrderDraft {
   const s = findSupplier(supplierId);
   const dl = s?.deliveries.find((x) => x.id === deliveryId) ?? s?.deliveries[0];
-  const cutoffAt = cutoffIso(date, dl?.cutoff, dl?.leadDays);
+  const cutoffAt = cutoffIso(date, dl?.cutoff, dl?.leadDays ?? 1); // 日数が無ければ 1日前
   return {
     id: `PO-${date}-${kind === "product" ? "P" : "M"}-${supplierId}-${dl?.id ?? deliveryId}`,
     supplierId,

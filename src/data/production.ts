@@ -38,6 +38,8 @@ export interface SupplierExtra {
   /** 発注サイト名など、画面に出す説明 */
   siteName?: string;
   deliveries: SupplierDelivery[];
+  /** 最小ロット（1回の発注で、1品目あたり最低何単位（袋・缶）から）。なければ 1 */
+  minLot?: number;
 }
 
 /** master.ts に無い仕入先（架空）。master.ts に入ったらここから消す */
@@ -48,6 +50,8 @@ export interface NewSupplier {
   siteName?: string;
   contact: string;
   deliveries: SupplierDelivery[];
+  /** 最小ロット（1品目あたり最低何単位から）。なければ 1 */
+  minLot?: number;
 }
 
 /** master.ts にある仕入先への追加情報 */
@@ -55,7 +59,7 @@ export const supplierExtras: Record<string, SupplierExtra> = {
   S01: { deliveries: [{ id: "1", name: "通常便" }] },
   S02: { deliveries: [{ id: "1", name: "通常便" }] },
   S03: { siteName: "メーカーの発注サイト", deliveries: [{ id: "1", name: "通常便" }] },
-  S04: { siteName: "インフォマート", deliveries: [{ id: "1", name: "通常便" }] },
+  S04: { siteName: "インフォマート", deliveries: [{ id: "1", name: "通常便" }], minLot: 2 },
   S05: { deliveries: [{ id: "1", name: "通常便" }] },
   S06: { deliveries: [{ id: "1", name: "通常便" }] },
   // ふじみ製パン（ふじみ相当）: 1便と2便。便ごとの締め・日数は未設定（未設定なら master.ts の値を使う）
@@ -94,6 +98,8 @@ export const customerDelivery: Record<string, Record<string, string>> = {
 export interface MaterialExtra {
   /** 1単位（kg・L・個）あたりの重さ kg。L の油なら 0.91 など。なければ 1 */
   kgPerUnit?: number;
+  /** 最小ロット（仕入先の値より優先）。なければ仕入先の値 */
+  minLot?: number;
 }
 
 export const materialExtras: Record<string, MaterialExtra> = {
@@ -113,6 +119,8 @@ export interface NewMaterial {
   /** 円 / unit */
   unitCost: number;
   kgPerUnit?: number;
+  /** 最小ロット（仕入先の値より優先） */
+  minLot?: number;
   /** 発注しない材料（水など） */
   noPurchase?: boolean;
 }
@@ -190,7 +198,7 @@ export interface DoughRecipe {
   steps: ProcessStep[];
 }
 
-const breadSteps = (o: { divide: number; shape: number; bake: number; pack: number; ferment: number; proof: number; bakeMin: string }): ProcessStep[] => [
+const breadSteps = (o: { divide: number; shape: number; bake: number; pack: number; ferment: number; proof: number; bakeMin: string; bakeMinutes: number }): ProcessStep[] => [
   { key: "weigh", name: "計量", minutesPerBatch: 5, people: 1 },
   { key: "mix", name: "ミキシング", minutesPerBatch: 15, people: 1, resource: "bread_mixer", note: "捏ね上げ 26℃" },
   { key: "ferment", name: "1次発酵", minutes: o.ferment, note: "27℃ 湿度75%" },
@@ -198,7 +206,7 @@ const breadSteps = (o: { divide: number; shape: number; bake: number; pack: numb
   { key: "bench", name: "ベンチタイム", minutes: 15 },
   { key: "shape", name: "成形", piecesPerHour: o.shape, people: 3, resource: "bread_shape" },
   { key: "proof", name: "ホイロ", minutes: o.proof, note: "38℃ 湿度85%" },
-  { key: "bake", name: "焼成", piecesPerHour: o.bake, people: 1, resource: "bread_oven", note: o.bakeMin },
+  { key: "bake", name: "焼成", minutes: o.bakeMinutes, piecesPerHour: o.bake, people: 1, resource: "bread_oven", note: o.bakeMin },
   { key: "cool", name: "冷却", minutes: 40 },
   { key: "pack", name: "包装", piecesPerHour: o.pack, people: 2, resource: "bread_pack" },
   { key: "metal_check", name: "金属検出", piecesPerHour: 3000, people: 1, resource: "bread_metal", ccp: true },
@@ -226,7 +234,7 @@ export const doughRecipes: DoughRecipe[] = [
       { materialId: "M06", percent: 12 }, { materialId: "M07", percent: 8 }, { materialId: "M08", percent: 2.5 },
       { materialId: "M09", percent: 3 }, { materialId: WATER_ID, percent: 50 },
     ],
-    steps: breadSteps({ ferment: 50, proof: 45, divide: 1800, shape: 900, bake: 1500, pack: 1200, bakeMin: "200℃ 10分" }),
+    steps: breadSteps({ ferment: 50, proof: 45, divide: 1800, shape: 900, bake: 1500, pack: 1200, bakeMin: "200℃ 10分", bakeMinutes: 10 }),
   },
   {
     id: "DG02", name: "黒糖ロール生地", line: "bread", lossRate: 0.04, mixerMaxKg: 60,
@@ -235,7 +243,7 @@ export const doughRecipes: DoughRecipe[] = [
       { materialId: "M06", percent: 8 }, { materialId: "M08", percent: 2.5 }, { materialId: "M09", percent: 3 },
       { materialId: WATER_ID, percent: 58 },
     ],
-    steps: breadSteps({ ferment: 50, proof: 45, divide: 1800, shape: 900, bake: 1500, pack: 1200, bakeMin: "195℃ 11分" }),
+    steps: breadSteps({ ferment: 50, proof: 45, divide: 1800, shape: 900, bake: 1500, pack: 1200, bakeMin: "195℃ 11分", bakeMinutes: 11 }),
   },
   {
     id: "DG03", name: "食パン生地", line: "bread", lossRate: 0.02, mixerMaxKg: 80,
@@ -244,7 +252,7 @@ export const doughRecipes: DoughRecipe[] = [
       { materialId: "M10", percent: 5 }, { materialId: "M09", percent: 3 }, { materialId: "M08", percent: 2 },
       { materialId: WATER_ID, percent: 70 },
     ],
-    steps: breadSteps({ ferment: 90, proof: 60, divide: 600, shape: 300, bake: 240, pack: 300, bakeMin: "210℃ 35分" }),
+    steps: breadSteps({ ferment: 90, proof: 60, divide: 600, shape: 300, bake: 240, pack: 300, bakeMin: "210℃ 35分", bakeMinutes: 35 }),
   },
   {
     id: "DG04", name: "ピザ生地", line: "pizza", lossRate: 0.05, mixerMaxKg: 50,
@@ -389,9 +397,26 @@ export interface LineSetting {
   dailyCap?: number;
   /** 当日の作業開始（0:00 からの分） */
   startMinute: number;
+  /**
+   * 工程表の組み方。
+   * "delivery": 納品時刻から逆算する（その日に作って届けるパン）
+   * "start": startMinute から前へ順に積む（冷凍で在庫にするピザ）
+   */
+  scheduleFrom: "delivery" | "start";
+  /** 焼き上がり（最後の工程の終わり）から納品までに見る時間（積み込み・配送）。分 */
+  shipBufferMinutes: number;
 }
 
+/** 得意先ごとの納品時刻（HH:MM）。書いていなければ DEFAULT_DELIVERY_TIME */
+export const customerDeliveryTime: Record<string, string> = {
+  C01: "08:30", // 保育園
+  C02: "07:30", // 病院（朝食用の分。昼に確定する追加分は2便）
+  C03: "09:00", // 給食センター
+};
+
+export const DEFAULT_DELIVERY_TIME = "08:00";
+
 export const lineSettings: Record<Line, LineSetting> = {
-  bread: { line: "bread", name: "パンライン", unit: "個", startMinute: 4 * 60 },
-  pizza: { line: "pizza", name: "ピザライン", unit: "枚", dailyCap: 1800, startMinute: 8 * 60 },
+  bread: { line: "bread", name: "パンライン", unit: "個", startMinute: 4 * 60, scheduleFrom: "delivery", shipBufferMinutes: 60 },
+  pizza: { line: "pizza", name: "ピザライン", unit: "枚", dailyCap: 1800, startMinute: 8 * 60, scheduleFrom: "start", shipBufferMinutes: 0 },
 };
