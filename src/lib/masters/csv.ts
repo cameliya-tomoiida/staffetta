@@ -353,7 +353,7 @@ export function exportCsv<T>(def: MasterDef<T>, rows: T[], opts: { refs?: RefInd
 }
 
 /** 空のテンプレート（見出し＋例の行）。例の行は「例:」で始めるので、そのまま取り込むとエラーになって気づける */
-export function templateCsv(def: MasterDef): Buffer {
+export function templateCsv<T>(def: MasterDef<T>): Buffer {
   const head = def.columns.map((c) => esc(c.label + (c.required ? "（必須）" : ""))).join(",");
   const ex = def.columns
     .map((c, i) => esc((i === 0 ? "例:" : "") + (c.example ?? (c.type === "enum" ? (c.options?.[0]?.label ?? "") : ""))))
