@@ -7,6 +7,7 @@ import { z } from "zod";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { langInfo, type Lang } from "./langs";
+import { tr } from "./dict";
 
 export const TRANSLATE_MODEL = "claude-sonnet-5-5";
 const FILE = path.join(process.cwd(), "src", "i18n", "machine.json");
@@ -26,6 +27,10 @@ const Schema = z.object({
   items: z.array(z.object({ ja: z.string().describe("元の日本語"), text: z.string().describe("訳") })),
 });
 
+/** 画面の辞書（dict.ts）の言葉を用語集として渡し、訳をそろえる（例: 生地を「麺」と訳さない） */
+const glossary = (lang: Lang) =>
+  (["dough", "flour", "pieces", "mix", "proof", "bake"] as const).map((k) => `- ${tr("ja", k)} → ${tr(lang, k)}`).join("\n");
+
 async function askClaude(lang: Lang, terms: string[]): Promise<Record<string, string>> {
   const info = langInfo(lang);
   const target =
@@ -39,11 +44,18 @@ async function askClaude(lang: Lang, terms: string[]): Promise<Record<string, st
     output_config: { format: betaZodOutputFormat(Schema) },
     system:
       "あなたはパン・ピザ工場の現場向けの翻訳係です。製造ラインの外国人スタッフが工程表で読む、商品名・生地名・材料名を訳します。" +
-      "短く、現場で通じる言葉にしてください。カタカナの商品名は、その国でふつうに使う呼び名に。サイズ（23cm）や「8枚切」などの数字は残します。",
+      "短く、現場で通じる言葉にしてください。カタカナの商品名は、その国でふつうに使う呼び名に。\n" +
+      "守ること:\n" +
+      "- 数字は 0〜9 のアラビア数字のまま書く。その国の数字（例: ၂၃ や २३）に変えない。\n" +
+      "- 単位（cm・g・kg・L）と「OEM」はそのまま残す。\n" +
+      "- 商品名の固有の部分（例: 超じゅく）は意味に訳さず、音をローマ字で残してよい。\n" +
+      "- 用語集の言葉を必ず使う（同じ日本語には同じ訳）。",
     messages: [
       {
         role: "user",
-        content: `次の日本語を ${target} に訳してください。1つずつ、元の日本語と訳を組にして返してください。\n\n${terms.map((t) => `- ${t}`).join("\n")}`,
+        content:
+          `次の日本語を ${target} に訳してください。1つずつ、元の日本語と訳を組にして返してください。\n\n` +
+          `用語集（日本語 → 訳）:\n${glossary(lang)}\n\n訳すもの:\n${terms.map((t) => `- ${t}`).join("\n")}`,
       },
     ],
   });

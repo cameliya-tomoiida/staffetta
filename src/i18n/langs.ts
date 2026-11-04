@@ -15,3 +15,6 @@ export const LANGS = [
 export type Lang = (typeof LANGS)[number]["code"];
 export const isLang = (s: unknown): s is Lang => LANGS.some((l) => l.code === s);
 export const langInfo = (code: Lang) => LANGS.find((l) => l.code === code)!;
+
+/** 現場のタブレットが覚えておく、えらんだことば（cookie の名前） */
+export const LANG_COOKIE = "hub_lang";

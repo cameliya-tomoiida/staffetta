@@ -5,11 +5,12 @@ import { customerById, customers } from "@/data/master";
 import { findProduct } from "@/lib/catalog";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
-  addDays, buttonClass, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
+  addDays, buttonClass, fmtNum, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
   orderIntent, orderStatusRank, PageHeader, Segmented, Tag,
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
 import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
+import { easyReasons, LOW_CONFIDENCE } from "@/components/ui/wording";
 
 const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
 
@@ -24,11 +25,11 @@ const barColor: Record<OrderStatus, string> = {
 };
 
 export function OrdersClient({
-  orders, today, storedIds, linePreviews,
-}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string> }) {
+  orders, today, storedIds, linePreviews, initialStatus = "all",
+}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter }) {
   const [who, setWho] = useState(STAFF[0]);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>(initialStatus);
   const [date, setDate] = useState<string>("all");
   const [customer, setCustomer] = useState<string>("all");
   const [channel, setChannel] = useState<"all" | OrderChannel>("all");
@@ -36,7 +37,7 @@ export function OrdersClient({
 
   const dates = useMemo(() => [...new Set(orders.map((o) => o.deliveryDate))].sort(), [orders]);
   const channels = useMemo(() => [...new Set(orders.map((o) => o.source.channel))], [orders]);
-  const custName = (id: string) => customerById(id)?.name ?? "（取引先が不明）";
+  const custName = (id: string) => customerById(id)?.name ?? "（お店が 分かりません）";
 
   const base = orders.filter(
     (o) => (date === "all" || o.deliveryDate === date) && (customer === "all" || o.customerId === customer) && (channel === "all" || o.source.channel === channel),
@@ -85,14 +86,16 @@ export function OrdersClient({
         </span>
       </PageHeader>
 
-      {reviewAll > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
-          要確認の注文が <span className="num text-xl">{reviewAll}</span> 件あります。元の資料と見比べて確定してください。
+      {reviewAll > 0 && status !== "needs_review" && (
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+          <button type="button" onClick={() => setStatus("needs_review")} className="text-left underline-offset-4 hover:underline">
+            要確認の注文が <span className="num text-xl">{reviewAll}</span> 件あります。押すと、要確認だけを出します。
+          </button>
         </Notice>
       )}
 
       {/* 絞り込み */}
-      <div className="no-print mb-4 space-y-3 rounded-lg border border-rule bg-sheet p-3 sm:p-4">
+      <div className="no-print mb-4 space-y-2.5 rounded-lg border border-rule bg-sheet p-3">
         <FilterRow label="状態">
           <Segmented
             label="状態"
@@ -115,7 +118,12 @@ export function OrdersClient({
             options={[{ value: "all", label: "すべて" }, ...dates.map((d) => ({ value: d, label: <span>{fmtDate(d)}{dayName(d) && <span className="ml-1 text-sm opacity-75">{dayName(d)}</span>}</span> }))]}
           />
         </FilterRow>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <details className="group" open={customer !== "all" || channel !== "all" || sort !== "date"}>
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-bold text-ink-soft">
+            <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+            くわしく絞り込む（取引先・入口・並べ方）
+          </summary>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <SelectBox label="取引先" value={customer} onChange={setCustomer} options={[{ value: "all", label: "すべての取引先" }, ...customers.map((c) => ({ value: c.id, label: c.name }))]} />
           <SelectBox
             label="入口"
@@ -134,6 +142,10 @@ export function OrdersClient({
             ]}
           />
         </div>
+        </details>
+      </div>
+      <div className="mb-2 text-sm text-ink-soft">
+        <b className="num text-base text-ink">{list.length}</b> 件を表示（要確認がいちばん上）
       </div>
 
       {list.length === 0 ? (
@@ -190,10 +202,10 @@ function OrderRow({
               const warn = !!(l.read?.attention || l.confidence < 0.8);
               return (
                 <li key={l.id} className={warn && !off ? "rounded bg-review-bg px-1" : ""}>
-                  {p?.name ?? <span className="text-review-ink">{l.read?.writtenName ?? "（商品未定）"}</span>}
-                  <span className="num ml-1.5 font-black">{l.quantity}</span>
+                  {p?.name ?? <span className="text-review-ink">{l.read?.writtenName ?? "（商品が 決まって いません）"}</span>}
+                  <span className="num ml-1.5 text-lg font-black">{fmtNum(l.quantity)}</span>
                   <span className="text-sm">{l.unit}</span>
-                  {l.piecesPerUnit > 1 && <span className="ml-1 text-sm text-ink-soft">（{l.pieces}{p?.unit === "枚" ? "枚" : "個"}）</span>}
+                  {l.piecesPerUnit > 1 && <span className="ml-1 text-sm text-ink-soft">（= {fmtNum(l.pieces)}{p?.unit === "枚" ? "枚" : "個"}）</span>}
                 </li>
               );
             })}
@@ -222,14 +234,19 @@ function OrderRow({
             </div>
           )}
           {!off &&
-            flagged.map((l) =>
-              l.read?.attention ? (
-                <div key={l.id} className="mt-1 flex items-start gap-1.5 text-sm font-bold text-review-ink">
-                  <Icon.alert className="mt-0.5 h-4 w-4 shrink-0" />
-                  {l.read.attention}
+            flagged.flatMap((l) => {
+              const reasons = easyReasons(l.read?.attention);
+              const name = findProduct(l.productId)?.name ?? l.read?.writtenName ?? "";
+              return (reasons.length ? reasons : [LOW_CONFIDENCE]).map((t, i) => (
+                <div key={`${l.id}-${i}`} className="mt-1 flex items-start gap-1.5 font-bold text-review-ink">
+                  <Icon.alert className="mt-1 h-4 w-4 shrink-0" />
+                  <span>
+                    {name && o.lines.length > 1 && <span className="mr-1 font-normal">{name}：</span>}
+                    {t}
+                  </span>
                 </div>
-              ) : null,
-            )}
+              ));
+            })}
         </div>
         <div className="flex flex-wrap gap-2 md:flex-col md:items-stretch">
           <SourceButton source={o.source} />

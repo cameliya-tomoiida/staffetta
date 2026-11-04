@@ -75,15 +75,15 @@ function review(id: string, customerId: string, channel: Order["source"]["channe
 /** 要確認の見本（③に無い入口の例）。要確認なので集計には入らない */
 const reviewSamples: Order[] = [
   review("DEMO-E2", "C03", "email", "07:12", [{ kind: "email", messageId: "e-2002", subject: "Re: 数量変更のお願い", from: "order@minato-kyushoku.example" }],
-    [["P05", 28, "P", 10, { name: "ミニロール 白", confidence: 0.7, attention: "本文に「先日の数から2袋減らして」とある。元の数の確認が必要" }]], "先日お願いした数から2袋減らしてください。"),
+    [["P05", 28, "P", 10, { name: "ミニロール 白", confidence: 0.7, attention: "メールに「この前の数から 2袋 へらして」と あります。前の数を 見てください" }]], "先日お願いした数から2袋減らしてください。"),
   review("DEMO-G1", "C01", "google_sheet", "06:30", [{ kind: "google_sheet", url: "https://docs.google.com/spreadsheets/d/demo", sheetName: "11月", range: "B4:H20" }],
-    [["P06", 80, "個", 1, { name: "ミニロール 黒", confidence: 0.75, attention: "シートに新しい行が増えている。追加の注文か確認" }]]),
+    [["P06", 80, "個", 1, { name: "ミニロール 黒", confidence: 0.75, attention: "シートに 新しい 行が あります。追加の 注文か 見てください" }]]),
   review("DEMO-L2", "C06", "line", "08:20", [{ kind: "line_message", messageId: "m-1002", userId: "U-demo-06", text: "らいしゅう月よう ピザ 30まい と いつもの" }],
-    [["P07", 30, "枚", 1, { name: "ピザ 30まい", confidence: 0.8, attention: "「いつもの」の中身が分からない。前回はピザ生地玉3P" }]], "らいしゅう月よう ピザ 30まい と いつもの"),
+    [["P07", 30, "枚", 1, { name: "ピザ 30まい", confidence: 0.8, attention: "「いつもの」が 何か 分かりません。前は ピザ生地玉 3袋 でした" }]], "らいしゅう月よう ピザ 30まい と いつもの"),
   review("DEMO-P2", "C04", "phone", "07:40", [{ kind: "manual", note: "留守電から書き起こし。聞き取りにくい" }],
-    [["P07", 17, "枚", 1, { name: "ピザ 17枚？ 70枚？", confidence: 0.5, attention: "留守電で「じゅうなな」か「ななじゅう」か聞き取れない" }]]),
+    [["P07", 17, "枚", 1, { name: "ピザ 17枚？ 70枚？", confidence: 0.5, attention: "数が 聞きとれません（17か 70）" }]]),
   review("DEMO-N2", "C08", "customer_site", "09:05", [{ kind: "csv", fileName: "edi_order_demo_2.csv", rowStart: 2, rowEnd: 3 }],
-    [["P05", 42, "P", 10, { name: "ミニロール", confidence: 0.75, attention: "概数の注文。当日12時に確定の連絡が来る予定" }]]),
+    [["P05", 42, "P", 10, { name: "ミニロール", confidence: 0.75, attention: "だいたいの 数です。当日の 12時に 本当の 数が きます" }]]),
 ];
 
 export function demoOrders(): Order[] {

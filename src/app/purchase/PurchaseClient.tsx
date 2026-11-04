@@ -46,7 +46,9 @@ function minutesLeft(cutoffAt: string, now: number) {
   return Number.isNaN(at) ? null : Math.floor((at - now) / 60000);
 }
 
-export function PurchaseClient({ pos, date, factory, warnings, dateNav, costBox }: { pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode }) {
+export function PurchaseClient({
+  pos, date, factory, warnings, dateNav, costBox, unconfirmed = 0,
+}: { pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode; unconfirmed?: number }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +79,13 @@ export function PurchaseClient({ pos, date, factory, warnings, dateNav, costBox 
   const counts = { draft: 0, approved: 0, sent: 0 } as Record<PurchaseStatus, number>;
   pos.forEach((p) => counts[st(p.id).status]++);
   const urgent = now == null ? [] : pos.filter((p) => st(p.id).status !== "sent" && (minutesLeft(p.cutoffAt, now) ?? Infinity) <= WARN_MIN);
-  const shown = pos.filter((p) => filter === "all" || st(p.id).status === filter);
+  // まだ送っていないものを上に、その中は締めの早い順（締め未設定は下）
+  const rank = { draft: 0, approved: 0, sent: 1 } as const;
+  const shown = pos
+    .filter((p) => filter === "all" || st(p.id).status === filter)
+    .sort((a, b) => rank[st(a.id).status] - rank[st(b.id).status] || (a.cutoffAt || "9").localeCompare(b.cutoffAt || "9"));
+  const late = urgent.filter((p) => (minutesLeft(p.cutoffAt, now ?? 0) ?? 0) < 0);
+  const soon = urgent.filter((p) => (minutesLeft(p.cutoffAt, now ?? 0) ?? 0) >= 0);
 
   return (
     <div>
@@ -104,17 +112,25 @@ export function PurchaseClient({ pos, date, factory, warnings, dateNav, costBox 
           <ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
         </Notice>
       )}
-      {urgent.length > 0 && (
-        <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-4">
-          締め時刻が近い発注書があります：
-          {urgent.map((p) => {
-            const m = minutesLeft(p.cutoffAt, now!)!;
-            return (
-              <span key={p.id} className="ml-2 inline-block">
-                {p.supplierName}（{m < 0 ? `${fmtDateTime(p.cutoffAt)} 締めを過ぎています` : `あと ${m} 分`}）
-              </span>
-            );
-          })}
+      {unconfirmed > 0 && (
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+          この日の注文で、まだ確定していないものが <span className="num text-xl">{unconfirmed}</span> 件あります。確定すると発注書の数が変わります。
+          <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で見る</Link>
+        </Notice>
+      )}
+      {soon.length > 0 && (
+        <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-3">
+          締めが近い発注書：
+          {soon.map((p) => (
+            <span key={p.id} className="ml-2 inline-block">
+              {p.supplierName}（あと <span className="num">{minutesLeft(p.cutoffAt, now!)}</span>分）
+            </span>
+          ))}
+        </Notice>
+      )}
+      {late.length > 0 && (
+        <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-3">
+          締めを過ぎて、まだ送っていない発注書が <span className="num text-xl">{late.length}</span> 枚あります。仕入先に電話で確かめてください。
         </Notice>
       )}
 
