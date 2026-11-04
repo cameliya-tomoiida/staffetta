@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* 並行開発の worktree（.claude/worktrees/）は読み込まない */
+@source not "../../.claude";
 
 /*
  * 受発注ハブ デザインの決まり（②デザイン）
