@@ -29,12 +29,14 @@ vi.mock("@/lib/channels/line/client", () => ({
 type Fixture = (recent: { id: string }[]) => LineRead;
 const fixtures: Record<string, Fixture> = {};
 const calls: { text: string; recent: { id: string; summary: string }[] }[] = [];
+const knownCalls: Record<string, string>[] = [];
 vi.mock("@/lib/channels/line/reader", async (importOriginal) => {
   const orig = await importOriginal<typeof import("@/lib/channels/line/reader")>();
   return {
     ...orig,
-    readLineText: async (text: string, _at: string, _known: Record<string, string>, recent: { id: string; summary: string }[] = []) => {
+    readLineText: async (text: string, _at: string, known: Record<string, string>, recent: { id: string; summary: string }[] = []) => {
       calls.push({ text, recent });
+      knownCalls.push(known);
       const f = fixtures[text];
       if (!f) throw new Error("読み取りに失敗しました（テスト）");
       return { read: orig.LineReadSchema.parse(f(recent)), model: "test-fixture" };
@@ -166,6 +168,20 @@ describe("LINE のトーク → 要確認の注文", () => {
   it("ひも付けのない人の注文は、得意先を空のまま（人がひも付ける）", async () => {
     await send(1, "U_new", "明日 食パン6枚切り 3本、ロール 20個");
     expect(mem.db.orders[0].customerId).toBe("");
+  });
+
+  it("名寄せ辞書にある呼び名は、その商品にする（読み取りの値は read に残る）。辞書は読み取りの指示文にも渡す", async () => {
+    const { addAlias } = await import("@/lib/aliases");
+    await addAlias({ customerId: "C06", alias: "ﾊﾞﾀﾛ", productId: "P02", source: "line", who: "事務" });
+    await send(2, "U_cafe", "金曜 バタロ 30 と ピザ 4袋");
+    const l = mem.db.orders[0].lines[0];
+    expect(l).toMatchObject({ productId: "P02", confidence: 0.95 });
+    expect(l.note).toMatch(/名寄せ辞書で P02（読み取りは P01）/);
+    expect(l.read).toMatchObject({ writtenName: "バタロ", productId: "P01", confidence: 0.6 });
+    expect(knownCalls.at(-1)).toMatchObject({ ﾊﾞﾀﾛ: "P02" });
+    // ほかのお客さん（C04）には当てない
+    await send(9, "U_kissa", "金曜 バタロ 30 と ピザ 4袋");
+    expect(mem.db.orders.at(-1)!.lines[0].productId).toBe("P01");
   });
 
   it("catalog にだけある商品（P12 ピザ生地玉）も商品として入る", async () => {
