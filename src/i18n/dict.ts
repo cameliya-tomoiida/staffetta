@@ -50,6 +50,8 @@ const ja = {
   mixer: "ミキサー",
   times: "回",
   unit_包: "包",
+  delivery_at: "納品",
+  finish_by: "までに終える",
 };
 export type Key = keyof typeof ja;
 type Dict = Record<Key, string>;
@@ -105,6 +107,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "ミキサー",
       times: "かい",
       unit_包: "つつみ",
+      delivery_at: "とどける",
+      finish_by: "までに おわらせる",
     },
   },
   vi: {
@@ -156,6 +160,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "Máy trộn",
       times: "mẻ",
       unit_包: "gói",
+      delivery_at: "Giao",
+      finish_by: "Xong trước",
     },
   },
   id: {
@@ -207,6 +213,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "Mixer",
       times: "kali",
       unit_包: "bungkus",
+      delivery_at: "Kirim",
+      finish_by: "Selesai sebelum",
     },
   },
   zh: {
@@ -258,6 +266,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "搅拌机",
       times: "次",
       unit_包: "包",
+      delivery_at: "交货",
+      finish_by: "之前完成",
     },
   },
   ko: {
@@ -309,6 +319,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "믹서",
       times: "회",
       unit_包: "개",
+      delivery_at: "납품",
+      finish_by: "까지 끝내기",
     },
   },
   fil: {
@@ -360,6 +372,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "Mixer",
       times: "beses",
       unit_包: "pakete",
+      delivery_at: "Delivery",
+      finish_by: "Tapusin bago",
     },
   },
   my: {
@@ -411,6 +425,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "ရောစက်",
       times: "ကြိမ်",
       unit_包: "ထုပ်",
+      delivery_at: "ပို့",
+      finish_by: "မတိုင်မီ ပြီးရမည်",
     },
   },
   ne: {
@@ -462,6 +478,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "मिक्सर",
       times: "पटक",
       unit_包: "प्याकेट",
+      delivery_at: "डेलिभरी",
+      finish_by: "अघि सक्ने",
     },
   },
   en: {
@@ -513,6 +531,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       mixer: "Mixer",
       times: "batches",
       unit_包: "packs",
+      delivery_at: "Delivery",
+      finish_by: "Finish by",
     },
   },
 };

@@ -276,8 +276,10 @@ function MakeTable({ bs, lang, t, name }: { bs: DoughBatchPlan[]; lang: Lang; t:
 function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: DoughBatchPlan[]; lang: Lang; t: T; name: NameFn }) {
   const todaySteps = rows.flatMap((r) => r.steps.filter((s) => !s.prevDay));
   if (todaySteps.length === 0) return null;
+  const deadlines = rows.flatMap((r) => (r.deadline != null ? [r.deadline] : []));
   const start = Math.floor(Math.min(...todaySteps.map((s) => s.start)) / 60) * 60;
-  const end = Math.ceil(Math.max(...todaySteps.map((s) => s.end)) / 60) * 60;
+  const end = Math.ceil(Math.max(...todaySteps.map((s) => s.end), ...deadlines) / 60) * 60;
+  const rowWarnings = rows.flatMap((r) => r.warnings);
   const span = Math.max(60, end - start);
   const hours = Array.from({ length: span / 60 + 1 }, (_, i) => start + i * 60);
   const pct = (m: number) => `${((m - start) / span) * 100}%`;
@@ -288,6 +290,13 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
   return (
     <div className="min-w-0 rounded-sm border border-rule-strong bg-sheet">
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("timetable")}</div>
+      {rowWarnings.length > 0 && (
+        <div className="border-b border-alert-line bg-alert-bg px-4 py-2 text-sm font-bold text-alert-ink" lang="ja">
+          {rowWarnings.map((w, i) => (
+            <div key={i}>{w}</div>
+          ))}
+        </div>
+      )}
 
       {/* 帯グラフ（せまい画面では横にすべらせる） */}
       <div className="overflow-x-auto px-4 pt-3 pb-2">
@@ -306,11 +315,23 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
                 <div className="w-36 shrink-0 pr-2 text-sm">
                   <Name n={name(r.doughName)} lang={lang} />
                   {b && <span className="num text-xs text-ink-faint">{fmtNum(b.doughKg, 1)}kg</span>}
+                  {r.deliveryMinute != null && (
+                    <span className="num block text-xs font-bold text-alert-ink">
+                      {t("delivery_at")} {ft(r.deliveryMinute)}
+                    </span>
+                  )}
                 </div>
                 <div className="relative h-10 flex-1">
                   {hours.map((h) => (
                     <span key={h} className="absolute inset-y-0 border-l border-dotted border-rule-strong" style={{ left: pct(h) }} />
                   ))}
+                  {r.deadline != null && (
+                    <span
+                      className="absolute -inset-y-1 z-10 border-l-[3px] border-dashed border-alert-ink"
+                      style={{ left: pct(r.deadline) }}
+                      title={`${t("finish_by")} ${ft(r.deadline)}`}
+                    />
+                  )}
                   {r.steps
                     .filter((s) => !s.prevDay && s.end > s.start)
                     .map((s, i) => (
@@ -343,6 +364,12 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
         {rows.map((r) => (
           <div key={r.doughId} className="bg-sheet px-4 py-2.5">
             <Name n={name(r.doughName)} lang={lang} />
+            {r.deadline != null && (
+              <div className="num mt-0.5 text-sm font-bold text-alert-ink">
+                {t("delivery_at")} {ft(r.deliveryMinute ?? r.deadline)} ／{" "}
+                {["ja", "ja-easy", "ko", "my", "ne"].includes(lang) ? `${ft(r.deadline)} ${t("finish_by")}` : `${t("finish_by")} ${ft(r.deadline)}`}
+              </div>
+            )}
             <table className="mt-1 w-full text-sm">
               <tbody>
                 {r.steps.map((s, i) => (
