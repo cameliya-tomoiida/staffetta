@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 同梱のライブラリ（pdf.js のワーカー）は検査しない
+    "public/**",
   ]),
 ]);
 
