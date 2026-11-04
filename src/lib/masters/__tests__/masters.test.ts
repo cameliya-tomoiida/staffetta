@@ -75,6 +75,7 @@ describe("セルの読み方", () => {
     expect(parseCell(col("boolean"), "たぶん").error).toBeTruthy();
     expect(parseCell(col("time"), "8:05")).toEqual({ value: "08:05" });
     expect(parseCell(col("time"), "25:00").error).toMatch(/08:30/);
+    expect(parseCell(col("time"), "24:00")).toEqual({ value: "24:00" }); // その日の終わりまで
     expect(parseCell(equipmentDef.columns.find((c) => c.key === "kind")!, "ミキサー")).toEqual({ value: "mixer" });
     expect(parseCell(equipmentDef.columns.find((c) => c.key === "kind")!, "mixer")).toEqual({ value: "mixer" });
     expect(parseCell(col("list"), "6;8")).toEqual({ value: [6, 8] });

@@ -79,3 +79,19 @@ describe("前日入れ（purchaseDaysBefore）", () => {
     expect(totalsForDate([o], "2026-11-10").products[0].pieces).toBe(48);
   });
 });
+
+describe("取引先サイトの注文に「前日に入れる品名」（prevDayItems）があるとき", () => {
+  it("コード表より prevDayItems を優先する", () => {
+    const line = (id: string, name: string, qty: number) => ({
+      ...demoOrders[0].lines[0], id, productId: "P10", quantity: qty, unit: "パック", piecesPerUnit: 1, pieces: qty, edits: [],
+      read: { writtenName: name, quantity: qty, unitWritten: "パック", piecesPerUnit: 1, productId: "P10", confidence: 1, attention: "" },
+    });
+    // コード表では「（１個）」が前日だが、取り込みのときの指定は「（６個入）」だけが前日
+    const o: Order = {
+      ...mk("NS-X", "2026-11-10", "P10", 0, 1, { prevDayItems: "超じゅくロール（６個入）／Ｐ" }),
+      lines: [line("a", "超じゅくロール（１個）／Ｐ", 18), line("b", "超じゅくロール（６個入）／Ｐ", 6)],
+    };
+    expect(purchaseTotalsForDate([o], "2026-11-09").products[0].pieces).toBe(6);
+    expect(purchaseTotalsForDate([o], "2026-11-10").products[0].pieces).toBe(18);
+  });
+});

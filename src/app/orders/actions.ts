@@ -6,12 +6,14 @@ import { revalidatePath } from "next/cache";
 import { findProduct } from "@/lib/catalog";
 import { customerById } from "@/data/master";
 import { updateDb } from "@/lib/store";
+import { addAlias, normalizeAlias, type AliasRow } from "@/lib/aliases";
 
 type Result = { ok: true; channel: string } | { ok: false; error: string };
 
 export async function confirmOrderAction(input: { orderId: string; who: string; customerId?: string; lines: { lineId: string; quantity: number }[] }): Promise<Result> {
   try {
     if (!input.who.trim()) throw new Error("確定する人を選んでください");
+    const learned: { customerId: string; alias: string; productId: string; source: AliasRow["source"] }[] = [];
     const channel = await updateDb((db) => {
       const o = db.orders.find((x) => x.id === input.orderId);
       if (!o) throw new Error("注文が見つかりません（見本の注文は確定できません）");
@@ -38,11 +40,20 @@ export async function confirmOrderAction(input: { orderId: string; who: string; 
         l.quantity = q;
         l.pieces = q * l.piecesPerUnit;
       }
+      // 人が確定した「呼び名 → 商品」は名寄せ辞書に入れる（商品名そのままの行は入れない）
+      const ch = o.source.channel;
+      const source: AliasRow["source"] = ch === "email" || ch === "google_sheet" || ch === "infomart" || ch === "customer_site" || ch === "line" ? ch : "manual";
+      for (const { l, q } of next) {
+        const name = l.read?.writtenName?.trim();
+        const p = findProduct(l.productId);
+        if (q > 0 && name && p && normalizeAlias(name) !== normalizeAlias(p.name)) learned.push({ customerId: o.customerId, alias: name, productId: p.id, source });
+      }
       o.status = o.lines.some((l) => l.quantity > 0) ? "confirmed" : "cancelled";
       o.confirmedAt = at;
       o.confirmedBy = input.who;
       return o.source.channel;
     });
+    for (const a of learned) await addAlias({ ...a, who: input.who });
     revalidatePath("/", "layout");
     return { ok: true, channel };
   } catch (e) {

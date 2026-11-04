@@ -105,7 +105,8 @@ export function parseCell(col: ColumnDef, raw: string | undefined): { value?: un
     }
     case "time": {
       const m = s.match(/^(\d{1,2}):(\d{2})$/);
-      if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return { error: "時刻は 08:30 の形で入れてください" };
+      if (m && m[1] === "24" && m[2] === "00") return { value: "24:00" }; // 「その日の終わりまで」
+      if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return { error: "時刻は 08:30 の形で入れてください（その日の終わりまでなら 24:00）" };
       return { value: `${m[1].padStart(2, "0")}:${m[2]}` };
     }
     case "enum": {

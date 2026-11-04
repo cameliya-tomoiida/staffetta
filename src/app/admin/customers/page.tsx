@@ -4,7 +4,7 @@ import { CustomerOrderSettings } from "@/components/line/CustomerOrderSettings";
 import { LineLinkPanel } from "@/components/line/LineLinkPanel";
 import { listCustomerSettings } from "@/lib/channels/line/customers";
 import { saveCustomerRowAction } from "@/lib/channels/line/actions";
-import { customerColumns } from "@/lib/masters/customers";
+import { adminCustomerColumns } from "@/lib/masters/customers";
 
 export const metadata = { title: "取引先｜マスタ管理" };
 
@@ -14,16 +14,7 @@ export const metadata = { title: "取引先｜マスタ管理" };
 
 export default async function CustomersAdmin() {
   const customers = await listCustomerSettings();
-  const columns: ColumnDef[] = customerColumns.map((c) => ({
-    key: c.key,
-    label: c.label,
-    type: c.type === "list" ? "text" : c.type === "select" ? "select" : c.type === "time" ? "time" : c.key === "note" ? "textarea" : "text",
-    options: c.options,
-    required: c.required,
-    help: c.help,
-    list: c.list ?? false,
-    ...(c.key === "lineUserIds" ? { readOnly: true, form: false } : {}),
-  }));
+  const columns: ColumnDef[] = adminCustomerColumns();
   const rows: Row[] = customers.map((c) => ({
     id: c.id,
     name: c.name,
@@ -34,6 +25,7 @@ export default async function CustomersAdmin() {
     fax: c.fax ?? "",
     externalCode: c.externalCode ?? "",
     note: c.note ?? "",
+    active: c.active !== false,
     lineUserIds: c.lineUserIds?.length ? `${c.lineUserIds.length}人` : "",
   }));
   const formExtra = Object.fromEntries(customers.map((c) => [c.id, <CustomerOrderSettings key={c.id} customerId={c.id} />]));

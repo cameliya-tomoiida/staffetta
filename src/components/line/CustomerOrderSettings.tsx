@@ -27,7 +27,7 @@ export async function CustomerOrderSettings({ customerId }: { customerId: string
       <OrderSettingsForm
         customerId={c.id}
         channels={CHANNEL_OPTIONS}
-        initial={{ name: c.name, channel: c.channel, cutoff: c.cutoff, deliveryTime: c.deliveryTime, course: c.course }}
+        initial={{ name: c.name, channel: c.channel, cutoff: c.cutoff, deliveryTime: c.deliveryTime ?? "", course: c.course ?? "" }}
       />
     </section>
   );
