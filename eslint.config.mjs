@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // 同梱のライブラリ（pdf.js のワーカー）は検査しない
     "public/**",
+    // 並行作業用の worktree は検査しない
+    ".claude/**",
   ]),
 ]);
 
