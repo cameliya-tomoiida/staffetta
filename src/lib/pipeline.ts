@@ -1,6 +1,7 @@
 // 通しの計算: 注文 → 集計 → 仕入品の発注書（下書き）→ 製造計画・工程表 → 材料の所要量 → 材料の発注書（下書き）
 // 画面（/orders・/plan・/purchase）は、これを1回呼べば必要なものが全部そろう。
 import type { Order } from "@/data/types";
+import { nowIso } from "./clock";
 import { totalsForDate, type DayTotals } from "./aggregate";
 import { materialRequirements, materialShortages, type MaterialRequirement, type MaterialShortage, type ShortageOptions } from "./materials";
 import { planMaterialOrders, type MaterialPlan } from "./material-plan";
@@ -18,7 +19,7 @@ export interface PipelineOptions {
   shortage?: ShortageOptions;
   /** 材料の発注を何日先まで見るか（既定 3日） */
   materialDays?: number;
-  /** 今の時刻（ISO）。渡すと、締めを過ぎた材料の発注書に注意を付ける */
+  /** 今の時刻（ISO）。材料は今から頼んで間に合う日から計画する。無ければ共通の時計（clock.ts） */
   now?: string;
 }
 
@@ -58,7 +59,8 @@ export function runPipeline(orders: Order[], date: string, opts: PipelineOptions
     stock: opts.shortage?.stock,
     ignoreSafetyStock: opts.shortage?.ignoreSafetyStock,
     production: opts.production,
-    now: opts.now,
+    // 今から頼んで間に合う日から計画する（共通の時計。DEMO_NOW があればその時刻）
+    now: opts.now ?? nowIso(),
   });
   return {
     date,
