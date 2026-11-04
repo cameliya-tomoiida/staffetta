@@ -2,6 +2,7 @@
 // 列の名前は日本語（CSV の1行目にそのまま出る）。項目は今の master.ts / production.ts の項目に、
 // 実用化の要件（リードタイム・ロット・保管場所・棚卸）を足したもの。
 import { allMaterials, allSuppliers } from "@/lib/catalog";
+import { CHANNEL_DEFS, CHANNEL_SEEDS } from "./channel-defs";
 import type { ColumnDef, MasterDef } from "./csv";
 
 export const PURCHASE_METHODS = [
@@ -175,7 +176,7 @@ export const packagingDef: MasterDef<PackagingRecord> = {
   validate: (r) => (!r.supplierId ? ["仕入先を入れてください"] : []),
 };
 
-export const MASTER_DEFS = { suppliers: supplierDef, materials: materialDef, packaging: packagingDef } as const;
+export const MASTER_DEFS = { suppliers: supplierDef, materials: materialDef, packaging: packagingDef, ...CHANNEL_DEFS } as const;
 export type MasterName = keyof typeof MASTER_DEFS;
 
 // ───────── 初期値（今の架空データ） ─────────
@@ -224,4 +225,10 @@ export function seedPackaging(): PackagingRecord[] {
   ];
 }
 
-export const SEEDS = { suppliers: seedSuppliers, materials: seedMaterials, packaging: seedPackaging } as const;
+export const SEEDS = { suppliers: seedSuppliers, materials: seedMaterials, packaging: seedPackaging, ...CHANNEL_SEEDS } as const;
+
+/** 画面のタブの分け方 */
+export const MASTER_GROUPS: { label: string; names: MasterName[] }[] = [
+  { label: "マスタ", names: ["suppliers", "materials", "packaging"] },
+  { label: "取り込みの設定", names: ["sheet_sources", "sheet_columns", "kirara_items", "infomart_headers"] },
+];

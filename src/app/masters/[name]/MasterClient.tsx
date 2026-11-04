@@ -39,7 +39,7 @@ export function MasterClient({ name, label, columns, rows, refs }: { name: strin
   const [file, setFile] = useState<File | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const hasStock = name !== "suppliers";
+  const hasStock = name === "materials" || name === "packaging";
   const listCols = (LIST_KEYS[name] ?? columns.map((c) => c.key)).map((k) => columns.find((c) => c.key === k)!).filter(Boolean);
   const visible = rows.filter((r) => showDisabled || !r.disabled);
 

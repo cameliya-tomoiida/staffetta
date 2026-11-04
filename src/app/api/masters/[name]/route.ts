@@ -21,7 +21,10 @@ const csvResponse = (buf: Buffer, fileName: string) =>
     },
   });
 
-const LABEL: Record<string, string> = { suppliers: "仕入先", materials: "材料", packaging: "包材" };
+const LABEL: Record<string, string> = {
+  suppliers: "仕入先", materials: "材料", packaging: "包材",
+  sheet_sources: "読みに行くシート", sheet_columns: "シートの列と商品", kirara_items: "専用サイトのコード表", infomart_headers: "インフォマートの列名",
+};
 
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/masters/[name]">) {
   const { name } = await ctx.params;
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
       else if (b.action === "delete") result = await remove(name, b.id ?? "", who);
       else if (b.action === "restore") result = await restore(name, b.id ?? "", who);
       else if (b.action === "stocktake") {
-        if (name === "suppliers") throw new Error("棚卸は材料・包材だけです");
+        if (name !== "materials" && name !== "packaging") throw new Error("棚卸は材料・包材だけです");
         result = await stocktake(name, b.id ?? "", Number(b.counted), who, b.note);
       } else throw new Error(`知らない操作です: ${b.action}`);
     }
