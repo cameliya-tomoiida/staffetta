@@ -16,7 +16,8 @@ export type ColumnType =
   | "time" // "HH:MM"
   | "enum" // options のどれか（日本語の表示名でも、値でもよい）
   | "list" // "6;8"（; ・ 、 | で区切る）→ 数の配列
-  | "map"; // "6:144;8:200" → { 6: 144, 8: 200 }
+  | "map" // "6:144;8:200" → { 6: 144, 8: 200 }
+  | "textlist"; // "C02;C05" → ["C02","C05"]
 
 export interface ColumnOption {
   value: string;
@@ -118,6 +119,8 @@ export function parseCell(col: ColumnDef, raw: string | undefined): { value?: un
       if (nums.some((n) => !Number.isFinite(n) || n <= 0)) return { error: "6;8 のように数を ; で区切って入れてください" };
       return { value: nums };
     }
+    case "textlist":
+      return { value: s.split(/[;；・、|]/).map((x) => x.trim()).filter(Boolean) };
     case "map": {
       const out: Record<number, number> = {};
       for (const p of s.split(/[;；、|]/).map((x) => x.trim()).filter(Boolean)) {
@@ -139,7 +142,8 @@ export function formatCell(col: ColumnDef, v: unknown): string {
     case "enum":
       return col.options?.find((o) => o.value === v)?.label ?? String(v);
     case "list":
-      return (v as number[]).join(";");
+    case "textlist":
+      return (v as (number | string)[]).join(";");
     case "map":
       return Object.entries(v as Record<string, number>).map(([k, x]) => `${k}:${x}`).join(";");
     default:

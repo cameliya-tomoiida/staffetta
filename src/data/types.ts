@@ -421,6 +421,8 @@ export interface SupplierDeliveryMaster {
   cutoff?: string;
   leadDays?: number;
   arrival?: string;
+  /** この便で受ける得意先（病院は2便 など）。どの便にも書いていない得意先は最初の便 */
+  customerIds?: string[];
 }
 
 /** 得意先 */

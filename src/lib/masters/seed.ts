@@ -7,7 +7,10 @@ import type {
   CustomerMaster, DoughMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster, SupplierMaster,
 } from "@/data/types";
-import { allMaterials, allProducts, allSuppliers, findDough } from "../catalog";
+import { legacyMaterials as allMaterials, legacyProducts as allProducts, legacySuppliers as allSuppliers } from "./legacy";
+import { customerDelivery } from "@/data/production";
+
+const findDough = (id: string) => doughRecipes.find((d) => d.id === id);
 
 const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
@@ -82,7 +85,7 @@ export function sampleSteps(): ProcessStepMaster[] {
 export const SAMPLE_PACKAGING: PackagingMaterial[] = [
   { id: "K01", name: "ロール袋（10個入）", unit: "枚", supplierId: "S05", orderUnit: 1000, orderUnitLabel: "1000枚箱", stock: 1800, safetyStock: 500, unitCost: 4, location: "包装室の棚", active: true },
   { id: "K02", name: "食パン袋（1斤）", unit: "枚", supplierId: "S05", orderUnit: 500, orderUnitLabel: "500枚箱", stock: 300, safetyStock: 200, unitCost: 6, location: "包装室の棚", active: true },
-  { id: "K03", name: "食パン個包装袋（1枚・2枚）", unit: "枚", supplierId: "S05", orderUnit: 2000, orderUnitLabel: "2000枚箱", stock: 900, safetyStock: 500, unitCost: 2, location: "包装室の棚", active: true },
+  { id: "K03", name: "食パン個包装袋（1枚・2枚）", unit: "枚", supplierId: "S05", orderUnit: 2000, orderUnitLabel: "2000枚箱", stock: 900, safetyStock: 500, unitCost: 3, location: "包装室の棚", active: true },
   { id: "K04", name: "ピザ袋", unit: "枚", supplierId: "S05", orderUnit: 1000, orderUnitLabel: "1000枚箱", stock: 2500, safetyStock: 1000, unitCost: 3, location: "冷凍庫前", active: true },
   { id: "K05", name: "段ボール（ケース）", unit: "枚", supplierId: "S05", orderUnit: 100, orderUnitLabel: "100枚束", stock: 120, safetyStock: 50, unitCost: 80, location: "倉庫2階", active: true },
 ];
@@ -176,7 +179,13 @@ export function sampleMasters(): Masters {
   }));
   const supplierDeliveries: SupplierDeliveryMaster[] = allSuppliers()
     .filter((s) => s.deliveries.length > 1 || s.deliveries.some((d) => d.arrival))
-    .flatMap((s) => s.deliveries.map((d) => ({ supplierId: s.id, id: d.id, name: d.name, ...(d.cutoff ? { cutoff: d.cutoff } : {}), ...(d.leadDays !== undefined ? { leadDays: d.leadDays } : {}), ...(d.arrival ? { arrival: d.arrival } : {}) })));
+    .flatMap((s) => s.deliveries.map((d) => {
+      const custs = Object.entries(customerDelivery[s.id] ?? {}).filter(([, bin]) => bin === d.id).map(([c]) => c);
+      return {
+        supplierId: s.id, id: d.id, name: d.name, ...(d.cutoff ? { cutoff: d.cutoff } : {}), ...(d.leadDays !== undefined ? { leadDays: d.leadDays } : {}),
+        ...(d.arrival ? { arrival: d.arrival } : {}), ...(custs.length ? { customerIds: custs } : {}),
+      };
+    }));
 
   const customers: CustomerMaster[] = masterCustomers.map((c) => ({
     id: c.id, name: c.name, channel: c.channel, cutoff: c.cutoff, active: true,

@@ -275,6 +275,7 @@ export const supplierDeliveryDef: MasterDef<SupplierDeliveryMaster> = {
     { key: "cutoff", label: "締め時刻", type: "time", example: "11:00", help: "空なら仕入先の締め" },
     { key: "leadDays", label: "リードタイム（日）", type: "integer", min: 0, example: "1" },
     { key: "arrival", label: "届く時刻", type: "time", example: "05:00" },
+    { key: "customerIds", label: "この便で受ける得意先ID", type: "textlist", example: "C02", help: "; で区切る。書いていない得意先は最初の便" },
   ],
 };
 
