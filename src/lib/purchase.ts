@@ -2,7 +2,8 @@
 // ここで作るのは「下書き」だけ。人が承認するまで送らない（送信は⑤の担当）。
 import type { PurchaseOrder, PurchaseOrderLine } from "@/data/types";
 import type { SupplierMethod } from "@/data/production";
-import type { DayTotals } from "./aggregate";
+import type { Order } from "@/data/types";
+import { countsInTotals, totalsForDate, type DayTotals } from "./aggregate";
 import { deliveryFor, findMaterial, findProduct, findSupplier } from "./catalog";
 import { bestPack, packFor, slicePlan } from "./packing";
 
@@ -11,8 +12,8 @@ export interface PurchaseLineDraft extends PurchaseOrderLine {
   needQuantity: number;
   /** 余り（発注量 − 必要量） */
   surplus: number;
-  /** 得意先ごとの内訳（仕入品のとき） */
-  customers?: { customerId: string; pieces: number; packs: number; surplus: number }[];
+  /** 得意先ごとの内訳（仕入品のとき）。forDeliveryDate があれば「前日入れ」（その日の納品分を前日に仕入れる） */
+  customers?: { customerId: string; pieces: number; packs: number; surplus: number; forDeliveryDate?: string }[];
   /** 気になる点 */
   notes?: string[];
 }
@@ -71,6 +72,44 @@ function newDraft(kind: "product" | "material", supplierId: string, deliveryId: 
   };
 }
 
+/**
+ * 注文の source.extra で、仕入品を「お客さんへの納品日より前に」入れる指定。
+ * - purchaseDaysBefore（数）: 何日前に仕入先から入れるか。前日便（前日に入れて包み直す）なら 1
+ * - supplierBin（文字）: 仕入先の便の ID（"1"・"2" など）。無ければ得意先の決まった便
+ * 例: 取引先サイトの「前日」振り分けの行 → { site: "kirara", purchaseDaysBefore: 1 }
+ */
+export function purchaseDaysBefore(o: Order): number {
+  const v = Number(o.source.extra?.purchaseDaysBefore ?? 0);
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+}
+
+/**
+ * 仕入の集計: その日に仕入先から入れる分。
+ * = その日が納品日の注文（前日入れの指定なし）＋ 前日入れの指定がある注文のうち「納品日 − 日数」がその日のもの。
+ * 製造の集計（totalsForDate）とは別。発注書は buildProductPurchaseOrders(purchaseTotalsForDate(...)) で作る。
+ */
+export function purchaseTotalsForDate(orders: Order[], date: string): DayTotals {
+  const sameDay = orders.filter((o) => o.deliveryDate === date && purchaseDaysBefore(o) === 0);
+  const day = totalsForDate(sameDay, date);
+  const ahead = orders.filter((o) => countsInTotals(o) && purchaseDaysBefore(o) > 0 && addDays(o.deliveryDate, -purchaseDaysBefore(o)) === date);
+  for (const o of ahead) {
+    const sub = totalsForDate([o], o.deliveryDate);
+    day.warnings.push(...sub.warnings);
+    const bin = o.source.extra?.supplierBin;
+    for (const t of sub.products) {
+      let p = day.products.find((x) => x.productId === t.productId);
+      if (!p) {
+        p = { ...t, pieces: 0, customers: [] };
+        day.products.push(p);
+      }
+      p.pieces += t.pieces;
+      for (const c of t.customers)
+        p.customers.push({ ...c, forDeliveryDate: o.deliveryDate, ...(bin !== undefined && bin !== "" ? { supplierDeliveryId: String(bin) } : {}) });
+    }
+  }
+  return day;
+}
+
 export interface ProductPurchaseOptions {
   /**
    * "per_customer"（初期値）: 得意先ごとに袋数を出して足す（袋は得意先ごとに分けて納めるため）。
@@ -100,7 +139,8 @@ export function buildProductPurchaseOrders(day: DayTotals, opts: ProductPurchase
     if (spec?.kind !== "buy" || spec.slicesPerItem) continue;
     const byDelivery = new Map<string, typeof t.customers>();
     for (const c of t.customers) {
-      const dl = deliveryFor(spec.supplierId, c.customerId)?.id ?? "1";
+      // 注文で便が指定されていればそれ（source.extra.supplierBin）、無ければ得意先の決まった便
+      const dl = c.supplierDeliveryId ?? deliveryFor(spec.supplierId, c.customerId)?.id ?? "1";
       byDelivery.set(dl, [...(byDelivery.get(dl) ?? []), c]);
     }
     for (const [dl, customers] of byDelivery) {
@@ -109,8 +149,12 @@ export function buildProductPurchaseOrders(day: DayTotals, opts: ProductPurchase
       const packSize = spec.packSizes.length === 1 ? spec.packSizes[0] : bestPack(need, spec.packSizes).packSize;
       const detail = customers.map((c) => {
         const x = packFor(c.pieces, packSize);
-        return { customerId: c.customerId, pieces: c.pieces, packs: x.packs, surplus: x.surplus };
+        return {
+          customerId: c.customerId, pieces: c.pieces, packs: x.packs, surplus: x.surplus,
+          ...(c.forDeliveryDate ? { forDeliveryDate: c.forDeliveryDate } : {}),
+        };
       });
+      const ahead = detail.filter((x) => x.forDeliveryDate);
       const total = packFor(need, packSize);
       const packs = mode === "total" ? total.packs : detail.reduce((s, x) => s + x.packs, 0);
       const surplus = packs * packSize - need;
@@ -124,6 +168,9 @@ export function buildProductPurchaseOrders(day: DayTotals, opts: ProductPurchase
         needQuantity: need,
         surplus,
         customers: detail,
+        ...(ahead.length
+          ? { notes: ahead.map((x) => `前日入れ: ${x.customerId} の ${Number(x.forDeliveryDate!.slice(5, 7))}/${Number(x.forDeliveryDate!.slice(8, 10))} 納品分 ${x.pieces}個（${x.packs}袋）`) }
+          : {}),
       });
     }
   }
