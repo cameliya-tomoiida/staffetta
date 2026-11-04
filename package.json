@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^1.4.0",
     "@expo-google-fonts/noto-sans-jp": "^0.4.4",
     "exceljs": "^4.4.0",
+    "iconv-lite": "^0.7.3",
     "mailparser": "^3.14.1",
     "next": "16.4.5",
     "pdfjs-dist": "^6.5.438",
