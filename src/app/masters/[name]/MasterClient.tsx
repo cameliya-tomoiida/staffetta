@@ -133,14 +133,14 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
       return r;
     }, () => `${label}を保存しました`);
 
-  const field = "min-h-12 w-full rounded-lg border border-rule-strong bg-sheet px-3 text-base";
+  const field = "min-h-12 w-full rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base";
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
           操作する人
-          <select className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 text-base text-ink" value={who} onChange={(e) => setWho(e.target.value)}>
+          <select className="min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base text-ink" value={who} onChange={(e) => setWho(e.target.value)}>
             <option value="">えらんでください</option>
             {STAFF.map((s) => <option key={s}>{s}</option>)}
           </select>
@@ -158,7 +158,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
 
       {/* CSV のプレビュー */}
       {preview && (
-        <section className="space-y-3 rounded-sm border-2 border-ink bg-sheet p-4">
+        <section className="space-y-3 rounded-lg border-2 border-crust-600 bg-sheet p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-black">読み込んだ CSV の確認：{preview.fileName}</h2>
             <span className="text-sm text-ink-soft">文字コード {preview.encoding === "shift_jis" ? "Shift_JIS" : "UTF-8"}</span>
@@ -174,7 +174,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
           {preview.missingColumns.length > 0 && <p className="text-sm text-ink-soft">CSV に無い列（今の値のまま）：{preview.missingColumns.join("・")}</p>}
           <div className="max-h-[50vh] overflow-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-sheet"><tr className="border-b border-rule-strong text-left"><th className="py-1 pr-2">行</th><th className="pr-2">結果</th><th className="pr-2">ID</th><th>内容</th></tr></thead>
+              <thead className="sticky top-0 bg-cream"><tr className="border-b-2 border-rule-strong text-left"><th className="py-1 pr-2">行</th><th className="pr-2">結果</th><th className="pr-2">ID</th><th>内容</th></tr></thead>
               <tbody>
                 {preview.rows.filter((r) => r.kind !== "same").map((r) => (
                   <tr key={r.line} className={`border-t border-dashed border-rule align-top ${r.kind === "error" ? "bg-alert-bg" : ""}`}>
@@ -205,13 +205,13 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
 
       {/* 1件の編集 */}
       {editing && (
-        <section className="space-y-3 rounded-sm border-2 border-ink bg-sheet p-4">
+        <section className="space-y-3 rounded-lg border-2 border-crust-600 bg-sheet p-4">
           <h2 className="text-xl font-black">{editing.id ? `${label}を直す（${editing.id}）` : `${label}を追加`}</h2>
           {formErrors.map((e, i) => <Notice key={i} tone="alert">{e.column && `${e.column}：`}{e.message}</Notice>)}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {columns.filter((c) => !(editing.id && keyColumns.includes(c.key))).map((c) => (
               <label key={c.key} className="block text-sm font-bold text-ink-soft">
-                {c.label}{c.required && <span className="text-alert-ink">＊</span>}
+                {c.label}{c.required && <span className="ml-1 text-crust-700">（必ず入れる）</span>}
                 {c.type === "enum" || c.type === "boolean" || c.ref ? (
                   <select className={field} value={editing.values[c.key] ?? ""} onChange={(e) => setEditing({ ...editing, values: { ...editing.values, [c.key]: e.target.value } })}>
                     <option value="">（なし）</option>
@@ -240,10 +240,10 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
       )}
 
       {/* 一覧 */}
-      <section className="overflow-x-auto rounded-sm border border-rule-strong bg-sheet">
+      <section className="overflow-x-auto rounded-lg border border-rule bg-sheet">
         <table className="w-full min-w-[760px]">
           <thead>
-            <tr className="border-b border-rule-strong text-left text-sm text-ink-soft [&>th]:px-2 [&>th]:py-2">
+            <tr className="border-b-2 border-rule-strong bg-cream text-left text-sm text-ink [&>th]:px-2 [&>th]:py-2 [&>th]:whitespace-nowrap">
               {listCols.map((c) => <th key={c.key} className={c.type === "number" || c.type === "integer" ? "text-right" : ""}>{c.label}</th>)}
               <th />
             </tr>
@@ -252,7 +252,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
             {visible.map((r) => {
               const low = hasStock && Number(r.stock ?? 0) < Number(r.safetyStock ?? 0);
               return (
-                <tr key={r.id} className={`border-t border-dashed border-rule align-top [&>td]:px-2 [&>td]:py-2 ${r.disabled ? "text-ink-faint line-through" : ""}`}>
+                <tr key={r.id} className={`border-t border-dashed border-rule align-top [&>td]:px-2 [&>td]:py-2 [&>td]:whitespace-nowrap ${r.disabled ? "text-ink-faint line-through" : ""}`}>
                   {listCols.map((c) => (
                     <td key={c.key} className={`${c.type === "number" || c.type === "integer" ? "num text-right" : ""} ${c.key === "name" ? "font-bold" : ""}`}>
                       {c.key === "stock" && low && !r.disabled ? <Tag tone="review">{show(c, get(r, c.key), refs)}</Tag> : show(c, get(r, c.key), refs)}

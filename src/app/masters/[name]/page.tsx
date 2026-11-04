@@ -1,10 +1,10 @@
 // マスタ管理（仕入先・便・材料・包材）と取り込みの設定。一覧＋1件の編集＋CSV の一括登録（プレビュー→確定）＋棚卸。
 // 列定義は③（src/lib/masters/defs.ts）、取り込みの設定は⑤（channel-defs.ts）。
-import Link from "next/link";
+
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/ui";
-import { LIST_KEYS, MASTER_GROUPS, STOCK_MASTERS } from "@/lib/masters/screens";
+import { LIST_KEYS, STOCK_MASTERS } from "@/lib/masters/screens";
 import { defOf, isScreenName, list, refOptions } from "@/lib/masters/service";
 import { MasterClient, type ClientColumn } from "./MasterClient";
 
@@ -32,22 +32,7 @@ export default async function MasterPage(props: PageProps<"/masters/[name]">) {
   return (
     <div className="space-y-5">
       <PageHeader title={`${def.label}マスタ`} lead={LEAD[name]} />
-      <nav className="space-y-2" aria-label="マスタの種類">
-        {MASTER_GROUPS.map((g) => (
-          <div key={g.label} className="flex flex-wrap items-center gap-2">
-            <span className="w-28 text-sm font-bold text-ink-soft">{g.label}</span>
-            {g.names.map((n) => (
-              <Link
-                key={n}
-                href={`/masters/${n}`}
-                className={`min-h-12 rounded-lg border px-4 py-2.5 font-bold ${n === name ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"}`}
-              >
-                {defOf(n).label}
-              </Link>
-            ))}
-          </div>
-        ))}
-      </nav>
+      {/* マスタの種類は左のメニュー（マスタ管理・取り込みの設定）から選ぶ */}
       <MasterClient
         name={name}
         label={def.label}

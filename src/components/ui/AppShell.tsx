@@ -37,6 +37,7 @@ export const MENU: Group[] = [
       { href: "/admin/customers", label: "取引先" },
       // 仕入先・材料・包材は⑤の /masters/*（CSV のプレビュー→確定・棚卸つき）
       { href: "/masters/suppliers", label: "仕入先" },
+      { href: "/masters/supplierDeliveries", label: "仕入先の便（締め・届く日）" },
       { href: "/masters/materials", label: "材料" },
       { href: "/masters/packaging", label: "包材" },
       { href: "/admin/equipment", label: "設備と人員" },
