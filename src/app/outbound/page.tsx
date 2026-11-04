@@ -4,6 +4,7 @@ import { entryList, supplierLabel } from "@/lib/channels/outbound/render";
 import { isSiteMethod } from "@/lib/channels/outbound/sites";
 import { listOutbound } from "@/lib/channels/outbound/workflow";
 import { OutboundClient } from "./OutboundClient";
+import { PageHeader } from "@/components/ui";
 
 export default async function OutboundPage() {
   await connection();
@@ -12,13 +13,10 @@ export default async function OutboundPage() {
   const supplierNames = Object.fromEntries(records.map((r) => [r.po.id, supplierLabel(r.po)]));
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-black">発注の送り出し</h1>
-        <p className="text-black/60">
-          発注書の下書きを人が承認すると、送り先ごとに「FAX用PDF」「メール下書き」「サイトの入力用リスト・CSV」ができます。
-          送信は人が行います（自動では送りません）。
-        </p>
-      </div>
+      <PageHeader
+        title="発注の送り出し"
+        lead="発注書の下書きを人が承認すると、送り先ごとに「FAX用PDF」「メール下書き」「サイトの入力用リスト・CSV」ができます。送信は人が行います（自動では送りません）。"
+      />
       <OutboundClient records={records} entryLists={entryLists} supplierNames={supplierNames} />
     </div>
   );

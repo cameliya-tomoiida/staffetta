@@ -173,7 +173,7 @@ function PoSheet({
 }: {
   po: PoView; s: PoState; left: number | null; factory: string; onApprove: () => void; onUnapprove: () => void; onSend: () => void;
 }) {
-  const m = methodLabel[po.method];
+  const m = methodLabel[po.method] ?? { short: po.method, kind: "site" as const };
   const late = left != null && left < 0;
   const near = left != null && left >= 0 && left <= WARN_MIN;
   const sendLabel = m.kind === "fax" ? "FAXで送る" : m.kind === "email" ? "メールで送る" : m.kind === "site" ? "サイトに入力した" : "電話で伝えた";
