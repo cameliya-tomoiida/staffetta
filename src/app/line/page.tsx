@@ -81,7 +81,7 @@ export default async function LinePage() {
                     {flagged > 0 && <Tag tone="review">要確認 {flagged} 行</Tag>}
                     {o.source.extra?.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
                   </div>
-                  {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm bg-[#e5f4e1] px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
+                  {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
                   <div className="text-sm">
                     {o.lines.map((l) => `${productById(l.productId)?.name ?? `（${l.read?.writtenName}）`} ${l.quantity}${l.unit}`).join("、") || "（品目なし）"}
                   </div>
@@ -105,7 +105,7 @@ export default async function LinePage() {
         <h2 className="mb-3 text-xl font-black">LINEで返した文面（新しい順）</h2>
         <ul className="space-y-2 text-sm">
           {[...state.outbox].reverse().slice(0, 30).map((m, i) => (
-            <li key={i} className="rounded-lg border border-rule bg-[#e5f4e1]/60 p-3">
+            <li key={i} className="rounded-lg border border-rule bg-cream p-3">
               <div className="text-xs text-ink-soft">
                 {fmtDateTime(m.at)}・{m.via === "reply" ? "返信" : "こちらから送信"}・{m.mode === "live" ? "LINEに送信" : "デモ（記録のみ）"}
                 {!m.ok && <span className="ml-2 text-alert-ink">失敗: {m.error}</span>}

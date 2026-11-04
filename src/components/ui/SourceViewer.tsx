@@ -70,7 +70,7 @@ function RefBody({ r }: { r: SourceRef }) {
       return (
         <div>
           <div className="mb-1 text-sm text-ink-soft">LINE のメッセージ</div>
-          <div className="inline-block max-w-full rounded-2xl rounded-tl-sm bg-[#e5f4e1] px-4 py-3 text-lg whitespace-pre-wrap">{r.text ?? "（本文なし）"}</div>
+          <div className="inline-block max-w-full rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-3 text-lg whitespace-pre-wrap">{r.text ?? "（本文なし）"}</div>
         </div>
       );
     case "email":

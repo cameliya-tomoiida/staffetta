@@ -3,7 +3,7 @@ import { FACTORY } from "@/data/master";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
 import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
-import { addDays, fmtDate } from "@/components/ui";
+import { addDays, fmtDate, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
@@ -89,7 +89,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
               <Link
                 key={d}
                 href={`/purchase?date=${d}`}
-                className={`num inline-flex min-h-12 items-center rounded-lg border px-4 font-bold ${d === date ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"}`}
+                className={choiceClass(d === date, "num inline-flex min-h-12 items-center px-4")}
               >
                 {fmtDate(d)}
                 {d === tomorrow && <span className="ml-1.5 text-sm opacity-75">明日</span>}

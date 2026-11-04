@@ -13,6 +13,12 @@ export const FaxReadSchema = z.object({
   layout_summary: z
     .string()
     .describe("この様式の特徴（見出し、日付の書き方、品名の並び、数量の単位、丸で選ぶ欄の有無など）を2〜3文で。様式の登録に使うので、向き・かすれ・受信日時などこの1枚だけの事情は書かない"),
+  format_kind: z
+    .enum(["weekly_table", "order_sheet", "corrected_print", "multi_page_set", "change_notice", "other"])
+    .describe(
+      "様式の型。weekly_table=品名×日付の週間表 / order_sheet=1回分の発注書 / corrected_print=印字の表に手書きで数や訂正を書き込むもの / multi_page_set=仮発注などの複数枚つづり（日付ごとに1枚など） / change_notice=変更・訂正の連絡票 / other",
+    ),
+  page_note: z.string().describe("複数ページなら、ページの関係（例: 13枚つづりで1枚1日分）。1枚なら空文字"),
   rotation_degrees: z
     .number()
     .describe("書類を正しい向きで読むために時計回りに回す角度。0/90/180/270 のどれか"),
@@ -70,10 +76,18 @@ export type FaxStatus =
   | "error";
 
 /** 得意先ごとの様式（人が承認したもの） */
+export type FaxFormatKind = "weekly_table" | "order_sheet" | "corrected_print" | "multi_page_set" | "change_notice" | "other";
+
 export interface FaxTemplate {
   customerId: string;
   title: string;
   layoutSummary: string;
+  /** 様式の型（週間表・発注書・印字＋手書き訂正・複数枚つづり…） */
+  formatKind?: FaxFormatKind;
+  /** 複数ページの関係（例: 13枚つづりで1枚1日分） */
+  pageNote?: string;
+  /** 人が付けたメモ（読み取りの指示文にも添える） */
+  note?: string;
   /** 書類の品名 → 商品ID */
   items: Record<string, string>;
   draftedBy: string; // 下書きしたモデル

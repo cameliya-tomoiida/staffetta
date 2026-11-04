@@ -8,13 +8,13 @@ import { InboxWatcher } from "@/components/InboxWatcher";
 
 
 const statusLabel = {
-  new: { text: "未読", cls: "bg-gray-200 text-gray-700" },
-  reading: { text: "読み取り中", cls: "bg-blue-100 text-blue-800" },
-  review: { text: "確認待ち", cls: "bg-amber-200 text-amber-900" },
-  template: { text: "新しい様式", cls: "bg-purple-200 text-purple-900" },
-  other: { text: "注文以外", cls: "bg-gray-200 text-gray-600" },
-  confirmed: { text: "確定済み", cls: "bg-emerald-100 text-emerald-800" },
-  error: { text: "エラー", cls: "bg-red-100 text-red-800" },
+  new: { text: "未読", cls: "bg-off-bg text-off-ink" },
+  reading: { text: "読み取り中", cls: "bg-info-bg text-info-ink" },
+  review: { text: "確認待ち", cls: "bg-review-bg text-review-ink" },
+  template: { text: "新しい様式", cls: "bg-review-bg text-review-ink" },
+  other: { text: "注文以外", cls: "bg-off-bg text-off-ink" },
+  confirmed: { text: "確定済み", cls: "bg-ok-bg text-ok-ink" },
+  error: { text: "エラー", cls: "bg-alert-bg text-alert-ink" },
 } as const;
 
 export default async function Inbox() {
@@ -25,10 +25,10 @@ export default async function Inbox() {
   return (
     <div className="space-y-6">
       <InboxWatcher />
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-crust-600 pb-3">
         <div>
-          <h1 className="text-2xl font-black">FAX受信箱</h1>
-          <p className="text-black/60">複合機に届いたFAXは、自動でここに入ります。Claudeが読み取り、スタッフが元のFAXと見比べて確定します。</p>
+          <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">FAX受信箱</h1>
+          <p className="text-ink-soft">複合機に届いたFAXは、自動でここに入ります。Claudeが読み取り、スタッフが元のFAXと見比べて確定します。</p>
         </div>
         <div className="flex gap-2">
           <ReadAllButton count={db.faxes.filter((f) => f.status === "new" || f.status === "error").length} />
@@ -36,7 +36,7 @@ export default async function Inbox() {
         </div>
       </div>
       {waiting > 0 && (
-        <div className="rounded-xl bg-amber-100 px-4 py-3 font-bold text-amber-900">確認待ちのFAXが {waiting} 件あります</div>
+        <div className="rounded-lg bg-review-bg px-4 py-3 font-bold text-review-ink">確認待ちのFAXが {waiting} 件あります</div>
       )}
       <div className="grid gap-4 md:grid-cols-3">
         {[...main].reverse().map((f) => {
@@ -46,25 +46,25 @@ export default async function Inbox() {
           const flagged = f.read?.orders.flatMap((o) => o.lines).filter((l) => l.attention || l.confidence < 0.8).length ?? 0;
           return (
             <div key={f.id} className="card flex flex-col overflow-hidden">
-              <div className="relative h-48 overflow-hidden bg-gray-100">
+              <div className="relative h-48 overflow-hidden bg-off-bg">
                 <PdfThumb url={f.file} rotation={f.rotation ?? 0} />
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
                 <div className="flex items-center justify-between">
                   <span className={`pill ${s.cls}`}>{s.text}</span>
-                  <span className="text-xs text-black/50">{f.via === "gmail" || f.via === "simulate" ? "📧 Gmail経由・" : ""}{new Date(f.receivedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 受信</span>
+                  <span className="text-xs text-ink-faint">{f.via === "gmail" || f.via === "simulate" ? "Gmail経由・" : ""}{new Date(f.receivedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 受信</span>
                 </div>
-                <div className="font-bold">{cust ?? <span className="text-black/50">{f.label}</span>}</div>
+                <div className="font-bold">{cust ?? <span className="text-ink-faint">{f.label}</span>}</div>
                 {f.read && f.read.kind !== "order" && (
                   <div><span className={`pill ${kindLabel[f.read.kind].cls}`}>{kindLabel[f.read.kind].text}</span></div>
                 )}
                 {f.read && (
-                  <div className="text-sm text-black/60">
-                    {f.read.document_title}・{lines}行{flagged > 0 && <span className="ml-1 font-bold text-amber-700">（要確認 {flagged}）</span>}
+                  <div className="text-sm text-ink-soft">
+                    {f.read.document_title}・{lines}行{flagged > 0 && <span className="ml-1 font-bold text-review-ink">（要確認 {flagged}）</span>}
                     {f.rotation ? <span className="ml-1">・{f.rotation}°回転して表示</span> : null}
                   </div>
                 )}
-                {f.error && <div className="text-sm text-red-700">{f.error}</div>}
+                {f.error && <div className="text-sm text-alert-ink">{f.error}</div>}
                 <div className="mt-auto flex gap-2 pt-2">
                   {(f.status === "new" || f.status === "error") && <ReadButton faxId={f.id} />}
                   {f.status === "reading" && <ReadButton faxId={f.id} />}
@@ -82,13 +82,13 @@ export default async function Inbox() {
       {others.length > 0 && (
         <details className="card p-4">
           <summary className="cursor-pointer font-bold">注文以外のFAX（{others.length}件）— 広告・仕入先からの返信</summary>
-          <ul className="mt-3 divide-y divide-black/5">
+          <ul className="mt-3 divide-y divide-rule">
             {others.map((f) => (
               <li key={f.id} className="flex items-center gap-3 py-2 text-sm">
-                <span className={`pill ${f.sortedAs === "supplier_reply" ? "bg-sky-100 text-sky-800" : "bg-gray-200 text-gray-600"}`}>{f.sortedAs === "supplier_reply" ? "仕入先の返信" : "広告など"}</span>
+                <span className={`pill ${f.sortedAs === "supplier_reply" ? "bg-info-bg text-info-ink" : "bg-off-bg text-off-ink"}`}>{f.sortedAs === "supplier_reply" ? "仕入先の返信" : "広告など"}</span>
                 <span className="font-bold">{f.read?.sender.name || f.label}</span>
-                <span className="text-black/60">{f.read?.document_title}</span>
-                <span className="ml-auto text-xs text-black/40">仕分け: {f.sortedBy}</span>
+                <span className="text-ink-soft">{f.read?.document_title}</span>
+                <span className="ml-auto text-xs text-ink-faint">仕分け: {f.sortedBy}</span>
                 <Link href={`/fax/${f.id}`} className="text-crust-700 underline">見る</Link>
               </li>
             ))}
@@ -100,9 +100,9 @@ export default async function Inbox() {
 }
 
 const kindLabel = {
-  order: { text: "注文", cls: "bg-emerald-100 text-emerald-800" },
-  change: { text: "変更・訂正", cls: "bg-rose-100 text-rose-800" },
-  provisional_order: { text: "仮発注", cls: "bg-indigo-100 text-indigo-800" },
-  supplier_reply: { text: "仕入先の返信？", cls: "bg-sky-100 text-sky-800" },
-  not_order: { text: "注文以外？", cls: "bg-gray-200 text-gray-700" },
+  order: { text: "注文", cls: "bg-ok-bg text-ok-ink" },
+  change: { text: "変更・訂正", cls: "bg-alert-bg text-alert-ink" },
+  provisional_order: { text: "仮発注", cls: "bg-prov-bg text-prov-ink" },
+  supplier_reply: { text: "仕入先の返信？", cls: "bg-info-bg text-info-ink" },
+  not_order: { text: "注文以外？", cls: "bg-off-bg text-off-ink" },
 } as const;
