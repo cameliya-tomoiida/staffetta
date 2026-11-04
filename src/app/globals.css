@@ -115,3 +115,22 @@ main a:not([class]),
     display: none !important;
   }
 }
+
+/* /plan の帳票（製造計画書・人員配置表・製造日報）は、画面では「プレビュー」を押したときだけ出す（印刷は print.css） */
+@media screen {
+  .sheet-paper {
+    display: none;
+  }
+  body:has(#pv-plan:checked) [data-sheet="plan"],
+  body:has(#pv-staff:checked) [data-sheet="staff"],
+  body:has(#pv-daily:checked) [data-sheet="daily"] {
+    display: block;
+  }
+  /* プレビューの文字は、押されているときは太く */
+  label:has(> #pv-plan:checked),
+  label:has(> #pv-staff:checked),
+  label:has(> #pv-daily:checked) {
+    font-weight: 900;
+    text-decoration-thickness: 3px;
+  }
+}
