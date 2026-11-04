@@ -72,6 +72,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
     ...prov.products.map((p) => p.name),
     ...r.production.doughs.flatMap((d) => [d.name, ...d.items.map((i) => i.name)]),
     ...r.schedule.flatMap((row) => row.steps.map(eqName)).filter(Boolean),
+    ...r.production.doughs.flatMap((d) => (d.waveName ? [d.waveName] : [])),
   ];
   const mt = await translateTerms(lang, jaNames);
   const name: NameFn = (ja) => ({ text: mt[ja] ?? ja, machine: !!mt[ja], ja });
@@ -95,7 +96,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         name: name(i.name).text,
         unit: unitOf(i.productId),
         pieces: i.pieces,
-        doughName: name(b.name).text,
+        doughName: name(b.name).text + (b.waveName ? `（${name(b.waveName).text}）` : ""),
         doughGram: i.doughGram,
         bagSize: productMaster.get(i.productId)?.bagSize,
         caseSize: productMaster.get(i.productId)?.caseSize,
@@ -416,6 +417,11 @@ const SHEETS = [
 ] as const;
 
 type T = (k: Key) => string;
+
+/** 便の名前（同じ生地を便ごとに分けて作るとき。③の waveName） */
+function WaveTag({ w }: { w: string }) {
+  return <span className="mt-0.5 inline-block rounded border border-ink px-1.5 text-xs font-bold">{w}</span>;
+}
 type NameFn = (ja: string) => { text: string; machine: boolean; ja: string };
 const stepName = (lang: Lang, key: ProcessKey, ja: string) => (key in stepColor ? tr(lang, key as Key) : ja);
 
@@ -476,11 +482,12 @@ function MakeTable({ bs, lang, t, name, unitOf }: { bs: DoughBatchPlan[]; lang: 
     <div className="overflow-hidden rounded-sm border border-rule-strong bg-sheet">
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("make_list")}</div>
       {bs.map((b) => (
-        <div key={b.doughId} className="border-b border-rule-strong last:border-b-0">
+        <div key={b.key} className="border-b border-rule-strong last:border-b-0">
           <div className="flex flex-wrap items-end justify-between gap-2 bg-cream px-4 py-2">
             <div>
               <span className="text-xs text-ink-soft">{t("dough")}</span>
               <Name n={name(b.name)} lang={lang} big />
+              {b.waveName && <WaveTag w={name(b.waveName).text} />}
             </div>
             <div className="flex gap-5">
               <Stat label={t("dough_kg")} value={fmtNum(b.doughKg, 1)} unit="kg" />
@@ -554,11 +561,12 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
             ))}
           </div>
           {rows.map((r) => {
-            const b = bs.find((b) => b.doughId === r.doughId);
+            const b = bs.find((b) => b.key === r.key);
             return (
-              <div key={r.doughId} className="flex items-center border-t border-rule py-1.5">
+              <div key={r.key} className="flex items-center border-t border-rule py-1.5">
                 <div className="w-36 shrink-0 pr-2 text-sm">
                   <Name n={name(r.doughName)} lang={lang} />
+                  {r.waveName && <WaveTag w={name(r.waveName).text} />}
                   {b && <span className="num text-xs text-ink-faint">{fmtNum(b.doughKg, 1)}kg</span>}
                   {r.deliveryMinute != null && (
                     <span className="num block text-xs font-bold text-alert-ink">
@@ -615,8 +623,9 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
       </label>
       <div className="hidden gap-px border-t border-rule-strong bg-rule peer-checked:grid print:grid sm:grid-cols-2">
         {rows.map((r) => (
-          <div key={r.doughId} className="bg-sheet px-4 py-2.5">
+          <div key={r.key} className="bg-sheet px-4 py-2.5">
             <Name n={name(r.doughName)} lang={lang} />
+            {r.waveName && <WaveTag w={name(r.waveName).text} />}
             {r.deadline != null && (
               <div className="num mt-0.5 text-sm font-bold text-alert-ink">
                 {t("delivery_at")} {ft(r.deliveryMinute ?? r.deadline)} ／{" "}

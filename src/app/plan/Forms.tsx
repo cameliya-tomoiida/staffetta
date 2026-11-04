@@ -66,7 +66,7 @@ export function PlanSheet({ rows, date, dow, lang, unitLabel }: { rows: MakeRow[
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={r.productId}>
+              <tr key={`${r.doughName}-${r.productId}`}>
                 <td className={`${td} num whitespace-nowrap`}>{i === 0 ? date : ""}</td>
                 <td className={`${td} whitespace-nowrap`}>{i === 0 ? dow : ""}</td>
                 <td className={`${td} min-w-[14em]`}>
@@ -127,6 +127,7 @@ export function EquipmentChart({
   shortName: FormName;
 }) {
   const t = (k: FormKey) => tf(lang, k);
+  const rowLabel = (r: ScheduleRow) => shortName(r.doughName) + (r.waveName ? ` ${shortName(r.waveName)}` : "");
   const today = rows.flatMap((r) => r.steps.filter((s) => !s.prevDay && s.end > s.start).map((s) => ({ r, s })));
   if (today.length === 0) return null;
   const byEq = new Map<string, Use[]>();
@@ -137,8 +138,8 @@ export function EquipmentChart({
       const k = equipmentName(s);
       const list = byEq.get(k) ?? [];
       const prevEnd = i > 0 ? steps[i - 1].end : s.start;
-      if (s.start > prevEnd) list.push({ start: prevEnd, end: s.start, label: `${shortName(r.doughName)} ${t("wait")}`, stepKey: s.key, wait: true });
-      list.push({ start: s.start, end: s.end, label: shortName(r.doughName), stepKey: s.key });
+      if (s.start > prevEnd) list.push({ start: prevEnd, end: s.start, label: `${rowLabel(r)} ${t("wait")}`, stepKey: s.key, wait: true });
+      list.push({ start: s.start, end: s.end, label: rowLabel(r), stepKey: s.key });
       byEq.set(k, list);
     });
   }
@@ -256,6 +257,7 @@ export function StaffSheet({
   headcountAt: (line: number, minute: number) => number | null;
 }) {
   const t = (k: FormKey) => tf(lang, k);
+  const rowLabel = (r: ScheduleRow) => shortName(r.doughName) + (r.waveName ? ` ${shortName(r.waveName)}` : "");
   const all = rows.flatMap((l) => l.rows.flatMap((r) => r.steps.filter((s) => !s.prevDay && s.end > s.start && s.people > 0)));
   if (all.length === 0) return null;
   const start = Math.floor(Math.min(...all.map((s) => s.start)) / 60) * 60;
@@ -293,7 +295,7 @@ export function StaffSheet({
                   <tr key={`${li}-${i}`}>
                     <td className={`${td} whitespace-nowrap`}>
                       <span className="font-bold">{stepLabel(s)}</span>
-                      <span className="ml-1 text-ink-faint">{shortName(r.doughName)}</span>
+                      <span className="ml-1 text-ink-faint">{rowLabel(r)}</span>
                       <span className="num ml-1">{s.people}{t("people")}</span>
                     </td>
                     <td className={td} />
@@ -349,7 +351,7 @@ export function DailySheet({ rows, date, lang, unitLabel }: { rows: MakeRow[]; d
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={r.productId}>
+            <tr key={`${r.doughName}-${r.productId}`}>
               <td className={`${td} num whitespace-nowrap`}>{i === 0 ? date : ""}</td>
               <td className={`${td} font-bold`}>{r.name}</td>
               <td className={`${td} num text-right whitespace-nowrap`}>{r.doughGram ? `${fmtNum(r.doughGram)}g` : ""}</td>
