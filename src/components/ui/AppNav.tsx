@@ -3,11 +3,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const nav = [
+  // 受ける
   { href: "/", label: "FAX受信", match: (p: string) => p === "/" || p.startsWith("/fax") },
-  { href: "/import", label: "取り込み", match: (p: string) => p.startsWith("/import") },
   { href: "/line", label: "LINE受付", match: (p: string) => p.startsWith("/line") },
+  { href: "/import", label: "取り込み", match: (p: string) => p.startsWith("/import") },
+  // まとめる
   { href: "/orders", label: "受注一覧", match: (p: string) => p.startsWith("/orders") },
+  // 作る
   { href: "/plan", label: "製造計画", match: (p: string) => p.startsWith("/plan") },
+  // 頼む
   { href: "/purchase", label: "発注書", match: (p: string) => p.startsWith("/purchase") },
   { href: "/outbound", label: "送り出し", match: (p: string) => p.startsWith("/outbound") },
 ];

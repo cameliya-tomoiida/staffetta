@@ -24,11 +24,11 @@ const barColor: Record<OrderStatus, string> = {
 };
 
 export function OrdersClient({
-  orders, today, storedIds, linePreviews,
-}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string> }) {
+  orders, today, storedIds, linePreviews, initialStatus = "all",
+}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter }) {
   const [who, setWho] = useState(STAFF[0]);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>(initialStatus);
   const [date, setDate] = useState<string>("all");
   const [customer, setCustomer] = useState<string>("all");
   const [channel, setChannel] = useState<"all" | OrderChannel>("all");
@@ -85,14 +85,16 @@ export function OrdersClient({
         </span>
       </PageHeader>
 
-      {reviewAll > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
-          要確認の注文が <span className="num text-xl">{reviewAll}</span> 件あります。元の資料と見比べて確定してください。
+      {reviewAll > 0 && status !== "needs_review" && (
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+          <button type="button" onClick={() => setStatus("needs_review")} className="text-left underline-offset-4 hover:underline">
+            要確認の注文が <span className="num text-xl">{reviewAll}</span> 件あります。押すと、要確認だけを出します。
+          </button>
         </Notice>
       )}
 
       {/* 絞り込み */}
-      <div className="no-print mb-4 space-y-3 rounded-lg border border-rule bg-sheet p-3 sm:p-4">
+      <div className="no-print mb-4 space-y-2.5 rounded-lg border border-rule bg-sheet p-3">
         <FilterRow label="状態">
           <Segmented
             label="状態"
@@ -115,7 +117,12 @@ export function OrdersClient({
             options={[{ value: "all", label: "すべて" }, ...dates.map((d) => ({ value: d, label: <span>{fmtDate(d)}{dayName(d) && <span className="ml-1 text-sm opacity-75">{dayName(d)}</span>}</span> }))]}
           />
         </FilterRow>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <details className="group" open={customer !== "all" || channel !== "all" || sort !== "date"}>
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-bold text-ink-soft">
+            <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+            くわしく絞り込む（取引先・入口・並べ方）
+          </summary>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <SelectBox label="取引先" value={customer} onChange={setCustomer} options={[{ value: "all", label: "すべての取引先" }, ...customers.map((c) => ({ value: c.id, label: c.name }))]} />
           <SelectBox
             label="入口"
@@ -134,6 +141,10 @@ export function OrdersClient({
             ]}
           />
         </div>
+        </details>
+      </div>
+      <div className="mb-2 text-sm text-ink-soft">
+        <b className="num text-base text-ink">{list.length}</b> 件を表示（要確認がいちばん上）
       </div>
 
       {list.length === 0 ? (
