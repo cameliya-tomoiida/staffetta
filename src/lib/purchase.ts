@@ -93,6 +93,13 @@ export function purchaseDaysBefore(o: Order): number {
 export function lineDaysBefore(o: Order, l: OrderLine): number {
   if (o.source.extra?.site === "kirara") {
     const name = l.read?.writtenName?.trim();
+    // ⑤が取り込みのときに書いた「前日に入れる品名」（改行区切り）があれば、それを優先する（コード表をマスタで変えても同じ判断になる）
+    const listed = o.source.extra.prevDayItems;
+    if (typeof listed === "string" && listed.trim()) {
+      const names = listed.split("
+").map((x) => x.trim()).filter(Boolean);
+      return name && names.includes(name) ? 1 : purchaseDaysBefore(o);
+    }
     const item = name ? KIRARA_ITEMS.find((i) => i.name === name) : undefined;
     const off = item ? KIRARA_SUPPLY[item.dest]?.dayOffset ?? 0 : 0;
     if (off < 0) return -off;
