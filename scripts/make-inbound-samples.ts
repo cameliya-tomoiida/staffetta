@@ -1,4 +1,4 @@
-// 外部の入口（メール・スプレッドシート・きららCSV・インフォマートCSV）の架空サンプルを作る。
+// 外部の入口（メール・スプレッドシート・専用サイトCSV・インフォマートCSV）の架空サンプルを作る。
 // 実行: npx tsx scripts/make-inbound-samples.ts
 // できるもの: public/samples/inbound/ 以下。社名・品名・数量はすべて架空。
 import ExcelJS from "exceljs";
@@ -20,7 +20,7 @@ async function write(rel: string, data: string | Uint8Array) {
 
 // ───────── メール ─────────
 async function emails() {
-  // ① PDF の発注書（ピザ店。ピザ店）
+  // ① PDF の発注書（ピザ店）
   const pdf = await makeSimplePdf({
     title: "発 注 書",
     headerRight: ["発注番号 YM-261105-01", "発注日 2026年11月5日"],
@@ -57,7 +57,7 @@ async function emails() {
     }),
   );
 
-  // ② Excel の注文書（社員食堂。社員食堂の取引先）
+  // ② Excel の注文書（社員食堂）
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("注文書");
   ws.addRow(["パン注文書"]);
@@ -89,7 +89,7 @@ async function emails() {
     }),
   );
 
-  // ③ 本文の注文 → ④ 本文で数量変更 → ⑤ キャンセル（給食の取引先）
+  // ③ 本文の注文 → ④ 本文で数量変更 → ⑤ キャンセル（材料卸）
   await write(
     "email/03_本文注文_まるしょう食品.eml",
     buildEml({
@@ -125,7 +125,7 @@ async function emails() {
   );
 }
 
-// ───────── Google スプレッドシート（ベーグル店本部。宅配の店A相当） ─────────
+// ───────── Google スプレッドシート（ベーグル店本部） ─────────
 // 店舗別・月別のシート。行＝納品日、列＝商品、セル＝ケース数。
 // v1 = 前回読んだときの中身、v2 = 本部が書き換えたあと（差分のデモ用）
 async function sheets() {
@@ -148,7 +148,7 @@ async function sheets() {
   await write("sheet/ベーグル工房みなみ_2026年11月_さかえ店_v2.csv", csv(v2));
 }
 
-// ───────── きらら（デモ: あおい医療フードサービス）の EDI CSV ─────────
+// ───────── 取引先の発注サイト（デモ: あおい医療フードサービス）の EDI CSV ─────────
 // 実物と同じ 23列・ヘッダーなし。数量は100倍の値（400 = 4パック）。
 async function kirara() {
   const sites = [

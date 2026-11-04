@@ -1,4 +1,4 @@
-// ⑤の取り込み（インフォマートCSV・きららEDI CSV・スプレッドシート）を、⑤が置いた架空サンプルで確かめる。
+// ⑤の取り込み（インフォマートCSV・取引先の発注サイトの EDI CSV・スプレッドシート）を、⑤が置いた架空サンプルで確かめる。
 // 保存先はメモリ（memdb）に差し替え、本物の data/ には書かない。AI は使わない入口なので、そのまま通す。
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -145,7 +145,7 @@ describe("Google スプレッドシート（店舗別・月別シート）", () 
   });
 });
 
-describe("きららの CSV → ③の発注書（前日入れ）", () => {
+describe("取引先の発注サイトの CSV → ③の発注書（前日入れ）", () => {
   it("前日の品は納品日の前日の発注書に、当日の品は納品日の発注書に入る（二重にならない）", async () => {
     const { runPipeline } = await import("@/lib/pipeline");
     await importKiraraCsv(sample("kirara", "SR900S01_20261108_朝.csv"), "朝.csv");

@@ -44,7 +44,7 @@ export const channelLabel: Record<OrderChannel, { short: string; long: string }>
   email: { short: "メール", long: "メール" },
   google_sheet: { short: "シート", long: "Googleスプレッドシート" },
   infomart: { short: "インフォマート", long: "インフォマート" },
-  customer_site: { short: "きららサイト", long: "取引先の発注サイト（きらら医療食品など）" },
+  customer_site: { short: "専用サイト", long: "取引先の発注サイト" },
   phone: { short: "電話", long: "電話" },
   driver: { short: "ドライバー", long: "ドライバー聞き取り" },
 };
@@ -57,7 +57,7 @@ export const methodLabel: Record<PurchaseMethod, { short: string; kind: "site" |
   aspit: { short: "アスピット", kind: "site" },
   hinode_site: { short: "メーカー発注サイト", kind: "site" },
   kirara_site: { short: "メーカー発注サイト", kind: "site" },
-  fujimi_site: { short: "受発注サイト（ふじみ）", kind: "site" },
-  kogane_site: { short: "発注サイト（こがね）", kind: "site" },
+  fujimi_site: { short: "受発注サイト", kind: "site" },
+  kogane_site: { short: "発注サイト", kind: "site" },
   phone: { short: "電話", kind: "phone" },
 };

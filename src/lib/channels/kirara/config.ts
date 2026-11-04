@@ -1,4 +1,4 @@
-// きらら医療食品（デモでは「あおい医療フードサービス」= C08）の専用サイトから落とす EDI CSV の設定。
+// 取引先の発注サイト（デモでは「あおい医療フードサービス」= C08）から落とす EDI CSV の設定。
 // 実物の CSV（23列・Shift_JIS・ヘッダーなし）と、現役の Excel マクロの「コード変換表」と同じ考え方にしている。
 // 商品コード・品名・事業所はすべて架空。
 
@@ -25,7 +25,7 @@ export const KIRARA_SUPPLY: Partial<Record<KiraraDest, { supplierId: string; day
 };
 
 export interface KiraraItem {
-  /** きらら側の商品コード（架空） */
+  /** 取引先側の商品コード（架空） */
   code: string;
   /** CSV に出てくる品名（架空） */
   name: string;

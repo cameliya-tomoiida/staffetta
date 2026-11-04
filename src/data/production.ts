@@ -62,7 +62,7 @@ export const supplierExtras: Record<string, SupplierExtra> = {
   S04: { siteName: "インフォマート", deliveries: [{ id: "1", name: "通常便" }], minLot: 2 },
   S05: { deliveries: [{ id: "1", name: "通常便" }] },
   S06: { deliveries: [{ id: "1", name: "通常便" }] },
-  // ふじみ製パン（ふじみ相当）: 1便と2便。便ごとの締め・日数は未設定（未設定なら master.ts の値を使う）
+  // ふじみ製パン（架空の大手製パン会社）: 1便と2便。便ごとの締め・日数は未設定（未設定なら master.ts の値を使う）
   S07: {
     siteName: "ふじみ製パン 受発注サイト",
     deliveries: [
@@ -70,7 +70,7 @@ export const supplierExtras: Record<string, SupplierExtra> = {
       { id: "2", name: "2便", arrival: "11:00" },
     ],
   },
-  // こがね食品（こがね相当）: ピザの粉・トマトを自社サイトで受け付ける
+  // こがね食品（架空の食材卸）: ピザの粉・トマトを自社サイトで受け付ける
   S08: { siteName: "こがね食品 発注サイト", deliveries: [{ id: "1", name: "通常便" }] },
 };
 
