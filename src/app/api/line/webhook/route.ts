@@ -16,12 +16,25 @@ type LineEvent = {
   source?: { type: string; userId?: string };
   message?: { id: string; type: string; text?: string };
   deliveryContext?: { isRedelivery?: boolean };
+  postback?: { data: string };
 };
 
 const ACK = "受け付けました（確認中）。";
-const NOT_TEXT = "ありがとうございます。\nご注文は、文章でお送りいただくか、下の「注文する」からお願いします。";
+const NOT_TEXT = "ありがとうございます。\nご注文は、下の「パンを注文する」か、文章でお送りください。";
+const HOWTO = [
+  "【ご注文のしかた】",
+  "",
+  "① 下の「パンを注文する」を押します。",
+  "② お届け日をえらび、パンの「＋」を押して数を入れます。数字を押すと、まとめて入れられます。",
+  "③「確認する」→「この内容で注文する」で完了です。",
+  "",
+  "・いつもと同じなら「前回と同じ」が便利です。",
+  "・このトークに文章で送っても受け付けます。",
+  "　例）明日 食パン6枚切り 3本、ロール 20個",
+  "・内容を確認して確定したら、このLINEでお知らせします。",
+].join("\n");
 const welcome = () =>
-  `友だち追加ありがとうございます。\nパンのご注文は、この画面からできます。\n\n▼注文フォーム（数を選ぶだけ）\n${liffUrl()}\n\n文章でも受け付けます。\n例）明日 食パン6枚切り 3本、ロール 20個`;
+  `友だち追加ありがとうございます。\nパンのご注文は、画面の下の「パンを注文する」からどうぞ。数をえらぶだけです。\n\n▼注文フォーム\n${liffUrl()}\n\n文章でも受け付けます。\n例）明日 食パン6枚切り 3本、ロール 20個`;
 
 export async function POST(request: Request) {
   const raw = await request.text();
@@ -51,6 +64,11 @@ export async function POST(request: Request) {
         await touchUser(userId, { displayName: await getDisplayName(userId) });
         if (ev.replyToken) await replyText(ev.replyToken, userId, welcome());
       });
+      continue;
+    }
+    // リッチメニューの「使いかた」
+    if (ev.type === "postback" && ev.postback?.data === "howto") {
+      if (ev.replyToken) after(() => replyText(ev.replyToken!, userId, HOWTO).then(() => undefined));
       continue;
     }
     if (ev.type !== "message" || !ev.message) continue;
