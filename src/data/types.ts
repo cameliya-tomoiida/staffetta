@@ -380,6 +380,10 @@ interface StockItemBase {
   unitCost: number;
   /** 保管場所（冷蔵庫A・倉庫2階 など） */
   location?: string;
+  /** 棚卸で在庫を数えた日時（ISO）・人・メモ（⑤の棚卸の画面が入れる） */
+  stockCountedAt?: string;
+  stockCountedBy?: string;
+  stockNote?: string;
   active: boolean;
 }
 
