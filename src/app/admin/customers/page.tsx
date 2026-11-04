@@ -3,14 +3,14 @@ import type { ColumnDef, Row } from "@/components/admin/types";
 import { CustomerOrderSettings } from "@/components/line/CustomerOrderSettings";
 import { LineLinkPanel } from "@/components/line/LineLinkPanel";
 import { listCustomerSettings } from "@/lib/channels/line/customers";
-import { saveCustomerRowAction } from "@/lib/channels/line/actions";
+import { importCustomersAction, saveCustomerRowAction } from "@/lib/channels/line/actions";
 import { adminCustomerColumns } from "@/lib/masters/customers";
 
 export const metadata = { title: "取引先｜マスタ管理" };
 
 // 取引先マスタ（masters の "customers"。持ち主は④）。
 // 一覧の上に LINE のひも付け、編集フォームの下に注文方法（入口・締め・納品時刻・配送コース）。
-// TODO(⑤): CSV の一括登録（onImport）は ⑤ の CSV エンジンができたらつなぐ。列の決まりは src/lib/masters/customers.ts。
+// CSV の一括登録・書き出しは⑤の枠（/api/masters/customers・service.ts）。列の決まりは③の customerDef。
 
 export default async function CustomersAdmin() {
   const customers = await listCustomerSettings();
@@ -39,6 +39,8 @@ export default async function CustomersAdmin() {
       columns={columns}
       rows={rows}
       onSave={saveCustomerRowAction}
+      onImport={importCustomersAction}
+      exportHref="/api/masters/customers?format=csv"
       top={<LineLinkPanel />}
       formExtra={formExtra}
       note={<>今の内容は見本（架空のデータ）です。直した内容は保存され、だれが・いつ直したかが残ります。</>}

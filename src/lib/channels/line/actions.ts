@@ -91,3 +91,24 @@ export async function saveCustomerRowAction(row: Record<string, string | number 
   if (r.ok) revalidatePath("/", "layout");
   return r;
 }
+
+/**
+ * 管理画面（②の AdminPage の onImport）: 取引先の CSV 一括登録。⑤の枠（service.ts）で読み、③の customerDef で確かめる。
+ * エラーが1件でもあれば保存しない（どの行がおかしいかを返す）。LINE のひも付け（lineUserIds）は CSV では変わらない。
+ */
+export async function importCustomersAction(fd: FormData): Promise<{ added: number; updated: number; errors: { line: number; message: string }[] }> {
+  const file = fd.get("file");
+  if (!(file instanceof File)) throw new Error("CSV ファイルを選んでください");
+  const { previewUpload, applyUpload } = await import("@/lib/masters/service");
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const p = await previewUpload("customers", buf, file.name);
+  const errors = [
+    ...p.fileErrors.map((message) => ({ line: 1, message })),
+    ...p.rows.flatMap((r) => (r.kind === "error" ? r.errors.map((e) => ({ line: r.line, message: `${e.column}: ${e.message}` })) : [])),
+  ];
+  if (errors.length) return { added: 0, updated: 0, errors };
+  if (!p.counts.add && !p.counts.update) return { added: 0, updated: 0, errors: [] };
+  const r = await applyUpload("customers", buf, file.name, "事務", p.hash);
+  revalidatePath("/", "layout");
+  return { ...r, errors: [] };
+}

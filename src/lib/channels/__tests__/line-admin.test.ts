@@ -101,3 +101,29 @@ describe("デモのリセット", () => {
     expect((await st.readLineState()).outbox.some((m) => m.to === "U_demo_kotori")).toBe(false);
   });
 });
+
+describe("取引先の CSV 一括登録（⑤の枠・③の列の決まり）", () => {
+  const csv = (text: string) => new TextEncoder().encode(text);
+
+  it("更新と追加ができ、LINE のひも付けは CSV で消えない", async () => {
+    const o = await import("@/lib/channels/line/orders");
+    const st = await import("@/lib/channels/line/state");
+    const c = await import("@/lib/channels/line/customers");
+    const svc = await import("@/lib/masters/service");
+    await st.touchUser("U_real_csv", { displayName: "CSVの人" });
+    await o.linkUserToCustomer("U_real_csv", "C05", "事務");
+    const buf = csv("得意先ID,名前,主な注文の入口,注文の締め（前日）,納品時刻,配送コース\nC05,みどり食堂（デモ）,LINE,16:00,07:15,南コース\nC90,新しい店（デモ）,FAX,15:00,,\n");
+    const p = await svc.previewUpload("customers", buf, "取引先.csv");
+    expect(p.counts).toMatchObject({ add: 1, update: 1, error: 0 });
+    await svc.applyUpload("customers", buf, "取引先.csv", "事務", p.hash);
+    expect(await c.getCustomerSettings("C05")).toMatchObject({ channel: "line", cutoff: "16:00", deliveryTime: "07:15", course: "南コース", lineUserIds: ["U_real_csv"] });
+    expect(await c.getCustomerSettings("C90")).toMatchObject({ name: "新しい店（デモ）", channel: "fax", active: true });
+  });
+
+  it("おかしな行があれば、行の番号つきでエラー（保存しない）", async () => {
+    const svc = await import("@/lib/masters/service");
+    const p = await svc.previewUpload("customers", csv("得意先ID,名前,主な注文の入口,注文の締め（前日）\nC91,だめな店,ハト,25:00\n"), "x.csv");
+    expect(p.counts.error).toBe(1);
+    expect(p.canApply).toBe(false);
+  });
+});

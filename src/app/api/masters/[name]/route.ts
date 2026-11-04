@@ -22,7 +22,7 @@ const csvResponse = (buf: Buffer, fileName: string) =>
   });
 
 const LABEL: Record<string, string> = {
-  suppliers: "仕入先", supplierDeliveries: "仕入先の便", materials: "材料", packaging: "包材",
+  suppliers: "仕入先", supplierDeliveries: "仕入先の便", materials: "材料", packaging: "包材", customers: "取引先",
   sheet_sources: "読みに行くシート", sheet_columns: "シートの列と商品", kirara_items: "専用サイトのコード表", infomart_headers: "インフォマートの列名",
 };
 
