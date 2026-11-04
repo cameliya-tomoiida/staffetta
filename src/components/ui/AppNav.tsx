@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 const nav = [
   { href: "/", label: "FAX受信", match: (p: string) => p === "/" || p.startsWith("/fax") },
   { href: "/import", label: "取り込み", match: (p: string) => p.startsWith("/import") },
-  // TODO(④): LINE受付の画面が master に入ったら有効にする
-  // { href: "/line", label: "LINE受付", match: (p: string) => p.startsWith("/line") },
+  { href: "/line", label: "LINE受付", match: (p: string) => p.startsWith("/line") },
   { href: "/orders", label: "受注一覧", match: (p: string) => p.startsWith("/orders") },
   { href: "/plan", label: "製造計画", match: (p: string) => p.startsWith("/plan") },
   { href: "/purchase", label: "発注書", match: (p: string) => p.startsWith("/purchase") },

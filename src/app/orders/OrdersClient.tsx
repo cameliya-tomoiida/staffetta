@@ -9,6 +9,9 @@ import {
   orderIntent, orderStatusRank, PageHeader, Segmented, Tag,
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
+import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
+
+const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
 
 type StatusFilter = "all" | OrderStatus;
 type SortKey = "date" | "customer" | "received";
@@ -20,7 +23,11 @@ const barColor: Record<OrderStatus, string> = {
   cancelled: "bg-off-line",
 };
 
-export function OrdersClient({ orders, today }: { orders: Order[]; today: string }) {
+export function OrdersClient({
+  orders, today, storedIds, linePreviews,
+}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string> }) {
+  const [who, setWho] = useState(STAFF[0]);
+  const stored = useMemo(() => new Set(storedIds), [storedIds]);
   const [status, setStatus] = useState<StatusFilter>("all");
   const [date, setDate] = useState<string>("all");
   const [customer, setCustomer] = useState<string>("all");
@@ -65,6 +72,14 @@ export function OrdersClient({ orders, today }: { orders: Order[]; today: string
   return (
     <div>
       <PageHeader title="受注一覧" lead="FAX・LINE・メール・サイト・電話の注文を、ここでまとめて見ます。">
+        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
+          確定する人
+          <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink">
+            {STAFF.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        </label>
         <span className="text-ink-soft">
           全 <b className="num text-ink">{orders.length}</b> 件
         </span>
@@ -126,7 +141,7 @@ export function OrdersClient({ orders, today }: { orders: Order[]; today: string
       ) : (
         <ul className="space-y-2.5">
           {list.map((o) => (
-            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} />
+            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} who={who} canConfirm={stored.has(o.id)} linePreview={linePreviews[o.id]} />
           ))}
         </ul>
       )}
@@ -134,7 +149,12 @@ export function OrdersClient({ orders, today }: { orders: Order[]; today: string
   );
 }
 
-function OrderRow({ o, custName, dayName, all, onJump }: { o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void }) {
+function OrderRow({
+  o, custName, dayName, all, onJump, who, canConfirm, linePreview,
+}: {
+  o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string;
+}) {
+  const x = o.source.extra ?? {};
   const intent = o.intent && o.intent !== "new" ? orderIntent[o.intent] : null;
   const original = o.changeOf ? all.find((x) => x.id === o.changeOf) : undefined;
   const followUps = all.filter((x) => x.changeOf === o.id);
@@ -149,8 +169,13 @@ function OrderRow({ o, custName, dayName, all, onJump }: { o: Order; custName: s
           <div className="flex flex-wrap items-center gap-2">
             <OrderStatusTag status={o.status} />
             {intent && <Tag tone={intent.tone}>{intent.label}</Tag>}
+            {x.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
+            {x.lineNotifiedAt && <Tag tone="info">LINEで連絡済み</Tag>}
             <ChannelBadge channel={o.source.channel} />
-            <span className="text-sm text-ink-soft">{fmtDateTime(o.source.receivedAt)} 受付</span>
+            <span className="text-sm text-ink-soft">
+              {fmtDateTime(o.source.receivedAt)} 受付
+              {o.source.channel === "line" && x.via && <>・{x.via === "liff" ? "注文フォーム" : "トーク"}から</>}
+            </span>
           </div>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <span className={`text-xl font-black ${off ? "line-through decoration-2" : ""}`}>{custName}</span>
@@ -173,6 +198,13 @@ function OrderRow({ o, custName, dayName, all, onJump }: { o: Order; custName: s
               );
             })}
           </ul>
+          {typeof x.notes === "string" && x.notes && <div className="mt-1 text-sm text-ink-soft">メモ：{x.notes}</div>}
+          {typeof x.readError === "string" && x.readError && (
+            <div className="mt-1 flex items-start gap-1.5 text-sm font-bold text-alert-ink">
+              <Icon.alert className="mt-0.5 h-4 w-4 shrink-0" />
+              読み取りできませんでした（{x.readError}）。元の文面を見て、手で入れてください。
+            </div>
+          )}
           {o.changeOf && (
             <button type="button" onClick={() => onJump(o.changeOf!)} className="mt-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-md border border-alert-line bg-alert-bg px-3 text-sm font-bold text-alert-ink">
               元の注文を見る
@@ -201,6 +233,10 @@ function OrderRow({ o, custName, dayName, all, onJump }: { o: Order; custName: s
         </div>
         <div className="flex flex-wrap gap-2 md:flex-col md:items-stretch">
           <SourceButton source={o.source} />
+          {canConfirm && o.status === "needs_review" && o.source.channel !== "fax" && (o.intent ?? "new") === "new" && (
+            <ConfirmButton order={o} who={who} custName={custName} />
+          )}
+          {linePreview && <LineNotifyButton orderId={o.id} preview={linePreview} who={who} />}
           {faxRef?.kind === "fax_pdf" && o.status === "needs_review" && (
             <Link href={`/fax/${faxRef.faxId}`} className={buttonClass("primary")}>
               見比べて確認
