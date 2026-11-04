@@ -73,6 +73,7 @@ export const equipmentDef: MasterDef<Equipment> = {
     { key: "minPieceGram", label: "1個の重さ 下限（g）", type: "number", min: 0, example: "20", help: "分割機" },
     { key: "maxPieceGram", label: "1個の重さ 上限（g）", type: "number", min: 0, example: "150", help: "分割機" },
     { key: "capacityPieces", label: "1回に入る数", type: "integer", min: 1, example: "", help: "オーブン・ホイロ" },
+    { key: "downtimes", label: "使えない時間帯", type: "textlist", example: "17:00-17:40", help: "霜取り・清掃など。毎日くり返す。複数なら ; で区切る" },
     { key: "exclusiveGroup", label: "同時に動かせないグループ", type: "text", example: "ミキサー", help: "同じグループの設備は1台ずつしか回せない（同じ時間に他のミキサーは回せない など）" },
     ACTIVE,
     { key: "note", label: "メモ", type: "text" },
@@ -80,6 +81,7 @@ export const equipmentDef: MasterDef<Equipment> = {
   check: (e) => [
     ...(e.kind === "mixer" && !e.maxBatchKg ? ["ミキサーは「1回の上限（kg）」を入れてください"] : []),
     ...(e.minPieceGram !== undefined && e.maxPieceGram !== undefined && e.minPieceGram > e.maxPieceGram ? ["重さの下限が上限より大きいです"] : []),
+    ...(e.downtimes ?? []).filter((w) => !/^([01]?[0-9]|2[0-4]):[0-5][0-9]-([01]?[0-9]|2[0-4]):[0-5][0-9]$/.test(w.replace(/\s/g, ""))).map((w) => `使えない時間帯「${w}」は 17:00-17:40 の形で入れてください`),
   ],
 };
 

@@ -27,7 +27,7 @@ export const SAMPLE_EQUIPMENT: Equipment[] = [
   { id: "EQ-P-MIX", name: "ミキサー（ピザ）", kind: "mixer", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", maxBatchKg: 75, exclusiveGroup: "ミキサー", active: true, note: "粉45kg（生地 約75kg）まで" },
   { id: "EQ-P-DIV", name: "分割機（ピザ）", kind: "divider", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 1200, lanes: 1, minPieceGram: 60, maxPieceGram: 220, active: true, note: "1分に10〜20個（4人）。鉄板1枚20個" },
   { id: "EQ-P-OVN", name: "ジェットオーブン", kind: "oven", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 600, active: true, note: "上下450℃・1分30秒（具ありは440℃以上・1分50秒）。連続投入" },
-  { id: "EQ-P-FRZ", name: "ショックフリーザー", kind: "cooler", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "17:00", active: true, note: "-30℃・20分。17:00〜17:40 は霜取りで使えない" },
+  { id: "EQ-P-FRZ", name: "ショックフリーザー", kind: "cooler", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", downtimes: ["17:00-17:40"], active: true, note: "-30℃・20分。17:00〜17:40 は霜取り" },
   { id: "EQ-P-PACK", name: "包装機（ピザ）", kind: "packer", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 600, active: true, note: "5枚/袋・ラベル" },
 ];
 

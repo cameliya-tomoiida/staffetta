@@ -294,12 +294,82 @@ export interface ScheduleOptions {
   deliveryMinute?: Record<string, number>;
 }
 
-const stepMinutes = (s: { minutes?: number; minutesPerBatch?: number; piecesPerHour?: number }, b: DoughBatchPlan) =>
-  (s.minutes ?? 0) + (s.minutesPerBatch ?? 0) * b.batches + (s.piecesPerHour ? Math.ceil((b.pieces / s.piecesPerHour) * 60) : 0);
+/** 手で分割するときの速さ（1人・1時間あたりの個数）と人数 */
+export const HAND_DIVIDE_PER_PERSON_HOUR = 300;
+export const HAND_DIVIDE_PEOPLE = 2;
 
-const toStep = (s: { key: ProcessKey; name: string; people?: number; resource?: string; equipmentId?: string; note?: string; ccp?: boolean }, start: number, end: number, prevDay: boolean): ScheduleStep => ({
-  key: s.key, name: s.name, start, end, people: s.people ?? 0, resource: s.resource, ...(s.equipmentId ? { equipmentId: s.equipmentId } : {}), note: s.note, ccp: s.ccp, prevDay,
-});
+type StepLike = { key: ProcessKey; minutes?: number; minutesPerBatch?: number; piecesPerHour?: number; people?: number; equipmentId?: string };
+
+/**
+ * 工程の実際の時間（分）と人数。
+ * 分割機の重さの範囲（下限〜上限 g）の外の商品は「手分割」として、手の速さで時間を足し、人数を足す。
+ */
+function effective(s: StepLike, b: DoughBatchPlan): { dur: number; people: number; handPieces: number; handNote?: string } {
+  let machinePieces = b.pieces;
+  let extra = 0;
+  let people = s.people ?? 0;
+  let handPieces = 0;
+  let handNote: string | undefined;
+  if (s.key === "divide" && s.equipmentId) {
+    const eq = findEquipment(s.equipmentId);
+    const out = (g: number) => (eq?.minPieceGram !== undefined && g < eq.minPieceGram) || (eq?.maxPieceGram !== undefined && g > eq.maxPieceGram);
+    const hand = b.items.filter((i) => out(i.doughGram));
+    handPieces = hand.reduce((x, i) => x + i.pieces, 0);
+    if (eq && handPieces > 0) {
+      machinePieces -= handPieces;
+      extra = Math.ceil((handPieces / (HAND_DIVIDE_PER_PERSON_HOUR * HAND_DIVIDE_PEOPLE)) * 60);
+      people += HAND_DIVIDE_PEOPLE;
+      handNote = `手分割 ${handPieces}個（${[...new Set(hand.map((i) => `${i.doughGram}g`))].join("・")}。${eq.name}は ${eq.minPieceGram ?? "-"}〜${eq.maxPieceGram ?? "-"}g）`;
+    }
+  }
+  const machine = s.piecesPerHour && machinePieces > 0 ? Math.ceil((machinePieces / s.piecesPerHour) * 60) : 0;
+  return { dur: (s.minutes ?? 0) + (s.minutesPerBatch ?? 0) * b.batches + machine + extra, people, handPieces, handNote };
+}
+
+const stepMinutes = (s: StepLike, b: DoughBatchPlan) => effective(s, b).dur;
+
+/** 設備の「使えない時間帯」（"17:00-17:40"）を、0:00 からの分の組にする */
+function downtimesOf(equipmentId?: string): [number, number][] {
+  const eq = equipmentId ? findEquipment(equipmentId) : undefined;
+  return (eq?.downtimes ?? [])
+    .map((w) => w.split("-").map((x) => x.trim()))
+    .filter((p) => p.length === 2)
+    .map(([a, b]) => [hhmm(a), hhmm(b)] as [number, number])
+    .filter(([a, b]) => b > a);
+}
+
+/** start から dur 分、使えない時間帯（毎日くり返す）に重ならない、いちばん早い開始 */
+function laterFree(start: number, dur: number, downs: [number, number][]): number {
+  let t = start;
+  for (let k = 0; k < 10 && downs.length; k++) {
+    const base = t - tod(t);
+    const hit = downs
+      .flatMap(([a, b]) => [-1440, 0, 1440].map((d) => [base + d + a, base + d + b] as [number, number]))
+      .find(([a, b]) => t < b && t + dur > a);
+    if (!hit) break;
+    t = hit[1];
+  }
+  return t;
+}
+
+/** end で終わる dur 分が、使えない時間帯に重なるとき、どれだけ前にずらせばよいか（分） */
+function earlierShift(end: number, dur: number, downs: [number, number][]): number {
+  const start = end - dur;
+  const base = start - tod(start);
+  const hit = downs
+    .flatMap(([a, b]) => [-1440, 0, 1440].map((d) => [base + d + a, base + d + b] as [number, number]))
+    .find(([a, b]) => start < b && end > a);
+  return hit ? end - hit[0] : 0;
+}
+
+const toStep = (s: StepLike & { name: string; resource?: string; note?: string; ccp?: boolean }, start: number, end: number, prevDay: boolean, b?: DoughBatchPlan): ScheduleStep => {
+  const e = b ? effective(s, b) : undefined;
+  const note = [s.note, e?.handNote].filter(Boolean).join("。") || undefined;
+  return {
+    key: s.key, name: s.name, start, end, people: e?.people ?? s.people ?? 0, resource: s.resource,
+    ...(s.equipmentId ? { equipmentId: s.equipmentId } : {}), note, ccp: s.ccp, prevDay,
+  };
+};
 
 /**
  * 工程表: 生地ごとに工程の開始・終了の時刻を出す。
@@ -321,11 +391,12 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     let t = opts.prevDayStartMinute ?? findLine(b.line).prevDayStartMinute;
     prevSteps.set(b.key, findDough(b.doughId)!.steps.filter((s) => s.prevDay).map((s) => {
       const key = s.resource ? `prev:${s.resource}` : undefined;
-      const start = Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0);
-      const end = start + stepMinutes(s, b);
+      const dur = stepMinutes(s, b);
+      const start = laterFree(Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0), dur, downtimesOf(s.equipmentId));
+      const end = start + dur;
       if (key) freeAfter.set(key, end);
       t = end;
-      return toStep(s, start, end, true);
+      return toStep(s, start, end, true, b);
     }));
   }
 
@@ -334,11 +405,13 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     let t = opts.startMinute?.[b.line] ?? findLine(b.line).startMinute;
     const today = findDough(b.doughId)!.steps.filter((s) => !s.prevDay).map((s) => {
       const key = s.resource ? `today:${s.resource}` : undefined;
-      const start = Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0);
-      const end = start + stepMinutes(s, b);
+      const dur = stepMinutes(s, b);
+      // 設備の使えない時間帯（霜取りなど）にかかるなら、終わるまで待つ
+      const start = laterFree(Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0), dur, downtimesOf(s.equipmentId));
+      const end = start + dur;
       if (key) freeAfter.set(key, end);
       t = end;
-      return toStep(s, start, end, false);
+      return toStep(s, start, end, false, b);
     });
     rows.set(b.key, { key: b.key, ...(b.waveName ? { waveName: b.waveName } : {}), line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.key)!, ...today], from: "start", warnings: [] });
   }
@@ -363,14 +436,23 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     const place = (end: number) => {
       let t = end - total;
       return src.map((s, i) => {
-        const st = toStep(s, t, t + durs[i], false);
+        const st = toStep(s, t, t + durs[i], false, b);
         t += durs[i];
         return st;
       });
     };
+    let shift = 0;
     let today = place(deadline);
-    const shift = Math.max(0, ...today.filter((x) => x.resource).map((x) => x.end - (busyFrom.get(`today:${x.resource}`) ?? Infinity)));
-    if (shift > 0) today = place(deadline - shift);
+    for (let k = 0; k < 10; k++) {
+      const need = Math.max(
+        0,
+        ...today.filter((x) => x.resource).map((x) => x.end - (busyFrom.get(`today:${x.resource}`) ?? Infinity)),
+        ...today.map((x) => earlierShift(x.end, x.end - x.start, downtimesOf(x.equipmentId))),
+      );
+      if (need <= 0) break;
+      shift += need;
+      today = place(deadline - shift);
+    }
     for (const x of today) if (x.resource) busyFrom.set(`today:${x.resource}`, Math.min(busyFrom.get(`today:${x.resource}`) ?? Infinity, x.start));
     const warnings = today.length && today[0].start < findLine(b.line).earliestStartMinute ? [`${b.name}${b.waveName ? `（${b.waveName}）` : ""}: ${basis || `納品 ${fmtTime(deliveryMinute)}`} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(findLine(b.line).earliestStartMinute)} より前）`] : [];
     rows.set(b.key, {
@@ -380,6 +462,13 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   }
 
   const out = plan.doughs.map((b) => rows.get(b.key)!);
+  for (const b of plan.doughs) {
+    const row = rows.get(b.key)!;
+    for (const st of findDough(b.doughId)!.steps) {
+      const e = effective(st, b);
+      if (e.handNote) row.warnings.push(`${b.name}: 分割機の重さの範囲の外なので ${e.handNote.replace(/^手分割 /, "")} を手で分割します（${HAND_DIVIDE_PEOPLE}人）`);
+    }
+  }
   checkScheduleConstraints(out);
   return out;
 }
@@ -433,19 +522,44 @@ export function checkScheduleConstraints(rows: ScheduleRow[]): void {
     }
   }
 
-  // 人数（当日の作業。班が登録されているラインだけ）
-  const shifts = allShifts();
+  // 設備の使えない時間帯（霜取りなど）に重なっていないか
   for (const { row, step } of uses) {
-    if (step.prevDay || step.people <= 0 || step.end <= step.start) continue;
-    const lineShifts = shifts.filter((s) => s.line === row.line || s.line === "common");
+    if (!step.equipmentId || step.end <= step.start) continue;
+    if (earlierShift(step.end, step.end - step.start, downtimesOf(step.equipmentId)) > 0) {
+      const eq = findEquipment(step.equipmentId)!;
+      row.warnings.push(`${row.doughName}: ${step.name}（${fmtTime(step.start)}〜${fmtTime(step.end)}）が ${eq.name} の使えない時間（${(eq.downtimes ?? []).join("・")}）にかかっています`);
+    }
+  }
+
+  // 人数（当日の作業。班が登録されているラインだけ）。足りない時間帯は、続いている区間ごとに1行にまとめる
+  const shifts = allShifts();
+  for (const line of [...new Set(rows.map((r) => r.line))]) {
+    const lineShifts = shifts.filter((s) => s.line === line || s.line === "common");
     if (!lineShifts.length) continue;
-    const at = step.start;
-    const need = uses
-      .filter((u) => !u.step.prevDay && u.row.line === row.line && u.step.start <= at && at < u.step.end)
-      .reduce((s, u) => s + u.step.people, 0);
-    const have = lineShifts.filter((s) => inWindow(at, s.from, s.to)).reduce((s, x) => s + x.headcount, 0);
-    if (need > have)
-      row.warnings.push(`${row.doughName}: ${step.name}（${fmtTime(step.start)}〜）の時間に人が足りません（同じ時間に ${need}人 要る・班は ${have}人）`);
+    const act = uses.filter((u) => u.row.line === line && !u.step.prevDay && u.step.people > 0 && u.step.end > u.step.start);
+    const points = [...new Set(act.flatMap((u) => [u.step.start, u.step.end]))].sort((a, b) => a - b);
+    type Seg = { from: number; to: number; need: number; have: number; uses: Use[] };
+    const short: Seg[] = [];
+    for (let i = 0; i + 1 < points.length; i++) {
+      const from = points[i], to = points[i + 1];
+      const on = act.filter((u) => u.step.start <= from && from < u.step.end);
+      const need = on.reduce((s, u) => s + u.step.people, 0);
+      const have = lineShifts.filter((s) => inWindow(from, s.from, s.to)).reduce((s, x) => s + x.headcount, 0);
+      if (need <= have) continue;
+      const last = short[short.length - 1];
+      if (last && last.to === from) {
+        last.to = to;
+        if (need - have > last.need - last.have) Object.assign(last, { need, have });
+        for (const u of on) if (!last.uses.includes(u)) last.uses.push(u);
+      } else short.push({ from, to, need, have, uses: [...on] });
+    }
+    const lineName = findLine(line as Line).name;
+    for (const g of short) {
+      const by = new Map<string, number>();
+      for (const u of g.uses) by.set(u.step.name, Math.max(by.get(u.step.name) ?? 0, u.step.people));
+      const detail = [...by.entries()].map(([n, p]) => `${n} ${p}`).join("・");
+      g.uses[0].row.warnings.push(`${lineName} ${fmtTime(g.from)}〜${fmtTime(g.to)} は人が ${g.need - g.have}人 たりません（要る ${g.need}人・班 ${g.have}人：${detail}）`);
+    }
   }
 }
 
