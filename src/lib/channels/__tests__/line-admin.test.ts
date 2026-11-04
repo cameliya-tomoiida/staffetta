@@ -88,7 +88,7 @@ describe("LINE の人のひも付け", () => {
 });
 
 describe("デモのリセット", () => {
-  it("架空のお客さんの分だけ消え、本物の LINE の人は残る", async () => {
+  it("架空のお客さんの分だけ消え、本物の LINE の人は残る（撮影用のデモの人はひも付けて入れ直す）", async () => {
     const st = await import("@/lib/channels/line/state");
     await st.touchUser("U_demo_kotori", { displayName: "デモ" });
     await st.touchUser("U-demo-DO-05", { displayName: "デモ2" });
@@ -96,9 +96,10 @@ describe("デモのリセット", () => {
     await st.resetLineDemo();
     const users = Object.keys((await st.readLineState()).users);
     expect(users).toContain("Uabcdef0123456789");
-    expect(users).not.toContain("U_demo_kotori");
     expect(users).not.toContain("U-demo-DO-05");
     expect((await st.readLineState()).outbox.some((m) => m.to === "U_demo_kotori")).toBe(false);
+    // 撮影用のデモの人は、ひも付けた状態で入れ直す
+    expect((await st.readLineState()).users["U_demo_kotori"]).toMatchObject({ customerId: "C06", linkedBy: "デモの初期値" });
   });
 });
 
