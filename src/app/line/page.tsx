@@ -118,7 +118,7 @@ export default async function LinePage() {
       </section>
 
       <p className="text-sm text-black/50">
-        お客さんの注文画面（デモ）: <Link className="underline" href="/liff?demoUser=U_demo_kotori">/liff?demoUser=U_demo_kotori</Link>
+        お客さんの注文画面（デモ）: <Link className="underline" href="/liff/order?demoUser=U_demo_kotori">/liff/order?demoUser=U_demo_kotori</Link>
       </p>
     </div>
   );
