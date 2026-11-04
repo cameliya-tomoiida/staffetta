@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { splitWarnings } from "@/components/ui/wording";
 import { FACTORY } from "@/data/master";
 import type { Line } from "@/data/master";
 import type { ProcessKey } from "@/data/production";
@@ -57,7 +58,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const cost = dayCostSummary(r);
   // 材料の締めに間に合わないもの（③の materialPlan.lateItems）は黄色で別に出す
   const lateMaterials = r.materialPlan.lateItems.map((x) => x.message);
-  const otherWarnings = r.warnings.filter((w) => !lateMaterials.includes(w));
+  const warn = splitWarnings(r.warnings.filter((w) => !lateMaterials.includes(w)));
+  const otherWarnings = warn.others;
 
   // 辞書に無い名前（商品名・生地名）は Claude で訳して保存。訳せたものには「機械翻訳」と出す
   const jaNames = [
@@ -98,6 +100,12 @@ export default async function PlanPage(props: PageProps<"/plan">) {
 
       {/* 注意とお金は、畳んで件数だけ（押すと開く）。管理者向け・日本語・印刷しない */}
       <div className="no-print mb-4 space-y-2" lang="ja">
+        {warn.incomplete.length > 0 && (
+          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
+            お店か商品が決まっていない注文が <span className="num">{warn.incomplete.length}</span> 件あります。この分は作る数に入っていません。
+            <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で直す</Link>
+          </Notice>
+        )}
         {otherWarnings.length > 0 && (
           <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />}>
             <details>

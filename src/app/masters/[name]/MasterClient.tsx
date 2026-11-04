@@ -62,7 +62,11 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
   const [file, setFile] = useState<File | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const listCols = listKeys.map((k) => columns.find((c) => c.key === k)).filter((c): c is ClientColumn => !!c);
+  const allListCols = listKeys.map((k) => columns.find((c) => c.key === k)).filter((c): c is ClientColumn => !!c);
+  // 1024 幅でも右が切れないように、いつもは前の5列だけ。「くわしく」で全部
+  const [wide, setWide] = useState(false);
+  const MAIN_COLS = 5;
+  const listCols = wide ? allListCols : allListCols.slice(0, MAIN_COLS);
   const get = (r: Rec, key: string) => r[key];
   const visible = rows.filter((r) => showDisabled || !r.disabled);
 
@@ -240,8 +244,15 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
       )}
 
       {/* 一覧 */}
+      {allListCols.length > MAIN_COLS && (
+        <div className="mb-2 flex justify-end">
+          <Button variant="quiet" onClick={() => setWide((w) => !w)} aria-expanded={wide}>
+            {wide ? "大事な列だけにする" : `くわしく（ほかの ${allListCols.length - MAIN_COLS} 列も出す）`}
+          </Button>
+        </div>
+      )}
       <section className="overflow-x-auto rounded-lg border border-rule bg-sheet">
-        <table className="w-full min-w-[760px]">
+        <table className="w-full">
           <thead>
             <tr className="border-b-2 border-rule-strong bg-cream text-left text-sm text-ink [&>th]:px-2 [&>th]:py-2 [&>th]:whitespace-nowrap">
               {listCols.map((c) => <th key={c.key} className={c.type === "number" || c.type === "integer" ? "text-right" : ""}>{c.label}</th>)}
@@ -252,14 +263,14 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
             {visible.map((r) => {
               const low = hasStock && Number(r.stock ?? 0) < Number(r.safetyStock ?? 0);
               return (
-                <tr key={r.id} className={`border-t border-dashed border-rule align-top [&>td]:px-2 [&>td]:py-2 [&>td]:whitespace-nowrap ${r.disabled ? "text-ink-faint line-through" : ""}`}>
+                <tr key={r.id} className={`border-t border-dashed border-rule align-top [&>td]:px-2 [&>td]:py-2 ${r.disabled ? "text-ink-faint line-through" : ""}`}>
                   {listCols.map((c) => (
-                    <td key={c.key} className={`${c.type === "number" || c.type === "integer" ? "num text-right" : ""} ${c.key === "name" ? "font-bold" : ""}`}>
+                    <td key={c.key} className={`${c.type === "number" || c.type === "integer" ? "num text-right whitespace-nowrap" : c.type === "time" ? "num whitespace-nowrap" : "min-w-[6em]"} ${c.key === "name" ? "font-bold" : ""}`}>
                       {c.key === "stock" && low && !r.disabled ? <Tag tone="review">{show(c, get(r, c.key), refs)}</Tag> : show(c, get(r, c.key), refs)}
                       {c.key === "stock" && typeof r.stockCountedAt === "string" && <div className="text-xs text-ink-soft no-underline">棚卸 {fmtDateTime(r.stockCountedAt)}</div>}
                     </td>
                   ))}
-                  <td className="whitespace-nowrap text-right">
+                  <td className="w-px text-right">
                     {r.disabled ? (
                       <Button variant="quiet" disabled={busy || !who} onClick={() => run(() => post({ action: "restore", id: r.id, who }), () => `${r.id} を戻しました`)}>戻す</Button>
                     ) : counting?.id === r.id ? (
@@ -269,7 +280,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
                         <Button variant="quiet" onClick={() => setCounting(null)}>×</Button>
                       </span>
                     ) : (
-                      <span className="inline-flex gap-1">
+                      <span className="flex flex-col items-stretch gap-1 whitespace-nowrap lg:flex-row lg:items-start">
                         {hasStock && <Button variant="ghost" disabled={busy} onClick={() => setCounting({ id: r.id, value: String(r.stock ?? "") })}>棚卸</Button>}
                         <Button variant="ghost" disabled={busy} onClick={() => openEdit(r)}>直す</Button>
                         <Button variant="quiet" disabled={busy || !who} onClick={() => confirm(`${r.id} ${String(r.name ?? "")} を「使わない」にしますか？（記録は残り、あとで戻せます）`) && run(() => post({ action: "delete", id: r.id, who }), () => `${r.id} を使わないにしました`)}>使わない</Button>
