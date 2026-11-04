@@ -76,6 +76,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       date={date}
       factory={FACTORY.name}
       warnings={r.warnings}
+      unconfirmed={orders.filter((o) => o.deliveryDate === date && (o.status === "needs_review" || o.status === "provisional")).length}
       costBox={<CostBox s={dayCostSummary(r)} show={["purchase", "material"]} />}
       dateNav={
         dates.length > 0 && (

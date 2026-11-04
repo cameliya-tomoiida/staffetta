@@ -9,10 +9,12 @@ import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf, provisionalForDate } from "@/lib/aggregate";
 import { findProduct } from "@/lib/catalog";
 import { fmtTime, type DoughBatchPlan, type LinePlan, type ScheduleRow } from "@/lib/production";
-import { isLang, langInfo, LANGS, type Lang } from "@/i18n/langs";
+import { isLang, LANG_COOKIE, langInfo, LANGS, type Lang } from "@/i18n/langs";
 import { isReviewed, tr, trUnit, type Key } from "@/i18n/dict";
 import { translateTerms } from "@/i18n/translate";
 import { PrintButton } from "./PrintButton";
+import { LangPicker } from "./LangPicker";
+import { cookies } from "next/headers";
 
 export const metadata = { title: "製造計画・工程表｜受発注ハブ" };
 
@@ -37,7 +39,8 @@ const STEPS = Object.keys(stepColor) as ProcessKey[];
 
 export default async function PlanPage(props: PageProps<"/plan">) {
   const q = await props.searchParams;
-  const lang: Lang = isLang(q.lang) ? q.lang : "ja";
+  const saved = (await cookies()).get(LANG_COOKIE)?.value;
+  const lang: Lang = isLang(q.lang) ? q.lang : isLang(saved) ? saved : "ja";
   const { orders, today } = await allOrders();
   const tomorrow = addDays(today, 1);
   const provDates = orders.filter((o) => o.status === "provisional").map((o) => o.deliveryDate);
@@ -92,27 +95,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </div>
       </div>
 
-      {/* ことばの切り替え */}
-      <div className="no-print mb-5 rounded-lg border border-rule bg-sheet p-3">
-        <div className="mb-2 flex items-center gap-2 text-sm font-bold text-ink-soft">
-          <Icon.globe className="h-5 w-5" />
-          {t("language")} / Language
-        </div>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-          {LANGS.map((l) => (
-            <Link
-              key={l.code}
-              href={href({ lang: l.code })}
-              lang={l.htmlLang}
-              aria-current={l.code === lang ? "true" : undefined}
-              className={`flex min-h-12 flex-col justify-center rounded-lg border px-3 py-1 leading-tight ${l.code === lang ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"}`}
-            >
-              <span className="font-bold">{l.native}</span>
-              <span className={`text-xs ${l.code === lang ? "text-white/70" : "text-ink-faint"}`}>{l.ja}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+      {/* ことばの切り替え（選んだことばはタブレットが覚える） */}
+      <LangPicker lang={lang} hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))} />
 
       {showMt && (
         <p className="mb-4 flex items-center gap-2 text-sm text-ink-soft">
@@ -132,8 +116,6 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </Notice>
       )}
 
-      {/* お金（管理者向け・日本語。印刷しない） */}
-      <CostBox s={cost} show={["material", "margin"]} />
 
       {/* 仮発注（製造量には入れない） */}
       {prov.products.length > 0 && (
@@ -176,6 +158,11 @@ export default async function PlanPage(props: PageProps<"/plan">) {
             </section>
           );
         })}
+      </div>
+
+      {/* お金（管理者向け・日本語。印刷しない）。現場の人が見る作る数・時間割より下に置く */}
+      <div className="mt-8">
+        <CostBox s={cost} show={["material", "margin"]} />
       </div>
     </div>
   );
@@ -291,7 +278,9 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
   const used = STEPS.filter((k) => todaySteps.some((s) => s.key === k));
   const spaced = !["ja", "ja-easy", "zh", "ko"].includes(lang);
   // 「翌1:00」の「翌」は日本語なので、ほかの言語では「+1 1:00」にする
-  const ft = (m: number) => (lang === "ja" || lang === "ja-easy" ? fmtTime(m) : fmtTime(m).replace("翌", "+1 "));
+  // 「翌1:00」「前日23:52」の「翌」「前日」は日本語なので、辞書の言葉に置きかえる
+  const ft = (m: number) =>
+    lang === "ja" ? fmtTime(m) : fmtTime(m).replace("翌", `${t("next_day")} `).replace("前日", `${t("prev_day_time")} `);
   return (
     <div className="min-w-0 rounded-sm border border-rule-strong bg-sheet">
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("timetable")}</div>
@@ -308,8 +297,8 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
         <div className={`pr-5 ${span > 600 ? "min-w-[860px]" : "min-w-[600px]"}`}>
           <div className="relative ml-36 h-6 text-xs text-ink-soft">
             {hours.map((h) => (
-              <span key={h} className="num absolute -translate-x-1/2" style={{ left: pct(h) }}>
-                {fmtTime(h)}
+              <span key={h} className="num absolute -translate-x-1/2 whitespace-nowrap" style={{ left: pct(h) }}>
+                {ft(h)}
               </span>
             ))}
           </div>
