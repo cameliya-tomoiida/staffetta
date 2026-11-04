@@ -83,7 +83,12 @@ export interface FaxTemplate {
 
 export interface FaxDoc {
   id: string;
-  file: string; // public 配下のパス
+  /** 表示用のURL（デモ: /samples/... 、受信: /api/fax-file/<id>） */
+  file: string;
+  /** どこから来たか */
+  via?: "sample" | "gmail" | "simulate";
+  messageId?: string;
+  subject?: string;
   receivedAt: string;
   label: string; // 受信時に分かっている表示（発信元など）
   status: FaxStatus;
@@ -116,4 +121,6 @@ export interface Db {
   mappings: Record<string, Record<string, string>>;
   /** 得意先ごとの承認済みの様式 */
   templates: Record<string, FaxTemplate>;
+  /** Gmail から受け取り済みのメッセージID（二重取り込み防止） */
+  importedMessageIds: string[];
 }

@@ -34,13 +34,20 @@ export async function readFaxAction(faxId: string) {
       f.status = orderLike && customerId && !d.templates[customerId] ? "template" : "review";
       // 読み直しのときは、このFAXの要確認の注文を作り直す（確定済みには触らない）
       d.orders = d.orders.filter((o) => !(o.status === "needs_review" && o.source.refs.some((r) => r.kind === "fax_pdf" && r.faxId === faxId)));
-      if (read.kind !== "order" && read.kind !== "provisional_order") return;
+      if (read.kind === "not_order" || read.kind === "supplier_reply") return;
+      const isChange = read.kind === "change";
       read.orders.forEach((ro, oi) => {
+        // 変更FAX: 同じ取引先・納品日の元の注文を探して changeOf に入れる（元の注文には触らない）
+        const original = isChange
+          ? d.orders.find((o) => o.customerId === customerId && o.deliveryDate === ro.delivery_date && (o.status === "confirmed" || o.status === "provisional") && (o.intent ?? "new") === "new")
+          : undefined;
         d.orders.push({
           id: `${faxId}-${oi}`,
           customerId,
           deliveryDate: ro.delivery_date,
           deliveryPlace: ro.delivery_place || undefined,
+          intent: isChange ? (ro.lines.every((l) => l.quantity === 0) ? "cancel" : "change") : "new",
+          changeOf: original?.id,
           status: "needs_review",
           createdAt: now(),
           edits: [],
@@ -167,7 +174,7 @@ export async function confirmFaxAction(input: { faxId: string; customerId: strin
 
       // 本発注: 同じ取引先・納品日の仮発注を置き換える
       if (!provisional && order.status === "confirmed") {
-        for (const old of db.orders.filter((o) => o.id !== order.id && o.status === "provisional" && o.customerId === order.customerId && o.deliveryDate === order.deliveryDate)) {
+        for (const old of db.orders.filter((o) => o.id !== order.id && o.status === "provisional" && (o.intent ?? "new") === "new" && o.customerId === order.customerId && o.deliveryDate === order.deliveryDate)) {
           old.status = "cancelled";
           old.supersededBy = order.id;
           old.edits.push({ at, who: input.who, field: "note", from: "仮発注", to: `本発注（${fax.id}）で置き換え` });
@@ -229,6 +236,15 @@ export async function confirmChangeAction(input: {
         lines: [{ id: `${fax.id}-add${i}-0`, productId: a.productId, quantity: a.quantity, unit: productById(a.productId)!.unit, piecesPerUnit: a.piecesPerUnit, pieces: a.quantity * a.piecesPerUnit, confidence: 1, edits: [], note: `変更FAXで追加（${a.writtenName}）` }],
       });
     });
+    // 変更の注文（intent: change）も確定にする。集計は intent が new のものだけを数えるので二重にはならない
+    for (const o of db.orders.filter((o) => o.id.startsWith(`${fax.id}-`) && o.intent && o.intent !== "new")) {
+      o.customerId = input.customerId;
+      o.status = "confirmed";
+      o.confirmedAt = at;
+      o.confirmedBy = input.who;
+      const applied = input.changes.find((c) => db.orders.find((x) => x.id === c.orderId)?.deliveryDate === o.deliveryDate);
+      if (applied) o.changeOf = applied.orderId;
+    }
     fax.customerId = input.customerId;
     fax.rotation = input.rotation;
     fax.status = "confirmed";
@@ -250,6 +266,7 @@ export async function addManualOrderAction(input: {
   const at = now();
   const order: Order = {
     id: `M${Date.now()}`,
+    intent: "new",
     customerId: input.customerId,
     deliveryDate: input.deliveryDate,
     status: "confirmed",

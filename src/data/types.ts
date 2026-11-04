@@ -105,6 +105,14 @@ export interface Order {
   createdAt: string;
   confirmedAt?: string;
   confirmedBy?: string;
+  /**
+   * 注文の意図。変更・キャンセルのFAXやメールは、新しい Order（needs_review）として入れ、
+   * changeOf に元の注文IDを入れる。元の注文は人が確定するまで書き換えない。
+   * 集計（製造計画・発注）は intent が "new"（または未設定）の注文だけを数える。
+   */
+  intent?: "new" | "change" | "cancel";
+  /** 変更・キャンセルの元になった注文のID */
+  changeOf?: string;
   /** 仮発注を本発注で置き換えたとき: 新しい注文のID（古い方に入る） */
   supersededBy?: string;
   /** 本発注が置き換えた仮発注のID（新しい方に入る） */
@@ -123,6 +131,8 @@ export type PurchaseMethod =
   | "aspit" // アスピット
   | "hinode_site" // ひので製パンの発注サイト
   | "kirara_site" // きららの発注サイト
+  | "fujimi_site" // ふじみの受発注サイト
+  | "kogane_site" // こがね食品のサイト
   | "phone";
 
 export interface PurchaseOrderLine {

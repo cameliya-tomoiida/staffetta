@@ -8,15 +8,13 @@ import type { Db, FaxDoc } from "./types";
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 
+/** デモの最初に受信箱にあるFAX（F006〜F008 はあとから「受信」させる: npm run fax:simulate） */
 const initialFaxes = (): FaxDoc[] => [
   { id: "F001", file: "/samples/fax1.pdf", receivedAt: "2026-11-05T08:12:00+09:00", label: "発信元: ﾋﾏﾜﾘﾎｲｸｴﾝ", status: "new" },
   { id: "F002", file: "/samples/fax2.pdf", receivedAt: "2026-11-05T08:40:00+09:00", label: "（発信元表示なし）", status: "new" },
   { id: "F003", file: "/samples/fax3.pdf", receivedAt: "2026-11-05T09:47:00+09:00", label: "発信元: ﾐﾅﾄｷｭｳｼｮｸｾﾝﾀｰ", status: "new" },
   { id: "F004", file: "/samples/fax4.pdf", receivedAt: "2026-11-05T10:05:00+09:00", label: "発信元: ｷｯﾁﾝﾌﾟﾛｻｰﾋﾞｽ", status: "new" },
   { id: "F005", file: "/samples/fax5.pdf", receivedAt: "2026-11-05T10:31:00+09:00", label: "発信元: ﾖﾈﾀﾞｾｲﾌﾝ", status: "new" },
-  { id: "F006", file: "/samples/fax6.pdf", receivedAt: "2026-11-05T11:20:00+09:00", label: "発信元: ﾋﾏﾜﾘﾎｲｸｴﾝ", status: "new" },
-  { id: "F007", file: "/samples/fax7.pdf", receivedAt: "2026-11-05T11:42:00+09:00", label: "（発信元表示なし）", status: "new" },
-  { id: "F008", file: "/samples/fax8.pdf", receivedAt: "2026-11-10T09:15:00+09:00", label: "（発信元表示なし）", status: "new" },
 ];
 
 /** デモの前提: いつもFAXをくれる3社は、様式を承認済み（めぐみ給食サービスは初めての様式） */
@@ -30,6 +28,7 @@ const initialTemplates = (): Db["templates"] => ({
 export const emptyDb = (): Db => ({
   faxes: initialFaxes(),
   orders: [],
+  importedMessageIds: [],
   templates: initialTemplates(),
   mappings: Object.fromEntries(Object.values(initialTemplates()).map((t) => [t.customerId, { ...t.items }])),
 });
@@ -42,6 +41,7 @@ export async function readDb(): Promise<Db> {
     const db = JSON.parse(await fs.readFile(DB_FILE, "utf8")) as Db;
     db.templates ??= {};
     db.mappings ??= {};
+    db.importedMessageIds ??= [];
     return db;
   } catch {
     return emptyDb();
@@ -65,4 +65,15 @@ export async function resetDb() {
   return updateDb((db) => {
     Object.assign(db, emptyDb());
   });
+}
+
+/** 受信したFAXのPDFを置く場所（git には入れない） */
+export const FAX_INBOX_DIR = path.join(DATA_DIR, "fax-inbox");
+
+/** FaxDoc.file から、サーバー上のPDFファイルの場所を出す */
+export function faxFilePath(file: string): string {
+  const m = file.match(/^\/api\/fax-file\/([A-Za-z0-9_-]+)$/);
+  if (m) return path.join(FAX_INBOX_DIR, `${m[1]}.pdf`);
+  if (file.startsWith("/samples/") && !file.includes("..")) return path.join(process.cwd(), "public", file);
+  throw new Error(`FAXファイルの場所が不正です: ${file}`);
 }

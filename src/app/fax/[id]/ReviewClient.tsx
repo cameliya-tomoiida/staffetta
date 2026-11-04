@@ -108,6 +108,7 @@ export function ReviewClient({
     for (const o of others) {
       if (o.customerId !== customerId || o.deliveryDate !== r.deliveryDate) continue;
       if (o.status !== "confirmed" && o.status !== "provisional") continue;
+      if ((o.intent ?? "new") !== "new") continue;
       const line = o.lines.find((l) => l.productId === r.productId);
       if (line) return { order: o, line };
     }
