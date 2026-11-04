@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import "./globals.css";
+import "./print.css";
 import { FACTORY } from "@/data/master";
 import { AppNav } from "@/components/ui/AppNav";
 
