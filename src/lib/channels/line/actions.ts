@@ -83,3 +83,11 @@ export async function saveCustomerSettingsAction(customerId: string, input: Sett
   await saveCustomerSettings(customerId, input, who);
   revalidatePath("/", "layout");
 }
+
+/** 管理画面（②の AdminPage の onSave）: 取引先1件の登録・修正。おかしいところは日本語で返す */
+export async function saveCustomerRowAction(row: Record<string, string | number | boolean | null | undefined>) {
+  const { upsertCustomerRow } = await import("./customers");
+  const r = await upsertCustomerRow(row, "事務");
+  if (r.ok) revalidatePath("/", "layout");
+  return r;
+}

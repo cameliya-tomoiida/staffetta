@@ -11,17 +11,29 @@ export * from "./icons";
 type BtnVariant = "primary" | "ghost" | "ok" | "quiet";
 type BtnSize = "md" | "lg";
 const variantClass: Record<BtnVariant, string> = {
-  primary: "bg-crust-600 text-white hover:bg-crust-700",
-  ghost: "border border-rule-strong bg-sheet text-ink hover:bg-crust-50",
-  ok: "bg-ok-ink text-white hover:bg-[#1c4621]",
-  quiet: "text-ink-soft hover:bg-black/5",
+  // 主ボタン: 赤地に白文字（1画面に1つが原則）
+  primary: "border-crust-600 bg-crust-600 text-white hover:border-crust-700 hover:bg-crust-700",
+  // 二番目のボタン: 白地に赤の線と赤い文字
+  ghost: "border-crust-600 bg-sheet text-crust-700 hover:bg-crust-50",
+  // 「承認する」「確定する」も主ボタンと同じ赤（緑は状態の色にだけ使う）
+  ok: "border-crust-600 bg-crust-600 text-white hover:border-crust-700 hover:bg-crust-700",
+  // 目立たせない操作（やめる・戻す）: 下線つきの文字
+  quiet: "border-transparent text-crust-700 underline underline-offset-4 hover:bg-crust-50",
 };
 const sizeClass: Record<BtnSize, string> = {
   md: "min-h-12 px-5 text-base",
   lg: "min-h-14 px-6 text-lg",
 };
+/** 押せないボタンは灰色（うすくするだけだと、押せるのか分からない） */
+const disabledClass = "disabled:pointer-events-none disabled:border-off-line disabled:bg-off-bg disabled:text-off-ink disabled:no-underline";
 export const buttonClass = (variant: BtnVariant = "ghost", size: BtnSize = "md", extra = "") =>
-  `inline-flex items-center justify-center gap-2 rounded-lg font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45 ${variantClass[variant]} ${sizeClass[size]} ${extra}`;
+  `inline-flex items-center justify-center gap-2 rounded-lg border-2 font-bold transition-colors select-none active:translate-y-px ${disabledClass} ${variantClass[variant]} ${sizeClass[size]} ${extra}`;
+
+/** 選ぶボタン（日付・状態・ことば・お店など）。選んだものは赤い線・うすい赤の地・赤い文字 */
+export const choiceClass = (on: boolean, extra = "") =>
+  `rounded-lg border-2 font-bold transition-colors select-none ${
+    on ? "border-crust-600 bg-crust-50 text-crust-700" : "border-rule-strong bg-sheet text-ink hover:border-crust-200 hover:bg-crust-50"
+  } ${extra}`;
 
 export function Button({ variant, size, className = "", ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant; size?: BtnSize }) {
   return <button type="button" className={buttonClass(variant, size, className)} {...rest} />;
@@ -49,7 +61,7 @@ export function PurchaseStatusTag({ status }: { status: PurchaseStatus }) {
 /* ───── 画面の見出し ───── */
 export function PageHeader({ title, lead, children }: { title: React.ReactNode; lead?: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-ink pb-3">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
       <div className="min-w-0">
         <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">{title}</h1>
         {lead && <p className="mt-1 text-ink-soft">{lead}</p>}
@@ -106,12 +118,10 @@ export function Segmented<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(o.value)}
-            className={`inline-flex items-center gap-1.5 rounded-lg border font-bold transition-colors select-none ${size === "sm" ? "min-h-10 px-3 text-sm" : "min-h-12 px-4"} ${
-              on ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet text-ink hover:bg-crust-50"
-            }`}
+            className={choiceClass(on, `inline-flex items-center gap-1.5 ${size === "sm" ? "min-h-10 px-3 text-sm" : "min-h-12 px-4"}`)}
           >
             {o.label}
-            {o.count != null && <span className={`num rounded px-1.5 text-sm ${on ? "bg-white/20" : "bg-black/5"}`}>{o.count}</span>}
+            {o.count != null && <span className={`num rounded px-1.5 text-sm ${on ? "bg-crust-100" : "bg-cream"}`}>{o.count}</span>}
           </button>
         );
       })}

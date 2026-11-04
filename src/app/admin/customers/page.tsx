@@ -1,42 +1,55 @@
+import { AdminPage } from "@/components/admin/AdminPage";
+import type { ColumnDef, Row } from "@/components/admin/types";
 import { CustomerOrderSettings } from "@/components/line/CustomerOrderSettings";
 import { LineLinkPanel } from "@/components/line/LineLinkPanel";
-import { PageHeader, Tag } from "@/components/ui";
 import { listCustomerSettings } from "@/lib/channels/line/customers";
-import { CHANNEL_LABEL } from "@/lib/masters/customers";
+import { saveCustomerRowAction } from "@/lib/channels/line/actions";
+import { customerColumns } from "@/lib/masters/customers";
 
-// 取引先マスタの管理画面（仮）。②の管理画面の枠（AdminPage）ができたら、②が作り替える。
-// ④の部品の置き場所: 一覧の上に <LineLinkPanel />、編集フォームの下に <CustomerOrderSettings customerId=… />。
+export const metadata = { title: "取引先｜マスタ管理" };
 
-export default async function CustomersAdminPage() {
+// 取引先マスタ（masters の "customers"。持ち主は④）。
+// 一覧の上に LINE のひも付け、編集フォームの下に注文方法（入口・締め・納品時刻・配送コース）。
+// TODO(⑤): CSV の一括登録（onImport）は ⑤ の CSV エンジンができたらつなぐ。列の決まりは src/lib/masters/customers.ts。
+
+export default async function CustomersAdmin() {
   const customers = await listCustomerSettings();
+  const columns: ColumnDef[] = customerColumns.map((c) => ({
+    key: c.key,
+    label: c.label,
+    type: c.type === "list" ? "text" : c.type === "select" ? "select" : c.type === "time" ? "time" : c.key === "note" ? "textarea" : "text",
+    options: c.options,
+    required: c.required,
+    help: c.help,
+    list: c.list ?? false,
+    ...(c.key === "lineUserIds" ? { readOnly: true, form: false } : {}),
+  }));
+  const rows: Row[] = customers.map((c) => ({
+    id: c.id,
+    name: c.name,
+    channel: c.channel,
+    cutoff: c.cutoff,
+    deliveryTime: c.deliveryTime ?? "",
+    course: c.course ?? "",
+    fax: c.fax ?? "",
+    externalCode: c.externalCode ?? "",
+    note: c.note ?? "",
+    lineUserIds: c.lineUserIds?.length ? `${c.lineUserIds.length}人` : "",
+  }));
+  const formExtra = Object.fromEntries(customers.map((c) => [c.id, <CustomerOrderSettings key={c.id} customerId={c.id} />]));
+
   return (
-    <div className="space-y-8">
-      <PageHeader title="取引先マスタ" lead="取引先ごとの注文の入口・締め時刻・納品時刻・配送コースと、LINE アカウントのひも付けを管理します。" />
-      <LineLinkPanel />
-      <section className="card overflow-hidden">
-        <h2 className="border-b border-rule p-5 text-xl font-black">取引先（{customers.length}社）</h2>
-        <ul className="divide-y divide-rule">
-          {customers.map((c) => (
-            <li key={c.id}>
-              <details>
-                <summary className="flex cursor-pointer flex-wrap items-center gap-3 px-5 py-4">
-                  <span className="num text-ink-faint">{c.id}</span>
-                  <span className="text-lg font-black">{c.name}</span>
-                  <Tag>{CHANNEL_LABEL[c.channel]}</Tag>
-                  <span className="text-sm text-ink-soft">
-                    締め 前日{c.cutoff}・納品 {c.deliveryTime}
-                    {c.course ? `・${c.course}` : ""}
-                  </span>
-                  {c.lineUserIds?.length ? <Tag tone="ok">LINE ひも付け {c.lineUserIds.length}</Tag> : null}
-                </summary>
-                <div className="px-5 pb-5">
-                  <CustomerOrderSettings customerId={c.id} />
-                </div>
-              </details>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
+    <AdminPage
+      title="取引先"
+      lead="注文をくれるお店・施設です。注文の入口・締め・納品時刻・配送コースと、LINE のひも付けを決めます。"
+      name="customers"
+      idKey="id"
+      columns={columns}
+      rows={rows}
+      onSave={saveCustomerRowAction}
+      top={<LineLinkPanel />}
+      formExtra={formExtra}
+      note={<>今の内容は見本（架空のデータ）です。直した内容は保存され、だれが・いつ直したかが残ります。</>}
+    />
   );
 }

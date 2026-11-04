@@ -14,7 +14,7 @@ export function NotifyButton({ orderId, preview, demo = false }: { orderId: stri
       message={
         <>
           {demo ? "架空のお客さん（デモ）なので、LINEには送らず記録だけします。" : "お客さんのLINEに、次の文面を送ります。"}
-          <div className="mt-2 rounded-2xl rounded-tl-sm bg-[#e5f4e1] px-4 py-3 font-normal">{preview}</div>
+          <div className="mt-2 rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-3 font-normal">{preview}</div>
         </>
       }
       yesLabel="この文面を送る"

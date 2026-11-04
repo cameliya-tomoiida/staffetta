@@ -67,3 +67,30 @@ export async function syncLineUserIds(userId: string, customerId: string | undef
   });
   if (changed.length) await upsertMasters<CustomerRow>(CUSTOMERS, changed, who);
 }
+
+/** 管理画面の1行（文字の入った行）をそのまま保存。新しい ID なら追加、あれば更新（LINE のひも付けは変えない） */
+export async function upsertCustomerRow(
+  row: Record<string, string | number | boolean | null | undefined>,
+  who: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string; field?: string }> {
+  await ready();
+  const s = (k: string) => (row[k] == null ? "" : String(row[k]).trim());
+  const cur = await getMaster<CustomerRow>(CUSTOMERS, s("id"));
+  const next: CustomerRow = {
+    ...(cur ?? {}),
+    id: s("id"),
+    name: s("name"),
+    channel: s("channel") as OrderChannel,
+    cutoff: s("cutoff"),
+    deliveryTime: s("deliveryTime") || "08:00",
+    course: s("course"),
+    ...(s("fax") ? { fax: s("fax") } : { fax: undefined }),
+    ...(s("externalCode") ? { externalCode: s("externalCode") } : { externalCode: undefined }),
+    ...(s("note") ? { note: s("note") } : { note: undefined }),
+    lineUserIds: cur?.lineUserIds,
+  };
+  const errors = validateCustomer(next);
+  if (errors.length) return { ok: false, error: errors.join("／") };
+  await upsertMasters<CustomerRow>(CUSTOMERS, [JSON.parse(JSON.stringify(next)) as CustomerRow], who);
+  return { ok: true, id: next.id };
+}

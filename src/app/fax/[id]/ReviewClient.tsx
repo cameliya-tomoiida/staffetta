@@ -32,11 +32,11 @@ interface Row {
 const STAFF = ["事務 たなか", "製造 グエン", "専務 はやし"];
 
 const kindInfo = {
-  order: { text: "注文", cls: "bg-emerald-100 text-emerald-800" },
-  change: { text: "変更・訂正", cls: "bg-rose-100 text-rose-800" },
-  provisional_order: { text: "仮発注", cls: "bg-indigo-100 text-indigo-800" },
-  supplier_reply: { text: "仕入先からの返信", cls: "bg-sky-100 text-sky-800" },
-  not_order: { text: "注文以外（広告など）", cls: "bg-gray-200 text-gray-700" },
+  order: { text: "注文", cls: "bg-ok-bg text-ok-ink" },
+  change: { text: "変更・訂正", cls: "bg-alert-bg text-alert-ink" },
+  provisional_order: { text: "仮発注", cls: "bg-prov-bg text-prov-ink" },
+  supplier_reply: { text: "仕入先からの返信", cls: "bg-info-bg text-info-ink" },
+  not_order: { text: "注文以外（広告など）", cls: "bg-off-bg text-off-ink" },
 } as const;
 
 export function ReviewClient({
@@ -163,20 +163,20 @@ export function ReviewClient({
 
   const statusPill = done
     ? fax.status === "other"
-      ? <span className="pill bg-gray-200 text-gray-700">注文以外として仕分け済み</span>
-      : <span className="pill bg-emerald-100 text-emerald-800">確定済み</span>
+      ? <span className="pill bg-off-bg text-off-ink">注文以外として仕分け済み</span>
+      : <span className="pill bg-ok-bg text-ok-ink">確定済み</span>
     : needsTemplate
-      ? <span className="pill bg-purple-200 text-purple-900">新しい様式・承認待ち</span>
-      : <span className="pill bg-amber-200 text-amber-900">確認待ち</span>;
+      ? <span className="pill bg-review-bg text-review-ink">新しい様式・承認待ち</span>
+      : <span className="pill bg-review-bg text-review-ink">確認待ち</span>;
 
   return (
     <div className="flex h-[calc(100vh-7rem)] flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Link href="/" className="text-sm text-black/60 hover:underline">← 受信箱</Link>
+        <Link href="/" className="text-sm text-ink-soft hover:underline">← 受信箱</Link>
         <h1 className="text-xl font-black">{read.document_title}</h1>
         <span className={`pill ${kindInfo[kind].cls}`}>{kindInfo[kind].text}</span>
         {statusPill}
-        <span className="text-xs text-black/50">読み取り: {fax.readModel}</span>
+        <span className="text-xs text-ink-faint">読み取り: {fax.readModel}</span>
         <span className="ml-auto" />
         {!done && <ReadButton faxId={fax.id} again />}
       </div>
@@ -186,8 +186,8 @@ export function ReviewClient({
         <div className="card min-h-0 overflow-hidden">
           <PdfView url={fax.file} rotation={rotation} highlight={selected != null ? rows[selected]?.y : null} />
           {!done && (
-            <div className="flex items-center gap-2 border-t border-black/5 px-3 py-2 text-sm">
-              <span className="text-black/60">向きがおかしいときは:</span>
+            <div className="flex items-center gap-2 border-t border-rule px-3 py-2 text-sm">
+              <span className="text-ink-soft">向きがおかしいときは:</span>
               <button className="btn-ghost px-3 py-1" onClick={() => setRotation((r) => (r + 270) % 360)}>↺ 左に回す</button>
               <button className="btn-ghost px-3 py-1" onClick={() => setRotation((r) => (r + 90) % 360)}>↻ 右に回す</button>
             </div>
@@ -196,11 +196,11 @@ export function ReviewClient({
 
         {/* 右: 読み取り結果 */}
         <div className="card flex min-h-0 flex-col overflow-hidden">
-          <div className="space-y-2 border-b border-black/5 p-4">
+          <div className="space-y-2 border-b border-rule p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="w-16 text-sm font-bold text-black/60">送り主</span>
+              <span className="w-16 text-sm font-bold text-ink-soft">送り主</span>
               {isOrderish ? (
-                <select disabled={done} value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={`min-w-0 flex-1 rounded-lg border px-3 py-2 font-bold ${customerId ? "" : "border-amber-500 bg-amber-50"}`}>
+                <select disabled={done} value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={`min-w-0 flex-1 rounded-lg border px-3 py-2 font-bold ${customerId ? "" : "border-review-line bg-review-bg"}`}>
                   <option value="">（選んでください）</option>
                   {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -208,11 +208,11 @@ export function ReviewClient({
                 <span className="font-bold">{read.sender.name || "（不明）"}</span>
               )}
             </div>
-            <div className="text-xs text-black/50">判定の根拠: {read.sender.evidence}</div>
-            <div className="text-xs text-black/50">種類の判断: {read.kind_reason}</div>
-            {read.notes && <div className="rounded-lg bg-crust-100 px-3 py-2 text-sm">📝 {read.notes}</div>}
+            <div className="text-xs text-ink-faint">判定の根拠: {read.sender.evidence}</div>
+            <div className="text-xs text-ink-faint">種類の判断: {read.kind_reason}</div>
+            {read.notes && <div className="rounded-lg border border-rule bg-cream px-3 py-2 text-sm"><b className="mr-1">メモ：</b>{read.notes}</div>}
             {!done && isOrderish && !needsTemplate && (
-              <div className={`rounded-lg px-3 py-2 text-sm font-bold ${flagged ? "bg-amber-100 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}>
+              <div className={`rounded-lg px-3 py-2 text-sm font-bold ${flagged ? "bg-review-bg text-review-ink" : "bg-ok-bg text-ok-ink"}`}>
                 {kind === "change"
                   ? "変更のFAXです。元の注文と変更後の数を見比べてください。確定するまで元の注文は変わりません。"
                   : flagged
@@ -221,10 +221,10 @@ export function ReviewClient({
               </div>
             )}
             {kind === "provisional_order" && !done && (
-              <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-900">仮発注として登録します。本発注のFAXが来たら、自動で探して置き換えます（集計では「仮」と表示）。</div>
+              <div className="rounded-lg bg-prov-bg px-3 py-2 text-sm font-bold text-prov-ink">仮発注として登録します。本発注のFAXが来たら、自動で探して置き換えます（集計では「仮」と表示）。</div>
             )}
             {provisionalToReplace.length > 0 && (
-              <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
+              <div className="rounded-lg bg-prov-bg px-3 py-2 text-sm text-prov-ink">
                 <div className="font-bold">この本発注で、仮発注を置き換えます</div>
                 {provisionalToReplace.map((o) => (
                   <div key={o.id}>
@@ -242,28 +242,28 @@ export function ReviewClient({
             {/* 注文以外 */}
             {!isOrderish && (
               <div className="space-y-3">
-                <div className="rounded-xl bg-sky-50 p-4">
+                <div className="rounded-lg bg-info-bg p-4">
                   <div className="font-bold">Claudeの判断：{kindInfo[kind].text}</div>
-                  <div className="mt-1 text-sm text-black/70">{read.kind_reason}</div>
+                  <div className="mt-1 text-sm text-ink-soft">{read.kind_reason}</div>
                   {kind === "supplier_reply" && <div className="mt-2 text-sm">こちらから出した発注への返事なので、受注には入れません。</div>}
                 </div>
-                {fax.status === "other" && <div className="text-sm text-black/60">仕分けた人: {fax.sortedBy}</div>}
+                {fax.status === "other" && <div className="text-sm text-ink-soft">仕分けた人: {fax.sortedBy}</div>}
               </div>
             )}
 
             {/* 新しい様式の承認 */}
             {needsTemplate && (
-              <div className="mb-5 rounded-xl border-2 border-purple-300 bg-purple-50 p-4">
+              <div className="mb-5 rounded-lg border-2 border-review-line bg-review-bg p-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-black text-purple-900">初めての様式です</span>
-                  <span className="pill bg-purple-200 text-purple-900">承認するまで受注に入りません</span>
+                  <span className="text-lg font-black text-review-ink">初めての様式です</span>
+                  <span className="pill bg-review-bg text-review-ink">承認するまで受注に入りません</span>
                 </div>
                 <ol className="mt-2 grid grid-cols-3 gap-2 text-center text-xs font-bold">
-                  <li className="rounded-lg bg-white px-2 py-1.5 ring-1 ring-purple-200">① Claudeが様式を下書き<br /><span className="font-normal text-purple-700">済み</span></li>
-                  <li className="rounded-lg bg-white px-2 py-1.5 ring-2 ring-purple-500">② 品名の対応を確かめる<br /><span className="font-normal text-purple-700">いまここ</span></li>
-                  <li className="rounded-lg bg-white px-2 py-1.5 ring-1 ring-purple-200">③ 承認 → 次から自動<br /><span className="font-normal text-purple-700">ボタン1つ</span></li>
+                  <li className="rounded-lg bg-sheet px-2 py-1.5 ring-1 ring-review-line">① Claudeが様式を下書き<br /><span className="font-normal text-review-ink">済み</span></li>
+                  <li className="rounded-lg bg-sheet px-2 py-1.5 ring-2 ring-review-line">② 品名の対応を確かめる<br /><span className="font-normal text-review-ink">いまここ</span></li>
+                  <li className="rounded-lg bg-sheet px-2 py-1.5 ring-1 ring-review-line">③ 承認 → 次から自動<br /><span className="font-normal text-review-ink">ボタン1つ</span></li>
                 </ol>
-                <dl className="mt-3 space-y-1 rounded-lg bg-white/70 p-3 text-sm">
+                <dl className="mt-3 space-y-1 rounded-lg bg-sheet/90 p-3 text-sm">
                   <div><dt className="inline font-bold">様式名：</dt><dd className="inline">{read.document_title}</dd></div>
                   <div><dt className="inline font-bold">Claudeが読んだ特徴：</dt><dd className="inline">{read.layout_summary}</dd></div>
                 </dl>
@@ -273,12 +273,12 @@ export function ReviewClient({
                     {[...new Map(rows.map((r, i) => [r.writtenName, i] as const)).entries()]
                       .filter(([, i]) => !rows[i].removed)
                       .map(([w, i]) => (
-                        <tr key={w} className="border-t border-purple-200">
+                        <tr key={w} className="border-t border-review-line">
                           <td className="py-1.5 pr-2">「{w}」</td>
                           <td className="py-1.5">
                             <select value={rows[i].productId}
                               onChange={(e) => setRows((rs) => rs.map((r) => (r.writtenName === w ? { ...r, productId: e.target.value } : r)))}
-                              className={`w-full rounded-lg border px-2 py-1 ${rows[i].productId ? "bg-white" : "border-amber-500 bg-amber-50"}`}>
+                              className={`w-full rounded-lg border px-2 py-1 ${rows[i].productId ? "bg-sheet" : "border-review-line bg-review-bg"}`}>
                               <option value="">（選ぶ）</option>
                               {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
@@ -293,8 +293,8 @@ export function ReviewClient({
               </div>
             )}
             {justApproved && !needsTemplate && (
-              <div className="mb-5 rounded-xl bg-emerald-50 p-4 text-emerald-900 ring-1 ring-emerald-200">
-                <div className="font-black">✅ 様式を登録しました</div>
+              <div className="mb-5 rounded-lg bg-ok-bg p-4 text-ok-ink ring-1 ring-ok-line">
+                <div className="font-black">様式を登録しました</div>
                 <div className="text-sm">次からこの取引先のFAXは、承認した対応で読み取ります。あとは中身を確かめて確定してください。</div>
               </div>
             )}
@@ -305,15 +305,15 @@ export function ReviewClient({
               return (
                 <div key={key} className="mb-5">
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="text-sm font-bold text-black/60">納品日</span>
+                    <span className="text-sm font-bold text-ink-soft">納品日</span>
                     <input type="date" disabled={done} value={date}
                       onChange={(e) => setRows((rs) => rs.map((r) => (r.orderIndex === Number(oi) ? { ...r, deliveryDate: e.target.value } : r)))}
                       className="rounded-lg border px-2 py-1 font-bold" />
-                    {read.orders[Number(oi)]?.delivery_place && <span className="text-sm text-black/60">納品場所: {read.orders[Number(oi)].delivery_place}</span>}
+                    {read.orders[Number(oi)]?.delivery_place && <span className="text-sm text-ink-soft">納品場所: {read.orders[Number(oi)].delivery_place}</span>}
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-xs text-black/50">
+                      <tr className="text-left text-xs text-ink-faint">
                         <th className="py-1">FAXに書いてある品名</th><th className="w-44">商品</th>
                         {kind === "change" && <th className="text-right">今の注文</th>}
                         <th className="text-right">{kind === "change" ? "変更後" : "数量"}</th><th className="text-right">個数</th><th />
@@ -326,55 +326,55 @@ export function ReviewClient({
                         const orig = kind === "change" ? findOriginal(r) : null;
                         return (
                           <tr key={i} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}
-                            className={`border-t border-black/5 align-top ${r.removed ? "opacity-40 line-through" : look ? "bg-amber-50" : ""} ${selected === i ? "outline outline-2 outline-amber-400" : ""}`}>
+                            className={`border-t border-rule align-top ${r.removed ? "opacity-40 line-through" : look ? "bg-review-bg" : ""} ${selected === i ? "outline outline-2 outline-review-line" : ""}`}>
                             <td className="py-2 pr-2">
                               <div className="font-bold">{r.writtenName}</div>
-                              {r.attention && <div className="mt-0.5 text-xs font-bold text-amber-800">⚠ {r.attention}</div>}
-                              {r.confidence < 0.8 && !r.attention && <div className="mt-0.5 text-xs text-amber-800">読み取りの自信が低め（{Math.round(r.confidence * 100)}%）</div>}
+                              {r.attention && <div className="mt-0.5 text-xs font-bold text-review-ink">{r.attention}</div>}
+                              {r.confidence < 0.8 && !r.attention && <div className="mt-0.5 text-xs text-review-ink">読み取りの自信が低め（{Math.round(r.confidence * 100)}%）</div>}
                             </td>
                             <td className="py-2 pr-2">
                               <select disabled={done || r.removed} value={r.productId} onChange={(e) => update(i, { productId: e.target.value })}
-                                className={`w-full rounded-lg border px-2 py-1.5 ${r.productId ? "" : "border-amber-500"}`}>
+                                className={`w-full rounded-lg border px-2 py-1.5 ${r.productId ? "" : "border-review-line"}`}>
                                 <option value="">（選ぶ）</option>
                                 {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
-                              {r.productId !== r.aiProductId && <div className="text-xs text-blue-700">AIの候補: {r.aiProductId ? productName(r.aiProductId) : "なし"}</div>}
+                              {r.productId !== r.aiProductId && <div className="text-xs text-info-ink">AIの候補: {r.aiProductId ? productName(r.aiProductId) : "なし"}</div>}
                             </td>
                             {kind === "change" && (
                               <td className="py-2 pr-2 text-right whitespace-nowrap">
                                 {done ? (
-                                  <span className="text-xs text-black/50">反映済み</span>
+                                  <span className="text-xs text-ink-faint">反映済み</span>
                                 ) : orig ? (
                                   <>
                                     <div className="text-lg font-bold">{orig.line.quantity}</div>
-                                    <div className="text-xs text-black/50">{orig.order.id}</div>
+                                    <div className="text-xs text-ink-faint">{orig.order.id}</div>
                                     {r.previousQuantity >= 0 && r.previousQuantity !== orig.line.quantity && (
-                                      <div className="text-xs font-bold text-red-700">FAXの変更前は {r.previousQuantity}</div>
+                                      <div className="text-xs font-bold text-alert-ink">FAXの変更前は {r.previousQuantity}</div>
                                     )}
                                   </>
                                 ) : (
-                                  <div className="text-xs font-bold text-red-700">元の注文なし<br />→ 追加として入れる</div>
+                                  <div className="text-xs font-bold text-alert-ink">元の注文なし<br />→ 追加として入れる</div>
                                 )}
                               </td>
                             )}
                             <td className="py-2 text-right">
                               <button disabled={done || r.removed} onClick={() => setPadFor(i)}
-                                className={`min-w-20 rounded-lg px-3 py-1.5 text-right text-lg font-black ring-1 hover:ring-crust-500 ${kind === "change" && orig && orig.line.quantity !== r.quantity ? "bg-rose-50 ring-rose-300" : "bg-white ring-black/15"}`}>
+                                className={`min-w-20 rounded-lg px-3 py-1.5 text-right text-lg font-black ring-1 hover:ring-crust-500 ${kind === "change" && orig && orig.line.quantity !== r.quantity ? "bg-alert-bg ring-alert-line" : "bg-sheet ring-rule-strong"}`}>
                                 {r.quantity}<span className="ml-1 text-xs font-normal">{r.unitWritten}</span>
                               </button>
-                              {r.quantity !== r.aiQuantity && <div className="text-xs text-blue-700">AIの読み: {r.aiQuantity}</div>}
+                              {r.quantity !== r.aiQuantity && <div className="text-xs text-info-ink">AIの読み: {r.aiQuantity}</div>}
                             </td>
                             <td className="py-2 text-right whitespace-nowrap">
                               <div className="font-bold">{r.quantity * r.piecesPerUnit}</div>
-                              {r.piecesPerUnit !== 1 && <div className="text-xs text-black/50">{r.piecesPerUnit}個入×{r.quantity}</div>}
+                              {r.piecesPerUnit !== 1 && <div className="text-xs text-ink-faint">{r.piecesPerUnit}個入×{r.quantity}</div>}
                             </td>
                             <td className="py-2 pl-2 text-right">
                               {!done && (
-                                <button className="text-xs text-black/40 hover:text-red-600" onClick={() => update(i, { removed: !r.removed })}>
+                                <button className="text-xs text-ink-faint hover:text-alert-ink" onClick={() => update(i, { removed: !r.removed })}>
                                   {r.removed ? "戻す" : "消す"}
                                 </button>
                               )}
-                              {changed(r) && !r.removed && <div className="pill mt-1 bg-blue-100 text-blue-800">修正</div>}
+                              {changed(r) && !r.removed && <div className="pill mt-1 bg-info-bg text-info-ink">修正</div>}
                             </td>
                           </tr>
                         );
@@ -388,16 +388,16 @@ export function ReviewClient({
           </div>
 
           {!done && (
-            <div className="flex flex-wrap items-center gap-3 border-t border-black/5 p-4">
-              <span className="text-sm text-black/60">確認した人</span>
+            <div className="flex flex-wrap items-center gap-3 border-t border-rule p-4">
+              <span className="text-sm text-ink-soft">確認した人</span>
               <select value={who} onChange={(e) => setWho(e.target.value)} className="rounded-lg border px-2 py-2 font-bold">
                 {STAFF.map((s) => <option key={s}>{s}</option>)}
               </select>
               <span className="ml-auto" />
-              {error && <span className="text-sm font-bold text-red-700">{error}</span>}
+              {error && <span className="text-sm font-bold text-alert-ink">{error}</span>}
               {isOrderish ? (
                 <>
-                  <button className="text-sm text-black/50 underline" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: "not_order", who }))}>注文ではない</button>
+                  <button className="text-sm text-ink-faint underline" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: "not_order", who }))}>注文ではない</button>
                   <button className="btn-primary px-6 py-3 text-lg" disabled={pending || !customerId || needsTemplate} onClick={submit}>
                     {pending ? "確定中…" : kind === "change" ? "この変更を反映する" : kind === "provisional_order" ? "仮発注として登録" : "この内容で確定"}
                   </button>
@@ -434,10 +434,10 @@ function EditHistory({ orders, productName }: { orders: Order[]; productName: (i
     ...o.lines.flatMap((l) => l.edits.map((e) => ({ ...e, label: l.read?.writtenName ?? productName(l.productId) }))),
   ]);
   return (
-    <div className="mt-4 rounded-xl bg-crust-50 p-3 text-sm">
+    <div className="mt-4 rounded-lg bg-crust-50 p-3 text-sm">
       <div className="mb-1 font-bold">修正・変更の記録</div>
       {items.length === 0 ? (
-        <div className="text-black/50">AIの読み取りのまま確定しました（修正なし）</div>
+        <div className="text-ink-faint">AIの読み取りのまま確定しました（修正なし）</div>
       ) : (
         <ul className="space-y-1">
           {items.map((e, i) => (
