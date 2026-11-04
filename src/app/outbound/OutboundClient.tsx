@@ -3,7 +3,7 @@
 // 見た目は②の共通部品（@/components/ui）。状態は③の purchase-store（API 経由）。
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, buttonClass, fmtDate, fmtDateTime, MethodIcon, Notice, PurchaseStatusTag } from "@/components/ui";
+import { Button, buttonClass, fmtDate, fmtDateTime, MethodIcon, Notice, PurchaseStatusTag, Qty } from "@/components/ui";
 
 const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 import type { EntryRow } from "@/lib/channels/outbound/render";
@@ -113,8 +113,7 @@ export function OutboundClient({ records, dates }: { records: View[]; dates: str
                   <tr key={i} className="border-t border-dashed border-rule">
                     <td className="py-1.5 font-bold">{l.name}</td>
                     <td className="py-1.5 text-right whitespace-nowrap">
-                      <span className="num text-2xl font-black">{l.units}</span>
-                      <span className="ml-1 text-sm">{l.unitLabel}</span>
+                      <Qty units={l.units} unit={l.unitLabel} />
                     </td>
                   </tr>
                 ))}

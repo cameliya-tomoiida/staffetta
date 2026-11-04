@@ -6,7 +6,7 @@ import type { PurchaseMethod } from "@/data/types";
 import { approvePoAction, markSentAction } from "./actions";
 import {
   Button, buttonClass, Empty, fmtDate, fmtDateTime, Icon, methodLabel, MethodIcon, Notice, PageHeader, PurchaseStatusTag, Segmented, Tag,
-  type PurchaseStatus,
+  Qty, type PurchaseStatus,
 } from "@/components/ui";
 
 export interface PoView {
@@ -256,8 +256,7 @@ function PoSheet({
                 {l.detail && <div className="text-sm text-ink-soft">{l.detail}</div>}
               </td>
               <td className="px-4 py-2 text-right whitespace-nowrap sm:px-5">
-                <span className="num text-2xl font-black">{l.units}</span>
-                <span className="ml-1 text-sm">{l.unitLabel}</span>
+                <Qty units={l.units} unit={l.unitLabel} />
               </td>
             </tr>
           ))}

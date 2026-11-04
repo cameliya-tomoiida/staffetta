@@ -1,47 +1,39 @@
 "use client";
-import { useState, useTransition } from "react";
+// LINE受付のボタン。確認はブラウザの confirm() ではなく、画面の中の「はい／いいえ」で聞く。
 import { linkLineUserAction, notifyLineConfirmedAction } from "@/lib/channels/line/actions";
+import { ConfirmInline } from "@/components/ui/ConfirmInline";
 
 const WHO = "事務"; // ログインの仕組みができたら、その人の名前にする
 
 export function LinkButton({ userId, customerId, label }: { userId: string; customerId: string; label: string }) {
-  const [pending, start] = useTransition();
   return (
-    <button
-      className="btn-ghost"
-      disabled={pending}
-      onClick={() => {
-        if (confirm(`このLINEのお客さんを「${label}」にひも付けます。よろしいですか？`)) start(() => linkLineUserAction(userId, customerId, WHO));
-      }}
-    >
-      {label}
-    </button>
+    <ConfirmInline
+      label={label}
+      message={`このLINEのお客さんを「${label}」にひも付けます。よろしいですか？`}
+      yesLabel="ひも付ける"
+      noLabel="やめる"
+      busyLabel="ひも付けています…"
+      onConfirm={() => linkLineUserAction(userId, customerId, WHO)}
+    />
   );
 }
 
 /** 確定した注文の「確定の連絡」。文面を見せてから、人が押したときだけ送る */
 export function NotifyButton({ orderId, preview }: { orderId: string; preview: string }) {
-  const [pending, start] = useTransition();
-  const [err, setErr] = useState("");
   return (
-    <div className="space-y-1 text-right">
-      <button
-        className="btn-primary"
-        disabled={pending}
-        onClick={() => {
-          if (!confirm(`お客さんのLINEに、次の文面を送ります。\n\n${preview}`)) return;
-          start(async () => {
-            try {
-              await notifyLineConfirmedAction(orderId, WHO);
-            } catch (e) {
-              setErr(e instanceof Error ? e.message : String(e));
-            }
-          });
-        }}
-      >
-        {pending ? "送っています…" : "確定の連絡をLINEで送る"}
-      </button>
-      {err && <div className="text-sm font-bold text-alert-ink">{err}</div>}
-    </div>
+    <ConfirmInline
+      variant="primary"
+      label="確定の連絡をLINEで送る"
+      message={
+        <>
+          お客さんのLINEに、次の文面を送ります。
+          <div className="mt-2 rounded-2xl rounded-tl-sm bg-[#e5f4e1] px-4 py-3 font-normal">{preview}</div>
+        </>
+      }
+      yesLabel="この文面を送る"
+      noLabel="やめる"
+      busyLabel="送っています…"
+      onConfirm={() => notifyLineConfirmedAction(orderId, WHO)}
+    />
   );
 }
