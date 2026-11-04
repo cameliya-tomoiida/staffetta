@@ -107,12 +107,40 @@ describe("工程表", () => {
       for (const b of uses) if (a !== b && a.k === b.k) expect(a.end <= b.start || b.end <= a.start).toBe(true);
   });
 
-  it("パンは4:00から、ピザは生地を前日に仕込んで当日8:00から", () => {
+  it("パンは納品時刻から逆算する: いちばん早い納品（病院 7:30）− 積み込み60分 = 6:30 に金属検出が終わる", () => {
     const roll = rows.find((r) => r.doughId === "DG01")!;
-    expect(roll.steps[0]).toMatchObject({ key: "weigh", start: 240, prevDay: false });
+    expect(roll).toMatchObject({ from: "delivery", deliveryMinute: 450, deliveryCustomerId: "C02", deadline: 390 });
+    expect(roll.steps.at(-1)!.end).toBeLessThanOrEqual(390);
+    expect(roll.steps[0].key).toBe("weigh");
+  });
+
+  it("工程はすき間なく続く（発酵が延びない）", () => {
+    for (const r of rows.filter((r) => r.from === "delivery"))
+      for (let i = 1; i < r.steps.length; i++) expect(r.steps[i].start).toBe(r.steps[i - 1].end);
+  });
+
+  it("得意先マスタに納品時刻が無ければ 8:00", () => {
+    const kokuto = rows.find((r) => r.doughId === "DG02")!; // 黒糖ロールは喫茶店（C04）だけ
+    expect(kokuto.deliveryMinute).toBe(480);
+    expect(kokuto.steps.at(-1)!.end).toBeLessThanOrEqual(420);
+  });
+
+  it("納品時刻を上書きでき、0時より前にかかると注意を出す", () => {
+    const r = buildSchedule(plan, { deliveryMinute: { C02: 4 * 60 } }).find((r) => r.doughId === "DG01")!;
+    expect(r.steps[0].start).toBeLessThan(0);
+    expect(r.warnings[0]).toMatch(/前日/);
+  });
+
+  it("ピザは生地を前日に仕込んで、当日8:00から順に", () => {
     const pizza = rows.find((r) => r.doughId === "DG04")!;
+    expect(pizza.from).toBe("start");
     expect(pizza.steps.find((s) => s.key === "mix")!.prevDay).toBe(true);
     expect(pizza.steps.find((s) => !s.prevDay)!.start).toBe(480);
+  });
+
+  it("mode: forward なら全部 開始時刻から順に（パンは4:00）", () => {
+    const r = buildSchedule(plan, { mode: "forward" }).find((r) => r.doughId === "DG01")!;
+    expect(r.steps[0]).toMatchObject({ key: "weigh", start: 240 });
   });
 
   it("量が多いほど分割・焼成・包装の時間が長い", () => {
@@ -135,5 +163,6 @@ describe("工程表", () => {
   it("時刻の表示", () => {
     expect(fmtTime(245)).toBe("4:05");
     expect(fmtTime(1440 + 60)).toBe("翌1:00");
+    expect(fmtTime(-120)).toBe("前日22:00");
   });
 });
