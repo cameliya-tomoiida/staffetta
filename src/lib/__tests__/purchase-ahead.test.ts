@@ -63,4 +63,19 @@ describe("前日入れ（purchaseDaysBefore）", () => {
     const o = { ...orders[1], status: "needs_review" as const };
     expect(purchaseTotalsForDate([o], "2026-11-09").products).toEqual([]);
   });
+
+  it("取引先サイト（kirara）の注文は、行を分けなくても ⑤のコード表の振り分け（前日）で前日の分に入る", () => {
+    const o: Order = {
+      ...mk("NS-420D102-2026-11-10", "2026-11-10", "P10", 0, 1),
+      lines: [
+        { ...demoOrders[0].lines[0], id: "a", productId: "P10", quantity: 18, unit: "パック", piecesPerUnit: 1, pieces: 18, edits: [],
+          read: { writtenName: "超じゅくロール（１個）／Ｐ", quantity: 18, unitWritten: "パック", piecesPerUnit: 1, productId: "P10", confidence: 1, attention: "" } },
+        { ...demoOrders[0].lines[0], id: "b", productId: "P10", quantity: 5, unit: "パック", piecesPerUnit: 6, pieces: 30, edits: [],
+          read: { writtenName: "超じゅくロール（６個入）／Ｐ", quantity: 5, unitWritten: "パック", piecesPerUnit: 6, productId: "P10", confidence: 1, attention: "" } },
+      ],
+    };
+    expect(purchaseTotalsForDate([o], "2026-11-09").products[0]).toMatchObject({ productId: "P10", pieces: 18 });
+    expect(purchaseTotalsForDate([o], "2026-11-10").products[0]).toMatchObject({ productId: "P10", pieces: 30 });
+    expect(totalsForDate([o], "2026-11-10").products[0].pieces).toBe(48);
+  });
 });

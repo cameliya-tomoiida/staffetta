@@ -72,7 +72,7 @@ const r = runPipeline(db.orders, "2026-11-06");
 
 **前日入れ**（取引先サイトの「前日」振り分けの行など。前日に仕入先から入れて、バラ・2個入に包み直す品）:
 注文の `source.extra` に `purchaseDaysBefore: 1`（何日前に入れるか）と、必要なら `supplierBin: "2"`（仕入先の便の ID）を入れる。
-1つの注文の中で当日分と前日分がまざるときは、前日分の行を別の注文（例: `NS-<事業所>-<納品日>-prev`）に分ける。
+取引先サイト（`source.extra.site === "kirara"`）の注文は、注文を分けなくてよい。行の品名から⑤のコード変換表（`KIRARA_ITEMS`）の振り分け先を引き、`KIRARA_SUPPLY` の `dayOffset`（前日 = -1）で行ごとに前日入れを決める（`lineDaysBefore`）。
 製造・納品の集計（`totalsForDate`）は今までどおり納品日に入る。仕入の発注書だけが前日に入り、行の `notes` に「前日入れ: 得意先 の 11/10 納品分 18個（3袋）」が付く。
 
 `PurchaseOrderDraft` は types.ts の `PurchaseOrder` に、画面用の項目（`supplierName`・`siteName`・`deliveryName`・`cutoffSet`・`kind`・行ごとの `needQuantity`/`surplus`/`customers`）を足したもの。

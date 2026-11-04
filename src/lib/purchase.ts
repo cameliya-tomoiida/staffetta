@@ -2,7 +2,8 @@
 // ここで作るのは「下書き」だけ。人が承認するまで送らない（送信は⑤の担当）。
 import type { PurchaseOrder, PurchaseOrderLine } from "@/data/types";
 import type { SupplierMethod } from "@/data/production";
-import type { Order } from "@/data/types";
+import type { Order, OrderLine } from "@/data/types";
+import { KIRARA_ITEMS, KIRARA_SUPPLY } from "./channels/kirara/config";
 import { countsInTotals, totalsForDate, type DayTotals } from "./aggregate";
 import { deliveryFor, findMaterial, findProduct, findSupplier } from "./catalog";
 import { bestPack, packFor, slicePlan } from "./packing";
@@ -84,14 +85,43 @@ export function purchaseDaysBefore(o: Order): number {
 }
 
 /**
+ * 1行ごとの前日入れの日数。
+ * - 取引先サイト（source.extra.site === "kirara"）の注文: ⑤のコード変換表（KIRARA_ITEMS）で行の品名から振り分け先を引き、
+ *   KIRARA_SUPPLY の dayOffset（前日便 = -1）を使う（⑤は行を分けなくてよい）
+ * - それ以外: 注文の source.extra.purchaseDaysBefore
+ */
+export function lineDaysBefore(o: Order, l: OrderLine): number {
+  if (o.source.extra?.site === "kirara") {
+    const name = l.read?.writtenName?.trim();
+    const item = name ? KIRARA_ITEMS.find((i) => i.name === name) : undefined;
+    const off = item ? KIRARA_SUPPLY[item.dest]?.dayOffset ?? 0 : 0;
+    if (off < 0) return -off;
+  }
+  return purchaseDaysBefore(o);
+}
+
+/**
  * 仕入の集計: その日に仕入先から入れる分。
- * = その日が納品日の注文（前日入れの指定なし）＋ 前日入れの指定がある注文のうち「納品日 − 日数」がその日のもの。
+ * = その日が納品日の行（前日入れでない）＋ 前日入れの行のうち「納品日 − 日数」がその日のもの。
  * 製造の集計（totalsForDate）とは別。発注書は buildProductPurchaseOrders(purchaseTotalsForDate(...)) で作る。
  */
 export function purchaseTotalsForDate(orders: Order[], date: string): DayTotals {
-  const sameDay = orders.filter((o) => o.deliveryDate === date && purchaseDaysBefore(o) === 0);
+  const sameDay: Order[] = [];
+  const ahead: Order[] = [];
+  for (const o of orders) {
+    if (!countsInTotals(o)) continue;
+    // 行を「前日入れの日数」ごとに分けて、仮の注文にする（元の注文は変えない）
+    const groups = new Map<number, OrderLine[]>();
+    for (const l of o.lines) {
+      const d = lineDaysBefore(o, l);
+      groups.set(d, [...(groups.get(d) ?? []), l]);
+    }
+    for (const [d, lines] of groups) {
+      if (d === 0 && o.deliveryDate === date) sameDay.push({ ...o, lines });
+      else if (d > 0 && addDays(o.deliveryDate, -d) === date) ahead.push({ ...o, lines });
+    }
+  }
   const day = totalsForDate(sameDay, date);
-  const ahead = orders.filter((o) => countsInTotals(o) && purchaseDaysBefore(o) > 0 && addDays(o.deliveryDate, -purchaseDaysBefore(o)) === date);
   for (const o of ahead) {
     const sub = totalsForDate([o], o.deliveryDate);
     day.warnings.push(...sub.warnings);
