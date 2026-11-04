@@ -2,7 +2,7 @@ import "server-only";
 // メール（.eml）を取り込んで、要確認の注文にする。
 // - 本文・PDF添付・Excel添付のどれでも読む（Excel はセルの中身を表のテキストにして Claude に渡す）
 // - 「変更」「キャンセル」は新しい注文（要確認）として入れ、元の注文は書き換えない。
-//   source.extra.intent / changeOf で元の注文とひも付ける。人が確定するまで元の注文はそのまま。
+//   Order.intent / changeOf で元の注文とひも付ける。人が確定するまで元の注文はそのまま。
 import { createHash } from "node:crypto";
 import ExcelJS from "exceljs";
 import { simpleParser } from "mailparser";
@@ -83,7 +83,7 @@ export async function emlToParts(eml: Buffer) {
 /** 変更・取消の元になる注文を探す（注文番号 → 得意先＋納品日）。見つからなければ undefined */
 export function findOriginal(orders: Order[], customerId: string, read: EmailRead): Order | undefined {
   const no = read.refers_to.order_number.trim();
-  const live = orders.filter((o) => o.status !== "cancelled" && o.source.extra?.intent !== "change" && o.source.extra?.intent !== "cancel");
+  const live = orders.filter((o) => o.status !== "cancelled" && (o.intent ?? "new") === "new");
   if (no) {
     const hit = live.find((o) => o.source.externalId === no);
     if (hit) return hit;
@@ -119,8 +119,11 @@ export async function importEml(eml: Buffer, fileName = "mail.eml"): Promise<Ema
   ];
   const bodyText = mail.parts.find((p) => p.kind === "text" && p.title === "本文");
 
+  const intent = read.intent as "new" | "change" | "cancel";
   const list: ImportedOrder[] = read.orders.map((ro, oi) => ({
     id: `${base}-${oi}`,
+    intent,
+    changeOf: original?.id,
     customerId,
     deliveryDate: ro.delivery_date,
     deliveryPlace: ro.delivery_place || undefined,
@@ -132,8 +135,6 @@ export async function importEml(eml: Buffer, fileName = "mail.eml"): Promise<Ema
       rawText: bodyText && bodyText.kind === "text" ? bodyText.text : undefined,
       extra: {
         fileName,
-        intent: read.intent,
-        ...(original ? { changeOf: original.id } : {}),
         ...(read.refers_to.order_number ? { refersToOrderNumber: read.refers_to.order_number } : {}),
         ...(read.notes ? { notes: read.notes } : {}),
         senderName: read.sender.name,
@@ -171,9 +172,11 @@ export async function importEml(eml: Buffer, fileName = "mail.eml"): Promise<Ema
         externalId: read.order_number || undefined,
         receivedAt: mail.date,
         rawText: bodyText && bodyText.kind === "text" ? bodyText.text : undefined,
-        extra: { fileName, intent: "cancel", ...(original ? { changeOf: original.id } : {}), notes: read.notes, model },
+        extra: { fileName, notes: read.notes, model },
       },
       lines: [],
+      intent: "cancel",
+      changeOf: original?.id,
     });
   }
 

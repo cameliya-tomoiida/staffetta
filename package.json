@@ -11,12 +11,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
     "@expo-google-fonts/noto-sans-jp": "^0.4.4",
-    "@pdf-lib/fontkit": "^1.1.1",
     "exceljs": "^4.4.0",
     "mailparser": "^3.14.1",
     "next": "16.4.5",
-    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.5.438",
+    "pdfkit": "^0.20.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
@@ -24,12 +23,15 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@types/mailparser": "^3.9.0",
     "@types/node": "^20",
+    "@types/pdfkit": "^0.17.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

@@ -30,6 +30,10 @@ export interface ImportedOrder {
   deliveryPlace?: string;
   lines: ImportedLine[];
   source: OrderSource;
+  /** 変更・キャンセルの連絡なら change / cancel（元の注文は書き換えない） */
+  intent?: "new" | "change" | "cancel";
+  /** 変更・キャンセルの元の注文ID */
+  changeOf?: string;
 }
 
 export function toOrderLine(orderId: string, l: ImportedLine, i: number): OrderLine {
@@ -68,6 +72,8 @@ export function toOrder(o: ImportedOrder): Order {
     status: "needs_review",
     createdAt: now(),
     edits: [],
+    intent: o.intent ?? "new",
+    ...(o.changeOf ? { changeOf: o.changeOf } : {}),
   };
 }
 
