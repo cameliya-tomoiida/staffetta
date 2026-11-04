@@ -1,6 +1,7 @@
 // 通しの計算: 注文 → 集計 → 仕入品の発注書（下書き）→ 製造計画・工程表 → 材料の所要量 → 材料の発注書（下書き）
 // 画面（/orders・/plan・/purchase）は、これを1回呼べば必要なものが全部そろう。
-import type { Order } from "@/data/types";
+import type { Masters, Order } from "@/data/types";
+import { withMasters } from "./catalog";
 import { nowIso } from "./clock";
 import { totalsForDate, type DayTotals } from "./aggregate";
 import { materialRequirements, materialShortages, type MaterialRequirement, type MaterialShortage, type ShortageOptions } from "./materials";
@@ -21,6 +22,8 @@ export interface PipelineOptions {
   materialDays?: number;
   /** 今の時刻（ISO）。材料は今から頼んで間に合う日から計画する。無ければ共通の時計（clock.ts） */
   now?: string;
+  /** マスタ一式（DB から loadMasters() したもの）。無ければ架空のサンプル */
+  masters?: Masters;
 }
 
 export interface PipelineResult {
@@ -44,6 +47,10 @@ export interface PipelineResult {
 
 /** 1つの納品日について、通しで計算する */
 export function runPipeline(orders: Order[], date: string, opts: PipelineOptions = {}): PipelineResult {
+  return withMasters(opts.masters, () => run(orders, date, opts));
+}
+
+function run(orders: Order[], date: string, opts: PipelineOptions): PipelineResult {
   const totals = totalsForDate(orders, date);
   const productionDate = addDays(date, opts.productionOffsetDays ?? 0);
   // 仕入品は「その日に入れる分」（前日入れの指定がある注文は、納品日の前日の分に入る）

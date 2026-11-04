@@ -13,6 +13,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     environment: "node",
     // テストの「今」は締めより前に固定（共通の時計 clock.ts）。日によって結果が変わらないように
-    env: { DEMO_NOW: "2026-11-01T09:00:00+09:00" },
+    // 保存先（①の SQLite）はメモリ上に。テストが本物の data/hub.sqlite に書かないように
+    env: { DEMO_NOW: "2026-11-01T09:00:00+09:00", HUB_DB_PATH: ":memory:" },
   },
 });

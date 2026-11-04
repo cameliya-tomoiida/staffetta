@@ -1,9 +1,9 @@
 // 製造計画と工程表。
 // 自社で作る商品の個数 → 生地kg（ロス率込み）→ ミキサー回数・材料kg、ライン（パン・ピザ）ごとの上限チェック、
 // 工程の時間割（工程表）を出す。全部ふつうの計算で、同じ入力なら必ず同じ結果になる。
-import { lineSettings, type Line, type ProcessKey } from "@/data/production";
+import type { Line, ProcessKey } from "@/data/production";
 import type { DayTotals } from "./aggregate";
-import { customerDeliveryMinute, findDough, findMaterial, findProduct, findTopping } from "./catalog";
+import { allLines, customerDeliveryMinute, findDough, findLine, findMaterial, findProduct, findTopping } from "./catalog";
 
 export interface DoughItem {
   productId: string;
@@ -124,8 +124,8 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
 
   const doughs: DoughBatchPlan[] = [...byDough.entries()].map(([doughId, items]) => doughBatch(doughId, items, opts.lossRates?.[doughId]));
 
-  const lines: LinePlan[] = (Object.keys(lineSettings) as Line[]).map((line) => {
-    const ls = lineSettings[line];
+  const lines: LinePlan[] = allLines().map((l) => l.line).map((line) => {
+    const ls = findLine(line);
     const lineDoughs = doughs.filter((d) => d.line === line);
     const pieces = lineDoughs.reduce((s, d) => s + d.pieces, 0);
     let cap = opts.lineCaps?.[line] ?? ls.dailyCap;
@@ -249,7 +249,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   const rows = new Map<string, ScheduleRow>();
   const freeAfter = new Map<string, number>(); // 前から積む: 設備 → 空く時刻
   const busyFrom = new Map<string, number>(); // 後ろから積む: 設備 → これより前なら空いている
-  const fromOf = (line: Line) => (opts.mode === "forward" ? "start" : lineSettings[line].scheduleFrom);
+  const fromOf = (line: Line) => (opts.mode === "forward" ? "start" : findLine(line).scheduleFrom);
 
   // 前日の作業（ピザの仕込みなど）は、どのラインも前日 13:00 から前へ順に積む
   const prevSteps = new Map<string, ScheduleStep[]>();
@@ -267,7 +267,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
 
   // 前から積むライン
   for (const b of plan.doughs.filter((b) => fromOf(b.line) === "start")) {
-    let t = opts.startMinute?.[b.line] ?? lineSettings[b.line].startMinute;
+    let t = opts.startMinute?.[b.line] ?? findLine(b.line).startMinute;
     const today = findDough(b.doughId)!.steps.filter((s) => !s.prevDay).map((s) => {
       const key = s.resource ? `today:${s.resource}` : undefined;
       const start = Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0);
@@ -286,7 +286,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
       const custs = [...new Set(b.items.flatMap((i) => i.customers ?? []))];
       const times = custs.map((c) => ({ c, m: opts.deliveryMinute?.[c] ?? customerDeliveryMinute(c) }));
       const first = times.sort((a, b) => a.m - b.m)[0] ?? { c: undefined, m: customerDeliveryMinute("") };
-      return { b, deliveryMinute: first.m, customerId: first.c, deadline: first.m - lineSettings[b.line].shipBufferMinutes };
+      return { b, deliveryMinute: first.m, customerId: first.c, deadline: first.m - findLine(b.line).shipBufferMinutes };
     })
     .sort((x, y) => y.deadline - x.deadline || x.b.doughId.localeCompare(y.b.doughId));
   for (const { b, deliveryMinute, customerId, deadline } of backward) {
@@ -306,7 +306,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     const shift = Math.max(0, ...today.filter((x) => x.resource).map((x) => x.end - (busyFrom.get(`today:${x.resource}`) ?? Infinity)));
     if (shift > 0) today = place(deadline - shift);
     for (const x of today) if (x.resource) busyFrom.set(`today:${x.resource}`, Math.min(busyFrom.get(`today:${x.resource}`) ?? Infinity, x.start));
-    const warnings = today.length && today[0].start < lineSettings[b.line].earliestStartMinute ? [`${b.name}: 納品 ${fmtTime(deliveryMinute)} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(lineSettings[b.line].earliestStartMinute)} より前）`] : [];
+    const warnings = today.length && today[0].start < findLine(b.line).earliestStartMinute ? [`${b.name}: 納品 ${fmtTime(deliveryMinute)} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(findLine(b.line).earliestStartMinute)} より前）`] : [];
     rows.set(b.doughId, {
       line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.doughId)!, ...today],
       from: "delivery", deliveryMinute, deliveryCustomerId: customerId, deadline, warnings,
@@ -321,7 +321,7 @@ export const scheduleWarnings = (rows: ScheduleRow[]) => rows.flatMap((r) => r.w
 
 /** ラインごとの終わる時刻と、のべ作業時間（分×人） */
 export function scheduleSummary(rows: ScheduleRow[]): { line: Line; start: number; end: number; laborMinutes: number }[] {
-  return (Object.keys(lineSettings) as Line[])
+  return allLines().map((l) => l.line)
     .map((line) => {
       const today = rows.filter((r) => r.line === line).flatMap((r) => r.steps.filter((s) => !s.prevDay));
       const all = rows.filter((r) => r.line === line).flatMap((r) => r.steps);

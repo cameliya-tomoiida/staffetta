@@ -101,7 +101,7 @@ const mdhm = (iso: string) => `${md(iso)} ${iso.slice(11, 16)}`;
 export function materialCutoff(materialId: string, arriveDate: string): string {
   const m = findMaterial(materialId);
   const dl = m ? findSupplier(m.supplierId)?.deliveries[0] : undefined;
-  return cutoffIso(arriveDate, dl?.cutoff, dl?.leadDays ?? 1);
+  return cutoffIso(arriveDate, dl?.cutoff, m?.leadDays ?? dl?.leadDays ?? 1);
 }
 
 const round = (n: number, d = 3) => Math.round(n * 10 ** d) / 10 ** d;
