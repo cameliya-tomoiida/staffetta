@@ -25,6 +25,8 @@ export interface CustomerRow {
   fax?: string;
   /** 外部サイトでの取引先コード（インフォマート等） */
   externalCode?: string;
+  /** ③の CustomerMaster と同じ。使っている取引先は true（止めるときは論理削除 disabled） */
+  active?: boolean;
   disabled?: boolean;
 }
 

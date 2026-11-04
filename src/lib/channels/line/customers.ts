@@ -50,7 +50,7 @@ export async function addCustomer(input: SettingsInput, who: string): Promise<st
   await ready();
   const all = await listMaster<CustomerRow>(CUSTOMERS, { includeDisabled: true });
   const max = Math.max(0, ...all.map((c) => Number(/^C(\d+)$/.exec(c.id)?.[1] ?? 0)));
-  const row: CustomerRow = { id: `C${String(max + 1).padStart(2, "0")}`, ...input, name: input.name.trim(), course: input.course.trim() };
+  const row: CustomerRow = { id: `C${String(max + 1).padStart(2, "0")}`, ...input, name: input.name.trim(), course: input.course.trim(), active: true };
   fail(validateCustomer(row));
   await upsertMasters<CustomerRow>(CUSTOMERS, [row], who);
   return row.id;
@@ -88,6 +88,7 @@ export async function upsertCustomerRow(
     ...(s("externalCode") ? { externalCode: s("externalCode") } : { externalCode: undefined }),
     ...(s("note") ? { note: s("note") } : { note: undefined }),
     lineUserIds: cur?.lineUserIds,
+    active: true,
   };
   const errors = validateCustomer(next);
   if (errors.length) return { ok: false, error: errors.join("／") };

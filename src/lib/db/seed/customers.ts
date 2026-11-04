@@ -32,6 +32,7 @@ export function sampleCustomers(): CustomerRow[] {
   return customers.map((c) => ({
     id: c.id,
     name: c.name,
+    active: true,
     channel: c.channel,
     cutoff: demo[c.id]?.cutoff ?? c.cutoff,
     deliveryTime: demo[c.id]?.deliveryTime ?? customerDeliveryTime[c.id] ?? DEFAULT_DELIVERY_TIME,
