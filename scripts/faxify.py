@@ -19,7 +19,7 @@ def faxify(name, angle=0.0, flip=False):
     for _ in range(W * H // 900):  # ゴミ点
         x, y = random.randrange(W), random.randrange(H)
         px[x, y] = 0
-    im = im.point(lambda v: 0 if v < 150 else 255, mode="1")
+    im = im.point(lambda v: 0 if v < 150 else 255).convert("L")  # 白黒2値（PDFはグレースケールで保存）
     if flip:
         im = im.rotate(180)
     im.save(out / f"{name}.pdf", "PDF", resolution=150)

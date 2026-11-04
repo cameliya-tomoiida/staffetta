@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Db, FaxDoc } from "./types";
@@ -18,6 +19,7 @@ export const emptyDb = (): Db => ({ faxes: initialFaxes(), orders: [], mappings:
 let queue: Promise<unknown> = Promise.resolve();
 
 export async function readDb(): Promise<Db> {
+  await connection(); // 毎回その時点のデータを読む（事前生成しない）
   try {
     return JSON.parse(await fs.readFile(DB_FILE, "utf8")) as Db;
   } catch {

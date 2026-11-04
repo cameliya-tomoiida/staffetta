@@ -1,4 +1,5 @@
 "use client";
+import { getPdfjs } from "@/lib/pdfjs";
 import { useEffect, useRef, useState } from "react";
 
 /** 元のFAX(PDF)を表示する。rotation で向きを直し、highlight(0〜100%) の高さに帯を出す */
@@ -11,8 +12,7 @@ export function PdfView({ url, rotation, highlight }: { url: string; rotation: n
     let cancelled = false;
     (async () => {
       try {
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        const pdfjs = await getPdfjs();
         const doc = await pdfjs.getDocument({ url }).promise;
         const page = await doc.getPage(1);
         const viewport = page.getViewport({ scale: 2, rotation: (page.rotate + rotation) % 360 });

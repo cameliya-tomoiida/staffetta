@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import "./globals.css";
 import { FACTORY } from "@/data/master";
 
@@ -37,7 +38,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </nav>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl flex-1 px-5 py-6">{children}</main>
+        <main className="mx-auto w-full max-w-7xl flex-1 px-5 py-6">
+          <Suspense fallback={<div className="text-black/50">読み込み中…</div>}>{children}</Suspense>
+        </main>
       </body>
     </html>
   );

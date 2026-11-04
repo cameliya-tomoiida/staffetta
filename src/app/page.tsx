@@ -3,8 +3,8 @@ import { customerById } from "@/data/master";
 import { readDb } from "@/lib/store";
 import { ReadButton } from "@/components/ReadButton";
 import { ResetButton } from "@/components/ResetButton";
+import { PdfThumb } from "@/components/PdfThumb";
 
-export const dynamic = "force-dynamic";
 
 const statusLabel = {
   new: { text: "未読", cls: "bg-gray-200 text-gray-700" },
@@ -38,7 +38,7 @@ export default async function Inbox() {
           return (
             <div key={f.id} className="card flex flex-col overflow-hidden">
               <div className="relative h-48 overflow-hidden bg-gray-100">
-                <iframe src={`${f.file}#toolbar=0&navpanes=0&view=FitH`} className="pointer-events-none h-[600px] w-full origin-top scale-[.95]" title={f.id} />
+                <PdfThumb url={f.file} rotation={f.rotation ?? 0} />
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
                 <div className="flex items-center justify-between">

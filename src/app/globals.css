@@ -16,8 +16,8 @@ body {
   color: var(--color-ink);
 }
 
-.card { @apply rounded-2xl bg-white shadow-sm ring-1 ring-black/5; }
-.btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50; }
-.btn-primary { @apply btn bg-crust-600 text-white hover:bg-crust-700; }
-.btn-ghost { @apply btn bg-white ring-1 ring-black/10 hover:bg-crust-100; }
-.pill { @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-bold; }
+@utility card { @apply rounded-2xl bg-white shadow-sm ring-1 ring-black/5; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50; }
+@utility btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50 bg-crust-600 text-white hover:bg-crust-700; }
+@utility btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50 bg-white ring-1 ring-black/10 hover:bg-crust-100; }
+@utility pill { @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-bold; }
