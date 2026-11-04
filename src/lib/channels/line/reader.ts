@@ -13,13 +13,19 @@ export const LineReadSchema = z.object({
   is_order: z.boolean().describe("注文（または注文の変更・追加・取消）の文章なら true。あいさつ・お礼・質問だけなら false"),
   orders: z.array(
     z.object({
+      intent: z
+        .enum(["new", "change", "cancel"])
+        .describe("new=新しい注文 / change=前に出した注文の数・日・品の変更や追加 / cancel=前に出した注文の取消"),
+      change_of_order_id: z
+        .string()
+        .describe("change・cancel のとき、このお客さんの最近の注文一覧のうち対象と思われる注文の id。分からなければ空文字"),
       delivery_date: z.string().describe("納品日 YYYY-MM-DD。書いてなければ受信日の翌日"),
       date_written: z.string().describe("文章に書いてあった日付の表現（明日・金曜・11/7 など）。なければ空文字"),
       lines: z.array(
         z.object({
           written_name: z.string().describe("文章に書いてある品名そのまま"),
           product_id: z.string().describe("商品一覧の id で一致するもの。自信がなければ一番近い候補、なければ空文字"),
-          quantity: z.number().describe("書いてある数量（本・袋・ケースならその数のまま）"),
+          quantity: z.number().describe("書いてある数量（本・袋・ケースならその数のまま）。変更なら変更後の数。取消なら0"),
           unit_written: z.string().describe("書いてある単位（個・本・斤・袋・枚 など）。なければ空文字"),
           pieces_per_unit: z.number().describe("1単位あたりの個数。分からなければ 1"),
           confidence: z.number().describe("読み取りの確からしさ 0〜1"),
@@ -42,18 +48,30 @@ const SYSTEM = `あなたは中小のパン工場で、お客さん（喫茶店�
 - 「明日」「あさって」「金曜」などは受信日時（日本時間）を基準に日付にする。曜日だけのときは受信日以降で最も近いその曜日。日付が書いていないときは受信日の翌日にし、attention に「納品日の記載なし」と書く。
 - 納品日が複数あるときは orders を納品日ごとに分ける。
 - 「いつもの」「前と同じ」など中身が分からない注文は lines を空にし、notes に書く。
-- 取消・変更の連絡は notes に必ず書く。`;
+- 「さっきの注文」「明日の分」などの変更・追加・取消は intent を change / cancel にし、下の「このお客さんの最近の注文」から対象を選んで change_of_order_id に入れる。対象が分からないときは空文字にして attention に書く。
+- change の lines には、変更・追加する品目だけを変更後の数で入れる（変わらない品目は入れない）。cancel で一部の品目だけ取消なら、その品目を数量0で入れる。全部の取消なら lines は空。
+- 取消・変更の連絡は notes にも必ず書く。`;
 
-function masterText(known: Record<string, string>) {
+export interface RecentOrderBrief {
+  id: string;
+  deliveryDate: string;
+  status: string;
+  receivedAt: string;
+  summary: string;
+}
+
+function masterText(known: Record<string, string>, recent: RecentOrderBrief[]) {
   const prod = products.map((p) => `${p.id}: ${p.name}（単位 ${p.unit}）`).join("\n");
   const maps = Object.entries(known).map(([w, pid]) => `「${w}」→ ${pid}`).join("\n");
-  return `## 商品一覧\n${prod}\n\n## このお客さんについてスタッフが過去に承認した品名の対応（優先する）\n${maps || "（まだなし）"}`;
+  const rec = recent.map((o) => `${o.id}: 納品日 ${o.deliveryDate}／${o.status}／受信 ${o.receivedAt}／${o.summary}`).join("\n");
+  return `## 商品一覧\n${prod}\n\n## このお客さんについてスタッフが過去に承認した品名の対応（優先する）\n${maps || "（まだなし）"}\n\n## このお客さんの最近の注文（新しい順。変更・取消の対象さがしに使う）\n${rec || "（まだなし）"}`;
 }
 
 export async function readLineText(
   text: string,
   receivedAt: string,
   knownMappings: Record<string, string> = {},
+  recentOrders: RecentOrderBrief[] = [],
 ): Promise<{ read: LineRead; model: string }> {
   const client = new Anthropic();
   const jst = new Date(receivedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", dateStyle: "full", timeStyle: "short" });
@@ -68,7 +86,7 @@ export async function readLineText(
     messages: [
       {
         role: "user",
-        content: `${masterText(knownMappings)}\n\n受信日時（日本時間）: ${jst}\n\n## LINEで届いた文章\n${text}`,
+        content: `${masterText(knownMappings, recentOrders)}\n\n受信日時（日本時間）: ${jst}\n\n## LINEで届いた文章\n${text}`,
       },
     ],
   });

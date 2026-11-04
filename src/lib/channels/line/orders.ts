@@ -43,14 +43,33 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
     extra: { via: "talk", ...extra },
   });
 
+  // このお客さんの最近の注文（「さっきの注文を変更」の対象さがし用）
+  const recent = existing.orders
+    .filter((o) => isLineOrderOf(o, input.userId) || (customerId && o.customerId === customerId))
+    .filter((o) => (o.intent ?? "new") === "new" && o.status !== "cancelled")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 8);
+  const recentBrief = recent.map((o) => ({
+    id: o.id,
+    deliveryDate: o.deliveryDate,
+    status: o.status === "confirmed" ? "確定済み" : "確認中",
+    receivedAt: new Date(o.source.receivedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
+    summary: o.lines.map((l) => `${productById(l.productId)?.name ?? l.read?.writtenName ?? "?"} ${l.quantity}${l.unit}`).join("、") || "（品目なし）",
+  }));
+
   let orders: Order[];
   try {
-    const { read, model } = await readLineText(input.text, input.receivedAt, existing.mappings[customerId] ?? {});
+    const { read, model } = await readLineText(input.text, input.receivedAt, existing.mappings[customerId] ?? {}, recentBrief);
     const extra = { readModel: model, isOrder: read.is_order, ...(read.notes ? { notes: read.notes } : {}) };
-    const groups = read.orders.length ? read.orders : [{ delivery_date: jstDate(new Date(input.receivedAt), 1), date_written: "", lines: [] }];
+    const groups = read.orders.length
+      ? read.orders
+      : [{ intent: "new" as const, change_of_order_id: "", delivery_date: jstDate(new Date(input.receivedAt), 1), date_written: "", lines: [] }];
     orders = groups.map((g, oi) => ({
       ...base,
       id: groups.length === 1 ? idBase : `${idBase}-${oi}`,
+      intent: g.intent,
+      // 元の注文は触らない。対象の注文IDは、このお客さんの注文の中にあるときだけ入れる
+      ...(g.intent !== "new" && recent.some((o) => o.id === g.change_of_order_id) ? { changeOf: g.change_of_order_id } : {}),
       deliveryDate: g.delivery_date,
       source: source({ ...extra, ...(g.date_written ? { dateWritten: g.date_written } : {}) }),
       lines: g.lines.map((l, li): OrderLine => {
@@ -82,6 +101,7 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
       {
         ...base,
         id: idBase,
+        intent: "new",
         deliveryDate: jstDate(new Date(input.receivedAt), 1),
         source: source({ readError: e instanceof Error ? e.message : String(e) }),
         lines: [],
@@ -121,6 +141,7 @@ export async function createLiffOrder(input: LiffOrderInput) {
     id,
     customerId,
     deliveryDate: input.deliveryDate,
+    intent: "new",
     status: "needs_review",
     createdAt: at,
     edits: [],
@@ -161,14 +182,16 @@ export async function liffContext(userId: string) {
   const [db, state] = await Promise.all([readDb(), readLineState()]);
   const customerId = customerIdForUser(state, userId);
   const mine = db.orders
-    .filter((o) => o.status !== "cancelled" && (isLineOrderOf(o, userId) || (customerId && o.customerId === customerId)))
+    .filter((o) => o.status !== "cancelled" && (o.intent ?? "new") === "new" && (isLineOrderOf(o, userId) || (customerId && o.customerId === customerId)))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   // いつもの商品 = これまで頼んだことのある商品（多い順）。まだなければ基本の商品
   const count = new Map<string, number>();
   for (const o of mine) for (const l of o.lines) if (productById(l.productId)) count.set(l.productId, (count.get(l.productId) ?? 0) + 1);
   const usual = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
   const defaults = products.filter((p) => p.unit !== "枚").map((p) => p.id); // ピザクラストは業務用なので最初は出さない
-  const last = mine.find((o) => o.lines.some((l) => productById(l.productId) && l.quantity > 0));
+  // 前回の注文: 人が確定したものを優先（AIの読み取りのままの注文は、確定済みがないときだけ）
+  const hasItems = (o: (typeof mine)[number]) => o.lines.some((l) => productById(l.productId) && l.quantity > 0);
+  const last = mine.find((o) => o.status === "confirmed" && hasItems(o)) ?? mine.find(hasItems);
   const customer = customerId ? customerById(customerId) : undefined;
   return {
     customerName: customer?.name ?? state.users[userId]?.claimedName ?? "",
@@ -223,8 +246,9 @@ const fmtDate = (ymd: string) =>
 /** 確定の連絡の文面（送る前に画面で見せる用にも使える） */
 export function confirmationText(order: Order) {
   const lines = order.lines.filter((l) => l.quantity > 0).map((l) => `・${productById(l.productId)?.name ?? l.read?.writtenName ?? "商品"}　${l.quantity}${l.unit}`);
+  const head = order.intent === "cancel" ? "ご注文の取消を承りました。" : order.intent === "change" ? "ご注文の変更を確定しました。" : "ご注文を確定しました。";
   return [
-    "ご注文を確定しました。",
+    head,
     "",
     `納品日：${fmtDate(order.deliveryDate)}`,
     ...lines,
