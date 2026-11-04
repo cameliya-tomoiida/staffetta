@@ -11,6 +11,7 @@ import type { Order, SourceRef } from "@/data/types";
 import { readDb } from "@/lib/store";
 import { saveImported, type ImportedOrder } from "../common";
 import { readEmail, type EmailRead, type MailPart } from "./reader";
+import { nowIso } from "@/lib/clock";
 
 export interface EmailImportResult {
   messageId: string;
@@ -74,7 +75,7 @@ export async function emlToParts(eml: Buffer) {
     messageId,
     subject: mail.subject ?? "",
     from: fromAddr ? `${fromAddr.name ?? ""} <${fromAddr.address ?? ""}>` : "",
-    date: (mail.date ?? new Date()).toISOString(),
+    date: mail.date ? mail.date.toISOString() : nowIso(),
     parts,
     attachmentNames,
   };

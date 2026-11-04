@@ -13,6 +13,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { readDb } from "@/lib/store";
 import { guessProduct, parseCsv, readChannelState, saveImported, toIsoDate, writeChannelState, type ImportedOrder } from "../common";
+import { nowIso } from "@/lib/clock";
 
 export interface SheetSpec {
   /** シートのURL（https://docs.google.com/spreadsheets/d/<ID>/...）または demo:<ファイル名> */
@@ -132,7 +133,7 @@ export async function importSheet(spec: SheetSpec): Promise<SheetImportResult> {
   const key = keyOf(spec);
   const prev = await readChannelState<{ snapshot: Snapshot; readAt: string }>(key);
   const diffs = diffSnapshots(prev?.snapshot, snapshot);
-  const readAt = new Date().toISOString();
+  const readAt = nowIso();
   const colMap = SHEET_COLUMN_MAP[spec.customerId] ?? {};
   const base = `GS${hash(key)}`;
   const db = await readDb();

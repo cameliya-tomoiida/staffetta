@@ -2,6 +2,7 @@
 // 発注メールの「下書き」と、取り込みテスト用の架空メールの両方で使う。
 // 送信はしない。できた .eml は Outlook / Thunderbird で開くと、そのまま下書きとして編集・送信できる。
 import { randomBytes } from "node:crypto";
+import { now as clockNow } from "../clock";
 
 export interface EmlAttachment {
   filename: string;
@@ -38,7 +39,7 @@ const encAddr = (s: string) =>
 
 export function buildEml(input: EmlInput): string {
   const boundary = `----=_hub_${randomBytes(8).toString("hex")}`;
-  const date = (input.date ?? new Date()).toUTCString().replace("GMT", "+0000");
+  const date = (input.date ?? clockNow()).toUTCString().replace("GMT", "+0000");
   const head = [
     `From: ${encAddr(input.from)}`,
     `To: ${encAddr(input.to)}`,
