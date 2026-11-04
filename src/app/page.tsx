@@ -1,69 +1,72 @@
-import Image from "next/image";
+import Link from "next/link";
+import { customerById } from "@/data/master";
+import { readDb } from "@/lib/store";
+import { ReadButton } from "@/components/ReadButton";
+import { ResetButton } from "@/components/ResetButton";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+const statusLabel = {
+  new: { text: "未読", cls: "bg-gray-200 text-gray-700" },
+  reading: { text: "読み取り中", cls: "bg-blue-100 text-blue-800" },
+  review: { text: "確認待ち", cls: "bg-amber-200 text-amber-900" },
+  confirmed: { text: "確定済み", cls: "bg-emerald-100 text-emerald-800" },
+  error: { text: "エラー", cls: "bg-red-100 text-red-800" },
+} as const;
+
+export default async function Inbox() {
+  const db = await readDb();
+  const waiting = db.faxes.filter((f) => f.status === "review").length;
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black">FAX受信箱</h1>
+          <p className="text-black/60">複合機に届いたFAXは、自動でここに入ります。Claudeが読み取り、スタッフが元のFAXと見比べて確定します。</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <ResetButton />
+      </div>
+      {waiting > 0 && (
+        <div className="rounded-xl bg-amber-100 px-4 py-3 font-bold text-amber-900">確認待ちのFAXが {waiting} 件あります</div>
+      )}
+      <div className="grid gap-4 md:grid-cols-3">
+        {db.faxes.map((f) => {
+          const s = statusLabel[f.status];
+          const cust = f.customerId ? customerById(f.customerId)?.name : f.read?.sender.name;
+          const lines = f.read?.orders.reduce((n, o) => n + o.lines.length, 0) ?? 0;
+          const flagged = f.read?.orders.flatMap((o) => o.lines).filter((l) => l.attention || l.confidence < 0.8).length ?? 0;
+          return (
+            <div key={f.id} className="card flex flex-col overflow-hidden">
+              <div className="relative h-48 overflow-hidden bg-gray-100">
+                <iframe src={`${f.file}#toolbar=0&navpanes=0&view=FitH`} className="pointer-events-none h-[600px] w-full origin-top scale-[.95]" title={f.id} />
+              </div>
+              <div className="flex flex-1 flex-col gap-2 p-4">
+                <div className="flex items-center justify-between">
+                  <span className={`pill ${s.cls}`}>{s.text}</span>
+                  <span className="text-xs text-black/50">{new Date(f.receivedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 受信</span>
+                </div>
+                <div className="font-bold">{cust ?? <span className="text-black/50">{f.label}</span>}</div>
+                {f.read && (
+                  <div className="text-sm text-black/60">
+                    {f.read.document_title}・{lines}行{flagged > 0 && <span className="ml-1 font-bold text-amber-700">（要確認 {flagged}）</span>}
+                    {f.rotation ? <span className="ml-1">・{f.rotation}°回転して表示</span> : null}
+                  </div>
+                )}
+                {f.error && <div className="text-sm text-red-700">{f.error}</div>}
+                <div className="mt-auto flex gap-2 pt-2">
+                  {(f.status === "new" || f.status === "error") && <ReadButton faxId={f.id} />}
+                  {f.status === "reading" && <ReadButton faxId={f.id} />}
+                  {(f.status === "review" || f.status === "confirmed") && (
+                    <Link href={`/fax/${f.id}`} className={f.status === "review" ? "btn-primary" : "btn-ghost"}>
+                      {f.status === "review" ? "見比べて確認する" : "内容を見る"}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

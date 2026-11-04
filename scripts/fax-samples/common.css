@@ -1,0 +1,14 @@
+@page { size: A4; margin: 0; }
+body { margin:0; width: 1240px; font-family: "Yu Gothic","YuGothic","Meiryo",sans-serif; color:#111; background:#fff; }
+.sheet { padding: 60px 70px; }
+.hand { font-family: "HG行書体","HGGyoshotai","Ink Free",cursive; font-size: 34px; color:#1a1a1a; }
+.num { font-family: "Ink Free", cursive; font-size: 36px; font-weight: 700; color:#141414; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 2px solid #222; padding: 10px 12px; font-size: 24px; }
+th { background:#eee; font-weight: 700; }
+h1 { text-align:center; font-size: 46px; letter-spacing: 8px; margin: 10px 0 24px; }
+.hdr { display:flex; justify-content:space-between; font-size: 24px; margin-bottom: 16px; }
+.small { font-size: 18px; }
+.strike { text-decoration: line-through; text-decoration-thickness: 3px; }
+.circle { border: 3px solid #111; border-radius: 50%; padding: 0 10px; }
+.faxbar { font-family: "MS Gothic", monospace; font-size: 18px; border-bottom: 1px solid #555; padding: 6px 20px; }

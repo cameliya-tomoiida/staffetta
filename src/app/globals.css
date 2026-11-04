@@ -1,26 +1,23 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-crust-50: #fdf8f1;
+  --color-crust-100: #f8ecda;
+  --color-crust-200: #f0d6b0;
+  --color-crust-500: #c8873a;
+  --color-crust-600: #a96b26;
+  --color-crust-700: #87521d;
+  --color-ink: #2b2118;
+  --font-sans: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-crust-50);
+  color: var(--color-ink);
 }
+
+.card { @apply rounded-2xl bg-white shadow-sm ring-1 ring-black/5; }
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50; }
+.btn-primary { @apply btn bg-crust-600 text-white hover:bg-crust-700; }
+.btn-ghost { @apply btn bg-white ring-1 ring-black/10 hover:bg-crust-100; }
+.pill { @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-bold; }
