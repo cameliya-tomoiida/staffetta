@@ -41,7 +41,7 @@ export function NotifyButton({ orderId, preview }: { orderId: string; preview: s
       >
         {pending ? "送っています…" : "確定の連絡をLINEで送る"}
       </button>
-      {err && <div className="text-sm text-red-700">{err}</div>}
+      {err && <div className="text-sm font-bold text-alert-ink">{err}</div>}
     </div>
   );
 }
