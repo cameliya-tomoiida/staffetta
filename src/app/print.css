@@ -220,3 +220,16 @@
     break-before: page;
   }
 }
+
+/* /plan: 「印刷する紙をえらぶ」でチェックした紙だけ印刷する */
+@media print {
+  .sheet-paper {
+    display: block !important;
+  }
+  body:has(#pr-plan:not(:checked)) [data-sheet="plan"],
+  body:has(#pr-process:not(:checked)) [data-sheet="process"],
+  body:has(#pr-staff:not(:checked)) [data-sheet="staff"],
+  body:has(#pr-daily:not(:checked)) [data-sheet="daily"] {
+    display: none !important;
+  }
+}

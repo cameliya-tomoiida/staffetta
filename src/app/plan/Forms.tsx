@@ -55,7 +55,6 @@ export function PlanSheet({ rows, date, dow, lang, unitLabel }: { rows: MakeRow[
               <th className={th}>{t("made_on")}</th>
               <th className={th}>{t("dow")}</th>
               <th className={th}>{t("item")}</th>
-              <th className={th}>{t("customer")}</th>
               <th className={`${th} text-right`}>{t("qty")}</th>
               <th className={`${th} text-right`}>{t("bags")}</th>
               <th className={`${th} text-right`}>{t("cases")}</th>
@@ -70,13 +69,18 @@ export function PlanSheet({ rows, date, dow, lang, unitLabel }: { rows: MakeRow[
               <tr key={r.productId}>
                 <td className={`${td} num whitespace-nowrap`}>{i === 0 ? date : ""}</td>
                 <td className={`${td} whitespace-nowrap`}>{i === 0 ? dow : ""}</td>
-                <td className={`${td} min-w-[8.5em] font-bold`}>{r.name}</td>
-                <td className={`${td} text-xs`}>
-                  {r.customers.map((c) => (
-                    <div key={c.name}>
-                      {c.name} <span className="num font-bold">{fmtNum(c.pieces)}</span>
+                <td className={`${td} min-w-[14em]`}>
+                  <div className="font-bold">{r.name}</div>
+                  {r.customers.length > 0 && (
+                    <div className="mt-0.5 text-xs text-ink-soft">
+                      {r.customers.map((c, j) => (
+                        <span key={c.name} className="whitespace-nowrap">
+                          {j > 0 && "／"}
+                          {c.name} <span className="num font-bold text-ink">{fmtNum(c.pieces)}</span>
+                        </span>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </td>
                 <td className={`${td} num text-right text-base font-black whitespace-nowrap`}>
                   {fmtNum(r.pieces)}
