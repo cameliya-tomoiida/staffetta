@@ -7,6 +7,7 @@ import { deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
 import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
 import { customerById } from "@/data/master";
+import { listPurchaseOrders } from "@/lib/purchase-store";
 import { PurchaseClient, type PoView } from "./PurchaseClient";
 
 export const metadata = { title: "発注書｜受発注ハブ" };
@@ -24,6 +25,8 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
   // 発注書の下書きは③（src/lib）が作る。画面は表示と、人の承認・送信の操作だけ
   const r = runPipeline(orders, date);
   const shortage = new Map(r.shortages.map((s) => [s.materialId, s]));
+  // 承認・送信済みの記録は③の purchase-store から（承認済みのものは中身も保存した方を見せる）
+  const stored = new Map((await listPurchaseOrders()).map((p) => [p.id, p]));
 
   const view = (po: PurchaseOrderDraft): PoView => {
     const s = findSupplier(po.supplierId);
@@ -38,6 +41,10 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       deliveryDate: po.deliveryDate,
       kind: po.kind,
       notes: po.notes,
+      state: (() => {
+        const s = stored.get(po.id);
+        return s ? { status: s.status, approvedBy: s.approvedBy, approvedAt: s.approvedAt, sentAt: s.sentAt, sentBy: s.sentBy } : { status: "draft" as const };
+      })(),
       lines: po.lines.map((l) => {
         let detail: string | undefined;
         if (l.itemType === "product" && l.customers?.length) {
@@ -55,11 +62,17 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       }),
     };
   };
-  const pos = [...r.productPurchaseOrders, ...r.materialPurchaseOrders].filter((p) => p.lines.length > 0).map(view);
+  // 承認後に注文が変わっても、承認した中身（保存したもの）を見せる
+  const drafts = [...r.productPurchaseOrders, ...r.materialPurchaseOrders].map((d) => {
+    const s = stored.get(d.id);
+    return s && s.status !== "draft" ? ({ ...d, lines: s.lines as typeof d.lines } as PurchaseOrderDraft) : d;
+  });
+  const pos = drafts.filter((p) => p.lines.length > 0).map(view);
 
   return (
     <PurchaseClient
       pos={pos}
+      date={date}
       factory={FACTORY.name}
       warnings={r.warnings}
       dateNav={
