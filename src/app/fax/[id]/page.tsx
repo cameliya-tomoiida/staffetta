@@ -16,6 +16,8 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
         まだ読み取っていません。<Link href="/" className="underline">受信箱</Link>から「Claudeで読み取る」を押してください。
       </div>
     );
-  const orders = db.orders.filter((o) => o.source.refs.some((r) => r.kind === "fax_pdf" && r.faxId === fax.id));
-  return <ReviewClient fax={fax} orders={orders} customers={customers} products={products} />;
+  const mine = (o: (typeof db.orders)[number]) => o.id.startsWith(`${fax.id}-`);
+  const orders = db.orders.filter(mine);
+  const others = db.orders.filter((o) => !mine(o));
+  return <ReviewClient fax={fax} orders={orders} others={others} templates={db.templates} customers={customers} products={products} />;
 }

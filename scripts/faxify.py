@@ -28,3 +28,8 @@ def faxify(name, angle=0.0, flip=False):
 faxify("fax1", angle=0.6)
 faxify("fax2", angle=-0.8, flip=True)
 faxify("fax3", angle=0.4)
+faxify("fax4", angle=-0.3)
+faxify("fax5", angle=0.5)
+faxify("fax6", angle=0.8)
+faxify("fax7", angle=0, flip=True)
+faxify("fax8", angle=-0.6)
