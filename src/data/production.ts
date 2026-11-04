@@ -310,6 +310,10 @@ export interface MakeSpec {
   packagingCost?: number;
   /** 人件費（円/個） */
   laborCost?: number;
+  /** 注文のリードタイム: 納品日の何日前までに注文が要るか（既定 1日） */
+  leadDays?: number;
+  /** その日の何時までか（HH:MM）。無ければ得意先マスタの締め、それも無ければ 17:00 */
+  cutoffTime?: string;
 }
 
 /** 仕入れて納める商品（入数単位でしか買えない） */
@@ -327,6 +331,12 @@ export interface BuySpec {
   caseSize?: number;
   /** 食パンのスライス: 1本あたりの枚数（3斤を30枚に切る なら 30） */
   slicesPerItem?: number;
+  /**
+   * 注文のリードタイムを上書きする（日）。無ければ「仕入先の便の締め」から出す
+   * （仕入先に頼む締めより前に、お客さんの注文が要る）。
+   */
+  leadDays?: number;
+  cutoffTime?: string;
 }
 
 /** 仕入れた食パンを切って、1枚入り・2枚入りに包み直して納める商品 */
@@ -339,6 +349,9 @@ export interface RepackSpec {
   packagingCost?: number;
   bagSize?: number;
   caseSize?: number;
+  /** リードタイムの上書き。無ければ元の食パンの仕入先の締めから出す */
+  leadDays?: number;
+  cutoffTime?: string;
 }
 
 export type ProductSpec = MakeSpec | BuySpec | RepackSpec;
@@ -367,16 +380,18 @@ export const productSpecs: Record<string, ProductSpec> = {
   // パン（自社）
   P01: { kind: "make", doughId: "DG01", doughGram: 35, bagSize: 10, caseSize: 100, packagingCost: 1.5, laborCost: 6 },
   P02: { kind: "make", doughId: "DG02", doughGram: 35, bagSize: 10, caseSize: 100, packagingCost: 1.5, laborCost: 6 },
-  P03: { kind: "make", doughId: "DG03", doughGram: 460, bagSize: 1, caseSize: 12, packagingCost: 8, laborCost: 40 },
-  P04: { kind: "make", doughId: "DG03", doughGram: 460, bagSize: 1, caseSize: 12, packagingCost: 8, laborCost: 40 },
+  // 食パンは前日の正午まで（中種の仕込みがあるため）
+  P03: { kind: "make", doughId: "DG03", doughGram: 460, bagSize: 1, caseSize: 12, packagingCost: 8, laborCost: 40, cutoffTime: "12:00" },
+  P04: { kind: "make", doughId: "DG03", doughGram: 460, bagSize: 1, caseSize: 12, packagingCost: 8, laborCost: 40, cutoffTime: "12:00" },
   P05: { kind: "make", doughId: "DG01", doughGram: 25, bagSize: 10, caseSize: 100, packagingCost: 1.2, laborCost: 5 },
   P06: { kind: "make", doughId: "DG02", doughGram: 25, bagSize: 10, caseSize: 100, packagingCost: 1.2, laborCost: 5 },
   // ピザ（自社）
   P07: { kind: "make", doughId: "DG04", doughGram: 180, bagSize: 5, caseSize: 50, packagingCost: 4, laborCost: 18 },
-  P11: { kind: "make", doughId: "DG05", doughGram: 120, toppingId: "TP01", bagSize: 1, caseSize: 20, packagingCost: 12, laborCost: 35 },
+  // OEM のピザは具材の手配があるので 3日前、27cm は 2日前まで
+  P11: { kind: "make", doughId: "DG05", doughGram: 120, toppingId: "TP01", bagSize: 1, caseSize: 20, packagingCost: 12, laborCost: 35, leadDays: 3 },
   P12: { kind: "make", doughId: "DG04", doughGram: 180, bagSize: 10, caseSize: 60, packagingCost: 2, laborCost: 8 },
-  P13: { kind: "make", doughId: "DG04", doughGram: 200, bagSize: 4, caseSize: 40, dailyCap: 1200, packagingCost: 5, laborCost: 20 },
-  P14: { kind: "make", doughId: "DG05", doughGram: 150, toppingId: "TP02", bagSize: 1, caseSize: 20, dailyCap: 1500, packagingCost: 12, laborCost: 35 },
+  P13: { kind: "make", doughId: "DG04", doughGram: 200, bagSize: 4, caseSize: 40, dailyCap: 1200, packagingCost: 5, laborCost: 20, leadDays: 2 },
+  P14: { kind: "make", doughId: "DG05", doughGram: 150, toppingId: "TP02", bagSize: 1, caseSize: 20, dailyCap: 1500, packagingCost: 12, laborCost: 35, leadDays: 3 },
   // 仕入品
   P08: { kind: "buy", supplierId: "S03", packSizes: [1], unitCost: 110 },
   P09: { kind: "buy", supplierId: "S03", packSizes: [10], unitCost: 32, bagSize: 10 },
