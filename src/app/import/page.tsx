@@ -1,10 +1,11 @@
 // 外部の入口（メール・スプレッドシート・きららCSV・インフォマートCSV）の取り込み。確認用の最小限の画面。
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { customerById, productById } from "@/data/master";
+import { customerById } from "@/data/master";
+import { findProduct } from "@/lib/catalog";
 import { readDb } from "@/lib/store";
 import { ImportPanel } from "./ImportPanel";
-import { ChannelBadge, fmtDate, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
+import { ChannelBadge, fmtDate, fmtNum, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
 
 const channelLabel: Record<string, string> = { email: "メール", google_sheet: "シート", customer_site: "専用サイト", infomart: "インフォマート" };
 const intentLabel: Record<string, string> = { change: "変更", cancel: "キャンセル" };
@@ -26,7 +27,7 @@ export default async function ImportPage() {
       <PageHeader title="外部の入口から取り込む" lead="メール・スプレッドシート・得意先の専用サイト・インフォマートの注文を、受注一覧に「要確認」で入れます。確定するのは人です。" />
       <ImportPanel samples={samples} />
       <section className="card p-4">
-        <h2 className="mb-2 text-xl font-black">取り込んだ注文（{orders.length} 件）</h2>
+        <h2 className="mb-2 text-xl font-black">取り込んだ注文（<span className="num">{orders.length}</span> 件）</h2>
         <div className="overflow-x-auto">
         <table className="w-full min-w-[640px]">
           <thead>
@@ -45,7 +46,7 @@ export default async function ImportPage() {
                   </td>
                   <td className="whitespace-nowrap"><OrderStatusTag status={o.status} /></td>
                   <td>
-                    {customerById(o.customerId)?.name ?? <span className="font-bold text-alert-ink">得意先不明</span>}
+                    {customerById(o.customerId)?.name ?? <span className="font-bold text-alert-ink">（お店が 分かりません）</span>}
                     {o.deliveryPlace && <div className="text-sm text-ink-soft">{o.deliveryPlace}</div>}
                     {o.changeOf && <div className="text-xs text-ink-faint">元の注文 {o.changeOf}</div>}
                   </td>
@@ -53,9 +54,10 @@ export default async function ImportPage() {
                   <td>
                     {o.lines.map((l) => (
                       <div key={l.id}>
-                        {productById(l.productId)?.name ?? <span className="font-bold text-alert-ink">{l.read?.writtenName}（商品未対応）</span>} {l.quantity}
-                        {l.unit}
-                        {l.piecesPerUnit > 1 && <span className="text-sm text-ink-soft">（×{l.piecesPerUnit}＝{l.pieces}個）</span>}
+                        {findProduct(l.productId)?.name ?? <span className="font-bold text-alert-ink">{l.read?.writtenName}（商品が 決まって いません）</span>}{" "}
+                        <span className="num font-black">{fmtNum(l.quantity)}</span>
+                        <span className="text-sm">{l.unit}</span>
+                        {l.piecesPerUnit > 1 && <span className="ml-1 text-sm text-ink-soft">（= {fmtNum(l.pieces)}個）</span>}
                       </div>
                     ))}
                     {!o.lines.length && <span className="text-ink-faint">（品目なし）</span>}
