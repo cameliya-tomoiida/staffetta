@@ -318,8 +318,10 @@ export interface BuySpec {
   supplierId: string;
   /** 仕入先が売る入数の候補（6・7・8個入りなど）。1つなら固定 */
   packSizes: number[];
-  /** 仕入単価（円/個） */
+  /** 仕入単価（円/個）。packPrices があればそちらを優先 */
   unitCost?: number;
+  /** 入数ごとの仕入値（円/袋）。例: { 6: 144 } = 6個入1袋 144円 → 1個 24円 */
+  packPrices?: Record<number, number>;
   /** 1袋（P）の入数（お客さんの注文の単位換算用） */
   bagSize?: number;
   caseSize?: number;
@@ -378,8 +380,8 @@ export const productSpecs: Record<string, ProductSpec> = {
   // 仕入品
   P08: { kind: "buy", supplierId: "S03", packSizes: [1], unitCost: 110 },
   P09: { kind: "buy", supplierId: "S03", packSizes: [10], unitCost: 32, bagSize: 10 },
-  P10: { kind: "buy", supplierId: "S07", packSizes: [6], unitCost: 24, bagSize: 6 },
-  P18: { kind: "buy", supplierId: "S07", packSizes: [6, 8], unitCost: 26 },
+  P10: { kind: "buy", supplierId: "S07", packSizes: [6], packPrices: { 6: 144 }, bagSize: 6 },
+  P18: { kind: "buy", supplierId: "S07", packSizes: [6, 8], packPrices: { 6: 162, 8: 200 } },
   P17: { kind: "buy", supplierId: "S07", packSizes: [1], unitCost: 600, slicesPerItem: 30 },
   // 食パンの包み直し
   P15: { kind: "repack", sourceProductId: "P17", slicesPerPack: 1, packagingCost: 3, bagSize: 1, caseSize: 30 },

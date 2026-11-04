@@ -40,22 +40,24 @@ describe("単位をそろえる", () => {
 
 describe("集計", () => {
   it("確定の注文だけを数える（要確認・取り消しは入れない）", () => {
-    // P01: 病院 12P×10=120 + 給食センター 3c/s×100=300 = 420（要確認の999は入らない）
-    expect(pieces(DEMO_DATE, "P01")).toBe(420);
+    // P01: 保育園 60 + 給食センター 3c/s×100=300 + 本発注 160 + インフォマート 180 = 700
+    // （要確認 12・取り消し 40・置き換わった仮発注 150・まだ仮の 200 は入らない）
+    expect(pieces(DEMO_DATE, "P01")).toBe(700);
     // P02: 喫茶店30（取り消しの500は入らない）
-    expect(pieces(DEMO_DATE, "P02")).toBe(30);
+    expect(pieces(DEMO_DATE, "P02")).toBe(75); // 保育園 45 + 喫茶店 30
   });
 
   it("intent=change・cancel の注文は数えない（二重に数えない）", () => {
     // P10: 病院65 + 保育園18。変更FAX（DO-11 の 70個）は入らない
-    expect(pieces(DEMO_DATE, "P10")).toBe(83);
-    // P05: 保育園 8P×10=80。キャンセルFAX（DO-12）は引き算もしない（人が確定すると元の注文が書き換わる）
-    expect(pieces(DEMO_DATE, "P05")).toBe(80);
+    expect(pieces(DEMO_DATE, "P10")).toBe(173);
+    // P06: 病院 11袋×3=33 だけ。カフェの取り消し（DO-16 は cancelled、DO-12 は intent=cancel）は数えない
+    expect(pieces(DEMO_DATE, "P06")).toBe(33);
   });
 
   it("仮発注は確定の集計に入れず、別枠の合計で返す", () => {
     const prov = provisionalForDate(demoOrders, DEMO_DATE);
     expect(prov.products.map((p) => [p.productId, p.pieces])).toEqual([["P01", 200], ["P10", 30]]);
+    expect(prov.products[0].customers[0].customerId).toBe("C08");
     expect(prov.products[0].customers[0].orderIds).toEqual(["DO-13"]);
     // 置き換わった古い仮発注（cancelled・supersededBy あり）は入らない
     expect(provisionalForDate(demoOrders, "2026-11-07").products).toEqual([]);
@@ -65,8 +67,10 @@ describe("集計", () => {
   it("単位が混在していても個数で合計する（個・P・c/s）", () => {
     // P07 ピザクラスト: 4P×5=20 + 12c/s×50=600
     expect(pieces(DEMO_DATE, "P07")).toBe(620);
-    // P10: 65個 + 18個
-    expect(pieces(DEMO_DATE, "P10")).toBe(83);
+    // P10: 病院 65個 + 保育園 18個 + インフォマート 15袋×6=90
+    expect(pieces(DEMO_DATE, "P10")).toBe(173);
+    // P05: 病院 39袋×2=78 + 保育園 32個 + 医療食 20P×10=200
+    expect(pieces(DEMO_DATE, "P05")).toBe(310);
   });
 
   it("得意先ごとの内訳と元の注文IDを残す", () => {
@@ -74,6 +78,7 @@ describe("集計", () => {
     expect(t.customers).toEqual([
       { customerId: "C02", pieces: 65, orderIds: ["DO-01"] },
       { customerId: "C01", pieces: 18, orderIds: ["DO-02"] },
+      { customerId: "C07", pieces: 90, orderIds: ["DO-06"] },
     ]);
   });
 
