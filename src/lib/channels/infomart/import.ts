@@ -5,6 +5,7 @@ import "server-only";
 import { customers } from "@/data/master";
 import { findProduct } from "@/lib/catalog";
 import { decodeText, guessProduct, parseCsv, saveImported, toIsoDate, type ImportedOrder } from "../common";
+import { nowIso } from "@/lib/clock";
 
 /** 項目 → 見出しの候補（左にあるものほど優先） */
 export const INFOMART_HEADERS = {
@@ -70,7 +71,7 @@ export async function importInfomartCsv(buf: Uint8Array, fileName: string): Prom
         channel: "infomart",
         refs: [{ kind: "csv", fileName, rowStart: Math.min(...rs.map((x) => x.rowNo)), rowEnd: Math.max(...rs.map((x) => x.rowNo)) }],
         externalId: slip,
-        receivedAt: new Date().toISOString(),
+        receivedAt: nowIso(),
         extra: { buyerCode, buyerName: get(first, "buyerName"), orderDate: toIsoDate(get(first, "orderDate")), placeCode: get(first, "placeCode") },
       },
       lines: rs.map(({ r }) => {

@@ -13,6 +13,7 @@ import { addDays } from "@/lib/purchase";
 import { readDb } from "@/lib/store";
 import { decodeText, parseCsv, readChannelState, saveImported, toIsoDate, writeChannelState, type ImportedOrder } from "../common";
 import { KIRARA_COL as C, KIRARA_DESTS, KIRARA_SUPPLY, KIRARA_QTY_SCALE, kiraraItem, type KiraraDest } from "./config";
+import { nowIso } from "@/lib/clock";
 
 export const KIRARA_CUSTOMER_ID = "C08";
 
@@ -194,7 +195,7 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
         channel: "customer_site",
         refs: [{ kind: "csv", fileName, rowStart: Math.min(...rs.map((r) => r.rowNo)), rowEnd: Math.max(...rs.map((r) => r.rowNo)) }],
         externalId: rs[0].slipNo,
-        receivedAt: new Date().toISOString(),
+        receivedAt: nowIso(),
         // site: "kirara" は③が行ごとの前日入れ（KIRARA_ITEMS の品名 → KIRARA_SUPPLY の dayOffset）を決めるのに使う。消さない
         extra: { site: "kirara", center: rs[0].centerName, bin: rs[0].binName, siteDate: rs[0].siteDate, siteCode },
       },
@@ -206,7 +207,7 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
   const routing = routingTable(rows, prev?.totals);
   const totals: Record<string, number> = {};
   for (const r of routing) totals[r.itemCode] = r.packs;
-  await writeChannelState(stateKey, { fileName, totals, at: new Date().toISOString() });
+  await writeChannelState(stateKey, { fileName, totals, at: nowIso() });
 
   const labels = rows
     .map((r) => {

@@ -9,8 +9,9 @@ import { customers } from "@/data/master";
 import { allProducts, findProduct } from "@/lib/catalog";
 import type { Order, OrderLine, OrderSource, ReadValue } from "@/data/types";
 import { updateDb } from "@/lib/store";
+import { nowIso } from "@/lib/clock";
 
-export const now = () => new Date().toISOString();
+export const now = () => nowIso();
 
 /** 取り込みでできた1行（パーサーやClaudeが出した値。換算はしない） */
 export interface ImportedLine {

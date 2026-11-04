@@ -10,6 +10,7 @@ import { toCsv } from "../common";
 import { buildEml } from "../eml";
 import { makeSimplePdf } from "../pdf";
 import { SITE_PROFILES, type SiteItem } from "./sites";
+import { todayJst } from "@/lib/clock";
 
 /** ③の PurchaseOrderDraft など、PurchaseOrder に画面用の項目が足されたものも受け取る */
 /** ③の PurchaseOrderDraft / StoredPurchaseOrder のように、画面用の項目が足されたものもそのまま受け取る */
@@ -103,7 +104,7 @@ export function purchasePdf(po: PoLike): Promise<Buffer> {
   const sup = findSupplier(po.supplierId) ?? supplierById(po.supplierId);
   return makeSimplePdf({
     title: "発 注 書",
-    headerRight: [`発注番号 ${po.id}`, `発注日 ${fmtDate(new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10))}`],
+    headerRight: [`発注番号 ${po.id}`, `発注日 ${fmtDate(todayJst())}`],
     to: [`${supplierLabel(po)} 御中`, ...(sup?.contact ? [sup.contact] : [])],
     from: [HUB_SENDER.name, `TEL ${HUB_SENDER.tel}`, `FAX ${HUB_SENDER.fax}`],
     lead: [
