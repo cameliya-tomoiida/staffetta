@@ -17,5 +17,8 @@ export const lineConfig = {
 /** 本物のLINEにつながっているか（false ならデモモード） */
 export const isLineLive = () => Boolean(lineConfig.channelSecret && lineConfig.accessToken);
 
+/** デモの架空のお客さん（U_demo_… / U-demo-…）か。本番のLINEでも、この人たちには送らない */
+export const isDemoLineUser = (userId: string) => /^U[-_]demo[-_]/i.test(userId);
+
 /** LIFFのURL（お客さんに送るリンク）。未設定ならローカルの画面 */
 export const liffUrl = () => (lineConfig.liffId ? `https://liff.line.me/${lineConfig.liffId}` : "/liff/order");

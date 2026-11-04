@@ -1,7 +1,7 @@
 import "server-only";
 import { nowIso } from "@/lib/clock";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { isLineLive, lineConfig } from "./config";
+import { isDemoLineUser, isLineLive, lineConfig } from "./config";
 import { updateLineState, type OutboxItem } from "./state";
 
 // LINE Messaging API との通信。デモモード（.env.local 未設定）では送らずに記録だけ残す。
@@ -27,8 +27,10 @@ async function callApi(pathname: string, body: unknown) {
 }
 
 async function send(item: Omit<OutboxItem, "at" | "mode" | "ok">, deliver: () => Promise<void>) {
-  const record: OutboxItem = { ...item, at: nowIso(), mode: isLineLive() ? "live" : "demo", ok: true };
-  if (isLineLive()) {
+  // 架空のお客さん（デモ）には、本番のLINEにつながっていても送らない（記録だけ）
+  const live = isLineLive() && !isDemoLineUser(item.to);
+  const record: OutboxItem = { ...item, at: nowIso(), mode: live ? "live" : "demo", ok: true };
+  if (live) {
     try {
       await deliver();
     } catch (e) {
