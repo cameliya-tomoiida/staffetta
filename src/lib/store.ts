@@ -44,6 +44,7 @@ export async function readDb(): Promise<Db> {
     db.mappings ??= {};
     db.importedMessageIds ??= [];
     db.purchaseOrders ??= [];
+    if (db.lossRates && typeof db.lossRates.rates !== "object") db.lossRates = undefined; // 壊れた値は使わない
     return db;
   } catch {
     return emptyDb();

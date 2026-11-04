@@ -125,4 +125,6 @@ export interface Db {
   importedMessageIds: string[];
   /** 仕入先への発注書（③: 承認・送信済みの保存） */
   purchaseOrders?: PurchaseOrder[];
+  /** 人が承認したロス率（③ approveLossProposals の結果。未承認なら undefined → 製造マスターの初期値を使う） */
+  lossRates?: { rates: Record<string, number>; approvedBy: string; approvedAt: string };
 }
