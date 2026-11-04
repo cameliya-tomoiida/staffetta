@@ -102,9 +102,9 @@ LINE は「インターネットから見えるURL」にしかメッセージを
 - 一時的なURLなので、**パソコンを閉じると届かなくなります**。デモと試しの間だけ使います。
 - 本番で使うときは、ハブをインターネット上のサーバーに置きます（あとで決めます）。
 
-手順（Claude が進めます。担当者は確認だけ）
+手順
 
-1. Claude が cloudflared を入れて起動し、`https://xxxx.trycloudflare.com` のようなURLをお伝えします。
+1. トンネルは担当者が起動します。出てきた `https://xxxx.trycloudflare.com` のURLは管理役から伝わります。
 2. LINE Developers →「自社 ご注文窓口」→ **「Messaging API設定」** タブ を開きます。
 3. **Webhook URL** の「編集」を押し、`https://xxxx.trycloudflare.com/api/line/webhook` を入れて「更新」。
 4. **「検証」** を押して「成功」と出ればOKです。
