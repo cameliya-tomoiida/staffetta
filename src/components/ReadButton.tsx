@@ -1,6 +1,6 @@
 "use client";
 import { useTransition } from "react";
-import { readFaxAction } from "@/app/actions";
+import { readAllNewAction, readFaxAction } from "@/app/actions";
 
 export function ReadButton({ faxId, again = false }: { faxId: string; again?: boolean }) {
   const [pending, start] = useTransition();
@@ -12,6 +12,21 @@ export function ReadButton({ faxId, again = false }: { faxId: string; again?: bo
           Claudeが読み取り中…
         </>
       ) : again ? "読み直す" : "Claudeで読み取る"}
+    </button>
+  );
+}
+
+export function ReadAllButton({ count }: { count: number }) {
+  const [pending, start] = useTransition();
+  if (count === 0) return null;
+  return (
+    <button className="btn-primary" disabled={pending} onClick={() => start(() => readAllNewAction())}>
+      {pending ? (
+        <>
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          {count}枚をClaudeが読み取り中…
+        </>
+      ) : `未読の${count}枚をまとめて読み取る`}
     </button>
   );
 }

@@ -22,6 +22,7 @@ export type OrderChannel =
 /** 注文の状態 */
 export type OrderStatus =
   | "needs_review" // 要確認（AIが読み取った直後・取り込んだ直後）
+  | "provisional" // 仮発注（人が確認済み。本発注が来たら置き換わる。集計では「仮」として扱う）
   | "confirmed" // 人が確定した → 集計・製造計画に入る
   | "cancelled";
 
@@ -104,6 +105,10 @@ export interface Order {
   createdAt: string;
   confirmedAt?: string;
   confirmedBy?: string;
+  /** 仮発注を本発注で置き換えたとき: 新しい注文のID（古い方に入る） */
+  supersededBy?: string;
+  /** 本発注が置き換えた仮発注のID（新しい方に入る） */
+  supersedes?: string;
   /** 注文全体の修正（得意先・納品日など） */
   edits: EditRecord[];
 }

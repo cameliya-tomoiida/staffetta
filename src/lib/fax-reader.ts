@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { customers, products } from "@/data/master";
+import { customers, products, suppliers } from "@/data/master";
 import { FaxReadSchema, type FaxRead } from "./types";
 
 export const READER_MODEL = "claude-opus-5-5";
@@ -18,7 +18,15 @@ const SYSTEM = `あなたは中小のパン工場で、取引先から届いたF
 - 丸で選ぶ欄（白・黒など）は、丸が付いている方を written_name に含め、attention にも書く。
 - 商品一覧との対応に少しでも推測が入るときは confidence を下げ、attention に理由を書く。
 - 書類が逆さま・横向きなら rotation_degrees で示す（中身は正しい向きとして読む）。
-- 年の記載がない日付は、受信日（FAX上端の日時）に最も近い未来の日付として解釈する。`;
+- 年の記載がない日付は、受信日（FAX上端の日時）に最も近い未来の日付として解釈する。
+- 「納品日」と「使用日」が両方あるときは、納品日を delivery_date にする。
+
+FAXの種類（kind）の見分け方:
+- 注文書・発注書 → order。「仮発注」「予定数」「内示」と書いてあれば provisional_order。
+- 「変更」「訂正」「キャンセル」など、既に出した注文を直す内容 → change。変更前の数が書いてあれば previous_quantity に入れ、quantity は変更後の数にする。
+- こちら（工場）が仕入先に出した発注への返事（注文請書・納期回答・在庫切れの連絡など）→ supplier_reply。lines は空でよい。
+- 広告・キャンペーン・営業案内など注文と関係ないもの → not_order。lines は空でよい。
+- 新しく見る様式でも、layout_summary に様式の特徴をまとめる（あとで人が承認して、この取引先の様式として登録する）。`;
 
 function masterText(knownMappings: Record<string, Record<string, string>>) {
   const cust = customers.map((c) => `${c.id}: ${c.name}${c.fax ? `（FAX ${c.fax}）` : ""}`).join("\n");

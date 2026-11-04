@@ -102,6 +102,7 @@ export const customers: Customer[] = [
   { id: "C05", name: "グループホームあおば", channel: "driver", cutoff: "16:00" },
   { id: "C06", name: "ベーカリーカフェ ことり", channel: "line", cutoff: "18:00", note: "LINEで注文" },
   { id: "C07", name: "やまびこ給食（インフォマート）", channel: "infomart", externalCode: "IM-0007", cutoff: "13:00" },
+  { id: "C09", name: "めぐみ給食サービス", channel: "fax", fax: "0000-66-6666", cutoff: "15:00", note: "仮発注のあと本発注が来る。初めての様式" },
   { id: "C08", name: "あおい医療フードサービス", channel: "customer_site", externalCode: "NS-1201", cutoff: "11:00", note: "取引先の専用発注サイト" },
 ];
 

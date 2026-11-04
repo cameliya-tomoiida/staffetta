@@ -2,7 +2,17 @@ import { z } from "zod";
 import type { Order } from "@/data/types";
 
 /** Claude が FAX 1枚から読み取る内容（値はそのまま。換算や修正はしない） */
+export const FaxKind = z.enum(["order", "change", "provisional_order", "supplier_reply", "not_order"]);
+export type FaxKind = z.infer<typeof FaxKind>;
+
 export const FaxReadSchema = z.object({
+  kind: FaxKind.describe(
+    "order=通常の注文 / change=既に出した注文の数量・日付の変更や訂正・キャンセル / provisional_order=仮発注・予定数（あとで本発注が来る） / supplier_reply=仕入先からの返信（注文請書・納期回答など、こちらが発注した側） / not_order=広告・案内など注文と関係ないもの",
+  ),
+  kind_reason: z.string().describe("その種類だと判断した理由（書類の見出し・文面など）"),
+  layout_summary: z
+    .string()
+    .describe("この様式の特徴（見出し、日付の書き方、品名の並び、数量の単位、丸で選ぶ欄の有無など）。様式の登録に使う"),
   rotation_degrees: z
     .number()
     .describe("書類を正しい向きで読むために時計回りに回す角度。0/90/180/270 のどれか"),
@@ -25,7 +35,10 @@ export const FaxReadSchema = z.object({
           product_id: z
             .string()
             .describe("商品一覧の id で一致するもの。自信がなければ一番近い候補、なければ空文字"),
-          quantity: z.number().describe("書いてある数量（袋・P・ケースならその数のまま）"),
+          quantity: z.number().describe("書いてある数量（袋・P・ケースならその数のまま）。変更FAXなら変更後の数量。キャンセルなら0"),
+          previous_quantity: z
+            .number()
+            .describe("変更FAXで「変更前」の数量が書いてあればその数。書いてなければ -1"),
           unit_written: z.string().describe("書いてある単位（個・ケ・袋・P・枚・斤 など）"),
           pieces_per_unit: z
             .number()
@@ -47,7 +60,26 @@ export const FaxReadSchema = z.object({
 });
 export type FaxRead = z.infer<typeof FaxReadSchema>;
 
-export type FaxStatus = "new" | "reading" | "review" | "confirmed" | "error";
+export type FaxStatus =
+  | "new"
+  | "reading"
+  | "review" // 人の確認待ち
+  | "template" // 新しい様式。様式の承認待ち（承認まで受注に入れない）
+  | "confirmed"
+  | "other" // 注文以外（広告・仕入先の返信）として仕分け済み
+  | "error";
+
+/** 得意先ごとの様式（人が承認したもの） */
+export interface FaxTemplate {
+  customerId: string;
+  title: string;
+  layoutSummary: string;
+  /** 書類の品名 → 商品ID */
+  items: Record<string, string>;
+  draftedBy: string; // 下書きしたモデル
+  approvedBy: string;
+  approvedAt: string;
+}
 
 export interface FaxDoc {
   id: string;
@@ -62,6 +94,9 @@ export interface FaxDoc {
   /** 人が確定した回転角（AIの推定を人が直した場合も含む） */
   rotation?: number;
   customerId?: string;
+  /** 注文以外として仕分けた理由（人が仕分けを確定したら入る） */
+  sortedAs?: "supplier_reply" | "not_order";
+  sortedBy?: string;
 }
 
 /** 確認画面で人が確定した1行（FAX確認画面 → confirmFaxAction） */
@@ -77,6 +112,8 @@ export interface ConfirmedLine {
 export interface Db {
   faxes: FaxDoc[];
   orders: Order[];
-  /** 得意先ごとに人が承認した「書類の品名 → 商品」の対応（＝様式） */
+  /** 得意先ごとに人が承認した「書類の品名 → 商品」の対応 */
   mappings: Record<string, Record<string, string>>;
+  /** 得意先ごとの承認済みの様式 */
+  templates: Record<string, FaxTemplate>;
 }
