@@ -151,9 +151,13 @@ export function ReviewClient({
           }),
         );
 
+  const [justApproved, setJustApproved] = useState(false);
   const approveTemplate = () =>
     run(
-      () => approveTemplateAction({ faxId: fax.id, customerId, who, items: Object.fromEntries(rows.filter((r) => !r.removed && r.productId).map((r) => [r.writtenName, r.productId])) }),
+      async () => {
+        await approveTemplateAction({ faxId: fax.id, customerId, who, items: Object.fromEntries(rows.filter((r) => !r.removed && r.productId).map((r) => [r.writtenName, r.productId])) });
+        setJustApproved(true);
+      },
       "",
     );
 
@@ -250,21 +254,48 @@ export function ReviewClient({
             {/* 新しい様式の承認 */}
             {needsTemplate && (
               <div className="mb-5 rounded-xl border-2 border-purple-300 bg-purple-50 p-4">
-                <div className="text-lg font-black text-purple-900">初めての様式です</div>
-                <p className="mt-1 text-sm">Claudeがこの様式の下書きを作りました。品名と商品の対応を確かめて承認すると、次からこの取引先のFAXは同じように読み取ります。<b>承認するまで受注には入りません。</b></p>
-                <dl className="mt-3 space-y-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-purple-900">初めての様式です</span>
+                  <span className="pill bg-purple-200 text-purple-900">承認するまで受注に入りません</span>
+                </div>
+                <ol className="mt-2 grid grid-cols-3 gap-2 text-center text-xs font-bold">
+                  <li className="rounded-lg bg-white px-2 py-1.5 ring-1 ring-purple-200">① Claudeが様式を下書き<br /><span className="font-normal text-purple-700">済み</span></li>
+                  <li className="rounded-lg bg-white px-2 py-1.5 ring-2 ring-purple-500">② 品名の対応を確かめる<br /><span className="font-normal text-purple-700">いまここ</span></li>
+                  <li className="rounded-lg bg-white px-2 py-1.5 ring-1 ring-purple-200">③ 承認 → 次から自動<br /><span className="font-normal text-purple-700">ボタン1つ</span></li>
+                </ol>
+                <dl className="mt-3 space-y-1 rounded-lg bg-white/70 p-3 text-sm">
                   <div><dt className="inline font-bold">様式名：</dt><dd className="inline">{read.document_title}</dd></div>
-                  <div><dt className="inline font-bold">特徴：</dt><dd className="inline">{read.layout_summary}</dd></div>
+                  <div><dt className="inline font-bold">Claudeが読んだ特徴：</dt><dd className="inline">{read.layout_summary}</dd></div>
                 </dl>
-                <div className="mt-3 text-sm font-bold">品名の対応（下の表で直せます）</div>
-                <ul className="mt-1 text-sm">
-                  {[...new Map(rows.filter((r) => !r.removed).map((r) => [r.writtenName, r.productId])).entries()].map(([w, pid]) => (
-                    <li key={w}>「{w}」→ <b>{pid ? productName(pid) : "（未選択）"}</b></li>
-                  ))}
-                </ul>
-                <button className="btn-primary mt-3" disabled={pending || rows.some((r) => !r.removed && !r.productId)} onClick={approveTemplate}>
-                  この様式を承認する（{who}）
+                <div className="mt-3 text-sm font-bold">FAXの品名 → 工場の商品（違っていたら選び直してください）</div>
+                <table className="mt-1 w-full text-sm">
+                  <tbody>
+                    {[...new Map(rows.map((r, i) => [r.writtenName, i] as const)).entries()]
+                      .filter(([, i]) => !rows[i].removed)
+                      .map(([w, i]) => (
+                        <tr key={w} className="border-t border-purple-200">
+                          <td className="py-1.5 pr-2">「{w}」</td>
+                          <td className="py-1.5">
+                            <select value={rows[i].productId}
+                              onChange={(e) => setRows((rs) => rs.map((r) => (r.writtenName === w ? { ...r, productId: e.target.value } : r)))}
+                              className={`w-full rounded-lg border px-2 py-1 ${rows[i].productId ? "bg-white" : "border-amber-500 bg-amber-50"}`}>
+                              <option value="">（選ぶ）</option>
+                              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                <button className="btn-primary mt-3 w-full py-3 text-lg" disabled={pending || rows.some((r) => !r.removed && !r.productId)} onClick={approveTemplate}>
+                  {pending ? "登録中…" : `この様式を承認して登録する（${who}）`}
                 </button>
+              </div>
+            )}
+            {justApproved && !needsTemplate && (
+              <div className="mb-5 rounded-xl bg-emerald-50 p-4 text-emerald-900 ring-1 ring-emerald-200">
+                <div className="font-black">✅ 様式を登録しました</div>
+                <div className="text-sm">次からこの取引先のFAXは、承認した対応で読み取ります。あとは中身を確かめて確定してください。</div>
               </div>
             )}
 
