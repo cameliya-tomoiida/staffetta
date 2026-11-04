@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { PurchaseMethod } from "@/data/types";
 import { approvePoAction, markSentAction } from "./actions";
+import { notifyHubChanged } from "@/components/ui/refresh";
 import {
   Button, buttonClass, Empty, fmtDate, fmtDateTime, Icon, methodLabel, MethodIcon, Notice, PageHeader, PurchaseStatusTag, Segmented, Tag,
   Qty, type PurchaseStatus,
@@ -47,8 +48,14 @@ function minutesLeft(cutoffAt: string, now: number) {
 }
 
 export function PurchaseClient({
-  pos, date, factory, warnings, dateNav, costBox, unconfirmed = 0,
-}: { pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode; unconfirmed?: number }) {
+  pos, date, factory, warnings, dateNav, costBox, unconfirmed = 0, serverNow, lateMaterials = [],
+}: {
+  pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode; unconfirmed?: number;
+  /** サーバーの「いま」（ミリ秒） */
+  serverNow: number;
+  /** 締めを過ぎて、もう発注書では頼めない材料（③の materialPlan.lateItems の文） */
+  lateMaterials?: string[];
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -57,10 +64,12 @@ export function PurchaseClient({
   const [filter, setFilter] = useState<"all" | PurchaseStatus>("all");
 
   useEffect(() => {
-    setNow(Date.now()); // eslint-disable-line react-hooks/set-state-in-effect -- 今の時刻はブラウザで決める（サーバーと食い違わないように）
-    const t = setInterval(() => setNow(Date.now()), 30_000);
+    // 時計はサーバーの「いま」（③の共通の時計。デモの時刻もある）から、ブラウザで経過を足して数える
+    const base = serverNow - Date.now();
+    setNow(Date.now() + base); // eslint-disable-line react-hooks/set-state-in-effect -- 開いた時刻はブラウザで決める
+    const t = setInterval(() => setNow(Date.now() + base), 30_000);
     return () => clearInterval(t);
-  }, []);
+  }, [serverNow]);
 
   const st = (id: string): PoState => pos.find((p) => p.id === id)?.state ?? { status: "draft" };
   // 保存は③の purchase-store（サーバー）。承認には名前が必要
@@ -70,6 +79,7 @@ export function PurchaseClient({
       const r = await fn();
       if (!r.ok) setError(r.error);
       router.refresh();
+      notifyHubChanged();
     });
   };
   const approve = (po: PoView) => run(() => approvePoAction({ date, poId: po.id, who }));
@@ -107,9 +117,19 @@ export function PurchaseClient({
           {error}
         </Notice>
       )}
-      {warnings.length > 0 && (
+      {lateMaterials.length > 0 && (
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+          <div className="mb-1">間に合わない材料があります（発注書には入っていません）。仕入先に電話で相談してください。</div>
+          <ul className="list-disc pl-5 font-normal">
+            {lateMaterials.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+        </Notice>
+      )}
+      {warnings.filter((w) => !lateMaterials.includes(w)).length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
-          <ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+          <ul>{warnings.filter((w) => !lateMaterials.includes(w)).map((w, i) => <li key={i}>{w}</li>)}</ul>
         </Notice>
       )}
       {unconfirmed > 0 && (
@@ -128,7 +148,7 @@ export function PurchaseClient({
           ))}
         </Notice>
       )}
-      {late.length > 0 && (
+      {lateMaterials.length > 0 && (
         <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-3">
           締めを過ぎて、まだ送っていない発注書が <span className="num text-xl">{late.length}</span> 枚あります。仕入先に電話で確かめてください。
         </Notice>

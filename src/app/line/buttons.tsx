@@ -23,6 +23,7 @@ export function NotifyButton({ orderId, preview }: { orderId: string; preview: s
   return (
     <ConfirmInline
       variant="primary"
+      align="right"
       label="確定の連絡をLINEで送る"
       message={
         <>

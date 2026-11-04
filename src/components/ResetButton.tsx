@@ -6,6 +6,7 @@ import { ConfirmInline } from "@/components/ui/ConfirmInline";
 export function ResetButton() {
   return (
     <ConfirmInline
+      align="right"
       label="デモを最初から"
       message="デモのデータを最初の状態に戻します。よろしいですか？"
       yesLabel="戻す"

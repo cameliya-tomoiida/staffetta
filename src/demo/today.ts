@@ -5,6 +5,7 @@ import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf } from "@/lib/aggregate";
 import { listPurchaseOrders } from "@/lib/purchase-store";
 import { allOrders, pickDate, visibleDates } from "./all-orders";
+import { nowMs } from "@/lib/clock";
 
 export interface TodaySummary {
   /** 要確認の注文（どの入口でも） */
@@ -25,9 +26,11 @@ export interface TodaySummary {
   overdue: number;
   /** 計算の注意（ピザの上限超えなど） */
   warnings: number;
+  /** サーバーの「いま」（ミリ秒。デモの時計なら、デモの時刻）。画面はここからの経過で数える */
+  serverNow: number;
 }
 
-export async function todaySummary(now = Date.now()): Promise<TodaySummary> {
+export async function todaySummary(now = nowMs()): Promise<TodaySummary> {
   const [{ orders, today }, db, stored] = await Promise.all([allOrders(), readDb(), listPurchaseOrders()]);
   const date = pickDate(undefined, visibleDates(deliveryDatesOf(orders), today), today);
   const r = runPipeline(orders, date);
@@ -49,5 +52,6 @@ export async function todaySummary(now = Date.now()): Promise<TodaySummary> {
     nextCutoffSupplier: future[0]?.supplierName ?? "",
     overdue: open.filter((p) => Date.parse(p.cutoffAt) < now).length,
     warnings: r.warnings.length,
+    serverNow: now,
   };
 }

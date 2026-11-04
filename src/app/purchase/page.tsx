@@ -10,6 +10,7 @@ import { findSupplier } from "@/lib/catalog";
 import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
 import { customerById } from "@/data/master";
 import { listPurchaseOrders } from "@/lib/purchase-store";
+import { nowMs } from "@/lib/clock";
 import { PurchaseClient, type PoView } from "./PurchaseClient";
 
 export const metadata = { title: "発注書｜受発注ハブ" };
@@ -76,6 +77,8 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       date={date}
       factory={FACTORY.name}
       warnings={r.warnings}
+      serverNow={nowMs()}
+      lateMaterials={r.materialPlan.lateItems.map((x) => x.message)}
       unconfirmed={orders.filter((o) => o.deliveryDate === date && (o.status === "needs_review" || o.status === "provisional")).length}
       costBox={<CostBox s={dayCostSummary(r)} show={["purchase", "material"]} />}
       dateNav={

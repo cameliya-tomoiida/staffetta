@@ -53,6 +53,9 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const r = runPipeline(orders, date);
   const prov = provisionalForDate(orders, date);
   const cost = dayCostSummary(r);
+  // 材料の締めに間に合わないもの（③の materialPlan.lateItems）は黄色で別に出す
+  const lateMaterials = r.materialPlan.lateItems.map((x) => x.message);
+  const otherWarnings = r.warnings.filter((w) => !lateMaterials.includes(w));
 
   // 辞書に無い名前（商品名・生地名）は Claude で訳して保存。訳せたものには「機械翻訳」と出す
   const jaNames = [
@@ -106,10 +109,22 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       )}
 
       {/* 計算の注意（管理者向け・日本語） */}
-      {r.warnings.length > 0 && (
+      {lateMaterials.length > 0 && (
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="no-print mb-3">
+          <div lang="ja">
+            <div className="mb-1">間に合わない材料があります（発注書には入っていません）。</div>
+            <ul className="list-disc pl-5 font-normal">
+              {lateMaterials.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        </Notice>
+      )}
+      {otherWarnings.length > 0 && (
         <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />} className="no-print mb-4">
           <ul className="space-y-0.5" lang="ja">
-            {r.warnings.map((w, i) => (
+            {otherWarnings.map((w, i) => (
               <li key={i}>{w}</li>
             ))}
           </ul>

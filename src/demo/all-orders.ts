@@ -22,9 +22,15 @@ export async function allOrders(): Promise<{ orders: Order[]; today: string }> {
  */
 export function pickDate(q: unknown, dates: string[], today: string): string {
   if (typeof q === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
-  if (dates.includes(DEMO_DATE)) return DEMO_DATE;
+  if (dates.includes(SHOW_DATE)) return SHOW_DATE;
   const tomorrow = addDays(today, 1);
   return dates.includes(tomorrow) ? tomorrow : (dates.find((d) => d >= today) ?? tomorrow);
 }
 /** 日付ボタンに並べる日（今日以降＋デモの日） */
-export const visibleDates = (dates: string[], today: string) => [...new Set(dates.filter((d) => d >= today || d === DEMO_DATE))].sort();
+export const visibleDates = (dates: string[], today: string) => [...new Set(dates.filter((d) => d >= today || d === SHOW_DATE))].sort();
+
+/**
+ * デモで最初に開く納品日。ふだんは③の DEMO_DATE（11/6）。
+ * 撮影で別の日（例 11/9 の材料の発注書）から始めたいときは、.env.local に DEMO_SHOW_DATE=2026-11-09 と書いて起動し直す。
+ */
+const SHOW_DATE = /^\d{4}-\d{2}-\d{2}$/.test(process.env.DEMO_SHOW_DATE ?? "") ? process.env.DEMO_SHOW_DATE! : DEMO_DATE;
