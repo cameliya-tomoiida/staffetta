@@ -15,15 +15,16 @@ describe("サンプルのマスタ", () => {
     expect(validateMasters(m)).toEqual([]);
   });
 
-  it("設備: ミキサー2台は同時に動かせないグループ。分割機は 1,800個/時・1ライン", () => {
-    const mixers = m.equipment.filter((e) => e.kind === "mixer" && e.line === "bread");
-    expect(mixers.map((e) => e.exclusiveGroup)).toEqual(["パンのミキサー", "パンのミキサー"]);
+  it("設備: ミキサーは全部「同時に動かせない」グループ（粉45kg＝生地75kg）。分割機は 1,800個/時・1ライン", () => {
+    const mixers = m.equipment.filter((e) => e.kind === "mixer");
+    expect(new Set(mixers.map((e) => e.exclusiveGroup))).toEqual(new Set(["ミキサー"]));
+    expect(m.equipment.find((e) => e.id === "EQ-P-MIX")!.maxBatchKg).toBe(75);
     expect(m.equipment.find((e) => e.id === "EQ-B-DIV")).toMatchObject({ piecesPerHour: 1800, lanes: 1, maxPieceGram: 150 });
   });
 
   it("工程: 人数・設備・CCP を持つ。食パンにはスライスがある。金属検出は CCP", () => {
     const shape = m.steps.find((s) => s.doughId === "DG01" && s.key === "shape")!;
-    expect(shape.people).toBe(4);
+    expect(shape.people).toBe(3); // 現場の標準: 成形 3人
     expect(m.steps.find((s) => s.doughId === "DG03" && s.key === "slice")).toMatchObject({ equipmentId: "EQ-B-SLC" });
     expect(m.steps.filter((s) => s.key === "metal_check").every((s) => s.ccp && s.equipmentId === "EQ-MD")).toBe(true);
     // 分割機の能力と同じ工程は「設備の能力から出す」（秒は空）
@@ -75,6 +76,7 @@ describe("セルの読み方", () => {
     expect(parseCell(col("boolean"), "たぶん").error).toBeTruthy();
     expect(parseCell(col("time"), "8:05")).toEqual({ value: "08:05" });
     expect(parseCell(col("time"), "25:00").error).toMatch(/08:30/);
+    expect(parseCell(col("time"), "24:00")).toEqual({ value: "24:00" }); // その日の終わりまで
     expect(parseCell(equipmentDef.columns.find((c) => c.key === "kind")!, "ミキサー")).toEqual({ value: "mixer" });
     expect(parseCell(equipmentDef.columns.find((c) => c.key === "kind")!, "mixer")).toEqual({ value: "mixer" });
     expect(parseCell(col("list"), "6;8")).toEqual({ value: [6, 8] });
@@ -133,7 +135,7 @@ describe("中身の検査（参照・重複・種類ごと）", () => {
 
   it("分割の重さが分割機の範囲の外なら教える", () => {
     const p = { ...m.products.find((x) => x.id === "P01")!, doughGram: 300 };
-    expect(validateItems(productDef, [p], m)[0].message).toMatch(/分割丸め機 の範囲/);
+    expect(validateItems(productDef, [p], m)[0].message).toMatch(/分割丸め機（パン） の範囲/);
   });
 
   it("量で時間が決まる工程に、秒も設備の能力も無ければ教える。金属検出は CCP", () => {
