@@ -159,5 +159,6 @@ export interface PurchaseOrder {
   status: "draft" | "approved" | "sent";
   /** 送るのは人の承認後（自動送信しない） */
   approvedBy?: string;
+  approvedAt?: string;
   sentAt?: string;
 }

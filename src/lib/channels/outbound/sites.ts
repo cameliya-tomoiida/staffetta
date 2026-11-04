@@ -61,7 +61,7 @@ export const SITE_PROFILES: Partial<Record<PurchaseMethod, SiteProfile>> = {
   },
   fujimi_site: {
     method: "fujimi_site",
-    label: "受発注サイト（ふじみ製パン・ふじみ相当）",
+    label: "ふじみ製パン 受発注サイト",
     steps: ["受発注サイトにログイン（人）", "便（1便／2便）と納品日を選ぶ", "定番リストの上から順に袋数を入れる", "確認画面で数を見比べて、人が「送信」を押す"],
     items: [
       { itemId: "P10", siteName: "超じゅくロール 6個入", siteCode: "0143", section: "ロール" },
@@ -72,7 +72,7 @@ export const SITE_PROFILES: Partial<Record<PurchaseMethod, SiteProfile>> = {
   },
   hinode_site: {
     method: "hinode_site",
-    label: "メーカーの発注タブレット（ひので製パン・ひので相当）",
+    label: "ひので製パン 発注タブレット",
     steps: ["タブレットの発注アプリを開く", "納品日を選ぶ", "画面の順に数を入れる（0 は空欄のまま）", "人が「発注確定」を押す"],
     items: [
       { itemId: "P08", siteName: "たまごサンドロール", siteCode: "Y-2201", section: "調理パン" },
@@ -81,7 +81,7 @@ export const SITE_PROFILES: Partial<Record<PurchaseMethod, SiteProfile>> = {
   },
   kogane_site: {
     method: "kogane_site",
-    label: "発注サイト（こがね食品・こがね相当）",
+    label: "こがね食品 発注サイト",
     steps: ["こがね食品の発注サイトにログイン（人）", "「定期品」タブ", "下の順で数量を入れてカートへ", "人が「注文を確定」を押す"],
     items: [
       { itemId: "M11", siteName: "エキストラバージンオリーブオイル 16.5L缶", siteCode: "K-OL-165", section: "油" },

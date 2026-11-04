@@ -12,7 +12,7 @@ export const FaxReadSchema = z.object({
   kind_reason: z.string().describe("その種類だと判断した理由（書類の見出し・文面など）"),
   layout_summary: z
     .string()
-    .describe("この様式の特徴（見出し、日付の書き方、品名の並び、数量の単位、丸で選ぶ欄の有無など）。様式の登録に使う"),
+    .describe("この様式の特徴（見出し、日付の書き方、品名の並び、数量の単位、丸で選ぶ欄の有無など）を2〜3文で。様式の登録に使うので、向き・かすれ・受信日時などこの1枚だけの事情は書かない"),
   rotation_degrees: z
     .number()
     .describe("書類を正しい向きで読むために時計回りに回す角度。0/90/180/270 のどれか"),
@@ -125,4 +125,6 @@ export interface Db {
   importedMessageIds: string[];
   /** 仕入先への発注書（③: 承認・送信済みの保存） */
   purchaseOrders?: PurchaseOrder[];
+  /** 人が承認したロス率（③ approveLossProposals の結果。未承認なら undefined → 製造マスターの初期値を使う） */
+  lossRates?: { rates: Record<string, number>; approvedBy: string; approvedAt: string };
 }

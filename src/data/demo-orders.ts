@@ -6,7 +6,7 @@
 //   → /plan・/purchase を開くと、あした分の製造計画・発注書の下書きがすでに出ている。
 // - 得意先・品目・単位の書き方は、各入口の見本（FAX①・LINE④・メール⑤・インフォマート⑤）と同じにしてある。
 // - 単位（個・P・袋・ケース(c/s)・斤・包）はわざとばらばら。変更・キャンセル・仮発注も入れてある。
-import type { EditRecord, Order, OrderChannel, OrderLine } from "./types";
+import type { EditRecord, Order, OrderChannel, OrderLine, SourceRef } from "./types";
 
 type L = [productId: string, quantity: number, unit: string, piecesPerUnit: number, edits?: EditRecord[]];
 
@@ -23,6 +23,28 @@ const iso = (mdhm: string) => {
   const [md, hm] = mdhm.split(" ");
   return `2026-${md}T${hm}:00+09:00`;
 };
+
+/** 入口らしい「元の資料」（画面で 元を見る に出る。どれも架空） */
+function refsFor(channel: OrderChannel, id: string, lines: L[], o: Opt): SourceRef[] {
+  const text = lines.map(([p, q, u]) => `${p} ${q}${u}`).join("、");
+  const tag = o.more?.intent === "change" ? "【変更】" : o.more?.intent === "cancel" ? "【取消】" : o.status === "provisional" ? "【仮発注】" : "";
+  switch (channel) {
+    case "line":
+      return [{ kind: "line_message", messageId: `m-${id}`, userId: `U-demo-${id}`, text: `${tag}あしたの分 ${text} おねがいします` }];
+    case "email":
+      return [{ kind: "email", messageId: `e-${id}`, subject: `${tag}11/6納品分 注文`, from: "order@example.com", attachmentName: id === "DO-17" ? "発注書.pdf" : undefined }];
+    case "infomart":
+      return [{ kind: "csv", fileName: "受注明細_デモ.csv", rowStart: 2, rowEnd: 1 + lines.length }];
+    case "customer_site":
+      return [{ kind: "csv", fileName: `edi_${id}.csv`, rowStart: 2, rowEnd: 1 + lines.length }];
+    case "phone":
+      return [{ kind: "manual", note: `${tag}電話で聞き取り：${text}` }];
+    case "driver":
+      return [{ kind: "manual", note: `${tag}ドライバーが納品時に聞き取り：${text}` }];
+    default:
+      return [{ kind: "manual", note: `${tag}FAX（デモ・紙は保存なし）：${text}` }];
+  }
+}
 
 let seq = 0;
 function order(id: string, customerId: string, deliveryDate: string, channel: OrderChannel, lines: L[], o: Opt): Order {
@@ -44,7 +66,7 @@ function order(id: string, customerId: string, deliveryDate: string, channel: Or
       confidence: 1,
       edits: edits ?? [],
     })),
-    source: { channel, refs: [{ kind: "manual", note: "デモ用の架空注文" }], receivedAt },
+    source: { channel, refs: refsFor(channel, id, lines, o), receivedAt },
     status,
     createdAt: receivedAt,
     confirmedAt: done ? receivedAt.replace(/T(\d\d)/, (_, h) => `T${String(Math.min(23, Number(h) + 1)).padStart(2, "0")}`) : undefined,

@@ -4,6 +4,7 @@
 //  - メール: 発注書 PDF を添付した下書き（.eml）
 import iconv from "iconv-lite";
 import { FACTORY, materialById, supplierById } from "@/data/master";
+import { findMaterial, findSupplier } from "@/lib/catalog";
 import type { PurchaseOrder } from "@/data/types";
 import { toCsv } from "../common";
 import { buildEml } from "../eml";
@@ -11,7 +12,10 @@ import { makeSimplePdf } from "../pdf";
 import { SITE_PROFILES, type SiteItem } from "./sites";
 
 /** ③の PurchaseOrderDraft など、PurchaseOrder に画面用の項目が足されたものも受け取る */
-export type PoLike = PurchaseOrder & { supplierName?: string; deliveryName?: string; notes?: string[] };
+/** ③の PurchaseOrderDraft / StoredPurchaseOrder のように、画面用の項目が足されたものもそのまま受け取る */
+export type PoLike = PurchaseOrder & { supplierName?: unknown; deliveryName?: unknown; notes?: unknown };
+const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
+const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
 export const HUB_SENDER = { name: FACTORY.name, email: "order@asahi-bakery.example", tel: "000-000-0001", fax: FACTORY.fax };
 
@@ -23,7 +27,7 @@ const fmtDate = (d: string) => {
 };
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, ""));
 /** 実際の量の単位（材料は kg / L、商品は 個） */
-const qtyUnit = (l: PurchaseOrder["lines"][number]) => (l.itemType === "material" ? (materialById(l.itemId)?.unit ?? "kg") : "個");
+const qtyUnit = (l: PurchaseOrder["lines"][number]) => (l.itemType === "material" ? (findMaterial(l.itemId)?.unit ?? materialById(l.itemId)?.unit ?? "kg") : "個");
 
 export interface EntryRow {
   no: number;
@@ -89,12 +93,14 @@ export function entryCsv(po: PoLike): { fileName: string; content: Buffer; note:
 }
 
 export function supplierLabel(po: PoLike) {
-  return po.supplierName ?? supplierById(po.supplierId)?.name ?? po.supplierId;
+  const name = str(po.supplierName) ?? findSupplier(po.supplierId)?.name ?? supplierById(po.supplierId)?.name ?? po.supplierId;
+  // マスターの「（デモ・○○相当）」の注記は、画面・発注書には出さない（実在の会社名を映さないため）
+  return name.replace(/・[^（）]*相当/, "");
 }
 
 /** FAX・メール添付用の発注書 PDF */
 export function purchasePdf(po: PoLike): Promise<Buffer> {
-  const sup = supplierById(po.supplierId);
+  const sup = findSupplier(po.supplierId) ?? supplierById(po.supplierId);
   return makeSimplePdf({
     title: "発 注 書",
     headerRight: [`発注番号 ${po.id}`, `発注日 ${fmtDate(new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10))}`],
@@ -102,7 +108,7 @@ export function purchasePdf(po: PoLike): Promise<Buffer> {
     from: [HUB_SENDER.name, `TEL ${HUB_SENDER.tel}`, `FAX ${HUB_SENDER.fax}`],
     lead: [
       "いつもお世話になっております。下記のとおり発注いたします。",
-      `納品希望日：${fmtDate(po.deliveryDate)}${po.deliveryName ? `（${po.deliveryName}）` : ""}`,
+      `納品希望日：${fmtDate(po.deliveryDate)}${str(po.deliveryName) ? `（${str(po.deliveryName)}）` : ""}`,
     ],
     table: {
       columns: [
@@ -116,7 +122,7 @@ export function purchasePdf(po: PoLike): Promise<Buffer> {
         .filter((l) => l.units > 0)
         .map((l, i) => [String(i + 1), l.name, fmtNum(l.units), l.unitLabel, `${fmtNum(l.quantity)} ${qtyUnit(l)}`]),
     },
-    notes: ["ご不明な点は上記までご連絡ください。", ...(po.notes ?? []).map((n) => `※${n}`)],
+    notes: ["ご不明な点は上記までご連絡ください。", ...strs(po.notes).map((n) => `※${n}`)],
     footer: [
       `承認: ${po.approvedBy ?? "（未承認）"}　この発注書は受発注ハブで作成し、担当者の承認後に送付しています。`,
     ],
@@ -125,7 +131,7 @@ export function purchasePdf(po: PoLike): Promise<Buffer> {
 
 /** メールの下書き（.eml）。To は仕入先の連絡先がメールアドレスならそれ。送信は人が行う */
 export async function emailDraft(po: PoLike, pdf: Buffer): Promise<{ fileName: string; content: string; to: string; subject: string }> {
-  const sup = supplierById(po.supplierId);
+  const sup = findSupplier(po.supplierId) ?? supplierById(po.supplierId);
   const to = sup?.contact && /@/.test(sup.contact) ? sup.contact : "（宛先を入れてください）";
   const subject = `【発注】${fmtDate(po.deliveryDate)}納品分（${po.id}）`;
   const lines = po.lines.filter((l) => l.units > 0).map((l) => `・${l.name}　${l.unitLabel} × ${fmtNum(l.units)}`);

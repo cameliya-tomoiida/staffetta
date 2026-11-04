@@ -6,7 +6,7 @@ import { readDb } from "@/lib/store";
 import { ImportPanel } from "./ImportPanel";
 import { ChannelBadge, fmtDate, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
 
-const channelLabel: Record<string, string> = { email: "メール", google_sheet: "シート", customer_site: "きららサイト", infomart: "インフォマート" };
+const channelLabel: Record<string, string> = { email: "メール", google_sheet: "シート", customer_site: "専用サイト", infomart: "インフォマート" };
 const intentLabel: Record<string, string> = { change: "変更", cancel: "キャンセル" };
 
 async function list(dir: string, ext: string) {
@@ -23,7 +23,7 @@ export default async function ImportPage() {
   const samples = { email: await list("email", ".eml"), kirara: await list("kirara", ".csv"), infomart: await list("infomart", ".csv") };
   return (
     <div className="space-y-6">
-      <PageHeader title="外部の入口から取り込む" lead="メール・スプレッドシート・きららサイト・インフォマートの注文を、受注一覧に「要確認」で入れます。確定するのは人です。" />
+      <PageHeader title="外部の入口から取り込む" lead="メール・スプレッドシート・得意先の専用サイト・インフォマートの注文を、受注一覧に「要確認」で入れます。確定するのは人です。" />
       <ImportPanel samples={samples} />
       <section className="card p-4">
         <h2 className="mb-2 text-xl font-black">取り込んだ注文（{orders.length} 件）</h2>
