@@ -4,6 +4,7 @@ import { readDb } from "@/lib/store";
 import { ReadAllButton, ReadButton } from "@/components/ReadButton";
 import { ResetButton } from "@/components/ResetButton";
 import { PdfThumb } from "@/components/PdfThumb";
+import { InboxWatcher } from "@/components/InboxWatcher";
 
 
 const statusLabel = {
@@ -23,6 +24,7 @@ export default async function Inbox() {
   const others = db.faxes.filter((f) => f.status === "other");
   return (
     <div className="space-y-6">
+      <InboxWatcher />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black">FAX受信箱</h1>
@@ -37,7 +39,7 @@ export default async function Inbox() {
         <div className="rounded-xl bg-amber-100 px-4 py-3 font-bold text-amber-900">確認待ちのFAXが {waiting} 件あります</div>
       )}
       <div className="grid gap-4 md:grid-cols-3">
-        {main.map((f) => {
+        {[...main].reverse().map((f) => {
           const s = statusLabel[f.status];
           const cust = f.customerId ? customerById(f.customerId)?.name : f.read?.sender.name;
           const lines = f.read?.orders.reduce((n, o) => n + o.lines.length, 0) ?? 0;
@@ -50,7 +52,7 @@ export default async function Inbox() {
               <div className="flex flex-1 flex-col gap-2 p-4">
                 <div className="flex items-center justify-between">
                   <span className={`pill ${s.cls}`}>{s.text}</span>
-                  <span className="text-xs text-black/50">{new Date(f.receivedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 受信</span>
+                  <span className="text-xs text-black/50">{f.via === "gmail" || f.via === "simulate" ? "📧 Gmail経由・" : ""}{new Date(f.receivedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 受信</span>
                 </div>
                 <div className="font-bold">{cust ?? <span className="text-black/50">{f.label}</span>}</div>
                 {f.read && f.read.kind !== "order" && (

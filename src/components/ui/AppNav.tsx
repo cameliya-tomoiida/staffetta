@@ -1,0 +1,35 @@
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const nav = [
+  { href: "/", label: "FAX受信", match: (p: string) => p === "/" || p.startsWith("/fax") },
+  { href: "/orders", label: "受注一覧", match: (p: string) => p.startsWith("/orders") },
+  { href: "/plan", label: "製造計画・工程表", match: (p: string) => p.startsWith("/plan") },
+  { href: "/purchase", label: "発注書", match: (p: string) => p.startsWith("/purchase") },
+];
+
+/** 上のメニュー。今いる画面に下線。スマホでは横にすべらせる */
+export function AppNav() {
+  const path = usePathname() ?? "/";
+  return (
+    <nav className="-mb-px flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="メニュー">
+      {nav.map((n, i) => {
+        const on = n.match(path);
+        return (
+          <Link
+            key={n.href}
+            href={n.href}
+            aria-current={on ? "page" : undefined}
+            className={`flex min-h-12 shrink-0 items-center gap-1.5 border-b-4 px-3 font-bold whitespace-nowrap ${
+              on ? "border-crust-600 text-ink" : "border-transparent text-ink-soft hover:text-ink"
+            }`}
+          >
+            <span className={`num grid h-6 w-6 place-items-center rounded-full text-sm ${on ? "bg-crust-600 text-white" : "bg-black/8 text-ink-soft"}`}>{i + 1}</span>
+            {n.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

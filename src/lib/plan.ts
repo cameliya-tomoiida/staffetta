@@ -5,6 +5,10 @@ import {
   supplierById, type Dough, type Line, type StepKey,
 } from "@/data/master";
 import type { Order } from "@/data/types";
+import { countsInTotals } from "./aggregate";
+
+// 古い下書き。新しい関数は aggregate.ts / purchase.ts / production.ts / materials.ts / pipeline.ts（src/lib/README.md）。
+// 画面が移ったら消す。集計の決まり（intent=change/cancel・仮発注を数えない）だけはここも合わせてある。
 
 export interface ProductTotal {
   productId: string;
@@ -15,7 +19,7 @@ export interface ProductTotal {
 /** 確定済みの注文だけを、納品日ごと・商品ごとに合計する（入口がFAXでもLINEでも同じ） */
 export function totalsByProduct(orders: Order[], date: string): ProductTotal[] {
   const map = new Map<string, ProductTotal>();
-  for (const o of orders.filter((o) => o.status === "confirmed" && o.deliveryDate === date)) {
+  for (const o of orders.filter((o) => countsInTotals(o) && o.deliveryDate === date)) {
     for (const l of o.lines) {
       const t = map.get(l.productId) ?? { productId: l.productId, pieces: 0, customers: [] };
       t.pieces += l.pieces;
@@ -30,7 +34,7 @@ export function totalsByProduct(orders: Order[], date: string): ProductTotal[] {
 }
 
 export function deliveryDates(orders: Order[]): string[] {
-  return [...new Set(orders.filter((o) => o.status === "confirmed").map((o) => o.deliveryDate))].sort();
+  return [...new Set(orders.filter(countsInTotals).map((o) => o.deliveryDate))].sort();
 }
 
 /** 仕入品: 仕入先の入数でしか買えないものを袋数に直す（例: 65個 → 6個入×11袋・余り1） */
