@@ -60,7 +60,7 @@ describe("製造計画", () => {
     const pizza = plan.lines.find((l) => l.line === "pizza")!;
     expect(pizza.cap).toBe(1800);
     expect(pizza.overBy).toBe(100);
-    expect(plan.warnings.join()).toMatch(/1,800個を 100個 超えています/);
+    expect(plan.warnings.join()).toMatch(/1,800枚を 100枚 超えています/);
   });
 
   it("1,800枚ちょうどなら警告なし", () => {

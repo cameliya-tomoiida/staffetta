@@ -58,6 +58,8 @@ export interface RepackJob {
 export interface LinePlan {
   line: Line;
   name: string;
+  /** 数の単位（個・枚） */
+  unit: string;
   pieces: number;
   /** その日の上限（なければ undefined） */
   cap?: number;
@@ -135,8 +137,8 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
       }
     const overBy = cap !== undefined ? Math.max(0, pieces - cap) : 0;
     const lw: string[] = [];
-    if (overBy > 0) lw.push(`${ls.name} ${fmtNum(pieces)}個: ${capReason} ${fmtNum(cap!)}個を ${fmtNum(overBy)}個 超えています`);
-    return { line, name: ls.name, pieces, cap, capReason, overBy, doughs: lineDoughs, warnings: lw };
+    if (overBy > 0) lw.push(`${ls.name} ${fmtNum(pieces)}${ls.unit}: ${capReason} ${fmtNum(cap!)}${ls.unit}を ${fmtNum(overBy)}${ls.unit} 超えています`);
+    return { line, name: ls.name, unit: ls.unit, pieces, cap, capReason, overBy, doughs: lineDoughs, warnings: lw };
   });
 
   return {

@@ -383,6 +383,8 @@ export const productSpecs: Record<string, ProductSpec> = {
 export interface LineSetting {
   line: Line;
   name: string;
+  /** 数の単位（パン=個、ピザ=枚） */
+  unit: string;
   /** 1日の上限（個・枚）。超えたら警告 */
   dailyCap?: number;
   /** 当日の作業開始（0:00 からの分） */
@@ -390,6 +392,6 @@ export interface LineSetting {
 }
 
 export const lineSettings: Record<Line, LineSetting> = {
-  bread: { line: "bread", name: "パンライン", startMinute: 4 * 60 },
-  pizza: { line: "pizza", name: "ピザライン", dailyCap: 1800, startMinute: 8 * 60 },
+  bread: { line: "bread", name: "パンライン", unit: "個", startMinute: 4 * 60 },
+  pizza: { line: "pizza", name: "ピザライン", unit: "枚", dailyCap: 1800, startMinute: 8 * 60 },
 };
