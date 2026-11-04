@@ -465,6 +465,27 @@ export interface CourseMaster {
   active: boolean;
 }
 
+/**
+ * 定期注文（毎週同じ曜日に同じものを頼む得意先の「いつもの」）。1行 = 得意先 × 曜日 × 商品。
+ * この表から週ごとに「要確認」の注文を作り、人が確かめて確定する（generateStandingOrders）。
+ */
+export interface StandingOrderMaster {
+  id: string;
+  customerId: string;
+  /** 納品する曜日（0=日〜6=土） */
+  weekday: number;
+  productId: string;
+  quantity: number;
+  /** 書く単位（個・P・袋・c/s など）と、1単位の個数 */
+  unit: string;
+  piecesPerUnit: number;
+  /** この日から／この日まで（YYYY-MM-DD。空なら いつでも） */
+  from?: string;
+  to?: string;
+  note?: string;
+  active: boolean;
+}
+
 /** 班（朝班・夜班）。時間帯と人数 */
 export interface ShiftMaster {
   id: string;
@@ -502,6 +523,7 @@ export interface Masters {
   supplierDeliveries: SupplierDeliveryMaster[];
   customers: CustomerMaster[];
   courses: CourseMaster[];
+  standingOrders: StandingOrderMaster[];
   shifts: ShiftMaster[];
   staffAssignments: StaffAssignmentMaster[];
 }

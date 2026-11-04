@@ -4,7 +4,7 @@
 import { customers as masterCustomers } from "@/data/master";
 import { customerDeliveryTime, doughRecipes, lineSettings, toppingRecipes, type ProcessStep } from "@/data/production";
 import type {
-  CourseMaster, CustomerMaster, DoughMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
+  CourseMaster, CustomerMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster, SupplierMaster,
 } from "@/data/types";
 import { legacyMaterials as allMaterials, legacyProducts as allProducts, legacySuppliers as allSuppliers } from "./legacy";
@@ -156,6 +156,19 @@ const CUSTOMER_COURSE: Record<string, { course: string; deliveryTime: string; de
   C13: { course: "ヤマト便", deliveryTime: "09:00" },
 };
 
+// ───────── 定期注文（架空） ─────────
+const so = (customerId: string, weekdays: number[], productId: string, quantity: number, unit = "個", piecesPerUnit = 1): StandingOrderMaster[] =>
+  weekdays.map((w) => ({ id: `SO-${customerId}-${w}-${productId}`, customerId, weekday: w, productId, quantity, unit, piecesPerUnit, active: true }));
+
+export const SAMPLE_STANDING_ORDERS: StandingOrderMaster[] = [
+  // グループホーム: 火・木・土に、いつものロールと食パン（ドライバーが聞き取っていた分）
+  ...so("C05", [2, 4, 6], "P01", 30),
+  ...so("C05", [2, 4, 6], "P03", 2, "斤"),
+  // 喫茶店: 月〜土の朝に黒糖ロールとふんわりロール
+  ...so("C04", [1, 2, 3, 4, 5, 6], "P02", 20),
+  ...so("C04", [1, 2, 3, 4, 5, 6], "P18", 16),
+];
+
 // ───────── まとめ ─────────
 export function sampleMasters(): Masters {
   const lines: LineMaster[] = Object.values(lineSettings).map((l) => ({
@@ -242,6 +255,7 @@ export function sampleMasters(): Masters {
     supplierDeliveries,
     customers,
     courses: SAMPLE_COURSES,
+    standingOrders: SAMPLE_STANDING_ORDERS,
     shifts: SAMPLE_SHIFTS,
     staffAssignments: SAMPLE_STAFF,
   };
