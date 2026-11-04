@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Customer } from "@/data/master";
 import type { Order } from "@/data/types";
 import type { FaxDoc, FaxTemplate } from "@/lib/types";
-import { approveTemplateAction, confirmChangeAction, confirmFaxAction, sortFaxAction } from "@/app/actions";
+import { addAliasAction, approveTemplateAction, confirmChangeAction, confirmFaxAction, sortFaxAction } from "@/app/actions";
 import { PdfView } from "@/components/PdfView";
 import { NumPad } from "@/components/NumPad";
 import { ReadButton } from "@/components/ReadButton";
@@ -27,7 +27,10 @@ interface Row {
   productId: string;
   piecesPerUnit: number;
   removed: boolean;
+  level: Level;
 }
+
+type Level = "high" | "mid" | "low";
 
 const STAFF = ["事務 たなか", "製造 グエン", "専務 はやし"];
 
@@ -40,7 +43,7 @@ const kindInfo = {
 } as const;
 
 export function ReviewClient({
-  fax, orders, others, templates, customers, products,
+  fax, orders, others, templates, customers, products, levels, aliases,
 }: {
   fax: FaxDoc;
   orders: Order[]; // このFAXから作った注文
@@ -48,8 +51,13 @@ export function ReviewClient({
   templates: Record<string, FaxTemplate>;
   customers: Customer[];
   products: { id: string; name: string }[];
+  /** 行（"注文の番号-行の番号"）ごとの自信度の段階 */
+  levels: Record<string, Level>;
+  /** 名寄せ辞書 { 取引先ID: { 呼び名: 商品ID } } */
+  aliases: Record<string, Record<string, string>>;
 }) {
   const read = fax.read!;
+  const [learned, setLearned] = useState<Record<string, string>>({}); // この画面で辞書に入れたもの（"取引先|呼び名" → 商品ID）
   const kind = read.kind;
   const done = fax.status === "confirmed" || fax.status === "other";
   const router = useRouter();
@@ -80,10 +88,11 @@ export function ReviewClient({
             productId: cur?.productId ?? l.product_id,
             piecesPerUnit: cur?.piecesPerUnit ?? (l.pieces_per_unit || 1),
             removed: confirmedOrder ? !cur : false,
+            level: levels[`${oi}-${li}`] ?? "mid",
           };
         });
       }),
-    [read, orders, fax.id, done, kind],
+    [read, orders, fax.id, done, kind, levels],
   );
   const [rows, setRows] = useState(initial);
   const [customerId, setCustomerId] = useState(fax.customerId ?? "");
@@ -94,7 +103,8 @@ export function ReviewClient({
 
   const update = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "（商品を選んでください）";
-  const needsLook = (r: Row) => !!r.attention || r.confidence < 0.8 || !r.productId;
+  const needsLook = (r: Row) => r.level !== "high" || !r.productId;
+  const inDict = (r: Row) => (learned[`${customerId}|${r.writtenName}`] ?? aliases[customerId]?.[r.writtenName]) === r.productId;
   const changed = (r: Row) => r.quantity !== r.aiQuantity || r.productId !== r.aiProductId || r.piecesPerUnit !== r.aiPieces || r.removed;
   const flagged = rows.filter((r) => !r.removed && needsLook(r)).length;
   const dates = [...new Set(rows.map((r) => `${r.orderIndex}|${r.deliveryDate}`))];
@@ -131,6 +141,12 @@ export function ReviewClient({
       }
     });
   };
+  // 「辞書に登録」の1タップ（①の addAliasAction）。画面は移らない
+  const learn = (r: Row) =>
+    run(async () => {
+      await addAliasAction({ customerId, alias: r.writtenName, productId: r.productId, who, source: "fax" });
+      setLearned((m) => ({ ...m, [`${customerId}|${r.writtenName}`]: r.productId }));
+    }, "");
 
   const submit = () =>
     kind === "change"
@@ -311,6 +327,12 @@ export function ReviewClient({
                       className="rounded-lg border px-2 py-1 font-bold" />
                     {read.orders[Number(oi)]?.delivery_place && <span className="text-sm text-ink-soft">納品場所: {read.orders[Number(oi)].delivery_place}</span>}
                   </div>
+                  {!done && (
+                    <div className="mb-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-soft">
+                      <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3.5 w-5 rounded-sm bg-review-bg ring-1 ring-review-line" />黄色＝念のため見る</span>
+                      <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3.5 w-5 rounded-sm bg-sheet ring-2 ring-alert-line" />赤い枠＝かならずFAXと見比べる</span>
+                    </div>
+                  )}
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-xs text-ink-faint">
@@ -326,11 +348,23 @@ export function ReviewClient({
                         const orig = kind === "change" ? findOriginal(r) : null;
                         return (
                           <tr key={i} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}
-                            className={`border-t border-rule align-top ${r.removed ? "opacity-40 line-through" : look ? "bg-review-bg" : ""} ${selected === i ? "outline outline-2 outline-review-line" : ""}`}>
+                            className={`border-t border-rule align-top ${
+                              r.removed
+                                ? "opacity-40 line-through"
+                                : r.level === "low"
+                                  ? "bg-alert-bg/50 outline outline-[3px] -outline-offset-[3px] outline-alert-line"
+                                  : look
+                                    ? "bg-review-bg"
+                                    : ""
+                            } ${selected === i && (r.removed || r.level !== "low") ? "outline outline-2 -outline-offset-2 outline-review-line" : ""}`}>
                             <td className="py-2 pr-2">
                               <div className="font-bold">{r.writtenName}</div>
                               {r.attention && <div className="mt-0.5 text-xs font-bold text-review-ink">{r.attention}</div>}
-                              {r.confidence < 0.8 && !r.attention && <div className="mt-0.5 text-xs text-review-ink">読み取りの自信が低め（{Math.round(r.confidence * 100)}%）</div>}
+                              {r.level === "low" ? (
+                                <div className="mt-0.5 text-xs font-bold text-alert-ink">読み取りの自信が低い（{Math.round(r.confidence * 100)}%）。かならずFAXと見比べてください</div>
+                              ) : r.level === "mid" && !r.attention ? (
+                                <div className="mt-0.5 text-xs text-review-ink">読み取りの自信が少し低め（{Math.round(r.confidence * 100)}%）</div>
+                              ) : null}
                             </td>
                             <td className="py-2 pr-2">
                               <select disabled={done || r.removed} value={r.productId} onChange={(e) => update(i, { productId: e.target.value })}
@@ -339,6 +373,24 @@ export function ReviewClient({
                                 {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                               {r.productId !== r.aiProductId && <div className="text-xs text-info-ink">AIの候補: {r.aiProductId ? productName(r.aiProductId) : "なし"}</div>}
+                              {customerId && r.productId && !r.removed && (
+                                inDict(r) ? (
+                                  <div className="mt-1 text-xs text-ok-ink">辞書に登録ずみ</div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={pending}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      learn(r);
+                                    }}
+                                    title={`「${r.writtenName}」を「${productName(r.productId)}」として覚えます`}
+                                    className="mt-1 min-h-9 rounded-md border-2 border-crust-600 bg-sheet px-2 text-xs font-bold text-crust-700 hover:bg-crust-50"
+                                  >
+                                    辞書に登録
+                                  </button>
+                                )
+                              )}
                             </td>
                             {kind === "change" && (
                               <td className="py-2 pr-2 text-right whitespace-nowrap">
