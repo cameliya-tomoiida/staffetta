@@ -32,7 +32,7 @@ export function AppNav() {
               on ? "border-crust-600 text-ink" : "border-transparent text-ink-soft hover:text-ink"
             }`}
           >
-            <span className={`num grid h-6 w-6 place-items-center rounded-full text-sm ${on ? "bg-crust-600 text-white" : "bg-black/8 text-ink-soft"}`}>{i + 1}</span>
+            <span className={`num grid h-6 w-6 place-items-center rounded-full text-sm ${on ? "bg-crust-600 text-white" : "bg-cream text-ink-soft"}`}>{i + 1}</span>
             {n.label}
           </Link>
         );

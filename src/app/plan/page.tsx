@@ -4,7 +4,7 @@ import type { ProcessKey } from "@/data/production";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
 import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
-import { addDays, Empty, fmtDate, fmtNum, Icon, MachineTranslated, Notice } from "@/components/ui";
+import { addDays, Empty, fmtDate, fmtNum, Icon, MachineTranslated, Notice, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf, provisionalForDate } from "@/lib/aggregate";
 import { findProduct } from "@/lib/catalog";
@@ -20,20 +20,21 @@ export const metadata = { title: "製造計画・工程表｜受発注ハブ" };
 
 /** 工程の色（落ち着いた色。隣どうしが見分けられるように） */
 const stepColor: Record<ProcessKey, string> = {
-  weigh: "#d8cdb6",
-  mix: "#c9b48a",
-  ferment: "#e3d3a3",
-  divide: "#a9c0a0",
-  bench: "#cfdcc4",
-  shape: "#8fae9b",
-  retard: "#b9cfd9",
-  proof: "#e6c79a",
-  topping: "#d9a98c",
-  bake: "#c98a5a",
-  cool: "#a9bfcf",
-  freeze: "#8fb0cc",
-  pack: "#b8b0c8",
-  metal_check: "#d98f8f",
+  // 落ち着いた生成り・灰色の濃淡。焼成だけ椿の赤に寄せ、冷やす工程は灰青（名前と時刻を必ず一緒に出す）
+  weigh: "#efe9df",
+  mix: "#ddd2c1",
+  ferment: "#ece2cc",
+  divide: "#e4ddd1",
+  bench: "#f3eee6",
+  shape: "#cfc5b5",
+  retard: "#dfe5eb",
+  proof: "#e8dabf",
+  topping: "#ead5d1",
+  bake: "#d4a49b",
+  cool: "#dde4ea",
+  freeze: "#c8d3de",
+  pack: "#e3ddd5",
+  metal_check: "#f7e6e2",
 };
 const STEPS = Object.keys(stepColor) as ProcessKey[];
 
@@ -77,7 +78,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   return (
     <div lang={langInfo(lang).htmlLang}>
       {/* 見出し */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-ink pb-3">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
         <div>
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">{t("plan_title")}</h1>
           {lang !== "ja" && <div className="text-sm text-ink-faint">製造計画・工程表</div>}
@@ -88,7 +89,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
             <Link
               key={d}
               href={href({ date: d })}
-              className={`num inline-flex min-h-12 items-center rounded-lg border px-4 font-bold ${d === date ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"}`}
+              className={choiceClass(d === date, "num inline-flex min-h-12 items-center px-4")}
             >
               {fmtDate(d)}
               {d === tomorrow && <span className="ml-1.5 text-sm opacity-75">{t("tomorrow")}</span>}
@@ -111,14 +112,16 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       {/* 計算の注意（管理者向け・日本語） */}
       {lateMaterials.length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="no-print mb-3">
-          <div lang="ja">
-            <div className="mb-1">間に合わない材料があります（発注書には入っていません）。</div>
-            <ul className="list-disc pl-5 font-normal">
+          <details lang="ja">
+            <summary className="cursor-pointer">
+              間に合わない材料が <span className="num">{lateMaterials.length}</span> 件あります（発注書には入っていません）。押すと一覧を出します。
+            </summary>
+            <ul className="mt-1 list-disc pl-5 font-normal">
               {lateMaterials.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
             </ul>
-          </div>
+          </details>
         </Notice>
       )}
       {otherWarnings.length > 0 && (
@@ -347,7 +350,7 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
                       <span
                         key={`${s.key}-${i}`}
                         title={`${stepName(lang, s.key, s.name)} ${fmtTime(s.start)}–${fmtTime(s.end)}`}
-                        className={`absolute inset-y-1 overflow-hidden rounded-[3px] border px-1 text-[0.7rem] leading-8 font-bold whitespace-nowrap text-ink ${s.ccp ? "border-alert-ink border-2" : "border-black/15"}`}
+                        className={`absolute inset-y-1 overflow-hidden rounded-[3px] border px-1 text-[0.7rem] leading-8 font-bold whitespace-nowrap text-ink ${s.ccp ? "border-2 border-crust-600" : "border-rule-strong"}`}
                         style={{ left: pct(s.start), width: `calc(${pct(s.end)} - ${pct(s.start)})`, background: stepColor[s.key] }}
                       >
                         {s.end - s.start >= 30 ? stepName(lang, s.key, s.name) : ""}
@@ -360,7 +363,7 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
           <div className="mt-2 ml-36 flex flex-wrap gap-x-3 gap-y-1 text-xs">
             {used.map((k) => (
               <span key={k} className="inline-flex items-center gap-1">
-                <span className="inline-block h-3 w-4 rounded-[2px] border border-black/15" style={{ background: stepColor[k] }} />
+                <span className="inline-block h-3 w-4 rounded-[2px] border border-rule-strong" style={{ background: stepColor[k] }} />
                 {tr(lang, k as Key)}
               </span>
             ))}

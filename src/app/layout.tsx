@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "FAX・電話の注文から、製造計画と材料の発注までをつなぐ中小パン工場向けのしくみ",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#f6f3ec" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

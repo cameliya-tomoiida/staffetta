@@ -2,7 +2,7 @@
 // ことばの切り替え（1行の小さなボタン）。選んだことばはこのタブレットが覚える（cookie）。
 import Link from "next/link";
 import { LANG_COOKIE, LANGS, type Lang } from "@/i18n/langs";
-import { Icon } from "@/components/ui";
+import { choiceClass, Icon } from "@/components/ui";
 
 
 
@@ -21,9 +21,7 @@ export function LangPicker({ lang, hrefFor }: { lang: Lang; hrefFor: Record<stri
             onClick={() => {
               document.cookie = `${LANG_COOKIE}=${l.code}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
             }}
-            className={`flex min-h-12 shrink-0 items-center rounded-lg border px-3 font-bold whitespace-nowrap ${
-              l.code === lang ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"
-            }`}
+            className={choiceClass(l.code === lang, "flex min-h-12 shrink-0 items-center px-3 whitespace-nowrap")}
           >
             {l.native}
           </Link>

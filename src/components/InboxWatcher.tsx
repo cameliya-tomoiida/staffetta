@@ -37,8 +37,8 @@ export function InboxWatcher() {
 
   if (!arrived) return null;
   return (
-    <div style={{ position: "fixed", right: 24, bottom: 24, zIndex: 40 }} className="rounded-2xl bg-crust-600 px-5 py-4 text-white shadow-lg ring-4 ring-crust-200">
-      <div className="text-lg font-black">📠 新しいFAXが届きました（{arrived}件）</div>
+    <div style={{ position: "fixed", right: 24, bottom: 24, zIndex: 40 }} className="rounded-lg bg-crust-600 px-5 py-4 text-white border-2 border-crust-700">
+      <div className="text-lg font-black">新しいFAXが届きました（{arrived}件）</div>
       <div className="text-sm opacity-90">Claudeが読み取りを始めています</div>
       <button className="mt-2 text-sm underline" onClick={() => setArrived(0)}>閉じる</button>
     </div>

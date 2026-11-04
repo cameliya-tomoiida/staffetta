@@ -7,7 +7,7 @@ import type { Order } from "@/data/types";
 import { customers } from "@/data/master";
 import { findProduct } from "@/lib/catalog";
 import { NumPad } from "@/components/NumPad";
-import { Button, Icon, Notice } from "@/components/ui";
+import { Button, Icon, Notice, choiceClass } from "@/components/ui";
 import { notifyLineConfirmedAction } from "@/lib/channels/line/actions";
 import { confirmOrderAction } from "./actions";
 import { notifyHubChanged } from "@/components/ui/refresh";
@@ -72,7 +72,7 @@ export function ConfirmButton({ order, who, custName }: { order: Order; who: str
                     type="button"
                     onClick={() => setCust(c.id)}
                     aria-pressed={cust === c.id}
-                    className={`min-h-12 rounded-lg border px-3 text-left font-bold ${cust === c.id ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"}`}
+                    className={choiceClass(cust === c.id, "min-h-12 px-3 text-left")}
                   >
                     {c.name}
                   </button>
@@ -166,8 +166,8 @@ export function LineNotifyButton({ orderId, preview, who }: { orderId: string; p
       </Button>
       {open && (
         <Sheet title="お客さんのLINEに送る文面" onClose={() => setOpen(false)}>
-          <div className="rounded-lg bg-[#8cabd9]/25 p-3">
-            <div className="max-w-full rounded-2xl rounded-tr-sm bg-[#e5f4e1] px-4 py-3 whitespace-pre-wrap">{preview}</div>
+          <div className="rounded-lg bg-paper p-3">
+            <div className="max-w-full rounded-2xl rounded-tr-sm border border-rule bg-cream px-4 py-3 whitespace-pre-wrap">{preview}</div>
           </div>
           <p className="mt-2 text-sm text-ink-soft">送るのは1回だけです。送ったあとは、この注文に「連絡済み」と出ます。</p>
           {error && <Notice tone="alert" className="mt-3">{error}</Notice>}
