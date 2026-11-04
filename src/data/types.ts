@@ -13,7 +13,7 @@ export type OrderChannel =
   | "fax" // 複合機 → Gmail転送 → PDF
   | "line" // お客さんが LINE 公式アカウントから発注
   | "infomart" // インフォマート（受注）
-  | "customer_site" // 取引先の専用サイト（例: きらら医療食品の発注サイト＝受注）
+  | "customer_site" // 取引先の専用の発注サイト（取引先が工場へ注文してくるサイト＝受注）
   | "email" // メール本文・添付で届く
   | "google_sheet" // お客さんの Google スプレッドシートの注文書を読みに行く
   | "phone"
@@ -129,10 +129,10 @@ export type PurchaseMethod =
   | "fax"
   | "infomart"
   | "aspit" // アスピット
-  | "hinode_site" // ひので製パンの発注サイト
-  | "kirara_site" // きららの発注サイト
-  | "fujimi_site" // ふじみの受発注サイト
-  | "kogane_site" // こがね食品のサイト
+  | "hinode_site" // 仕入先（大手製パン）の受発注サイト
+  | "kirara_site" // 仕入先（食品メーカー）の受発注サイト
+  | "fujimi_site" // 仕入先（製パン）の受発注サイト
+  | "kogane_site" // 仕入先（食品）の受発注サイト
   | "phone";
 
 export interface PurchaseOrderLine {

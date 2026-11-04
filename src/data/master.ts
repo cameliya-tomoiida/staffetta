@@ -117,8 +117,8 @@ export const suppliers: Supplier[] = [
   { id: "S04", name: "まるやま食材（デモ）", method: "infomart", cutoff: "16:00", leadDays: 2, contact: "インフォマート" },
   { id: "S05", name: "みどり包材（デモ）", method: "aspit", cutoff: "15:00", leadDays: 3, contact: "アスピット" },
   { id: "S06", name: "きらら食品（デモ）", method: "kirara_site", cutoff: "12:00", leadDays: 2, contact: "メーカーの発注サイト" },
-  { id: "S07", name: "ふじみ製パン（デモ・ふじみ相当）", method: "fujimi_site", cutoff: "11:00", leadDays: 1, contact: "受発注サイト" },
-  { id: "S08", name: "こがね食品（デモ・こがね相当）", method: "kogane_site", cutoff: "14:00", leadDays: 2, contact: "発注サイト" },
+  { id: "S07", name: "ふじみ製パン（デモ）", method: "fujimi_site", cutoff: "11:00", leadDays: 1, contact: "受発注サイト" },
+  { id: "S08", name: "こがね食品（デモ）", method: "kogane_site", cutoff: "14:00", leadDays: 2, contact: "発注サイト" },
 ];
 
 export const materials: Material[] = [
