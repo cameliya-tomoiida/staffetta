@@ -91,7 +91,7 @@ export function ReviewClient({ fax, orders, customers, products }: { fax: FaxDoc
             .filter((r) => !r.removed)
             .map((r) => ({ orderIndex: r.orderIndex, lineIndex: r.lineIndex, deliveryDate: r.deliveryDate, productId: r.productId, quantity: r.quantity, piecesPerUnit: r.piecesPerUnit })),
         });
-        router.push("/orders");
+        router.push("/");
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -157,7 +157,7 @@ export function ReviewClient({ fax, orders, customers, products }: { fax: FaxDoc
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-xs text-black/50">
-                        <th className="py-1">FAXに書いてある品名</th><th>商品</th><th className="text-right">数量</th><th className="text-right">個数</th><th />
+                        <th className="py-1">FAXに書いてある品名</th><th className="w-44">商品</th><th className="text-right">数量</th><th className="text-right">個数</th><th />
                       </tr>
                     </thead>
                     <tbody>

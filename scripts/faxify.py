@@ -11,18 +11,18 @@ out.mkdir(parents=True, exist_ok=True)
 def faxify(name, angle=0.0, flip=False):
     im = Image.open(src / f"{name}.png").convert("L")
     w, h = im.size
-    im = im.resize((int(w * 0.62), int(h * 0.62)), Image.BILINEAR)  # 約200dpi相当に落とす
+    im = im.resize((int(w * 1.3), int(h * 1.3)), Image.LANCZOS)  # FAXの標準〜ファイン程度の解像度
     im = im.rotate(angle, resample=Image.BICUBIC, expand=False, fillcolor=255)
-    im = im.filter(ImageFilter.GaussianBlur(0.6))
+    im = im.filter(ImageFilter.GaussianBlur(0.4))
     px = im.load()
     W, H = im.size
-    for _ in range(W * H // 900):  # ゴミ点
+    for _ in range(W * H // 4000):  # ゴミ点
         x, y = random.randrange(W), random.randrange(H)
         px[x, y] = 0
-    im = im.point(lambda v: 0 if v < 150 else 255).convert("L")  # 白黒2値（PDFはグレースケールで保存）
+    im = im.point(lambda v: 0 if v < 175 else 255).convert("L")  # 白黒2値（PDFはグレースケールで保存）
     if flip:
         im = im.rotate(180)
-    im.save(out / f"{name}.pdf", "PDF", resolution=150)
+    im.save(out / f"{name}.pdf", "PDF", resolution=200)
     print("wrote", out / f"{name}.pdf", im.size)
 
 faxify("fax1", angle=0.6)
