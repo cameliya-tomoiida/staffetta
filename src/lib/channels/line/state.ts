@@ -13,6 +13,8 @@ export interface LineUser {
   displayName?: string;
   /** 初回にお客さんが自分で入れたお店の名前（人がひも付けるときの手がかり） */
   claimedName?: string;
+  /** 最初に届いた文章（どのお店か人が見分ける手がかり） */
+  firstMessage?: string;
   firstSeenAt: string;
   lastSeenAt: string;
   /** 人が確認してひも付けた得意先 */
@@ -33,13 +35,23 @@ export interface OutboxItem {
   orderId?: string;
 }
 
+/** ひも付け・解除の履歴（だれが・いつ・どのお店に） */
+export interface LinkLogItem {
+  at: string;
+  userId: string;
+  action: "link" | "unlink";
+  customerId: string;
+  who: string;
+}
+
 export interface LineState {
   users: Record<string, LineUser>;
   outbox: OutboxItem[];
+  linkLog: LinkLogItem[];
 }
 
 const FILE = path.join(process.cwd(), "data", "line.json");
-const empty = (): LineState => ({ users: {}, outbox: [] });
+const empty = (): LineState => ({ users: {}, outbox: [], linkLog: [] });
 
 export async function readLineState(): Promise<LineState> {
   try {
@@ -70,13 +82,14 @@ export function customerIdForUser(state: LineState, userId: string): string {
 }
 
 /** メッセージが来るたびに呼ぶ。はじめての人なら記録する */
-export async function touchUser(userId: string, info: { displayName?: string; claimedName?: string } = {}) {
+export async function touchUser(userId: string, info: { displayName?: string; claimedName?: string; firstMessage?: string } = {}) {
   return updateLineState((s) => {
     const at = nowIso();
     const u = (s.users[userId] ??= { userId, firstSeenAt: at, lastSeenAt: at });
     u.lastSeenAt = at;
     if (info.displayName) u.displayName = info.displayName;
     if (info.claimedName) u.claimedName = info.claimedName;
+    if (info.firstMessage && !u.firstMessage) u.firstMessage = info.firstMessage.slice(0, 200);
     return { user: { ...u }, customerId: customerIdForUser(s, userId) };
   });
 }

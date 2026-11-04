@@ -1,12 +1,13 @@
 import "server-only";
 import { now as clockNow, nowIso, todayJst } from "@/lib/clock";
-import { customerById } from "@/data/master";
 import { allProducts, findProduct as productById } from "@/lib/catalog";
 import type { Order, OrderLine, SourceRef } from "@/data/types";
 import { readDb, updateDb } from "@/lib/store";
 import { pushText } from "./client";
 import { readLineText } from "./reader";
 import { customerIdForUser, readLineState, touchUser, updateLineState } from "./state";
+import { isDemoLineUser } from "./config";
+import { addCustomer, getCustomerSettings } from "./customers";
 
 // LINEから来た注文を、共通の型の Order（channel: "line"、status: "needs_review"）にして store.ts に保存する。
 
@@ -29,7 +30,7 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
   const existing = await readDb();
   if (existing.orders.some((o) => o.id === idBase || o.id.startsWith(`${idBase}-`))) return { duplicated: true };
 
-  const { customerId } = await touchUser(input.userId);
+  const { customerId } = await touchUser(input.userId, { firstMessage: input.text });
   const ref: SourceRef = { kind: "line_message", messageId: input.messageId, userId: input.userId, text: input.text };
   const base = {
     customerId,
@@ -135,7 +136,11 @@ export async function createLiffOrder(input: LiffOrderInput) {
   const items = input.items.filter((i) => i.quantity > 0 && productById(i.productId));
   if (!items.length) throw new Error("数が入っていません");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate) || input.deliveryDate <= todayJst()) throw new Error("納品日を選んでください");
-  const { customerId } = await touchUser(input.userId, { displayName: input.displayName, claimedName: input.claimedName });
+  const { customerId } = await touchUser(input.userId, {
+    displayName: input.displayName,
+    claimedName: input.claimedName,
+    firstMessage: `【注文フォーム】${input.items.map((i) => `${productById(i.productId)?.name ?? i.productId} ${i.quantity}`).join("、")}`,
+  });
   const at = now();
   const id = `LF${Date.now()}`;
   const text = items.map((i) => `${productById(i.productId)!.name} ${i.quantity}${productById(i.productId)!.unit}`).join("、");
@@ -195,7 +200,7 @@ export async function liffContext(userId: string) {
   // 前回の注文: 人が確定したものを優先（AIの読み取りのままの注文は、確定済みがないときだけ）
   const hasItems = (o: (typeof mine)[number]) => o.lines.some((l) => productById(l.productId) && l.quantity > 0);
   const last = mine.find((o) => o.status === "confirmed" && hasItems(o)) ?? mine.find(hasItems);
-  const customer = customerId ? customerById(customerId) : undefined;
+  const customer = customerId ? await getCustomerSettings(customerId) : undefined;
   return {
     customerName: customer?.name ?? state.users[userId]?.claimedName ?? "",
     linked: Boolean(customer),
@@ -230,13 +235,14 @@ export async function liffContext(userId: string) {
 
 /** LINEの人と得意先を、人が確認してひも付ける。その人のまだ得意先が空の「要確認」注文にも入れる（修正履歴つき） */
 export async function linkUserToCustomer(userId: string, customerId: string, who: string) {
-  if (!customerById(customerId)) throw new Error("得意先を選んでください");
+  if (!(await getCustomerSettings(customerId))) throw new Error("得意先を選んでください");
   const at = now();
   await updateLineState((s) => {
     const u = (s.users[userId] ??= { userId, firstSeenAt: at, lastSeenAt: at });
     u.customerId = customerId;
     u.linkedAt = at;
     u.linkedBy = who;
+    s.linkLog.push({ at, userId, action: "link", customerId, who });
   });
   await updateDb((db) => {
     for (const o of db.orders) {
@@ -248,12 +254,46 @@ export async function linkUserToCustomer(userId: string, customerId: string, who
   });
 }
 
-/** ひも付けがまだのLINEの人（初回確認待ち） */
-export async function unlinkedLineUsers() {
+/**
+ * ひも付けを外す（人違いだったとき）。これから届く注文は「お店が不明」に戻る。
+ * もう入っている注文の得意先は、自動では戻さない（受注一覧で人が直す）。
+ */
+export async function unlinkUser(userId: string, who: string) {
+  const at = now();
+  await updateLineState((s) => {
+    const u = s.users[userId];
+    if (!u?.customerId) return;
+    s.linkLog.push({ at, userId, action: "unlink", customerId: u.customerId, who });
+    u.customerId = undefined;
+    u.linkedAt = undefined;
+    u.linkedBy = undefined;
+  });
+}
+
+/** 新しい取引先として登録して、そのままひも付ける */
+export async function addCustomerAndLink(userId: string, input: Parameters<typeof addCustomer>[0], who: string) {
+  const id = await addCustomer(input, who);
+  await linkUserToCustomer(userId, id, who);
+  return id;
+}
+
+/** LINE の人の一覧（管理画面用）。ひも付け前の人が先、新しい順 */
+export async function lineUsersForAdmin() {
   const [db, state] = await Promise.all([readDb(), readLineState()]);
   return Object.values(state.users)
-    .filter((u) => !customerIdForUser(state, u.userId))
-    .map((u) => ({ ...u, orders: db.orders.filter((o) => isLineOrderOf(o, u.userId)).length }));
+    .map((u) => ({
+      ...u,
+      customerId: customerIdForUser(state, u.userId) || undefined,
+      demo: isDemoLineUser(u.userId),
+      orders: db.orders.filter((o) => isLineOrderOf(o, u.userId)).length,
+      firstMessage: u.firstMessage ?? db.orders.filter((o) => isLineOrderOf(o, u.userId)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]?.source.rawText,
+    }))
+    .sort((a, b) => Number(Boolean(a.customerId)) - Number(Boolean(b.customerId)) || b.lastSeenAt.localeCompare(a.lastSeenAt));
+}
+
+/** ひも付けがまだのLINEの人（初回確認待ち） */
+export async function unlinkedLineUsers() {
+  return (await lineUsersForAdmin()).filter((u) => !u.customerId);
 }
 
 // ───────── 確定の連絡 ─────────

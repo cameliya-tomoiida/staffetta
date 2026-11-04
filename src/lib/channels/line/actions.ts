@@ -3,7 +3,8 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { lineConfig } from "./config";
 import { verifyLiffIdToken } from "./client";
-import { createLiffOrder, liffContext, linkUserToCustomer, notifyOrderConfirmed } from "./orders";
+import { addCustomerAndLink, createLiffOrder, liffContext, linkUserToCustomer, notifyOrderConfirmed, unlinkUser } from "./orders";
+import { saveCustomerSettings, type CustomerSettings } from "./customers";
 
 // 画面から呼ぶサーバー関数（LIFFの注文画面・受注一覧の画面）。
 
@@ -60,4 +61,25 @@ export async function notifyLineConfirmedAction(orderId: string, who: string) {
   const r = await notifyOrderConfirmed(orderId, who);
   revalidatePath("/", "layout");
   return r;
+}
+
+/** 管理画面: ひも付けを外す（人違いだったとき） */
+export async function unlinkLineUserAction(userId: string, who: string) {
+  await unlinkUser(userId, who);
+  revalidatePath("/", "layout");
+}
+
+type SettingsInput = Pick<CustomerSettings, "name" | "channel" | "cutoff" | "deliveryTime" | "course">;
+
+/** 管理画面: 新しい取引先として登録して、この LINE の人とひも付ける */
+export async function addCustomerAndLinkAction(userId: string, input: SettingsInput, who: string) {
+  const id = await addCustomerAndLink(userId, input, who);
+  revalidatePath("/", "layout");
+  return { customerId: id };
+}
+
+/** 管理画面: 取引先ごとの注文方法を保存 */
+export async function saveCustomerSettingsAction(customerId: string, input: SettingsInput, who: string) {
+  await saveCustomerSettings(customerId, input, who);
+  revalidatePath("/", "layout");
 }
