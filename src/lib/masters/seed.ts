@@ -14,20 +14,21 @@ const findDough = (id: string) => doughRecipes.find((d) => d.id === id);
 
 const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
-// ───────── 設備（架空） ─────────
+// ───────── 設備（架空。台数・能力・時間帯は現場の資料（01_設計/現場条件_20261105.md）に寄せた） ─────────
+// 要確認: 資料ではパンの早出は 4:00〜。デモの納品時刻（7:30〜）に合わせて、パンの設備は前日の夜から使える設定にしている。
 export const SAMPLE_EQUIPMENT: Equipment[] = [
-  { id: "EQ-B-MIX1", name: "ミキサー（大）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 60, exclusiveGroup: "パンのミキサー", active: true, note: "同じ時間に小と一緒には回せない（電気の容量）" },
-  { id: "EQ-B-MIX2", name: "ミキサー（小）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 30, exclusiveGroup: "パンのミキサー", active: true },
-  { id: "EQ-B-DIV", name: "分割丸め機", kind: "divider", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", piecesPerHour: 1800, lanes: 1, minPieceGram: 20, maxPieceGram: 150, active: true, note: "食パン（460g）は手で分割" },
-  { id: "EQ-B-OVN", name: "ラックオーブン", kind: "oven", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", piecesPerHour: 1500, capacityPieces: 400, active: true },
-  { id: "EQ-B-SLC", name: "スライサー", kind: "slicer", line: "bread", count: 1, availableFrom: "00:00", availableTo: "12:00", piecesPerHour: 120, active: true, note: "食パン1斤あたり30秒" },
-  { id: "EQ-B-PACK", name: "包装機（パン）", kind: "packer", line: "bread", count: 1, availableFrom: "00:00", availableTo: "12:00", piecesPerHour: 1200, active: true },
-  { id: "EQ-MD", name: "金属検出機", kind: "metal_detector", line: "common", count: 1, availableFrom: "00:00", availableTo: "23:59", piecesPerHour: 3000, active: true, note: "CCP。パンとピザで共用" },
-  { id: "EQ-P-MIX", name: "ミキサー（ピザ）", kind: "mixer", line: "pizza", count: 1, availableFrom: "08:00", availableTo: "18:00", maxBatchKg: 50, active: true },
-  { id: "EQ-P-DIV", name: "分割機（ピザ）", kind: "divider", line: "pizza", count: 1, availableFrom: "08:00", availableTo: "18:00", piecesPerHour: 900, lanes: 1, minPieceGram: 100, maxPieceGram: 250, active: true },
-  { id: "EQ-P-OVN", name: "ジェットオーブン", kind: "oven", line: "pizza", count: 1, availableFrom: "08:00", availableTo: "18:00", piecesPerHour: 600, active: true },
-  { id: "EQ-P-FRZ", name: "急速冷凍庫", kind: "cooler", line: "pizza", count: 1, availableFrom: "08:00", availableTo: "20:00", active: true },
-  { id: "EQ-P-PACK", name: "包装機（ピザ）", kind: "packer", line: "pizza", count: 1, availableFrom: "08:00", availableTo: "18:00", piecesPerHour: 600, active: true },
+  { id: "EQ-B-MIX1", name: "ミキサー（大）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 75, exclusiveGroup: "ミキサー", active: true, note: "粉45kg（生地 約75kg）まで。同じ時間に他のミキサーは回せない" },
+  { id: "EQ-B-MIX2", name: "ミキサー（小）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 30, exclusiveGroup: "ミキサー", active: true, note: "台数は要確認" },
+  { id: "EQ-B-DIV", name: "分割丸め機（パン）", kind: "divider", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", piecesPerHour: 1800, lanes: 1, minPieceGram: 20, maxPieceGram: 150, active: true, note: "小さいロール用。食パン（460g）は手で分割" },
+  { id: "EQ-B-OVN", name: "平釜", kind: "oven", line: "bread", count: 2, availableFrom: "21:00", availableTo: "12:00", piecesPerHour: 750, active: true, note: "常にいっぱいで、増設を検討中。1回の本数は要確認" },
+  { id: "EQ-B-SLC", name: "スライサー", kind: "slicer", line: "bread", count: 1, availableFrom: "00:00", availableTo: "12:00", piecesPerHour: 200, active: true, note: "3斤66本で20分。6切・8切・24枚切" },
+  { id: "EQ-B-PACK", name: "包装機（パン）", kind: "packer", line: "bread", count: 1, availableFrom: "00:00", availableTo: "12:00", piecesPerHour: 1200, active: true, note: "機械包装 3〜4人。手包装は別" },
+  { id: "EQ-MD", name: "金属検出機", kind: "metal_detector", line: "common", count: 1, availableFrom: "00:00", availableTo: "24:00", piecesPerHour: 3000, active: true, note: "CCP。テストピース Fe5.0mm・Sus6.0mm をロットの始めと終わりに通す" },
+  { id: "EQ-P-MIX", name: "ミキサー（ピザ）", kind: "mixer", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", maxBatchKg: 75, exclusiveGroup: "ミキサー", active: true, note: "粉45kg（生地 約75kg）まで" },
+  { id: "EQ-P-DIV", name: "分割機（ピザ）", kind: "divider", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 1200, lanes: 1, minPieceGram: 60, maxPieceGram: 220, active: true, note: "1分に10〜20個（4人）。鉄板1枚20個" },
+  { id: "EQ-P-OVN", name: "ジェットオーブン", kind: "oven", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 600, active: true, note: "上下450℃・1分30秒（具ありは440℃以上・1分50秒）。連続投入" },
+  { id: "EQ-P-FRZ", name: "ショックフリーザー", kind: "cooler", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "17:00", active: true, note: "-30℃・20分。17:00〜17:40 は霜取りで使えない" },
+  { id: "EQ-P-PACK", name: "包装機（ピザ）", kind: "packer", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 600, active: true, note: "5枚/袋・ラベル" },
 ];
 
 /** production.ts の「設備の名前（resource）」→ 設備ID。生地ごとに違うものは doughId で分ける */
@@ -64,8 +65,9 @@ export function sampleSteps(): ProcessStepMaster[] {
         key: s.key as ProcessStepKey,
         name: s.name,
         ...(equipmentId ? { equipmentId } : {}),
-        people: s.key === "shape" && d.line === "bread" ? 4 : s.people ?? 0,
-        setupMinutes: 0,
+        people: s.people ?? 0,
+        // 分割機の段取り・金属検出のテストピースは5分
+        setupMinutes: (s.key === "divide" && equipmentId) || s.key === "metal_check" ? 5 : 0,
         waitMinutes: s.minutes ?? 0,
         minutesPerBatch: s.minutesPerBatch ?? 0,
         ...(spp !== undefined ? { secondsPerPiece: spp } : {}),
@@ -102,24 +104,27 @@ export function sampleProductPackaging(): ProductPackagingMaster[] {
   return rows;
 }
 
-// ───────── 人員（架空） ─────────
+// ───────── 人員（架空。現場の資料の班・人数に寄せた） ─────────
 export const SAMPLE_SHIFTS: ShiftMaster[] = [
-  { id: "SH-BN", name: "夜班（パン）", line: "bread", from: "21:00", to: "06:00", headcount: 7 },
-  { id: "SH-BM", name: "朝班（パン）", line: "bread", from: "05:00", to: "14:00", headcount: 4 },
-  { id: "SH-PD", name: "日勤（ピザ）", line: "pizza", from: "08:00", to: "17:00", headcount: 9 },
+  { id: "SH-BN", name: "夜班（パン）", line: "bread", from: "21:00", to: "06:00", headcount: 6 },
+  { id: "SH-BM", name: "朝班（パン・包装）", line: "bread", from: "05:00", to: "14:00", headcount: 4 },
+  { id: "SH-PA", name: "朝班（ピザ）", line: "pizza", from: "07:00", to: "18:00", headcount: 2 },
+  { id: "SH-PN", name: "夜班（ピザ）", line: "pizza", from: "13:00", to: "24:00", headcount: 2 },
+  { id: "SH-PT", name: "スポットの人（ピザ）", line: "pizza", from: "07:00", to: "14:00", headcount: 6 },
 ];
 
+/** 工程ごとの配置人数（現場の標準: 計量1・ミキシング1・分割3・成形3・焼成1・包装3〜4・金検1、ピザは成形4・トッピング3・検品包装3） */
 export const SAMPLE_STAFF: StaffAssignmentMaster[] = [
   { shiftId: "SH-BN", line: "bread", stepKey: "mix", people: 1 },
   { shiftId: "SH-BN", line: "bread", stepKey: "divide", people: 2 },
-  { shiftId: "SH-BN", line: "bread", stepKey: "shape", people: 4 },
+  { shiftId: "SH-BN", line: "bread", stepKey: "shape", people: 3 },
   { shiftId: "SH-BN", line: "bread", stepKey: "bake", people: 1 },
   { shiftId: "SH-BM", line: "bread", stepKey: "slice", people: 1 },
   { shiftId: "SH-BM", line: "bread", stepKey: "pack", people: 3 },
   { shiftId: "SH-BM", line: "bread", stepKey: "metal_check", people: 1 },
-  { shiftId: "SH-PD", line: "pizza", stepKey: "shape", people: 4 },
-  { shiftId: "SH-PD", line: "pizza", stepKey: "topping", people: 3 },
-  { shiftId: "SH-PD", line: "pizza", stepKey: "pack", people: 3 },
+  { shiftId: "SH-PT", line: "pizza", stepKey: "shape", people: 4 },
+  { shiftId: "SH-PT", line: "pizza", stepKey: "topping", people: 3 },
+  { shiftId: "SH-PA", line: "pizza", stepKey: "pack", people: 3 },
 ];
 
 // ───────── まとめ ─────────
@@ -131,8 +136,7 @@ export function sampleMasters(): Masters {
 
   const doughs: DoughMaster[] = doughRecipes.map((d) => ({
     id: d.id, name: d.name, line: d.line, lossRate: d.lossRate,
-    // ミキサーの上限は設備の値を使う（パンの生地）。ピザは生地の値
-    ...(d.line === "pizza" ? { mixerMaxKg: d.mixerMaxKg } : {}),
+    // ミキサーの上限は、使うミキサー（設備）の値を使う
   }));
   const recipeItems = doughRecipes.flatMap((d) => d.items.map((i) => ({ doughId: d.id, materialId: i.materialId, percent: i.percent })));
 

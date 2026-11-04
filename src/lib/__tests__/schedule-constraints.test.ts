@@ -30,16 +30,17 @@ describe("設備の制約", () => {
     expect(r.flatMap((x) => x.warnings)).toEqual(expect.not.arrayContaining([expect.stringMatching(/重なって/)]));
   });
 
-  it("分割機の処理能力で分割の時間が決まる（2ラインにすると半分）", () => {
+  it("分割機の処理能力で分割の時間が決まる（段取り5分 ＋ 個数 ÷ 能力。2ラインにすると能力が倍）", () => {
     const one = step(undefined, "DG01", "divide");
+    expect(one.end - one.start).toBe(5 + Math.ceil((1010 / 1800) * 60)); // ロール 1,010個・1,800個/時
     const two = step(patch((m) => (m.equipment.find((e) => e.id === "EQ-B-DIV")!.lanes = 2)), "DG01", "divide");
-    expect(two.end - two.start).toBe(Math.ceil((one.end - one.start) / 2));
+    expect(two.end - two.start).toBe(5 + Math.ceil((1010 / 3600) * 60));
   });
 
   it("工程に1個あたりの秒があれば、設備の能力より優先する", () => {
     const m = patch((m) => (m.steps.find((s) => s.doughId === "DG01" && s.key === "divide")!.secondsPerPiece = 4));
     const s = step(m, "DG01", "divide");
-    expect(s.end - s.start).toBe(Math.ceil((1010 * 4) / 60)); // ロール 1,010個
+    expect(s.end - s.start).toBe(5 + Math.ceil((1010 * 4) / 60)); // ロール 1,010個（段取り5分）
   });
 
   it("ミキサーの上限（設備の kg）で回数が決まる", () => {
@@ -63,7 +64,7 @@ describe("人員の制約", () => {
   it("同じ時間に要る人数が班の人数を超えたら注意", () => {
     const m = patch((m) => (m.shifts.find((s) => s.id === "SH-BN")!.headcount = 2));
     const w = rows(m).flatMap((x) => x.warnings);
-    expect(w.some((x) => /成形.*人が足りません（同じ時間に 4人 要る・班は 2人）/.test(x))).toBe(true);
+    expect(w.some((x) => /成形.*人が足りません（同じ時間に \d+人 要る・班は 2人）/.test(x))).toBe(true);
   });
 
   it("工程の配置人数（班ごと）が、工程の人数より優先される", () => {
