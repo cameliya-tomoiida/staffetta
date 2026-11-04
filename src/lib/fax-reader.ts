@@ -3,7 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { promises as fs } from "node:fs";
 import { faxFilePath } from "./store";
-import { customers, products, suppliers } from "@/data/master";
+import { customers, suppliers } from "@/data/master";
+import { allProducts } from "./catalog";
 import { FaxReadSchema, type FaxRead } from "./types";
 
 export const READER_MODEL = "claude-opus-5-5";
@@ -30,14 +31,15 @@ FAXの種類（kind）の見分け方:
 
 function masterText(knownMappings: Record<string, Record<string, string>>) {
   const cust = customers.map((c) => `${c.id}: ${c.name}${c.fax ? `（FAX ${c.fax}）` : ""}`).join("\n");
-  const prod = products
-    .map((p) => `${p.id}: ${p.name}（${p.source === "make" ? "自社製造" : "仕入品"}・単位 ${p.unit}${p.pieceGram ? `・${p.pieceGram}g` : ""}）`)
+  const prod = allProducts()
+    .map((p) => `${p.id}: ${p.name}（単位 ${p.unit}${p.spec ? `・${p.spec.kind === "buy" ? "仕入品" : "自社製造"}` : ""}）`)
     .join("\n");
+  const sup = suppliers.map((x) => `${x.id}: ${x.name}`).join("\n");
   const maps = Object.entries(knownMappings)
     .map(([cid, m]) => Object.entries(m).map(([w, pid]) => `${cid} の「${w}」→ ${pid}`).join("\n"))
     .filter(Boolean)
     .join("\n");
-  return `## 得意先一覧\n${cust}\n\n## 商品一覧\n${prod}\n\n## スタッフが過去に承認した品名の対応（この対応を優先する）\n${maps || "（まだなし）"}`;
+  return `## 得意先一覧（工場にパンを注文するお客さん）\n${cust}\n\n## 仕入先一覧（工場が材料・仕入品を発注する相手。ここからのFAXは注文ではない）\n${sup}\n\n## 商品一覧\n${prod}\n\n## スタッフが過去に承認した品名の対応（この対応を優先する）\n${maps || "（まだなし）"}`;
 }
 
 export async function readFax(
