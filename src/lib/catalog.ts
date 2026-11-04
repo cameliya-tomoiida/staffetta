@@ -236,6 +236,31 @@ export function deliveryFor(supplierId: string, customerId: string): SupplierDel
 /** 得意先の納品時刻（0:00 からの分）。得意先マスタに無ければ 8:00 */
 export const customerDeliveryMinute = (customerId: string) => hhmmToMinute(findCustomer(customerId)?.deliveryTime ?? DEFAULT_DELIVERY_TIME);
 
+export const findCourse = (id: string) => cat().masters.courses?.find((c) => c.id === id && c.active !== false);
+
+/**
+ * 得意先の「作り終える時刻」（0:00 からの分。前日ならマイナス）と、その根拠。
+ * 便があれば 出発時刻（＋出発する日）− 積み込み、無ければ 納品時刻 − ラインの積み込み・配送の時間。
+ */
+export function customerDeadline(customerId: string, line: ProductionLineId, deliveryOverride?: number): { minute: number; courseId?: string; basis: string } {
+  const c = findCustomer(customerId);
+  const course = c?.course ? findCourse(c.course) : undefined;
+  if (course && deliveryOverride === undefined) {
+    const minute = hhmmToMinute(course.departTime) + course.dayOffset * 1440 - course.loadMinutes;
+    return { minute, courseId: course.id, basis: `${course.name} ${course.dayOffset < 0 ? "前日 " : ""}${course.departTime} 出発` };
+  }
+  const delivery = deliveryOverride ?? customerDeliveryMinute(customerId);
+  return { minute: delivery - findLine(line).shipBufferMinutes, basis: `納品 ${Math.floor(delivery / 60)}:${String(delivery % 60).padStart(2, "0")}` };
+}
+
+/** 得意先が納品する曜日（得意先 → 便 → 毎日）。空配列 = 毎日 */
+export function customerWeekdays(customerId: string): number[] {
+  const c = findCustomer(customerId);
+  if (c?.deliveryWeekdays?.length) return c.deliveryWeekdays;
+  const course = c?.course ? findCourse(c.course) : undefined;
+  return course?.weekdays ?? [];
+}
+
 /** 商品の並び順（マスターの順） */
 export const productOrder = (id: string) => {
   const i = cat().products.findIndex((p) => p.id === id);

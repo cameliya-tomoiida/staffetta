@@ -1,7 +1,7 @@
 // 各マスタの CSV 列定義（日本語の列名）と、種類ごとの検査（③）。
 // 型は src/data/types.ts の …Master。しくみは columns.ts。
 import type {
-  CustomerMaster, DoughMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
+  CourseMaster, CustomerMaster, DoughMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, RecipeItemMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster,
   SupplierMaster, ToppingItemMaster, ToppingMaster,
 } from "@/data/types";
@@ -289,7 +289,23 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "externalCode", label: "外部サイトの取引先コード", type: "text" },
     { key: "cutoff", label: "注文の締め（前日）", type: "time", required: true, example: "15:00" },
     { key: "deliveryTime", label: "納品時刻", type: "time", example: "08:30", help: "工程表の逆算に使う。空なら 08:00" },
-    { key: "course", label: "配送コース", type: "text", example: "A" },
+    { key: "course", label: "配送コース", type: "text", example: "東コース（朝便）", help: "便のマスタの便ID。便のマスタに無いコースは、納品時刻から工程を逆算する" },
+    { key: "deliveryWeekdays", label: "納品する曜日", type: "weekdays", example: "月;水;金", help: "空なら便の曜日（それも空なら毎日）" },
+    { key: "note", label: "メモ", type: "text" },
+    ACTIVE,
+  ],
+};
+
+// ───────── 便（配送コース） ─────────
+export const courseDef: MasterDef<CourseMaster> = {
+  name: "courses", label: "便", keyColumns: ["id"],
+  columns: [
+    ID("便ID", "東コース（朝便）", "取引先マスタの「配送コース」と同じ文字"),
+    { key: "name", label: "名前", type: "text", required: true, example: "東コース（朝便）" },
+    { key: "departTime", label: "出発時刻", type: "time", required: true, example: "06:30" },
+    { key: "loadMinutes", label: "積み込み（分）", type: "integer", min: 0, default: 30, example: "30", help: "出発のこの時間前までに作り終える" },
+    { key: "dayOffset", label: "出発する日", type: "integer", min: -3, max: 0, default: 0, example: "0", help: "0 = 納品日の当日、-1 = 前日（宅配便・冷凍便）" },
+    { key: "weekdays", label: "走る曜日", type: "weekdays", example: "月;火;水;木;金;土", help: "空なら毎日" },
     { key: "note", label: "メモ", type: "text" },
     ACTIVE,
   ],
@@ -322,13 +338,13 @@ export const staffAssignmentDef: MasterDef<StaffAssignmentMaster> = {
 export const MASTER_DEFS: Record<MasterName, MasterDef> = {
   lines: lineDef, equipment: equipmentDef, doughs: doughDef, recipeItems: recipeItemDef, steps: stepDef,
   toppings: toppingDef, toppingItems: toppingItemDef, products: productDef, materials: materialDef, packaging: packagingDef,
-  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef,
+  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef,
   shifts: shiftDef, staffAssignments: staffAssignmentDef,
 } as unknown as Record<MasterName, MasterDef>;
 
 /** 取り込みの順番（参照される側から） */
 export const MASTER_ORDER: MasterName[] = [
-  "lines", "suppliers", "supplierDeliveries", "customers", "materials", "packaging", "equipment", "doughs", "recipeItems",
+  "lines", "suppliers", "supplierDeliveries", "courses", "customers", "materials", "packaging", "equipment", "doughs", "recipeItems",
   "steps", "toppings", "toppingItems", "products", "productPackaging", "shifts", "staffAssignments",
 ];
 
