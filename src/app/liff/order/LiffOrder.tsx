@@ -185,7 +185,14 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           <div className="px-5 pt-6 pb-1">
             <p className="text-[12px] font-bold tracking-[.25em] text-[#b8913f]">ORDER</p>
             <h1 className="mt-1 text-[26px] font-bold leading-tight" style={serif}>
-              {ctx.customerName ? `${ctx.customerName} さま` : "パンのご注文"}
+              {ctx.customerName ? (
+                <>
+                  {ctx.customerName}
+                  <span className="ml-1 whitespace-nowrap text-[18px]">さま</span>
+                </>
+              ) : (
+                "パンのご注文"
+              )}
             </h1>
             <p className="mt-1 text-[14px] text-[#7b7067]">
               {pastCutoff ? `本日の締め切り（${ctx.cutoff}）をすぎました。あさって以降をお選びください。` : `ご注文の締め切りは、前日の ${ctx.cutoff} です。`}
@@ -195,7 +202,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           {/* お届け日 */}
           <section className="pt-4">
             <h2 className="px-5 text-[15px] font-bold text-[#7b7067]">お届け日</h2>
-            <div className="mt-2 flex snap-x gap-2.5 overflow-x-auto px-5 pb-2 [scrollbar-width:none]">
+            <div className="mt-2 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pt-1 pb-3 [scrollbar-width:none]">
               {days.map((d, i) => {
                 const late = i === 0 && pastCutoff;
                 const on = date === d.ymd;
@@ -270,15 +277,36 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   if (!p) return null;
                   const q = qty[id] ?? 0;
                   return (
-                    <li key={id} className="flex items-center gap-3.5 border-b border-[#f1ebe1] px-4 py-3.5 last:border-b-0">
-                      <div className={`grid h-[60px] w-[60px] shrink-0 place-items-center rounded-2xl transition ${q ? "bg-[#8f1d1d]/[.08] text-[#8f1d1d]" : "bg-[#f7f3ec] text-[#a07a4a]"}`}>
-                        <BreadArt name={p.name} className="h-11 w-11" />
+                    <li key={id} className="flex items-start gap-3 border-b border-[#f1ebe1] py-3.5 pr-3 pl-3.5 last:border-b-0">
+                      <div className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl transition ${q ? "bg-[#8f1d1d]/[.08] text-[#8f1d1d]" : "bg-[#f7f3ec] text-[#a07a4a]"}`}>
+                        <BreadArt name={p.name} className="h-10 w-10" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-[18px] font-bold leading-snug">{p.name}</div>
-                        <div className="text-[13px] text-[#7b7067]">{p.unit}で注文</div>
+                        {q === 0 ? (
+                          <div className="text-[13px] text-[#7b7067]">{p.unit}で注文</div>
+                        ) : (
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <span className="text-[13px] text-[#7b7067]">{p.unit}</span>
+                            <div className="flex items-center rounded-full bg-[#8f1d1d] text-white shadow-[0_6px_16px_-8px_rgba(143,29,29,.7)]">
+                              <button aria-label={`${p.name}を1へらす`} onClick={() => set(id, q - 1)} className="grid h-12 w-12 place-items-center active:scale-90">
+                                <Minus />
+                              </button>
+                              <button
+                                aria-label={`${p.name}の数を入力`}
+                                onClick={() => setPad({ id, value: String(q) })}
+                                className="min-w-[48px] text-center text-[22px] font-bold tabular-nums underline decoration-white/40 decoration-dotted underline-offset-4"
+                              >
+                                {q}
+                              </button>
+                              <button aria-label={`${p.name}を1ふやす`} onClick={() => set(id, q + 1)} className="grid h-12 w-12 place-items-center active:scale-90">
+                                <Plus />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {q === 0 ? (
+                      {q === 0 && (
                         <button
                           aria-label={`${p.name}を追加`}
                           onClick={() => set(id, 1)}
@@ -286,22 +314,6 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                         >
                           <Plus className="h-6 w-6" />
                         </button>
-                      ) : (
-                        <div className="flex shrink-0 items-center rounded-full bg-[#8f1d1d] text-white shadow-[0_6px_16px_-8px_rgba(143,29,29,.7)]">
-                          <button aria-label={`${p.name}を1へらす`} onClick={() => set(id, q - 1)} className="grid h-12 w-11 place-items-center active:scale-90">
-                            <Minus />
-                          </button>
-                          <button
-                            aria-label={`${p.name}の数を入力`}
-                            onClick={() => setPad({ id, value: String(q) })}
-                            className="min-w-[44px] text-center text-[22px] font-bold tabular-nums underline decoration-white/40 decoration-dotted underline-offset-4"
-                          >
-                            {q}
-                          </button>
-                          <button aria-label={`${p.name}を1ふやす`} onClick={() => set(id, q + 1)} className="grid h-12 w-11 place-items-center active:scale-90">
-                            <Plus />
-                          </button>
-                        </div>
                       )}
                     </li>
                   );

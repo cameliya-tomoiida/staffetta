@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { products } from "@/data/master";
+import { allProducts } from "@/lib/catalog";
 import { LiffOrder } from "./LiffOrder";
 
 // LIFFの注文フォーム。LINE公式アカウントのリッチメニュー「ご注文」から開く。
@@ -16,7 +16,7 @@ export default async function LiffPage({ searchParams }: { searchParams: Promise
     <LiffOrder
       liffId={demo ? "" : liffId}
       demoUserId={demo ? demoUser || "U_demo_kotori" : undefined}
-      catalog={products.map((p) => ({ id: p.id, name: p.name, unit: p.unit }))}
+      catalog={allProducts().map((p) => ({ id: p.id, name: p.name, unit: p.unit }))}
     />
   );
 }
