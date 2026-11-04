@@ -228,6 +228,8 @@ export interface Equipment {
   maxPieceGram?: number;
   /** 1回に入る数（オーブン・ホイロの段・天板の数 × 1枚あたり） */
   capacityPieces?: number;
+  /** 同時に動かせない設備のまとまり（電気の容量などで、同じグループの設備は1台ずつしか回せない） */
+  exclusiveGroup?: string;
   active: boolean;
   note?: string;
 }

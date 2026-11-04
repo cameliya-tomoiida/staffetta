@@ -73,6 +73,7 @@ export const equipmentDef: MasterDef<Equipment> = {
     { key: "minPieceGram", label: "1個の重さ 下限（g）", type: "number", min: 0, example: "20", help: "分割機" },
     { key: "maxPieceGram", label: "1個の重さ 上限（g）", type: "number", min: 0, example: "150", help: "分割機" },
     { key: "capacityPieces", label: "1回に入る数", type: "integer", min: 1, example: "", help: "オーブン・ホイロ" },
+    { key: "exclusiveGroup", label: "同時に動かせないグループ", type: "text", example: "ミキサー", help: "同じグループの設備は1台ずつしか回せない（同じ時間に他のミキサーは回せない など）" },
     ACTIVE,
     { key: "note", label: "メモ", type: "text" },
   ],
@@ -94,10 +95,11 @@ export const doughDef: MasterDef<DoughMaster> = {
     { key: "note", label: "メモ", type: "text" },
   ],
   check: (d, all) => {
-    const items = (all.recipeItems ?? []).filter((r) => r.doughId === d.id);
-    if (!items.length) return all.recipeItems ? ["配合（レシピ明細）が1行もありません"] : [];
-    const flour = items.filter((r) => all.materials?.find((m) => m.id === r.materialId)?.name.includes("粉")).reduce((s, r) => s + r.percent, 0);
-    return flour > 0 && Math.abs(flour - 100) > 0.5 ? [`粉の合計が ${flour}% です（ベーカーズ％では 100%）`] : [];
+    if (!all.recipeItems) return [];
+    const items = all.recipeItems.filter((r) => r.doughId === d.id);
+    if (!items.length) return ["配合（生地の配合）が1行もありません"];
+    if (!items.some((r) => r.percent >= 50)) return ["配合に粉（50% 以上の材料）がありません。ベーカーズ％は粉の合計を 100 にします"];
+    return [];
   },
 };
 

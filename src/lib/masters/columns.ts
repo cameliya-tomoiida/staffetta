@@ -79,11 +79,14 @@ const norm = (s: string) => s.normalize("NFKC").trim();
 
 /** 1つのセルを型に直す。空なら value は undefined */
 export function parseCell(col: ColumnDef, raw: string | undefined): { value?: unknown; error?: string } {
+  // 文字の列はそのまま（全角のかっこ・℃ などを変えない）。数・時刻・選択肢などは全角を半角にそろえて読む
+  if (col.type === "text") {
+    const t = (raw ?? "").trim();
+    return t === "" ? { value: col.default } : { value: t };
+  }
   const s = norm(raw ?? "");
   if (s === "") return { value: col.default };
   switch (col.type) {
-    case "text":
-      return { value: s };
     case "number":
     case "integer": {
       const n = Number(s.replace(/[,，円]/g, ""));
@@ -173,6 +176,7 @@ export function parseTable<T>(def: MasterDef<T>, table: string[][]): ParseResult
     const rowNo = i + 2;
     if (cells.every((c) => norm(c ?? "") === "")) return; // 空の行は飛ばす
     const row: Record<string, unknown> = {};
+    const bad = new Set<string>();
     let ok = true;
     // 見出しに無い列は既定値
     for (const c of def.columns) if (c.default !== undefined) row[c.key] = c.default;
@@ -181,12 +185,13 @@ export function parseTable<T>(def: MasterDef<T>, table: string[][]): ParseResult
       const { value, error } = parseCell(c, cells[ci]);
       if (error) {
         ok = false;
+        bad.add(c.key);
         errors.push({ row: rowNo, column: c.label, value: cells[ci] ?? "", message: error });
       } else if (value !== undefined) row[c.key] = value;
     });
     for (const c of def.columns) {
       const empty = row[c.key] === undefined || row[c.key] === "";
-      if (!empty) continue;
+      if (!empty || bad.has(c.key)) continue;
       const why = c.required ? "必須です" : c.requiredWhen?.(row);
       if (why) {
         ok = false;
@@ -208,6 +213,14 @@ export interface ItemError {
 }
 
 const keyOf = (def: MasterDef, item: Record<string, unknown>) => def.keyColumns.map((k) => String(item[k] ?? "")).join(" / ");
+
+/**
+ * 保存用の行 ID。キーが id だけのマスタはその id、
+ * 配合・工程の配置など複数の列がキーのマスタは "DG01|M01" のようにつなぐ（①の保存の口は id で1件を決めるため）。
+ */
+export function rowId(def: MasterDef, item: Record<string, unknown>): string {
+  return def.keyColumns.length === 1 ? String(item[def.keyColumns[0]] ?? "") : def.keyColumns.map((k) => String(item[k] ?? "")).join("|");
+}
 
 /**
  * 行の中身を確かめる: キーの重複、参照先の存在、種類ごとの検査（def.check）。
