@@ -13,6 +13,17 @@ export const KIRARA_DESTS = [
 ] as const;
 export type KiraraDest = (typeof KIRARA_DESTS)[number]["key"];
 
+/**
+ * 仕入先から買う振り分け先の行き先。発注書そのものは③の通常の発注書（buildProductPurchaseOrders）でまとめて作る。
+ * ここは「どの仕入先から・いつ届く分か」を画面と注文の行に書くためだけに使う。
+ * dayOffset: センター納品日から何日ずらして届くか（前日分は -1）
+ */
+export const KIRARA_SUPPLY: Partial<Record<KiraraDest, { supplierId: string; dayOffset: number }>> = {
+  fujimi_main: { supplierId: "S07", dayOffset: 0 },
+  fujimi_prev: { supplierId: "S07", dayOffset: -1 },
+  hinode: { supplierId: "S03", dayOffset: 0 },
+};
+
 export interface KiraraItem {
   /** きらら側の商品コード（架空） */
   code: string;
