@@ -3,7 +3,9 @@
 // 見た目は②の共通部品（@/components/ui）。状態は③の purchase-store（API 経由）。
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, buttonClass, fmtDate, fmtDateTime, Notice, PurchaseStatusTag } from "@/components/ui";
+import { Button, buttonClass, fmtDate, fmtDateTime, MethodIcon, Notice, PurchaseStatusTag } from "@/components/ui";
+
+const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 import type { EntryRow } from "@/lib/channels/outbound/render";
 import type { OutboundRecord } from "@/lib/channels/outbound/workflow";
 
@@ -52,7 +54,11 @@ export function OutboundClient({ records, dates }: { records: View[]; dates: str
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
-          担当者名 <input className={field} value={who} onChange={(e) => setWho(e.target.value)} placeholder="例: 専務 はやし" />
+          担当する人
+          <select className={field} value={who} onChange={(e) => setWho(e.target.value)}>
+            <option value="">えらんでください</option>
+            {STAFF.map((s) => <option key={s}>{s}</option>)}
+          </select>
         </label>
         <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
           納品日
@@ -66,7 +72,7 @@ export function OutboundClient({ records, dates }: { records: View[]; dates: str
 
       {/* FAX 送信待ち */}
       <section className="space-y-2 rounded-sm border border-rule-strong bg-sheet p-4">
-        <h2 className="text-xl font-black">📠 FAX 送信待ち（{faxQueue.length} 件）</h2>
+        <h2 className="flex items-center gap-2 text-xl font-black"><MethodIcon method="fax" className="h-6 w-6" />FAX 送信待ち（<span className="num">{faxQueue.length}</span> 件）</h2>
         {!faxQueue.length && <p className="text-sm text-ink-soft">承認された FAX の発注書はありません。</p>}
         {faxQueue.map((r) => (
           <div key={r.po.id} className="flex flex-wrap items-center gap-3 border-t border-dashed border-rule pt-2">
@@ -117,7 +123,7 @@ export function OutboundClient({ records, dates }: { records: View[]; dates: str
             {r.notes.length > 0 && <div className="text-xs text-ink-soft">{r.notes.join("／")}</div>}
             {po.status === "draft" && (
               <Button variant="ok" size="lg" className="w-full" disabled={busy || !who} onClick={() => act({ action: "approve", poId: po.id }, "承認して出力を作りました")}>
-                承認して出力を作る{!who && "（担当者名を入れてください）"}
+                承認して出力を作る{!who && "（上で担当する人をえらんでください）"}
               </Button>
             )}
             {po.status !== "draft" && (
@@ -136,17 +142,19 @@ export function OutboundClient({ records, dates }: { records: View[]; dates: str
                   <div>
                     <div className="font-bold">入力用リスト（{r.entry.profileLabel}・画面の並び順）</div>
                     <ol className="list-decimal pl-5 text-sm text-ink-soft">{r.entry.steps.map((s) => <li key={s}>{s}</li>)}</ol>
-                    <table className="mt-2 w-full text-sm">
-                      <thead><tr className="text-left"><th>順</th><th>区分</th><th>コード</th><th>サイトの品名</th><th className="text-right">入れる数</th><th>単位</th></tr></thead>
+                    <div className="overflow-x-auto">
+                    <table className="mt-2 w-full min-w-[560px]">
+                      <thead><tr className="border-b border-rule-strong text-left text-sm text-ink-soft [&>th]:py-1.5 [&>th]:pr-3"><th>順</th><th>区分</th><th>コード</th><th>サイトの品名</th><th className="text-right">入れる数</th><th>単位</th></tr></thead>
                       <tbody>
                         {r.entry.rows.map((x) => (
-                          <tr key={x.no} className={`border-t border-dashed border-rule ${x.notOnSite ? "bg-review-bg" : ""}`}>
-                            <td>{x.no}</td><td>{x.section}</td><td>{x.siteCode}</td><td>{x.siteName}{x.notOnSite && "（サイトの定番に登録なし）"}</td>
-                            <td className="text-right text-lg font-black">{x.units}</td><td>{x.unitLabel}</td>
+                          <tr key={x.no} className={`border-t border-dashed border-rule [&>td]:py-1.5 [&>td]:pr-3 ${x.notOnSite ? "bg-review-bg" : ""}`}>
+                            <td className="num">{x.no}</td><td>{x.section}</td><td className="num">{x.siteCode}</td><td>{x.siteName}{x.notOnSite && "（サイトの定番に登録なし）"}</td>
+                            <td className="num text-right text-xl font-black">{x.units}</td><td>{x.unitLabel}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
                 {po.status === "approved" && po.method !== "fax" && (

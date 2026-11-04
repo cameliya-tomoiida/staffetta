@@ -70,7 +70,7 @@ export function ImportPanel({ samples }: Props) {
 
         <section className="card space-y-2 p-4">
           <h2 className="text-lg font-black">Google スプレッドシート</h2>
-          <p className="text-sm text-ink-soft">店舗別・月別のシート（行＝納品日、列＝商品、セル＝ケース数）を読み、前回との差分を出します。</p>
+          <p className="text-sm text-ink-soft">店舗別・月別のシート（行＝納品日、列＝商品、セル＝ケース数）を読み、前回とのちがいを出します。</p>
           <div className="flex flex-wrap gap-2">
             <button className={sub} disabled={!!busy} onClick={() => run("sheet", "シート 1回目", { sample: "v1" })}>デモ: 1回目を読む</button>
             <button className={sub} disabled={!!busy} onClick={() => run("sheet", "シート 2回目（本部が書き換えた後）", { sample: "v2" })}>デモ: 書き換え後を読む</button>
@@ -132,34 +132,36 @@ function ResultView({ title, data }: { title: string; data: unknown }) {
       )}
       {Array.isArray(d.diffs) && (
         <div>
-          <p className="font-bold">{d.firstTime ? "はじめて読みました（次から差分が出ます）" : `前回との差分 ${(d.diffs as unknown[]).length} か所`}</p>
-          <ul className="text-sm">
+          <p className="font-bold">{d.firstTime ? "はじめて読みました（次から、前回とのちがいが出ます）" : `前回とのちがい ${(d.diffs as unknown[]).length} か所`}</p>
+          <ul className="mt-1 space-y-0.5">
             {(d.diffs as { date: string; column: string; before: number | null; after: number | null }[]).map((x, i) => (
               <li key={i}>
-                {x.date} {x.column}: {x.before ?? "なし"} → <b>{x.after ?? "なし"}</b>
+                <span className="num">{x.date}</span> {x.column}：<span className="num">{x.before ?? "なし"}</span> → <b className="num">{x.after ?? "なし"}</b>
               </li>
             ))}
           </ul>
         </div>
       )}
       {Array.isArray(d.routing) && (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px]">
           <thead>
-            <tr className="text-left">
+            <tr className="border-b border-rule-strong text-left text-sm text-ink-soft [&>th]:py-1.5 [&>th]:pr-3">
               <th>振り分け先</th><th>行き先（便・届く日）</th><th>品目</th><th className="text-right">パック</th><th className="text-right">個数</th><th className="text-right">前回との差</th>
             </tr>
           </thead>
           <tbody>
             {(d.routing as { destLabel: string; route: string; shortName: string; packs: number; pieces: number; diff: number | null; productId: string }[]).map((r, i) => (
-              <tr key={i} className={`border-t border-dashed border-rule ${r.productId ? "" : "bg-review-bg"}`}>
-                <td>{r.destLabel}</td><td className="text-sm">{r.route}</td><td>{r.shortName}</td><td className="text-right">{r.packs}</td><td className="text-right">{r.pieces}</td>
-                <td className={`text-right ${r.diff ? "font-bold text-alert-ink" : ""}`}>{r.diff == null ? "—" : r.diff > 0 ? `+${r.diff}` : r.diff}</td>
+              <tr key={i} className={`border-t border-dashed border-rule [&>td]:py-1.5 [&>td]:pr-3 ${r.productId ? "" : "bg-review-bg"}`}>
+                <td className="font-bold">{r.destLabel}</td><td className="text-sm">{r.route}</td><td>{r.shortName}</td><td className="num text-right font-black">{r.packs}</td><td className="num text-right">{r.pieces}</td>
+                <td className={`num text-right ${r.diff ? "font-bold text-alert-ink" : ""}`}>{r.diff == null ? "—" : r.diff > 0 ? `+${r.diff}` : r.diff}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
-      {Array.isArray(d.orderIds) && <p className="text-sm">受注一覧に「要確認」で入った注文: {(d.orderIds as string[]).length} 件</p>}
+      {Array.isArray(d.orderIds) && <p className="font-bold">受注一覧に「要確認」で入った注文：<span className="num text-xl">{(d.orderIds as string[]).length}</span> 件</p>}
       <details>
         <summary className="cursor-pointer text-sm text-ink-soft">中身をすべて見る</summary>
         <pre className="max-h-96 overflow-auto rounded border border-rule bg-paper p-2 text-xs">{JSON.stringify(data, null, 2)}</pre>
