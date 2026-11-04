@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Db, FaxDoc } from "./types";
+import { demoDb } from "./demo-reset";
 
 // デモ用のかんたんな保存先（JSONファイル）。本番ではDBに置き換える。
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -44,6 +45,7 @@ export async function readDb(): Promise<Db> {
     db.mappings ??= {};
     db.importedMessageIds ??= [];
     db.purchaseOrders ??= [];
+    if (db.lossRates && typeof db.lossRates.rates !== "object") db.lossRates = undefined; // 壊れた値は使わない
     return db;
   } catch {
     return emptyDb();
@@ -63,10 +65,19 @@ export function updateDb<T>(fn: (db: Db) => T | Promise<T>): Promise<T> {
   return run;
 }
 
+/**
+ * デモを最初の状態に戻す（受信箱の「デモを最初から」ボタン）。npm run demo:reset と同じ状態:
+ * 受信箱 F001〜F005・確定済み DO-01〜DO-18・発注書なし・受け取ったFAXのPDFなし・LINEのひも付けなし。
+ */
 export async function resetDb() {
-  return updateDb((db) => {
-    Object.assign(db, emptyDb());
+  await updateDb((db) => {
+    const fresh = demoDb(emptyDb());
+    for (const k of Object.keys(db) as (keyof Db)[]) delete db[k];
+    Object.assign(db, fresh);
   });
+  await fs.rm(FAX_INBOX_DIR, { recursive: true, force: true });
+  await fs.mkdir(FAX_INBOX_DIR, { recursive: true });
+  await fs.writeFile(path.join(DATA_DIR, "line.json"), JSON.stringify({ users: {}, outbox: [] }, null, 2), "utf8");
 }
 
 /** 受信したFAXのPDFを置く場所（git には入れない） */

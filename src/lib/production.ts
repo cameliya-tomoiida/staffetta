@@ -86,6 +86,8 @@ export interface ProductionPlan {
 export interface ProductionOptions {
   /** ラインの上限を上書きする（例: { pizza: 1500 }） */
   lineCaps?: Partial<Record<Line, number>>;
+  /** 生地のロス率を上書き（棚卸の補正案を人が承認したもの）。doughId → 0.05 など */
+  lossRates?: Record<string, number>;
 }
 
 const round = (n: number, d = 3) => Math.round(n * 10 ** d) / 10 ** d;
@@ -120,7 +122,7 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
     if (spec.toppingId) toppings.push({ productId: t.productId, toppingId: spec.toppingId, pieces: t.pieces });
   }
 
-  const doughs: DoughBatchPlan[] = [...byDough.entries()].map(([doughId, items]) => doughBatch(doughId, items));
+  const doughs: DoughBatchPlan[] = [...byDough.entries()].map(([doughId, items]) => doughBatch(doughId, items, opts.lossRates?.[doughId]));
 
   const lines: LinePlan[] = (Object.keys(lineSettings) as Line[]).map((line) => {
     const ls = lineSettings[line];
@@ -154,12 +156,13 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
 }
 
 /** 生地1種類分: 個数 → 生地kg（ロス込み）→ 粉kg → 材料kg（ベーカーズ％） */
-export function doughBatch(doughId: string, items: DoughItem[]): DoughBatchPlan {
+export function doughBatch(doughId: string, items: DoughItem[], lossRateOverride?: number): DoughBatchPlan {
   const d = findDough(doughId);
   if (!d) throw new Error(`生地 ${doughId} がありません`);
   const pieces = items.reduce((s, i) => s + i.pieces, 0);
   const netKg = items.reduce((s, i) => s + (i.pieces * i.doughGram) / 1000, 0);
-  const doughKg = netKg / (1 - d.lossRate);
+  const lossRate = lossRateOverride ?? d.lossRate;
+  const doughKg = netKg / (1 - lossRate);
   const totalPercent = d.items.reduce((s, i) => s + i.percent, 0);
   const flourKg = doughKg / (totalPercent / 100);
   const batches = doughKg > 0 ? Math.ceil(doughKg / d.mixerMaxKg) : 0;
@@ -170,7 +173,7 @@ export function doughBatch(doughId: string, items: DoughItem[]): DoughBatchPlan 
     items,
     pieces,
     netKg: round(netKg),
-    lossRate: d.lossRate,
+    lossRate,
     doughKg: round(doughKg),
     flourKg: round(flourKg),
     batches,
@@ -303,7 +306,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     const shift = Math.max(0, ...today.filter((x) => x.resource).map((x) => x.end - (busyFrom.get(`today:${x.resource}`) ?? Infinity)));
     if (shift > 0) today = place(deadline - shift);
     for (const x of today) if (x.resource) busyFrom.set(`today:${x.resource}`, Math.min(busyFrom.get(`today:${x.resource}`) ?? Infinity, x.start));
-    const warnings = today.length && today[0].start < 0 ? [`${b.name}: 納品 ${fmtTime(deliveryMinute)} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります`] : [];
+    const warnings = today.length && today[0].start < lineSettings[b.line].earliestStartMinute ? [`${b.name}: 納品 ${fmtTime(deliveryMinute)} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(lineSettings[b.line].earliestStartMinute)} より前）`] : [];
     rows.set(b.doughId, {
       line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.doughId)!, ...today],
       from: "delivery", deliveryMinute, deliveryCustomerId: customerId, deadline, warnings,

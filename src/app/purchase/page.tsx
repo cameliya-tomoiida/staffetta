@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { FACTORY } from "@/data/master";
-import { allOrders } from "@/demo/all-orders";
+import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
+import { dayCostSummary } from "@/lib/cost";
+import { CostBox } from "@/components/ui/CostBox";
 import { addDays, fmtDate } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
 import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
 import { customerById } from "@/data/master";
+import { listPurchaseOrders } from "@/lib/purchase-store";
 import { PurchaseClient, type PoView } from "./PurchaseClient";
 
 export const metadata = { title: "発注書｜受発注ハブ" };
@@ -17,13 +20,14 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
   const q = await props.searchParams;
   const { orders, today } = await allOrders();
   const tomorrow = addDays(today, 1);
-  const dates = deliveryDatesOf(orders).filter((d) => d >= today);
-  const date =
-    typeof q.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.date) ? q.date : dates.includes(tomorrow) ? tomorrow : (dates[0] ?? tomorrow);
+  const dates = visibleDates(deliveryDatesOf(orders), today);
+  const date = pickDate(q.date, dates, today);
 
   // 発注書の下書きは③（src/lib）が作る。画面は表示と、人の承認・送信の操作だけ
   const r = runPipeline(orders, date);
   const shortage = new Map(r.shortages.map((s) => [s.materialId, s]));
+  // 承認・送信済みの記録は③の purchase-store から（承認済みのものは中身も保存した方を見せる）
+  const stored = new Map((await listPurchaseOrders()).map((p) => [p.id, p]));
 
   const view = (po: PurchaseOrderDraft): PoView => {
     const s = findSupplier(po.supplierId);
@@ -38,6 +42,10 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       deliveryDate: po.deliveryDate,
       kind: po.kind,
       notes: po.notes,
+      state: (() => {
+        const s = stored.get(po.id);
+        return s ? { status: s.status, approvedBy: s.approvedBy, approvedAt: s.approvedAt, sentAt: s.sentAt, sentBy: s.sentBy } : { status: "draft" as const };
+      })(),
       lines: po.lines.map((l) => {
         let detail: string | undefined;
         if (l.itemType === "product" && l.customers?.length) {
@@ -55,13 +63,20 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       }),
     };
   };
-  const pos = [...r.productPurchaseOrders, ...r.materialPurchaseOrders].filter((p) => p.lines.length > 0).map(view);
+  // 承認後に注文が変わっても、承認した中身（保存したもの）を見せる
+  const drafts = [...r.productPurchaseOrders, ...r.materialPurchaseOrders].map((d) => {
+    const s = stored.get(d.id);
+    return s && s.status !== "draft" ? ({ ...d, lines: s.lines as typeof d.lines } as PurchaseOrderDraft) : d;
+  });
+  const pos = drafts.filter((p) => p.lines.length > 0).map(view);
 
   return (
     <PurchaseClient
       pos={pos}
+      date={date}
       factory={FACTORY.name}
       warnings={r.warnings}
+      costBox={<CostBox s={dayCostSummary(r)} show={["purchase", "material"]} />}
       dateNav={
         dates.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">

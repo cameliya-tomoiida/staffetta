@@ -13,10 +13,8 @@ const at = (day: string, hm: string) => `${day}T${hm}:00+09:00`;
 const nameOf = (l: OrderLine) => findProduct(l.productId)?.name ?? l.productId;
 const lineText = (o: Order) => o.lines.map((l) => `${nameOf(l)} ${l.quantity}${l.unit}`).join("、");
 
-/** ③の注文に、入口らしい元の資料と受付時刻を付ける */
-function dress(o: Order, i: number): Order {
-  const day = addDays(o.deliveryDate, -1);
-  const receivedAt = at(day, `${String(7 + (i % 10)).padStart(2, "0")}:${String((i * 17) % 60).padStart(2, "0")}`);
+/** ③の注文に、入口らしい元の資料を付ける（受付時刻などは③のまま） */
+function dress(o: Order): Order {
   const text = lineText(o);
   let refs: SourceRef[];
   switch (o.source.channel) {
@@ -44,16 +42,18 @@ function dress(o: Order, i: number): Order {
   }
   const kind = o.intent === "change" ? "【変更】" : o.intent === "cancel" ? "【取消】" : o.status === "provisional" ? "【仮発注】" : "";
   if (kind && refs[0].kind === "manual") refs = [{ kind: "manual", note: `${kind}${refs[0].note}` }];
-  return { ...o, createdAt: receivedAt, source: { ...o.source, refs, receivedAt } };
+  return { ...o, source: { ...o.source, refs } };
 }
 
 type L = [productId: string, quantity: number, unit: string, per: number, read: { name: string; confidence: number; attention: string }];
+// 今日（デモの日 11/5）届いた、来週（11/9）分の要確認
+const REVIEW_DATE = addDays(DEMO_DATE, 3);
 function review(id: string, customerId: string, channel: Order["source"]["channel"], hm: string, refs: SourceRef[], lines: L[], rawText?: string): Order {
-  const receivedAt = at(addDays(DEMO_DATE, -1), hm);
+  const receivedAt = at(addDays(DEMO_DATE, -1), hm); // 11/5（デモの「今日」）の朝
   return {
     id,
     customerId,
-    deliveryDate: DEMO_DATE,
+    deliveryDate: REVIEW_DATE,
     status: "needs_review",
     createdAt: receivedAt,
     edits: [],
@@ -74,15 +74,15 @@ function review(id: string, customerId: string, channel: Order["source"]["channe
 
 /** 要確認の見本（③に無い入口の例）。要確認なので集計には入らない */
 const reviewSamples: Order[] = [
-  review("DEMO-E2", "C03", "email", "16:41", [{ kind: "email", messageId: "e-2002", subject: "Re: 数量変更のお願い", from: "order@minato-kyushoku.example" }],
+  review("DEMO-E2", "C03", "email", "07:12", [{ kind: "email", messageId: "e-2002", subject: "Re: 数量変更のお願い", from: "order@minato-kyushoku.example" }],
     [["P05", 28, "P", 10, { name: "ミニロール 白", confidence: 0.7, attention: "本文に「先日の数から2袋減らして」とある。元の数の確認が必要" }]], "先日お願いした数から2袋減らしてください。"),
   review("DEMO-G1", "C01", "google_sheet", "06:30", [{ kind: "google_sheet", url: "https://docs.google.com/spreadsheets/d/demo", sheetName: "11月", range: "B4:H20" }],
     [["P06", 80, "個", 1, { name: "ミニロール 黒", confidence: 0.75, attention: "シートに新しい行が増えている。追加の注文か確認" }]]),
-  review("DEMO-L2", "C06", "line", "20:20", [{ kind: "line_message", messageId: "m-1002", userId: "U-demo-06", text: "あした ピザ もう30まい と いつもの" }],
-    [["P07", 30, "枚", 1, { name: "ピザ 30まい", confidence: 0.8, attention: "「いつもの」の中身が分からない。前回はピザ生地玉3P" }]], "あした ピザ もう30まい と いつもの"),
-  review("DEMO-P2", "C04", "phone", "17:20", [{ kind: "manual", note: "留守電から書き起こし。聞き取りにくい" }],
+  review("DEMO-L2", "C06", "line", "08:20", [{ kind: "line_message", messageId: "m-1002", userId: "U-demo-06", text: "らいしゅう月よう ピザ 30まい と いつもの" }],
+    [["P07", 30, "枚", 1, { name: "ピザ 30まい", confidence: 0.8, attention: "「いつもの」の中身が分からない。前回はピザ生地玉3P" }]], "らいしゅう月よう ピザ 30まい と いつもの"),
+  review("DEMO-P2", "C04", "phone", "07:40", [{ kind: "manual", note: "留守電から書き起こし。聞き取りにくい" }],
     [["P07", 17, "枚", 1, { name: "ピザ 17枚？ 70枚？", confidence: 0.5, attention: "留守電で「じゅうなな」か「ななじゅう」か聞き取れない" }]]),
-  review("DEMO-N2", "C08", "customer_site", "12:05", [{ kind: "csv", fileName: "edi_order_demo_2.csv", rowStart: 2, rowEnd: 3 }],
+  review("DEMO-N2", "C08", "customer_site", "09:05", [{ kind: "csv", fileName: "edi_order_demo_2.csv", rowStart: 2, rowEnd: 3 }],
     [["P05", 42, "P", 10, { name: "ミニロール", confidence: 0.75, attention: "概数の注文。当日12時に確定の連絡が来る予定" }]]),
 ];
 

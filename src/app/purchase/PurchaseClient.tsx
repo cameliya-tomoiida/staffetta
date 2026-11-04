@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { PurchaseMethod } from "@/data/types";
-import { approveDraft } from "@/lib/purchase";
+import { approvePoAction, markSentAction } from "./actions";
 import {
-  Button, Empty, fmtDate, fmtDateTime, Icon, methodLabel, MethodIcon, Notice, PageHeader, PurchaseStatusTag, Segmented, Tag,
+  Button, buttonClass, Empty, fmtDate, fmtDateTime, Icon, methodLabel, MethodIcon, Notice, PageHeader, PurchaseStatusTag, Segmented, Tag,
   type PurchaseStatus,
 } from "@/components/ui";
 
@@ -22,27 +24,21 @@ export interface PoView {
   kind: "product" | "material";
   notes: string[];
   lines: { name: string; units: number; unitLabel: string; detail?: string }[];
+  /** 保存されている状態（③の purchase-store）。まだ保存されていなければ下書き */
+  state: PoState;
 }
 
-interface PoState {
+export interface PoState {
   status: PurchaseStatus;
   approvedBy?: string;
   approvedAt?: string;
   sentAt?: string;
+  sentBy?: string;
 }
 
 const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 const WARN_MIN = 60; // 締めの何分前から警告するか
 
-// TODO(③⑤): 発注書の状態は今はこの端末（localStorage）にだけ保存している。store の PurchaseOrder に保存するように置き換える
-const KEY = "juhacchu.purchase.v1";
-const load = (): Record<string, PoState> => {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-};
 
 /** 今から締めまでの分。締め未設定なら null */
 function minutesLeft(cutoffAt: string, now: number) {
@@ -50,35 +46,33 @@ function minutesLeft(cutoffAt: string, now: number) {
   return Number.isNaN(at) ? null : Math.floor((at - now) / 60000);
 }
 
-export function PurchaseClient({ pos, factory, warnings, dateNav }: { pos: PoView[]; factory: string; warnings: string[]; dateNav?: React.ReactNode }) {
-  const [state, setState] = useState<Record<string, PoState>>({});
+export function PurchaseClient({ pos, date, factory, warnings, dateNav, costBox }: { pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<number | null>(null);
   const [who, setWho] = useState(STAFF[0]);
   const [filter, setFilter] = useState<"all" | PurchaseStatus>("all");
 
   useEffect(() => {
-    setState(load()); // eslint-disable-line react-hooks/set-state-in-effect -- 保存した状態はブラウザでしか読めない
-    setNow(Date.now());
+    setNow(Date.now()); // eslint-disable-line react-hooks/set-state-in-effect -- 今の時刻はブラウザで決める（サーバーと食い違わないように）
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
 
-  const st = (id: string): PoState => state[id] ?? { status: "draft" };
-  const save = (id: string, s: PoState) =>
-    setState((prev) => {
-      const next = { ...prev, [id]: s };
-      localStorage.setItem(KEY, JSON.stringify(next));
-      return next;
+  const st = (id: string): PoState => pos.find((p) => p.id === id)?.state ?? { status: "draft" };
+  // 保存は③の purchase-store（サーバー）。承認には名前が必要
+  const run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>) => {
+    setError(null);
+    start(async () => {
+      const r = await fn();
+      if (!r.ok) setError(r.error);
+      router.refresh();
     });
-
-  // 承認の決まり（下書きだけ・名前が必要）は③の approveDraft に合わせる
-  const approve = (po: PoView) => {
-    const a = approveDraft({ status: st(po.id).status, approvedBy: undefined as string | undefined }, who);
-    save(po.id, { status: a.status, approvedBy: a.approvedBy, approvedAt: new Date().toISOString() });
   };
-  const unapprove = (po: PoView) => save(po.id, { status: "draft" });
-  // TODO(⑤): ここで実際に送る（FAX送信・メール送信・サイトへの入力）。今は「送信済み」の印を付けるだけ
-  const send = (po: PoView) => save(po.id, { ...st(po.id), status: "sent", sentAt: new Date().toISOString() });
+  const approve = (po: PoView) => run(() => approvePoAction({ date, poId: po.id, who }));
+  // 実際の送信は「送り出し」画面（⑤）・複合機・サイトで人が行い、送ったらこれを押す
+  const send = (po: PoView) => run(() => markSentAction({ poId: po.id, who }));
 
   const counts = { draft: 0, approved: 0, sent: 0 } as Record<PurchaseStatus, number>;
   pos.forEach((p) => counts[st(p.id).status]++);
@@ -99,6 +93,12 @@ export function PurchaseClient({ pos, factory, warnings, dateNav }: { pos: PoVie
       </PageHeader>
 
       {dateNav && <div className="no-print mb-4">{dateNav}</div>}
+      {costBox}
+      {error && (
+        <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
+          {error}
+        </Notice>
+      )}
       {warnings.length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
           <ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
@@ -144,8 +144,8 @@ export function PurchaseClient({ pos, factory, warnings, dateNav }: { pos: PoVie
               s={st(po.id)}
               left={now == null ? null : minutesLeft(po.cutoffAt, now)}
               factory={factory}
+              busy={pending}
               onApprove={() => approve(po)}
-              onUnapprove={() => unapprove(po)}
               onSend={() => send(po)}
             />
           ))}
@@ -169,14 +169,14 @@ function Steps() {
 }
 
 function PoSheet({
-  po, s, left, factory, onApprove, onUnapprove, onSend,
+  po, s, left, factory, busy, onApprove, onSend,
 }: {
-  po: PoView; s: PoState; left: number | null; factory: string; onApprove: () => void; onUnapprove: () => void; onSend: () => void;
+  po: PoView; s: PoState; left: number | null; factory: string; busy: boolean; onApprove: () => void; onSend: () => void;
 }) {
-  const m = methodLabel[po.method];
+  const m = methodLabel[po.method] ?? { short: po.method, kind: "site" as const };
   const late = left != null && left < 0;
   const near = left != null && left >= 0 && left <= WARN_MIN;
-  const sendLabel = m.kind === "fax" ? "FAXで送る" : m.kind === "email" ? "メールで送る" : m.kind === "site" ? "サイトに入力した" : "電話で伝えた";
+  const sendLabel = m.kind === "fax" ? "FAXを送った" : m.kind === "email" ? "メールを送った" : m.kind === "site" ? "サイトに入力した" : "電話で伝えた";
   return (
     <section className={`flex flex-col rounded-sm border bg-sheet ${s.status === "draft" ? "border-rule-strong" : s.status === "approved" ? "border-ok-line" : "border-info-line"}`}>
       {/* 帳票の頭 */}
@@ -252,7 +252,7 @@ function PoSheet({
       <div className="no-print mt-auto border-t border-rule bg-paper/60 px-4 py-3 sm:px-5">
         {s.status === "draft" && (
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ok" size="lg" className="flex-1" onClick={onApprove}>
+            <Button variant="ok" size="lg" className="flex-1" disabled={busy} onClick={onApprove}>
               <Icon.check className="h-6 w-6" />
               この内容で承認する
             </Button>
@@ -261,23 +261,27 @@ function PoSheet({
         {s.status === "approved" && (
           <div className="space-y-2">
             <div className="text-sm text-ok-ink">
-              <b>{s.approvedBy}</b> が承認（{fmtDateTime(s.approvedAt!)}）
+              <b>{s.approvedBy}</b> が承認{s.approvedAt && `（${fmtDateTime(s.approvedAt)}）`}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" size="lg" className="w-full whitespace-nowrap sm:w-auto sm:flex-1" onClick={onSend}>
+              <Link href="/outbound" className={buttonClass("ghost", "lg", "w-full sm:w-auto")}>
+                送り出しの準備（PDF・メール・入力リスト）
+              </Link>
+              <Button variant="primary" size="lg" className="w-full whitespace-nowrap sm:w-auto sm:flex-1" disabled={busy} onClick={onSend}>
                 <Icon.send className="h-6 w-6" />
                 {sendLabel}
               </Button>
-              <Button variant="quiet" onClick={onUnapprove}>
-                承認を取り消す
-              </Button>
             </div>
-            {m.kind === "site" && <div className="text-sm text-ink-soft">発注サイトにログインして入力したら、このボタンを押してください。IDとパスワードは、ご自分で入れてください。</div>}
+            <div className="text-sm text-ink-soft">
+              {m.kind === "site"
+                ? "発注サイトにログインして入力したら、送信済みにします。IDとパスワードは、ご自分で入れてください。"
+                : "送ったあとに押してください。自動では送りません。"}
+            </div>
           </div>
         )}
         {s.status === "sent" && (
           <div className="text-sm text-info-ink">
-            <b>送信済み</b>（{fmtDateTime(s.sentAt!)}・{po.contact}）／ 承認：{s.approvedBy}
+            <b>送信済み</b>（{s.sentAt ? fmtDateTime(s.sentAt) : ""}{s.sentBy ? `・${s.sentBy}` : ""}{po.contact ? `・${po.contact}` : ""}）／ 承認：{s.approvedBy}
           </div>
         )}
       </div>

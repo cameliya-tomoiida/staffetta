@@ -122,12 +122,58 @@ const r = runPipeline(db.orders, "2026-11-06");
 - **最小ロット**: 材料（`materialExtras` / 新しい材料の `minLot`）→ 仕入先（`supplierExtras` / 新しい仕入先の `minLot`）→ **1** の順。デモではまるやま食材が 2袋から。
 - `now` を渡すと、締めを過ぎた発注書に「締めを過ぎています」の注意。
 
+### 商品ごとのリードタイム判定 `leadtime.ts`
+全社一律の締めは作らない。商品ごとに締めを出し、受注の確認画面で「この商品はもう間に合わない」を黄色で出す元データにする（判定だけ。注文は変えない）。
+
+| 関数 | 入力 → 出力 |
+|---|---|
+| `checkLeadTime(order, now)` | → 行ごとの `{ lineId, productId, status, deadline, reason }`。`status`: `ok` 間に合う / `late` もう間に合わない（黄色）/ `warn` 間に合わないが仮発注なので警告だけ / `unknown` 締めを決められない |
+| `leadTimeSummary(checks)` | → 注文全体でいちばん悪い状態 |
+| `orderDeadline(productId, customerId, deliveryDate)` | → `{ deadline, basis }`（締めの ISO と、その根拠の説明） |
+
+締めの出し方:
+- **自社製造**: 納品日の `leadDays` 日前（既定 **1日**）の `cutoffTime`。`cutoffTime` が無ければ得意先マスタの締め、それも無ければ 17:00。
+  デモ: 食パンは前日 12:00、ピザクラスト27cm は2日前、OEM のピザは3日前。
+- **仕入品**: その得意先が受ける**仕入先の便の締め**（例: ふじみ製パン 前日 11:00）。仕入先に頼む締めより前に、お客さんの注文が要るため。商品に `leadDays` があればそちらを使う。
+- **食パンの包み直し**: 元の食パン（3斤）の仕入先の締め。
+- **仮発注（provisional）**: 病院の「概数 → 当日確定」の運用なので、締めを過ぎても `late` にせず `warn`（警告だけ）。
+
+### 棚卸でロス率を補正 `stocktake.ts`（3か月に1回）
+**ロス率は書き換えない。補正案を返すだけ。** 人が承認した分だけを使う。
+
+| 関数 | 入力 → 出力 |
+|---|---|
+| `theoreticalPlans(orders, from, to, opts?)` | → 期間中の毎日の製造計画（理論の使用量の元） |
+| `applyStocktake(materials, counted, period)` | `materials`: 材料ごとの `{ materialId, startStock（期首在庫）, received（期間中の入荷） }`、`counted`: 棚卸の実数 `{ materialId, qty }`、`period`: `{ from, to, plans }` → `{ adjustments（材料ごとの 帳簿・実数・差・実際/理論）, newStock（実数に合わせた在庫）, proposals（生地ごとの補正案）, warnings }` |
+| `approveLossProposals(proposals, doughIds, who, at?, current?)` | 人がチェックした生地だけを承認 → `{ lossRates, approvedBy, approvedAt, approved }`。名前が空ならエラー |
+| `planProduction(day, { lossRates })` | 承認したロス率を渡したときだけ、生地kg の計算に入る |
+
+補正案 `{ doughId, currentLoss, suggestedLoss, change, needsCheck, basis }` の式:
+```
+実際の使用量  A_m = 期首在庫 + 期間中の入荷 − 棚卸の実数        （材料 m ごと）
+理論の使用量  T_m = 期間中の製造計画から出した使用量（今のロス率込み・トッピング込み）
+材料の比      r_m = A_m ÷ T_m
+生地の比      R_d = Σ(w_dm × r_m) ÷ Σ w_dm
+              w_dm = 生地 d で使う材料 m の理論kg（水など発注しない材料・棚卸の数が無い材料は除く）
+補正案        L' = 1 − (1 − L) ÷ R_d        （L = 今のロス率。0〜30% におさめる）
+```
+- 実際の生地量 = 正味 ÷ (1 − L') = 理論の生地量 × R_d になるロス率、という意味。
+- ±0.5% 未満の差は `change: "same"`（変えない）。
+- R_d が 0.8 未満か 1.3 超えなら `needsCheck: true`（数え間違い・入荷の記録もれを疑う）。
+- 材料を複数の生地・トッピングで使っているときは、どれも同じ比で多く（少なく）使ったとみなす（材料ごとの使い分けは棚卸ではわからないため）。
+- 承認したロス率（`lossRates`）を保存する場所は Db にまだ無い（①に相談）。
+
 ### 原価・利益 `cost.ts`
 | 関数 | 入力 → 出力 |
 |---|---|
-| `productCost(productId)` | → 材料費（ロス込み）・包材費・人件費・原価・粗利・粗利率・未入力の項目 |
+| `dayCostSummary(runPipelineの結果)` | → その日の **材料費**（`materialCost`）・**仕入額**（`purchaseCost`、仕入先ごと）・**商品ごとの粗利**（`margins`）をまとめて。/plan・/purchase はまずこれ |
+| `productionMaterialCost(r.production)` | → 今日の製造の材料費の合計（`total`）と、材料ごと（`lines`、金額の大きい順）・生地ごと（`byDough`）・トッピングごと（`byTopping`）。水は0円 |
+| `productMargins(r.totals, r.productPurchaseOrders?)` | → 商品ごとの 売上・原価・粗利・粗利率（`products`）と合計（`total`）。発注書を渡すと、仕入品は**実際に買う袋数 × 仕入値**（余りの分も入る。173個に 6個入×29袋＝174個分）、食パンの包み直しは 3斤の仕入額を枚数の割合で分ける |
+| `productCost(productId)` | → 1個の 材料費（ロス込み）・包材費・人件費・原価・粗利・粗利率・未入力の項目 |
+| `buyUnitCost(spec, packSize?)` | → 仕入品の1個の仕入値。入数ごとの仕入値（`packPrices`: 円/袋）があれば 袋の値段 ÷ 入数、無ければ `unitCost` |
+| `buyPackCost(spec, packs, packSize)` | → 袋数 × 入数 で買ったときの金額 |
 | `costTable()` | → 全商品の原価表 |
-| `dailyProfit(totals.products)` | → 1日の売上・原価・粗利 |
+| `dailyProfit(totals.products)` | → 1日の売上・原価・粗利（1個の原価 × 個数。仕入の余りは見ない簡易版） |
 | `doughYenPerGram(doughId)` | → 生地1gの材料費 |
 
 ### マスターを引く `catalog.ts`
@@ -140,7 +186,11 @@ master.ts（①）と production.ts（③）の両方を見る窓口。商品名
 - `production.ts`（③）: 架空の製造マスター。生地（ベーカーズ％・ロス率・ミキサー上限・工程）、トッピング、商品ごとの作り方・仕入れ方（入数・袋/ケース入数）、仕入先の便（ふじみ製パンの1便・2便）、ピザ用の材料と仕入先、ラインの上限。
   - 便ごとの締め時刻・日数は空でよい。空なら master.ts の仕入先の締めを使う。日数も無ければ 1日。
   - 得意先の納品時刻 `customerDeliveryTime`（無い得意先は 8:00）、仕入先・材料の最小ロット `minLot`、ラインの工程表の組み方 `scheduleFrom`・積み込み時間 `shipBufferMinutes`。
-- `demo-orders.ts`（③）: 通し確認・画面デモ用の架空注文（入口も単位もばらばら。変更・キャンセル・仮発注も入っている）。
+- `demo-orders.ts`（③）: 通し確認・画面デモ用の架空注文。**あした 11/6（金）分**の、もう確定した注文（11/2〜11/5朝に届いたもの）。
+  - 今日 11/5 に届いた FAX（F001〜F005）・メール・インフォマート・シートは来週（11/9〜）分なので、ここには入れていない。
+  - 得意先・品目・単位の書き方は各入口の見本にそろえた（病院=3個入り・2個入りの袋、保育園=週間表の個・斤、給食センター=ケ・P・c/s、インフォマート=6個入の袋、ピッツェリア=PDFのケース、食品会社=本文）。
+  - 変更（病院の超じゅくロール 60→65、edits に跡あり）・取り消し（カフェのLINE）・仮発注（医療食の概数）・仮→本発注の置き換え（めぐみ給食）も入っている。
+  - あしたの合計: パン 1,134個、ピザ 1,650枚（27cm がある日の上限 1,200枚を超える → 警告が出る）、超じゅくロール 173個 → 1便 18袋＋2便 11袋。
 - 実在の取引先・単価・レシピは入れていない。数字は実際の資料の「形」だけをまねた架空の値。
 
 ## 古いもの

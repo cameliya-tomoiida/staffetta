@@ -1,5 +1,6 @@
 // 発注の送り出し（確認用の最小限の画面）。発注書の状態は③の purchase-store にある。
 import { connection } from "next/server";
+import { PageHeader } from "@/components/ui";
 import { allOrders } from "@/demo/all-orders";
 import { deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
@@ -23,13 +24,10 @@ export default async function OutboundPage() {
   }));
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-black">発注の送り出し</h1>
-        <p className="text-black/60">
-          発注書の下書きを人が承認すると、送り先ごとに「FAX用PDF」「メール下書き」「サイトの入力用リスト・CSV」ができます。
-          送信は人が行い、送ったあとに「送った」を押します（自動では送りません）。
-        </p>
-      </div>
+      <PageHeader
+        title="発注の送り出し"
+        lead="発注書の下書きを人が承認すると、送り先ごとに「FAX用PDF」「メール下書き」「サイトの入力用リスト・CSV」ができます。送信は人が行い、送ったあとに「送った」を押します（自動では送りません）。"
+      />
       <OutboundClient records={views} dates={dates} />
     </div>
   );

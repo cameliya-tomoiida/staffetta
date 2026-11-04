@@ -111,7 +111,8 @@ LINE は「インターネットから見えるURL」にしかメッセージを
 5. **「Webhookの利用」** をオンにします。
 6. 作業4の LIFF の「エンドポイントURL」も、`https://xxxx.trycloudflare.com/liff/order` に直します。
 
-> cloudflared のURLは起動するたびに変わります。変わったら 3 と 6 をやり直します。
+> **注意：cloudflared のURLは起動するたびに変わります。** パソコンの再起動のあとや**動画の撮影日**など、トンネルを起動し直したら、必ず 3〜4（Webhook URL と検証）と 6（LIFF のエンドポイントURL）を新しいURLでやり直します。
+> リッチメニューのリンク（`https://liff.line.me/（LIFF ID）`）と `.env.local` は変わらないので、やり直さなくてよいです。
 
 ## さいごに：お客さんへの見せ方
 

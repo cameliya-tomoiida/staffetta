@@ -34,15 +34,21 @@
   "id": {
     "バターロール": "Roti gulung mentega",
     "ピザクラスト 23cm": "Kulit pizza 23cm",
+    "ピザクラスト 27cm": "Kulit Pizza 27cm",
     "ピザ生地": "Adonan pizza",
+    "ピザ生地玉 180g": "Bola Adonan Pizza 180g",
+    "マルゲリータ 21cm": "Pizza Margherita 21cm",
     "ミニロール（黒糖）": "Roti gulung mini (gula merah)",
     "ミニロール（白）": "Roti gulung mini (putih)",
     "ロール生地": "Adonan roti gulung",
+    "高加水ピザ 白（OEM）": "Pizza Hidrasi Tinggi Putih (OEM)",
+    "高加水ピザ生地": "Adonan Pizza Hidrasi Tinggi",
     "黒糖ロール": "Roti gulung gula merah",
     "黒糖ロール生地": "Adonan roti gulung gula merah",
     "食パン 6枚切": "Roti tawar 6 lembar",
     "食パン 8枚切": "Roti tawar 8 lembar",
-    "食パン生地": "Adonan roti tawar"
+    "食パン生地": "Adonan roti tawar",
+    "超じゅくロール 6個入": "Roti Gulung Super Lembut (Chō Juku Roll) isi 6"
   },
   "zh": {
     "バターロール": "黄油小餐包",

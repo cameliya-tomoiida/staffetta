@@ -95,10 +95,10 @@ export function ChannelBadge({ channel, size = "md" }: { channel: OrderChannel; 
 }
 
 export function MethodIcon({ method, className }: { method: PurchaseMethod; className?: string }) {
-  const kind = methodLabel[method].kind;
+  const kind = methodLabel[method]?.kind ?? "site";
   const key = kind === "site" ? "customer_site" : kind;
   return (
-    <Svg className={className} title={methodLabel[method].short}>
+    <Svg className={className} title={methodLabel[method]?.short ?? method}>
       {paths[key]}
     </Svg>
   );
