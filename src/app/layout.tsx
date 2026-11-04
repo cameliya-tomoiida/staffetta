@@ -18,7 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ja" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
-        <header className="no-print sticky top-0 z-20 border-b border-rule-strong bg-sheet">
+        <header className="no-print z-20 md:sticky md:top-0 border-b border-rule-strong bg-sheet">
           <div className="mx-auto max-w-7xl px-4 pt-2 sm:px-5">
             {/* 上の段: 名前と「今日やること」 */}
             <div className="flex flex-col gap-x-5 md:flex-row md:items-center">
