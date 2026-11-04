@@ -4,6 +4,7 @@ import { allProducts, findProduct as productById } from "@/lib/catalog";
 import type { Order, OrderLine, SourceRef } from "@/data/types";
 import { readDb, updateDb } from "@/lib/store";
 import { pushText } from "./client";
+import { aliasMapFor, normalizeAlias } from "@/lib/aliases";
 import { readLineText } from "./reader";
 import { customerIdForUser, readLineState, touchUser, updateLineState } from "./state";
 import { isDemoLineUser } from "./config";
@@ -62,7 +63,11 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
 
   let orders: Order[];
   try {
-    const { read, model } = await readLineText(input.text, input.receivedAt, existing.mappings[customerId] ?? {}, recentBrief);
+    // 名寄せ辞書（①の aliases。人が確定した「呼び名 → 商品」）。読み取りの指示文に渡し、読んだあとにも当てる
+    const dict = customerId ? ((await aliasMapFor(customerId))[customerId] ?? {}) : {};
+    const known = { ...(existing.mappings[customerId] ?? {}), ...dict };
+    const byAlias = new Map(Object.entries(dict).map(([a, pid]) => [normalizeAlias(a), pid]));
+    const { read, model } = await readLineText(input.text, input.receivedAt, known, recentBrief);
     const extra = { readModel: model, isOrder: read.is_order, ...(read.notes ? { notes: read.notes } : {}) };
     const groups = read.orders.length
       ? read.orders
@@ -77,15 +82,20 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
       source: source({ ...extra, ...(g.date_written ? { dateWritten: g.date_written } : {}) }),
       lines: g.lines.map((l, li): OrderLine => {
         const ppu = l.pieces_per_unit || 1;
+        // 辞書にある呼び名なら、その商品にする（読み取りの値は read にそのまま残す）
+        const fromDict = l.written_name ? byAlias.get(normalizeAlias(l.written_name)) : undefined;
+        const pid = fromDict && productById(fromDict) ? fromDict : productById(l.product_id) ? l.product_id : "";
+        const dictNote = fromDict && pid === fromDict && fromDict !== l.product_id ? `名寄せ辞書で ${fromDict}${l.product_id ? `（読み取りは ${l.product_id}）` : ""}` : undefined;
         return {
           id: `${idBase}-${oi}-${li}`,
-          productId: productById(l.product_id) ? l.product_id : "",
+          productId: pid,
           quantity: l.quantity,
           unit: l.unit_written || productById(l.product_id)?.unit || "",
           piecesPerUnit: ppu,
           pieces: l.quantity * ppu,
-          confidence: l.confidence,
+          confidence: fromDict && pid === fromDict ? Math.max(l.confidence, 0.95) : l.confidence,
           edits: [],
+          ...(dictNote ? { note: dictNote } : {}),
           read: {
             writtenName: l.written_name,
             quantity: l.quantity,
