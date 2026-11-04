@@ -87,7 +87,7 @@ describe("セルの読み方", () => {
 
 describe("取り込みのエラー（行と列で返す）", () => {
   it("見出しは日本語の列名でも英字の項目名でもよい。順番も自由。知らない列は教える", () => {
-    const h = mapHeader(recipeItemDef, ["ベーカーズ％", "doughId", "材料ID", "メモ"]);
+    const h = mapHeader(recipeItemDef as never, ["ベーカーズ％", "doughId", "材料ID", "メモ"]);
     expect(h.missing).toEqual([]);
     expect(h.unknown).toEqual(["メモ"]);
   });
