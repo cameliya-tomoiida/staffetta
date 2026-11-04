@@ -437,8 +437,30 @@ export interface CustomerMaster {
   cutoff: string;
   /** 納品時刻 "HH:MM"（工程表の逆算に使う。空なら 08:00） */
   deliveryTime?: string;
-  /** 配送コース（A・B・D・F・売店 など） */
+  /** 配送コース（便）。便のマスタ（CourseMaster）の id と同じ文字 */
   course?: string;
+  /** 納品する曜日（0=日〜6=土）。空なら便の曜日、それも空なら毎日 */
+  deliveryWeekdays?: number[];
+  note?: string;
+  active: boolean;
+}
+
+/**
+ * 便（配送コース）。工程表は、得意先の便の出発時刻から逆算する（積み込みの時間を引いた時刻までに作り終える）。
+ * 便が無い得意先は、納品時刻 − ラインの積み込み・配送の時間。
+ */
+export interface CourseMaster {
+  /** 取引先マスタの course と同じ文字（例: "東コース（朝便）"） */
+  id: string;
+  name: string;
+  /** 出発時刻 "HH:MM" */
+  departTime: string;
+  /** 積み込みの時間（分）。出発のこの時間前までに作り終える */
+  loadMinutes: number;
+  /** 出発する日: 0 = 納品日の当日、-1 = 前日（宅配便・冷凍便など） */
+  dayOffset: number;
+  /** 走る曜日（0=日〜6=土）。空なら毎日 */
+  weekdays?: number[];
   note?: string;
   active: boolean;
 }
@@ -479,6 +501,7 @@ export interface Masters {
   suppliers: SupplierMaster[];
   supplierDeliveries: SupplierDeliveryMaster[];
   customers: CustomerMaster[];
+  courses: CourseMaster[];
   shifts: ShiftMaster[];
   staffAssignments: StaffAssignmentMaster[];
 }

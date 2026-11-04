@@ -97,3 +97,46 @@ describe("マスタの差し替え", () => {
     expect(productCost("P01").packagingCost).toBe(0.4);
   });
 });
+
+describe("便（配送コース）別の製造計画", () => {
+  it("同じ生地でも、便の出発が2時間以上離れたら別の仕込みに分け、それぞれの出発から逆算する", () => {
+    // 喫茶店（C04）を午後便（13:00 出発）にすると、黒糖ロール生地が 朝の便の分と 午後便の分に分かれる
+    const m = patch((m) => (m.customers.find((c) => c.id === "C04")!.course = "午後便（売店）"));
+    const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
+    const kokuto = r.production.doughs.filter((d) => d.doughId === "DG02");
+    expect(kokuto.map((d) => d.key)).toEqual(["DG02#1", "DG02#2"]);
+    expect(kokuto[1].waveName).toBe("午後便（売店）");
+    // 個数は分かれても合計は同じ（保育園 45 ＋ 病院 33 ／ 喫茶店 30）
+    expect(kokuto.map((d) => d.pieces)).toEqual([78, 30]);
+    const late = r.schedule.find((x) => x.key === "DG02#2")!;
+    expect(late).toMatchObject({ waveName: "午後便（売店）", deadline: 12 * 60 + 30 });
+    expect(late.steps.at(-1)!.end).toBeLessThanOrEqual(750);
+    expect(late.steps[0].start).toBeGreaterThan(6 * 60); // 朝に作り始める（夜中ではない）
+    // 材料は合計で同じ
+    const total = (rr: typeof r) => rr.materials.find((x) => x.materialId === "M04")!.needKg;
+    expect(total(r)).toBeCloseTo(total(runPipeline(demoOrders, DEMO_DATE)), 2);
+  });
+
+  it("分ける間隔を 0 にすると分けない", () => {
+    const m = patch((m) => (m.customers.find((c) => c.id === "C04")!.course = "午後便（売店）"));
+    const r = runPipeline(demoOrders, DEMO_DATE, { masters: m, production: { waveGapMinutes: 0 } });
+    expect(r.production.doughs.filter((d) => d.doughId === "DG02").map((d) => d.key)).toEqual(["DG02"]);
+  });
+
+  it("前日に出る便（宅配便）は前日の時刻に作り終える", () => {
+    const m = patch((m) => {
+      m.customers.find((c) => c.id === "C04")!.course = "ヤマト便";
+    });
+    const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
+    const late = r.schedule.find((x) => x.doughId === "DG02" && x.waveName === "ヤマト便")!;
+    expect(late.deadline).toBe(16 * 60 - 1440 - 60); // 前日 16:00 出発 − 積み込み60分
+    expect(late.deadlineBasis).toMatch(/前日 16:00 出発/);
+  });
+
+  it("便のマスタに無いコースの得意先は、納品時刻から逆算する", () => {
+    const m = patch((m) => (m.customers.find((c) => c.id === "C02")!.course = "ないコース"));
+    const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
+    expect(r.schedule.length).toBeGreaterThan(0);
+  });
+});
+

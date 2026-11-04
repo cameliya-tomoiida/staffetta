@@ -107,10 +107,11 @@ describe("工程表", () => {
       for (const b of uses) if (a !== b && a.k === b.k) expect(a.end <= b.start || b.end <= a.start).toBe(true);
   });
 
-  it("パンは納品時刻から逆算する: いちばん早い納品（病院 7:30）− 積み込み60分 = 6:30 に金属検出が終わる", () => {
+  it("パンは便の出発から逆算する: いちばん早い便（5:30 出発）− 積み込み30分 = 5:00 に金属検出が終わる", () => {
     const roll = rows.find((r) => r.doughId === "DG01")!;
-    expect(roll).toMatchObject({ from: "delivery", deliveryMinute: 450, deliveryCustomerId: "C02", deadline: 390 });
-    expect(roll.steps.at(-1)!.end).toBeLessThanOrEqual(390);
+    expect(roll).toMatchObject({ from: "delivery", deadline: 300 });
+    expect(roll.deadlineBasis).toMatch(/05:30 出発/);
+    expect(roll.steps.at(-1)!.end).toBeLessThanOrEqual(300);
     expect(roll.steps[0].key).toBe("weigh");
   });
 
@@ -119,10 +120,10 @@ describe("工程表", () => {
       for (let i = 1; i < r.steps.length; i++) expect(r.steps[i].start).toBe(r.steps[i - 1].end);
   });
 
-  it("得意先マスタに納品時刻が無ければ 8:00", () => {
-    // 黒糖ロールを喫茶店（C04、納品時刻の登録なし）だけが頼んだ日
-    const kokuto = buildSchedule(planProduction({ ...day([["P02", 30]]), products: [{ productId: "P02", name: "", unit: "個", pieces: 30, customers: [{ customerId: "C04", pieces: 30, orderIds: [] }] }] }))[0];
-    expect(kokuto).toMatchObject({ deliveryMinute: 480, deliveryCustomerId: "C04" });
+  it("便も納品時刻も無い得意先は 8:00 納品 − 積み込み・配送60分", () => {
+    // 黒糖ロールを、マスタに無い得意先（C99）だけが頼んだ日
+    const kokuto = buildSchedule(planProduction({ ...day([["P02", 30]]), products: [{ productId: "P02", name: "", unit: "個", pieces: 30, customers: [{ customerId: "C99", pieces: 30, orderIds: [] }] }] }))[0];
+    expect(kokuto).toMatchObject({ deliveryMinute: 480, deliveryCustomerId: "C99", deadline: 420 });
     expect(kokuto.steps.at(-1)!.end).toBeLessThanOrEqual(420);
   });
 
