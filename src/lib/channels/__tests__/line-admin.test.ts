@@ -86,3 +86,18 @@ describe("LINE の人のひも付け", () => {
     expect(s.outbox.at(-1)).toMatchObject({ to: "U_demo_kotori", via: "push", mode: "demo", orderId: "L1" });
   });
 });
+
+describe("デモのリセット", () => {
+  it("架空のお客さんの分だけ消え、本物の LINE の人は残る", async () => {
+    const st = await import("@/lib/channels/line/state");
+    await st.touchUser("U_demo_kotori", { displayName: "デモ" });
+    await st.touchUser("U-demo-DO-05", { displayName: "デモ2" });
+    await st.touchUser("Uabcdef0123456789", { displayName: "本物" });
+    await st.resetLineDemo();
+    const users = Object.keys((await st.readLineState()).users);
+    expect(users).toContain("Uabcdef0123456789");
+    expect(users).not.toContain("U_demo_kotori");
+    expect(users).not.toContain("U-demo-DO-05");
+    expect((await st.readLineState()).outbox.some((m) => m.to === "U_demo_kotori")).toBe(false);
+  });
+});

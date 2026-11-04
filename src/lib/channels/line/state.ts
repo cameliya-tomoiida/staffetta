@@ -170,3 +170,22 @@ export async function touchUser(userId: string, info: { displayName?: string; cl
     return { user: { ...u }, customerId: customerIdForUser(s, userId) };
   });
 }
+
+/**
+ * 「デモを最初から」で呼ぶ（①の resetDb から）。架空のお客さん（U_demo_… / U-demo-…）の分だけ消す。
+ * 本物の LINE の人（ひも付け・送った記録）は残す。
+ */
+export async function resetLineDemo() {
+  await init();
+  const db = getDb();
+  const isDemo = (id: string) => /^U[-_]demo[-_]/i.test(id);
+  const ids = (sql: string) => (db.prepare(sql).all() as { id: string }[]).map((r) => r.id).filter(isDemo);
+  const users = ids(`SELECT id FROM masters WHERE name = '${USERS}'`);
+  const outTo = ids("SELECT DISTINCT to_user AS id FROM line_outbox");
+  const logUsers = ids("SELECT DISTINCT user_id AS id FROM line_link_log");
+  transaction(() => {
+    for (const id of users) db.prepare("DELETE FROM masters WHERE name = ? AND id = ?").run(USERS, id);
+    for (const id of outTo) db.prepare("DELETE FROM line_outbox WHERE to_user = ?").run(id);
+    for (const id of logUsers) db.prepare("DELETE FROM line_link_log WHERE user_id = ?").run(id);
+  });
+}
