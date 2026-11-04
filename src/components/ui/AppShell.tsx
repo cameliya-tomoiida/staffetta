@@ -35,11 +35,21 @@ export const MENU: Group[] = [
       { href: "/admin/products", label: "商品" },
       { href: "/admin/recipes", label: "レシピと工程" },
       { href: "/admin/customers", label: "取引先" },
-      { href: "/admin/suppliers", label: "仕入先" },
-      { href: "/admin/materials", label: "材料" },
-      { href: "/admin/packaging", label: "包材" },
+      // 仕入先・材料・包材は⑤の /masters/*（CSV のプレビュー→確定・棚卸つき）
+      { href: "/masters/suppliers", label: "仕入先" },
+      { href: "/masters/materials", label: "材料" },
+      { href: "/masters/packaging", label: "包材" },
       { href: "/admin/equipment", label: "設備と人員" },
       { href: "/admin/fax-templates", label: "FAXの様式" },
+    ],
+  },
+  {
+    title: "取り込みの設定",
+    items: [
+      { href: "/masters/sheet_sources", label: "読みに行くシート" },
+      { href: "/masters/sheet_columns", label: "シートの列と商品" },
+      { href: "/masters/kirara_items", label: "専用サイトのコード表" },
+      { href: "/masters/infomart_headers", label: "インフォマートの列名" },
     ],
   },
   {
