@@ -36,35 +36,28 @@ export interface CsvRowInput {
   poId: string;
 }
 
-const ymdSlash = (d: string) => d.replace(/-/g, "/");
 
 export const SITE_PROFILES: Partial<Record<PurchaseMethod, SiteProfile>> = {
   infomart: {
     method: "infomart",
     label: "インフォマート（発注）",
     url: "https://www.infomart.co.jp/",
-    steps: ["インフォマートにログイン（担当者）", "発注 → 取引先を選ぶ → マイカタログ", "下の順番で数量を入れる", "納品日を入れて「確認」→ 内容を見て人が「発注」を押す"],
-    items: [
-      { itemId: "M03", siteName: "上白糖 30kg", siteCode: "IM-S-0103", section: "粉・糖" },
-      { itemId: "M04", siteName: "黒糖 10kg", siteCode: "IM-S-0104", section: "粉・糖" },
-      { itemId: "M05", siteName: "食塩 25kg", siteCode: "IM-S-0105", section: "調味料" },
-      { itemId: "M08", siteName: "ドライイースト 500g", siteCode: "IM-S-0108", section: "副材料" },
-      { itemId: "M10", siteName: "ショートニング 15kg", siteCode: "IM-S-0110", section: "油脂" },
-      { itemId: "M11", siteName: "オリーブオイル 16.5L", siteCode: "IM-S-0111", section: "油脂" },
+    steps: [
+      "インフォマートにログイン（人）",
+      "上のメニュー「発注リスト」→「発注」タブ。並び順を「設定済表示順」にする",
+      "① 下の順番で数量を入れる（単位は画面の数量欄の横に出る）",
+      "「納品日入力へ」→ ② 納品日を入れる",
+      "③ 確認画面で数を見比べて、人が確定する → ④ 完了",
     ],
-    // 【推】インフォマートの「発注明細CSV取込」に当たる形。実物は画面調査で確認する（docs/infomart-notes.md）
-    csv: {
-      encoding: "shift_jis",
-      note: "【仮】インフォマートに発注CSVの取込があるか、列の形は画面調査で確認する",
-      columns: [
-        { label: "納品希望日", value: (x) => ymdSlash(x.deliveryDate) },
-        { label: "商品コード", value: (x) => x.siteCode },
-        { label: "商品名", value: (x) => x.siteName },
-        { label: "数量", value: (x) => x.units },
-        { label: "単位", value: (x) => x.unitLabel },
-        { label: "備考", value: (x) => `ハブ ${x.poId}` },
-      ],
-    },
+    items: [
+      { itemId: "M03", siteName: "上白糖 30kg・1／袋", siteCode: "IM-S-0103", section: "A社（12:00締 翌日）" },
+      { itemId: "M04", siteName: "黒糖 10kg・1／C/S", siteCode: "IM-S-0104", section: "A社（12:00締 翌日）" },
+      { itemId: "M05", siteName: "食塩 25kg・1／袋", siteCode: "IM-S-0105", section: "A社（12:00締 翌日）" },
+      { itemId: "M08", siteName: "ドライイースト 500g・1／PC", siteCode: "IM-S-0108", section: "A社（12:00締 翌日）" },
+      { itemId: "M10", siteName: "ショートニング 15kg・1／缶", siteCode: "IM-S-0110", section: "A社（12:00締 翌日）" },
+      { itemId: "M11", siteName: "オリーブオイル 16.5L・1／缶", siteCode: "IM-S-0111", section: "A社（12:00締 翌日）" },
+    ],
+    // 画面調査（docs/infomart-notes.md）: 発注を CSV で一括取り込みする機能はなかった → 入力用リストだけ出す
   },
   fujimi_site: {
     method: "fujimi_site",
