@@ -106,6 +106,8 @@ export async function approveTemplateAction(input: { faxId: string; customerId: 
       customerId: input.customerId,
       title: fax.read.document_title,
       layoutSummary: fax.read.layout_summary,
+      formatKind: fax.read.format_kind,
+      pageNote: fax.read.page_note || undefined,
       items,
       draftedBy: fax.readModel ?? "",
       approvedBy: input.who,
