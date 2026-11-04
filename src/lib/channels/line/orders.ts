@@ -7,7 +7,7 @@ import { pushText } from "./client";
 import { readLineText } from "./reader";
 import { customerIdForUser, readLineState, touchUser, updateLineState } from "./state";
 import { isDemoLineUser } from "./config";
-import { addCustomer, getCustomerSettings } from "./customers";
+import { addCustomer, getCustomerSettings, syncLineUserIds } from "./customers";
 
 // LINEから来た注文を、共通の型の Order（channel: "line"、status: "needs_review"）にして store.ts に保存する。
 
@@ -243,7 +243,8 @@ export async function linkUserToCustomer(userId: string, customerId: string, who
     u.linkedAt = at;
     u.linkedBy = who;
     s.linkLog.push({ at, userId, action: "link", customerId, who });
-  });
+  }, who);
+  await syncLineUserIds(userId, customerId, who);
   await updateDb((db) => {
     for (const o of db.orders) {
       if (o.status === "needs_review" && !o.customerId && isLineOrderOf(o, userId)) {
@@ -267,7 +268,8 @@ export async function unlinkUser(userId: string, who: string) {
     u.customerId = undefined;
     u.linkedAt = undefined;
     u.linkedBy = undefined;
-  });
+  }, who);
+  await syncLineUserIds(userId, undefined, who);
 }
 
 /** 新しい取引先として登録して、そのままひも付ける */

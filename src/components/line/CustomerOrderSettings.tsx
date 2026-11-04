@@ -23,7 +23,6 @@ export async function CustomerOrderSettings({ customerId }: { customerId: string
         ) : (
           <Tag tone="off">LINE：ひも付けなし</Tag>
         )}
-        {c.updatedAt && <span className="text-sm text-ink-faint">最後に直した人：{c.updatedBy}</span>}
       </div>
       <OrderSettingsForm
         customerId={c.id}
