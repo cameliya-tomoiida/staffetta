@@ -5,11 +5,12 @@ import { customerById, customers } from "@/data/master";
 import { findProduct } from "@/lib/catalog";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
-  addDays, buttonClass, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
+  addDays, buttonClass, fmtNum, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
   orderIntent, orderStatusRank, PageHeader, Segmented, Tag,
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
 import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
+import { easyReasons, LOW_CONFIDENCE } from "@/components/ui/wording";
 
 const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
 
@@ -36,7 +37,7 @@ export function OrdersClient({
 
   const dates = useMemo(() => [...new Set(orders.map((o) => o.deliveryDate))].sort(), [orders]);
   const channels = useMemo(() => [...new Set(orders.map((o) => o.source.channel))], [orders]);
-  const custName = (id: string) => customerById(id)?.name ?? "（取引先が不明）";
+  const custName = (id: string) => customerById(id)?.name ?? "（お店が 分かりません）";
 
   const base = orders.filter(
     (o) => (date === "all" || o.deliveryDate === date) && (customer === "all" || o.customerId === customer) && (channel === "all" || o.source.channel === channel),
@@ -201,10 +202,10 @@ function OrderRow({
               const warn = !!(l.read?.attention || l.confidence < 0.8);
               return (
                 <li key={l.id} className={warn && !off ? "rounded bg-review-bg px-1" : ""}>
-                  {p?.name ?? <span className="text-review-ink">{l.read?.writtenName ?? "（商品未定）"}</span>}
-                  <span className="num ml-1.5 font-black">{l.quantity}</span>
+                  {p?.name ?? <span className="text-review-ink">{l.read?.writtenName ?? "（商品が 決まって いません）"}</span>}
+                  <span className="num ml-1.5 text-lg font-black">{fmtNum(l.quantity)}</span>
                   <span className="text-sm">{l.unit}</span>
-                  {l.piecesPerUnit > 1 && <span className="ml-1 text-sm text-ink-soft">（{l.pieces}{p?.unit === "枚" ? "枚" : "個"}）</span>}
+                  {l.piecesPerUnit > 1 && <span className="ml-1 text-sm text-ink-soft">（= {fmtNum(l.pieces)}{p?.unit === "枚" ? "枚" : "個"}）</span>}
                 </li>
               );
             })}
@@ -233,14 +234,19 @@ function OrderRow({
             </div>
           )}
           {!off &&
-            flagged.map((l) =>
-              l.read?.attention ? (
-                <div key={l.id} className="mt-1 flex items-start gap-1.5 text-sm font-bold text-review-ink">
-                  <Icon.alert className="mt-0.5 h-4 w-4 shrink-0" />
-                  {l.read.attention}
+            flagged.flatMap((l) => {
+              const reasons = easyReasons(l.read?.attention);
+              const name = findProduct(l.productId)?.name ?? l.read?.writtenName ?? "";
+              return (reasons.length ? reasons : [LOW_CONFIDENCE]).map((t, i) => (
+                <div key={`${l.id}-${i}`} className="mt-1 flex items-start gap-1.5 font-bold text-review-ink">
+                  <Icon.alert className="mt-1 h-4 w-4 shrink-0" />
+                  <span>
+                    {name && o.lines.length > 1 && <span className="mr-1 font-normal">{name}：</span>}
+                    {t}
+                  </span>
                 </div>
-              ) : null,
-            )}
+              ));
+            })}
         </div>
         <div className="flex flex-wrap gap-2 md:flex-col md:items-stretch">
           <SourceButton source={o.source} />
