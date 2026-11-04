@@ -2,6 +2,7 @@
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { liffLoadAction, liffOrderAction, type LiffAuth } from "@/lib/channels/line/actions";
+import { nowMs } from "@/lib/clock";
 import { BreadArt } from "./BreadArt";
 
 // お客さん（喫茶店・小さな店・介護施設。年配の店主が多い）向けの注文画面。LINEの中で開く。
@@ -28,10 +29,10 @@ declare global {
 const RED = "#8f1d1d";
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 function jstDay(n: number) {
-  const t = new Date(Date.now() + 9 * 3600_000 + n * 86400_000);
+  const t = new Date(nowMs() + 9 * 3600_000 + n * 86400_000);
   return { ymd: t.toISOString().slice(0, 10), m: t.getUTCMonth() + 1, d: t.getUTCDate(), wd: WD[t.getUTCDay()], dow: t.getUTCDay() };
 }
-const jstHHMM = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(11, 16);
+const jstHHMM = () => new Date(nowMs() + 9 * 3600_000).toISOString().slice(11, 16);
 const fmtYmd = (ymd: string) => {
   const t = new Date(`${ymd}T00:00:00Z`);
   return `${t.getUTCMonth() + 1}月${t.getUTCDate()}日（${WD[t.getUTCDay()]}）`;

@@ -1,4 +1,5 @@
 import "server-only";
+import { nowIso } from "@/lib/clock";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { isLineLive, lineConfig } from "./config";
 import { updateLineState, type OutboxItem } from "./state";
@@ -26,7 +27,7 @@ async function callApi(pathname: string, body: unknown) {
 }
 
 async function send(item: Omit<OutboxItem, "at" | "mode" | "ok">, deliver: () => Promise<void>) {
-  const record: OutboxItem = { ...item, at: new Date().toISOString(), mode: isLineLive() ? "live" : "demo", ok: true };
+  const record: OutboxItem = { ...item, at: nowIso(), mode: isLineLive() ? "live" : "demo", ok: true };
   if (isLineLive()) {
     try {
       await deliver();
