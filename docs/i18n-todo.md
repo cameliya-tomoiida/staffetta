@@ -31,7 +31,7 @@
 | 食パン 6枚切 | しょくぱん 6まいぎり | Bánh mì sandwich cắt 6 lát | Roti tawar 6 lembar | 吐司 6片装 | 식빵 6장 슬라이스 | Tinapay (Loaf Bread) 6 hiwa | ပေါင်မုန့် ၆ ချပ်ဖြတ် | स्लाइस पाउरोटी ६ स्लाइस | Sandwich bread, 6 slices |
 | 食パン 8枚切 | しょくぱん 8まいぎり | Bánh mì sandwich cắt 8 lát | Roti tawar 8 lembar | 吐司 8片装 | 식빵 8장 슬라이스 | Tinapay (Loaf Bread) 8 hiwa | ပေါင်မုန့် ၈ ချပ်ဖြတ် | स्लाइस पाउरोटी ८ स्लाइस | Sandwich bread, 8 slices |
 | 食パン生地 | しょくぱんの きじ | Bột bánh mì sandwich | Adonan roti tawar | 吐司面团 | 식빵 반죽 | Masa ng Tinapay (Loaf Bread) | ဆန်ပေါင်မုန့် ခေါက်ဆွဲ | स्लाइस पाउरोटी को पिठो (डो) | Sandwich bread dough |
-| 超じゅくロール 6個入 | ちょうじゅくロール 6こいり | Bánh cuộn siêu mềm (Choju Roll) 6 cái | Roti Gulung Super Lembut (Chō Juku Roll) isi 6 | 超じゅく餐包卷 6个装 | 초숙성 롤빵 6개입 | Chō-Juku Roll (Super Soft Roll) 6 piraso | ချောင်းဆွဲ ပေါင်မုန့်လိပ် (စူပါ့ဂျူကု ရိုးလ်) ၆ လုံးပါ | सुपर जुकु रोल ६ वटा प्याकेट | Super Soft Rolls, 6-pack |
+| 超じゅくロール 6個入 | ちょうじゅくロール 6こいり | Bánh cuộn siêu mềm (Choju Roll) 6 cái | Roti Gulung Super Lembut (Chō Juku Roll) isi 6 | 超软小餐包 6个装 | 초숙성 롤빵 6개입 | Chō-Juku Roll (Super Soft Roll) 6 piraso | ချောင်းဆွဲ ပေါင်မုန့်လိပ် (စူပါ့ဂျူကု ရိုးလ်) ၆ လုံးပါ | सुपर जुकु रोल ६ वटा प्याकेट | Super Soft Rolls, 6-pack |
 
 ### 案
 1. **商品名・生地名は dict.ts に移さない**。マスターに増えていく言葉なので、machine.json（＝自動で増える辞書）のままにする。
