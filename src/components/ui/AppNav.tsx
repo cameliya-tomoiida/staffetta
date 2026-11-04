@@ -13,7 +13,7 @@ const nav = [
 export function AppNav() {
   const path = usePathname() ?? "/";
   return (
-    <nav className="-mb-px flex min-w-0 gap-1 overflow-x-auto" aria-label="メニュー">
+    <nav className="-mb-px flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="メニュー">
       {nav.map((n, i) => {
         const on = n.match(path);
         return (

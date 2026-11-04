@@ -163,7 +163,7 @@ function PoSheet({
   const m = methodLabel[po.method];
   const late = left != null && left < 0;
   const near = left != null && left >= 0 && left <= WARN_MIN;
-  const sendLabel = m.kind === "fax" ? "FAXで送る" : m.kind === "email" ? "メールで送る" : m.kind === "site" ? "サイトを開いて入力" : "電話した";
+  const sendLabel = m.kind === "fax" ? "FAXで送る" : m.kind === "email" ? "メールで送る" : m.kind === "site" ? "サイトに入力した" : "電話で伝えた";
   return (
     <section className={`flex flex-col rounded-sm border bg-sheet ${s.status === "draft" ? "border-rule-strong" : s.status === "approved" ? "border-ok-line" : "border-info-line"}`}>
       {/* 帳票の頭 */}
@@ -247,7 +247,7 @@ function PoSheet({
               <b>{s.approvedBy}</b> が承認（{fmtDateTime(s.approvedAt!)}）
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" size="lg" className="flex-1" onClick={onSend}>
+              <Button variant="primary" size="lg" className="w-full whitespace-nowrap sm:w-auto sm:flex-1" onClick={onSend}>
                 <Icon.send className="h-6 w-6" />
                 {sendLabel}
               </Button>
@@ -255,7 +255,7 @@ function PoSheet({
                 承認を取り消す
               </Button>
             </div>
-            {m.kind === "site" && <div className="text-sm text-ink-soft">サイトのIDとパスワードは、ご自分で入れてください。</div>}
+            {m.kind === "site" && <div className="text-sm text-ink-soft">発注サイトにログインして入力したら、このボタンを押してください。IDとパスワードは、ご自分で入れてください。</div>}
           </div>
         )}
         {s.status === "sent" && (
