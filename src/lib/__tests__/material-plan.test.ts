@@ -95,4 +95,14 @@ describe("材料の発注（何日先まで見るか）", () => {
   it("水は発注しない", () => {
     expect(planMaterialOrders(demoOrders, DEMO_DATE).rows.find((r) => r.materialId === "W00")).toBeUndefined();
   });
+
+  it("デモ（今 = 11/5 11:30）: 11/6 分は警告だけ、来週 11/9 分では 材料の3つの頼み方（インフォマート・発注サイト・FAX）の下書きが出る", () => {
+    const now = "2026-11-05T11:30:00+09:00";
+    const d6 = planMaterialOrders(demoOrders, DEMO_DATE, { now });
+    expect(d6.lateItems.length).toBeGreaterThan(0);
+    expect(d6.purchaseOrders.filter((po) => po.deliveryDate === "2026-11-05")).toEqual([]);
+    const d9 = planMaterialOrders(demoOrders, "2026-11-09", { now });
+    expect(d9.lateItems).toEqual([]);
+    expect([...new Set(d9.purchaseOrders.map((po) => po.method))].sort()).toEqual(["fax", "infomart", "kogane_site"]);
+  });
 });

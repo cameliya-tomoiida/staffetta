@@ -61,7 +61,7 @@ describe("集計", () => {
     expect(prov.products[0].customers[0].orderIds).toEqual(["DO-13"]);
     // 置き換わった古い仮発注（cancelled・supersededBy あり）は入らない
     expect(provisionalForDate(demoOrders, "2026-11-07").products).toEqual([]);
-    expect(deliveryDatesOf(demoOrders)).toEqual(["2026-11-06", "2026-11-07"]);
+    expect(deliveryDatesOf(demoOrders)).toEqual(["2026-11-06", "2026-11-07", "2026-11-09", "2026-11-10"]);
   });
 
   it("単位が混在していても個数で合計する（個・P・c/s）", () => {
@@ -84,9 +84,9 @@ describe("集計", () => {
 
   it("納品日ごとに分ける", () => {
     const days = aggregateOrders(demoOrders);
-    expect(days.map((d) => d.date)).toEqual(["2026-11-06", "2026-11-07"]);
+    expect(days.map((d) => d.date)).toEqual(["2026-11-06", "2026-11-07", "2026-11-09", "2026-11-10"]);
     expect(pieces("2026-11-07", "P10")).toBe(60);
-    expect(aggregateOrders(demoOrders, { from: "2026-11-07" }).length).toBe(1);
+    expect(aggregateOrders(demoOrders, { from: "2026-11-07", to: "2026-11-07" }).length).toBe(1);
   });
 
   it("商品が空の行は集計に入れず、注意を出す", () => {
