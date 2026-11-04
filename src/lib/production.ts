@@ -306,7 +306,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     const shift = Math.max(0, ...today.filter((x) => x.resource).map((x) => x.end - (busyFrom.get(`today:${x.resource}`) ?? Infinity)));
     if (shift > 0) today = place(deadline - shift);
     for (const x of today) if (x.resource) busyFrom.set(`today:${x.resource}`, Math.min(busyFrom.get(`today:${x.resource}`) ?? Infinity, x.start));
-    const warnings = today.length && today[0].start < 0 ? [`${b.name}: 納品 ${fmtTime(deliveryMinute)} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります`] : [];
+    const warnings = today.length && today[0].start < lineSettings[b.line].earliestStartMinute ? [`${b.name}: 納品 ${fmtTime(deliveryMinute)} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(lineSettings[b.line].earliestStartMinute)} より前）`] : [];
     rows.set(b.doughId, {
       line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.doughId)!, ...today],
       from: "delivery", deliveryMinute, deliveryCustomerId: customerId, deadline, warnings,

@@ -1,36 +1,156 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 受発注ハブ
 
-## Getting Started
+FAX・LINE・メール・スプレッドシート・受発注サイト・電話から届くパンとピザの注文を、1か所に集めます。
+集めた注文から、集計、入数の換算、仕入先別の発注書、製造計画と工程表、材料の発注までを、ひと続きで出します。
 
-First, run the development server:
+> ハッカソン「Built with Claude: Japan 2026」の応募作品です。
+> データ（得意先・仕入先・商品・単価・レシピ）は、すべて架空のものです。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 何を解決するか
+
+愛知の中小のパン・ピザ工場では、注文の入口がばらばらです（FAX・メール・スプレッドシート・受発注サイト・電話・ドライバーの聞き取り）。
+FAX は逆さまや横向きで届くこともあり、単位も「個・P・袋・ケース」がまざります。
+いまは毎晩、課長が紙に書き写し、電卓で入数を換算し、仕入先ごとの発注をしています。
+製造の現場も、その日になって生地の量と材料を計算し直しています。
+
+受発注ハブでは、Claude が注文を**読み取り**、あやしいところに**印を付け**ます。
+人は大きなボタンとテンキーで、確かめて確定するだけです。
+確定した注文からは、集計・入数の換算・発注書の下書き・製造計画・材料の発注が自動で出ます。
+画面を使うのは、高齢の事務員さんと外国人スタッフです。そのため、少ない画面・大きな文字・紙に近い見た目・多言語にしています。
+
+## 注文の入口と流れ
+
+```
+ 入口（受注）                         ハブ                                      出口（発注・製造）
+ ─────────────                       ──────────────────────────────            ──────────────────
+ FAX（複合機→Gmail→PDF）  ─┐
+ LINE（公式アカウント・LIFF）─┤      ① Claude が読み取り・要確認の印付け
+ メール（本文・PDF・Excel）  ─┤        （元の値 read はそのまま残す）
+ Googleスプレッドシート     ─┼──→   ② 人が確認・修正・確定                  ┌→ 仕入先別の発注書（下書き）
+ 受発注サイト（CSV）        ─┤        （タップ＋テンキー・候補から選ぶ。       │    → 人が承認 → 送信
+ 取引先の専用発注サイト     ─┤          直した跡 edits を残す）               │      （受発注サイト・FAX・メール）
+ 電話・ドライバー（手入力） ─┘      ③ 集計（確定の注文だけ・単位をそろえる）─┼→ 製造計画・工程表（パン／ピザ）
+                                     ④ 入数の換算（65個 → 6個入×11袋・余り1）  └→ 材料の所要量 → 材料の発注書（下書き）
+                                                                                    → 人が承認 → 送信
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 変更・キャンセルの連絡は、新しい注文（`intent: change / cancel`）として入れます。人が確定するまで、元の注文は書き換えません。
+- 仮発注（概数で先に来て、当日に確定する注文）は集計に入れず、「仮：○個」として別枠で見せます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 画面
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 画面 | 内容 |
+|---|---|
+| `/` | FAX 受信箱。届いた FAX と、読み取りの状態（要確認の数）を見る |
+| `/fax/[id]` | FAX の確認画面。元の FAX と読み取り結果を並べて表示し、テンキーで直して確定する |
+| `/orders` | 受注一覧。すべての入口の注文を、納品日ごとに見る（要確認・仮発注・変更・取消の印つき） |
+| `/plan` | 製造計画・工程表。パンとピザのライン別に、生地kg・工程の時刻・材料・上限の警告・原価を表示する |
+| `/purchase` | 発注書。仕入先×便ごとの下書きを見て、承認する |
+| `/import` | 外部の入口（メール・スプレッドシート・受発注サイトの CSV）から取り込む。取り込んだ注文は「要確認」で入る |
+| `/outbound` | 承認した発注書の送り出し（受発注サイト・FAX・メール） |
+| `/line` | LINE 受付（工場のスタッフ用）。はじめての LINE のお客さんを得意先にひも付け、確定の連絡と送信の記録を見る |
+| `/liff/order` | お客さん用の LINE 注文フォーム（リッチメニューの「注文する」から開く） |
 
-## Learn More
+## 動かし方
 
-To learn more about Next.js, take a look at the following resources:
+Node.js 20.9 以上が必要です（動作確認は 24）。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`.env.example` を `.env.local` という名前でコピーし、次の項目に値を入れます。
+空の項目があっても動きます。LINE が空ならデモモードになり、送らずに記録だけ残します。
 
-## Deploy on Vercel
+| 項目 | 用途 |
+|---|---|
+| `ANTHROPIC_API_KEY` | Claude で FAX・メールなどを読み取る |
+| `FAX_INBOUND_TOKEN` | Gmail（GAS）から FAX を受け取るときの合言葉 |
+| `LINE_CHANNEL_SECRET` / `LINE_CHANNEL_ACCESS_TOKEN` | LINE 公式アカウント（Messaging API） |
+| `LINE_LOGIN_CHANNEL_ID` / `NEXT_PUBLIC_LIFF_ID` | LINE の注文フォーム（LIFF） |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run dev -- -p 3100   # 開発サーバー（http://localhost:3100）
+npm test                 # 計算のテスト（vitest）
+npm run demo:reset       # デモを最初の状態に戻す（下の「デモのやり直し」）
+npm run fax:simulate     # 「FAX が届いた」を再現する（変更 → 仮発注 → 本発注の FAX を1枚ずつ）
+LINE_TEST_URL=http://localhost:3100/api/line/webhook node scripts/line-webhook-test.mjs "明日 ロール 20個"
+                         # LINE の注文を再現する（LINE 未設定でも可）
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`fax:simulate` と `line-webhook-test` は、開発サーバーが動いている状態で使います。
+送り先は `fax:simulate` が `HUB_URL`（既定 `http://localhost:3100`）、`line-webhook-test` が `LINE_TEST_URL` です。
+`fax:simulate` は `.env.local` の `FAX_INBOUND_TOKEN` を使います。
+
+### デモのやり直し
+
+```bash
+npm run demo:reset
+```
+
+次の状態に戻ります。開発サーバーは止めなくてかまいません。
+
+- 受信箱：FAX が F001〜F005（未読）
+- 注文：あした 11/6（金）分などの、確定済みのデモ注文 DO-01〜DO-18
+- 発注書：なし
+- LINE：ひも付けなし・送信記録なし
+- 受け取った FAX の PDF：なし
+
+そのあと `npm run fax:simulate` を実行するたびに、次の FAX が1枚ずつ届きます。
+
+接続の手順は `docs/` にあります（`line-setup.md`・`gmail-setup.md`・`google-sheet-auth.md`・`fax-sending.md`・`tunnel.md`）。
+
+## 設計の決まり
+
+- **AI がするのは「読み取り」と「要確認の印付け」まで。** 値を直すのも、確定するのも人です。人が確定した値を、AI が上書きすることはありません。
+- **修正はタップとテンキー、＋−、候補から選ぶだけ。** キーボードで文字を打たなくても使えるようにしています。
+- **元の値と修正の履歴を必ず残します。** AI が読んだ値（`read`）と、誰が・いつ・何を・何から何に直したか（`edits`）を保存します。
+- **発注書は「下書き → 人が承認 → 送信」の順だけ。** 承認していない発注書は送れません。承認した人と時刻を記録します。承認済みの発注書は、計算し直しても上書きしません。
+- **全社一律の締めは作りません。** 締めは商品ごとのリードタイムと、仕入先の便の締めから出します。
+- **計算はふつうのプログラム（純関数）で行います。** 集計・入数換算・製造計画・材料・原価に AI は使わないので、同じ入力なら必ず同じ結果になります。テストも付けています。
+- **ロス率などのマスターを、関数が勝手に書き換えることはありません。** 棚卸から出すのは「補正案」だけで、人が承認したものだけを使います。
+- **パスワードや ID は AI が入力しません。** ログインが要る画面は人が操作します。
+
+## フォルダ構成
+
+```
+src/
+  app/                画面（Next.js App Router）と API
+    api/fax/            FAX の受け取り（GAS から）
+    api/line/           LINE の Webhook
+    api/import/         外部の入口の取り込み
+    api/outbound/       発注の送り出し
+  components/         画面の部品（大きなボタン・テンキー・PDF 表示など）
+  data/
+    types.ts            共通の型（注文・発注書）
+    master.ts           架空のマスター（得意先・仕入先・商品・材料）
+    production.ts       架空の製造マスター（生地のレシピ・工程・入数・便・ライン）
+    demo-orders.ts      デモ用の架空注文
+  lib/                計算・保存・読み取り
+    README.md           計算の関数の一覧（下記）
+    store.ts            保存（data/db.json）
+    fax-reader.ts       Claude による FAX の読み取り
+    channels/           入口ごとの取り込み（line・email・google_sheet・infomart・kirara）と送り出し（outbound）
+    aggregate.ts …      集計・入数換算・発注書・製造計画・材料・原価・締め・棚卸
+  i18n/               多言語の文言
+scripts/              FAX・LINE の再現、デモの初期化、見本の作成
+public/samples/       見本の FAX・メール・CSV（すべて架空）
+docs/                 接続の手順
+data/                 実行時のデータ（git には入れない）
+```
+
+## 主な計算
+
+集計・入数換算・発注書・製造計画・工程表・材料の発注・原価・締めの判定・棚卸の関数と、その式は [src/lib/README.md](src/lib/README.md) にまとめています。
+
+- 集計：確定の注文だけを、納品日・商品ごとに個数で合計します（個・P・袋・ケースをそろえる）。
+- 入数換算：例えば 65個 → 6個入×11袋・余り1。食パンは「3斤を30枚に切り、1枚入り・2枚入りに包み直す」換算をします。
+- 発注書：仕入先×便ごとに下書きを作ります。
+- 製造計画：生地kg（ロス率込み・ベーカーズ％）、ミキサーの回数、ラインの上限（ピザ 1日1,800枚）の警告を出します。
+- 工程表：パンは納品時刻から逆算し、ピザは前日の仕込みから組みます。
+- 材料：3日先まで見て、在庫・リードタイム・最小ロットから発注書の下書きを作ります。
+- 原価と粗利：材料費（ロス込み）と包材費・人件費、仕入品は実際に買う袋数で出します。
+
+## Claude をどう使ったか
+
+<!-- 管理役が書きます -->

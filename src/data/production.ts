@@ -422,6 +422,8 @@ export interface LineSetting {
   scheduleFrom: "delivery" | "start";
   /** 焼き上がり（最後の工程の終わり）から納品までに見る時間（積み込み・配送）。分 */
   shipBufferMinutes: number;
+  /** いちばん早く始められる時刻（0:00 からの分。前日なら マイナス）。夜班があるパンは 前日21:00 = -180。これより前にかかると注意 */
+  earliestStartMinute: number;
 }
 
 /** 得意先ごとの納品時刻（HH:MM）。書いていなければ DEFAULT_DELIVERY_TIME */
@@ -434,6 +436,6 @@ export const customerDeliveryTime: Record<string, string> = {
 export const DEFAULT_DELIVERY_TIME = "08:00";
 
 export const lineSettings: Record<Line, LineSetting> = {
-  bread: { line: "bread", name: "パンライン", unit: "個", startMinute: 4 * 60, scheduleFrom: "delivery", shipBufferMinutes: 60 },
-  pizza: { line: "pizza", name: "ピザライン", unit: "枚", dailyCap: 1800, startMinute: 8 * 60, scheduleFrom: "start", shipBufferMinutes: 0 },
+  bread: { line: "bread", name: "パンライン", unit: "個", startMinute: 4 * 60, scheduleFrom: "delivery", shipBufferMinutes: 60, earliestStartMinute: -180 },
+  pizza: { line: "pizza", name: "ピザライン", unit: "枚", dailyCap: 1800, startMinute: 8 * 60, scheduleFrom: "start", shipBufferMinutes: 0, earliestStartMinute: 0 },
 };

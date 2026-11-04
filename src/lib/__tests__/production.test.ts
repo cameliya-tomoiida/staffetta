@@ -126,10 +126,17 @@ describe("工程表", () => {
     expect(kokuto.steps.at(-1)!.end).toBeLessThanOrEqual(420);
   });
 
-  it("納品時刻を上書きでき、0時より前にかかると注意を出す", () => {
-    const r = buildSchedule(plan, { deliveryMinute: { C02: 4 * 60 } }).find((r) => r.doughId === "DG01")!;
+  it("夜班がある（前日21:00から）ので、0時より前に始まるだけなら注意しない", () => {
+    const r = rows.find((r) => r.doughId === "DG01")!; // デモの日は ロール 1,010個 → 前日のうちに始まる
     expect(r.steps[0].start).toBeLessThan(0);
-    expect(r.warnings[0]).toMatch(/前日/);
+    expect(r.steps[0].start).toBeGreaterThanOrEqual(-180);
+    expect(r.warnings).toEqual([]);
+  });
+
+  it("納品時刻を上書きでき、前日21:00 より前にかかると注意を出す", () => {
+    const r = buildSchedule(plan, { deliveryMinute: { C02: 60 } }).find((r) => r.doughId === "DG01")!;
+    expect(r.steps[0].start).toBeLessThan(-180);
+    expect(r.warnings[0]).toMatch(/前日21:00 より前/);
   });
 
   it("ピザは生地を前日に仕込んで、当日8:00から順に", () => {
