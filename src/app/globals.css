@@ -1,23 +1,96 @@
 @import "tailwindcss";
 
+/*
+ * 受発注ハブ デザインの決まり（②デザイン）
+ * - 紙の帳票に近い、落ち着いた見た目。飾りのグラデーションや影は使わない。
+ * - 主に使うのはタブレット。文字は大きめ（本文 17px）、ボタンは高さ 56px 以上。
+ * - 状態の色: 要確認＝黄 / 確定＝緑 / 取消＝灰。色だけに頼らず、必ず文字も出す。
+ * 詳しくは src/components/ui/README.md
+ */
 @theme {
-  --color-crust-50: #fdf8f1;
-  --color-crust-100: #f8ecda;
-  --color-crust-200: #f0d6b0;
-  --color-crust-500: #c8873a;
-  --color-crust-600: #a96b26;
-  --color-crust-700: #87521d;
-  --color-ink: #2b2118;
-  --font-sans: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  /* 紙とインク */
+  --color-paper: #f6f3ec; /* 画面の地（わら半紙） */
+  --color-sheet: #fffdf8; /* 帳票の紙 */
+  --color-ink: #26221d; /* 本文 */
+  --color-ink-soft: #5d564c; /* 補足 */
+  --color-ink-faint: #8d8578; /* 注記 */
+  --color-rule: #ddd5c6; /* 罫線 */
+  --color-rule-strong: #b9ad98;
+
+  /* ブランド（焼き色）: 主ボタン・選択中 */
+  --color-crust-50: #fbf6ee;
+  --color-crust-100: #f4e8d6;
+  --color-crust-200: #e9d2ae;
+  --color-crust-500: #b97a35;
+  --color-crust-600: #9a5f22;
+  --color-crust-700: #7a4a1a;
+
+  /* 状態 */
+  --color-review-bg: #fdf0b8; /* 要確認＝黄 */
+  --color-review-line: #e2c044;
+  --color-review-ink: #6b5200;
+  --color-ok-bg: #dcefdc; /* 確定＝緑 */
+  --color-ok-line: #7fb17f;
+  --color-ok-ink: #24572a;
+  --color-off-bg: #e6e3de; /* 取消＝灰 */
+  --color-off-line: #b6b0a6;
+  --color-off-ink: #5b5650;
+  --color-alert-bg: #f9dcd5; /* 締め切れ・エラー */
+  --color-alert-line: #d27a66;
+  --color-alert-ink: #8a2a17;
+  --color-info-bg: #dde8f2; /* 送信済み・お知らせ */
+  --color-info-line: #86a5c2;
+  --color-info-ink: #24486a;
+
+  /* ライン */
+  --color-bread: #9a5f22;
+  --color-pizza: #a33b2a;
+
+  --font-sans: "BIZ UDPGothic", "BIZ UDゴシック", "Yu Gothic UI", "Meiryo", "Noto Sans JP", "Noto Sans", "Noto Sans Myanmar",
+    "Myanmar Text", "Noto Sans Devanagari", "Nirmala UI", "Malgun Gothic", "Microsoft YaHei", system-ui, sans-serif;
+  --font-num: "BIZ UDPGothic", "Yu Gothic UI", ui-monospace, monospace;
+}
+
+html {
+  font-size: 17px;
 }
 
 body {
-  background: var(--color-crust-50);
+  background: var(--color-paper);
   color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
 }
 
-@utility card { @apply rounded-2xl bg-white shadow-sm ring-1 ring-black/5; }
-@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50; }
-@utility btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50 bg-crust-600 text-white hover:bg-crust-700; }
-@utility btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-[.98] disabled:opacity-50 bg-white ring-1 ring-black/10 hover:bg-crust-100; }
-@utility pill { @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-bold; }
+/* 数字は桁がそろうように */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───── 共通の形（FAX画面でも使っている名前は残す） ───── */
+@utility card {
+  @apply rounded-lg border border-rule bg-sheet;
+}
+@utility sheet {
+  @apply rounded-sm border border-rule-strong bg-sheet;
+}
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45;
+}
+@utility btn-primary {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45 bg-crust-600 text-white hover:bg-crust-700;
+}
+@utility btn-ghost {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45 border border-rule-strong bg-sheet text-ink hover:bg-crust-50;
+}
+@utility pill {
+  @apply inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm font-bold whitespace-nowrap;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
