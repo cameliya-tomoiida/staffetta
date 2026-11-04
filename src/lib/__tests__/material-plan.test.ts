@@ -60,15 +60,49 @@ describe("材料の発注（何日先まで見るか）", () => {
     expect(p.rows.find((r) => r.materialId === "M15")!.minLot).toBe(2);
   });
 
-  it("今の時刻を渡すと、締めを過ぎた発注書に注意を付ける", () => {
+  it("今の時刻を渡すと、今から頼んで間に合う日から計画する。間に合わない日の不足は発注書に入れず、警告だけ", () => {
+    // 11/5 12:00 の時点: 11/6 製造分（11/5 着）の締めは 11/3〜11/4 で、もう過ぎている
     const p = planMaterialOrders(demoOrders, DEMO_DATE, { now: "2026-11-05T12:00:00+09:00" });
-    expect(p.warnings.some((w) => w.includes("締め") && w.includes("過ぎています"))).toBe(true);
-    const late = p.purchaseOrders.find((po) => po.supplierId === "S08")!;
-    expect(late.notes.join()).toMatch(/締めを過ぎています/);
-    expect(planMaterialOrders(demoOrders, DEMO_DATE, { now: "2026-11-01T00:00:00+09:00" }).warnings).toEqual([]);
+    expect(p.purchaseOrders.filter((po) => po.deliveryDate === "2026-11-05")).toEqual([]);
+    const flour = p.lateItems.find((x) => x.materialId === "M12")!;
+    expect(flour).toMatchObject({ supplierId: "S08", productionDate: "2026-11-06", cutoffAt: "2026-11-03T14:00:00+09:00" });
+    expect(flour.message).toMatch(/^ピザ用小麦粉（タイプ00）は締め（11\/3 14:00）を過ぎています。11\/6の製造に .+kg たりません。こがね食品に電話で確認してください$/);
+    expect(p.warnings).toContain(flour.message);
+    // 日ごとの表にも印。在庫は電話で頼めた前提で数え、次の日から計画を続ける
+    const row = p.rows.find((r) => r.materialId === "M12")!.days[0];
+    expect(row.late).toBe(true);
+    expect(row.stockAfter).toBeGreaterThanOrEqual(25 - 0.001);
+  });
+
+  it("締めより前なら、今までどおり発注書の下書きを作る", () => {
+    const p = planMaterialOrders(demoOrders, DEMO_DATE, { now: "2026-11-01T00:00:00+09:00" });
+    expect(p.lateItems).toEqual([]);
+    expect(p.warnings).toEqual([]);
+    expect(p.purchaseOrders.some((po) => po.supplierId === "S08" && po.deliveryDate === "2026-11-05")).toBe(true);
+  });
+
+  it("間に合う日（先の日）の不足は発注書に入る", () => {
+    // 11/9 に大きなピザの注文。11/5 12:00 の時点で 11/8 着（締め 11/6 14:00）はまだ間に合う
+    const big = { ...demoOrders.find((o) => o.id === "DO-17")!, id: "BIG", deliveryDate: "2026-11-09" };
+    const p = planMaterialOrders([...demoOrders, big], DEMO_DATE, { now: "2026-11-05T12:00:00+09:00", days: 4, stock: { M12: 1000 } });
+    const late = p.lateItems.map((x) => x.materialId);
+    expect(late).not.toContain("M12");
+    const p2 = planMaterialOrders([...demoOrders, big], DEMO_DATE, { now: "2026-11-05T12:00:00+09:00", days: 4, stock: { M12: 0 } });
+    expect(p2.lateItems.find((x) => x.materialId === "M12")!.productionDate).toBe("2026-11-06");
+    expect(p2.purchaseOrders.some((po) => po.supplierId === "S08" && po.deliveryDate === "2026-11-08")).toBe(true);
   });
 
   it("水は発注しない", () => {
     expect(planMaterialOrders(demoOrders, DEMO_DATE).rows.find((r) => r.materialId === "W00")).toBeUndefined();
+  });
+
+  it("デモ（今 = 11/5 11:30）: 11/6 分は警告だけ、来週 11/9 分では 材料の3つの頼み方（インフォマート・発注サイト・FAX）の下書きが出る", () => {
+    const now = "2026-11-05T11:30:00+09:00";
+    const d6 = planMaterialOrders(demoOrders, DEMO_DATE, { now });
+    expect(d6.lateItems.length).toBeGreaterThan(0);
+    expect(d6.purchaseOrders.filter((po) => po.deliveryDate === "2026-11-05")).toEqual([]);
+    const d9 = planMaterialOrders(demoOrders, "2026-11-09", { now });
+    expect(d9.lateItems).toEqual([]);
+    expect([...new Set(d9.purchaseOrders.map((po) => po.method))].sort()).toEqual(["fax", "infomart", "kogane_site"]);
   });
 });

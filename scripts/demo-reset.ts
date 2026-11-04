@@ -2,7 +2,7 @@
 //   npm run demo:reset
 //
 // 戻したあとの状態:
-// - data/db.json … 受信箱は F001〜F005（未読）、注文は確定済みの DO-01〜DO-18（あした 11/6 分ほか）、
+// - data/db.json … 受信箱は F001〜F005（未読）、注文は確定済みの DO-01〜DO-20（あした 11/6 分と来週の定期分ほか）、
 //                   発注書なし、様式は①の初期値（いつもの3社は承認済み）
 // - data/fax-inbox/ … 空（npm run fax:simulate で受け取ったPDFを消す）
 // - data/line.json … LINE のひも付けなし・送信記録なし

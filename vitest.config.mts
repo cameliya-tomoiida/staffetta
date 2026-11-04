@@ -9,5 +9,10 @@ export default defineConfig({
       "server-only": path.resolve(import.meta.dirname, "src/test-stubs/server-only.ts"),
     },
   },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  test: {
+    include: ["src/**/*.test.ts"],
+    environment: "node",
+    // テストの「今」は締めより前に固定（共通の時計 clock.ts）。日によって結果が変わらないように
+    env: { DEMO_NOW: "2026-11-01T09:00:00+09:00" },
+  },
 });

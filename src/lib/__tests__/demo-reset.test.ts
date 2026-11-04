@@ -13,9 +13,9 @@ const base = (): Db => ({
 });
 
 describe("デモの初期状態（npm run demo:reset）", () => {
-  it("注文は確定済みのデモ注文 DO-01〜DO-18 だけ、発注書なし、取り込み済みの記録なし", () => {
+  it("注文は確定済みのデモ注文 DO-01〜DO-20 だけ、発注書なし、取り込み済みの記録なし", () => {
     const db = demoDb(base());
-    expect(db.orders.map((o) => o.id).sort()).toEqual(Array.from({ length: 18 }, (_, i) => `DO-${String(i + 1).padStart(2, "0")}`));
+    expect(db.orders.map((o) => o.id).sort()).toEqual(Array.from({ length: 20 }, (_, i) => `DO-${String(i + 1).padStart(2, "0")}`));
     expect(db.purchaseOrders).toEqual([]);
     expect(db.importedMessageIds).toEqual([]);
   });
