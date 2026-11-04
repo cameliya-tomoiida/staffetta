@@ -75,65 +75,88 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const lines: Line[] = ["bread", "pizza"];
   const showMt = lang !== "ja" && (!isReviewed(lang) || Object.keys(mt).length > 0);
 
+  const jaLabel = langInfo(lang).ja;
   return (
-    <div lang={langInfo(lang).htmlLang}>
-      {/* 見出し */}
+    <div>
+      {/* 画面の上（見るのは日本人なので日本語） */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
         <div>
-          <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">{t("plan_title")}</h1>
-          {lang !== "ja" && <div className="text-sm text-ink-faint">製造計画・工程表</div>}
+          <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">製造計画・工程表</h1>
+          <p className="mt-1 text-ink-soft">納品日を選び、下のタブでことばを選んで印刷し、現場に渡します。</p>
         </div>
         <div className="no-print flex flex-wrap items-center gap-2">
-          <span className="text-sm font-bold text-ink-soft">{t("deliver")}</span>
+          <span className="text-sm font-bold text-ink-soft">納品日</span>
           {dates.map((d) => (
-            <Link
-              key={d}
-              href={href({ date: d })}
-              className={choiceClass(d === date, "num inline-flex min-h-12 items-center px-4")}
-            >
+            <Link key={d} href={href({ date: d })} className={choiceClass(d === date, "num inline-flex min-h-12 items-center px-4")}>
               {fmtDate(d)}
-              {d === tomorrow && <span className="ml-1.5 text-sm opacity-75">{t("tomorrow")}</span>}
+              {d === tomorrow && <span className="ml-1.5 text-sm opacity-75">明日</span>}
             </Link>
           ))}
-          <PrintButton label={t("print")} />
         </div>
       </div>
 
-      {/* ことばの切り替え（選んだことばはタブレットが覚える） */}
-      <LangPicker lang={lang} hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))} />
+      {/* 注意とお金は、畳んで件数だけ（押すと開く）。管理者向け・日本語・印刷しない */}
+      <div className="no-print mb-4 space-y-2" lang="ja">
+        {otherWarnings.length > 0 && (
+          <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />}>
+            <details>
+              <summary className="cursor-pointer">
+                製造の注意が <span className="num">{otherWarnings.length}</span> 件あります（ピザの上限・始める時刻など）。押すと出します。
+              </summary>
+              <ul className="mt-1 list-disc pl-5 font-normal">
+                {otherWarnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </details>
+          </Notice>
+        )}
+        {lateMaterials.length > 0 && (
+          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
+            <details>
+              <summary className="cursor-pointer">
+                間に合わない材料が <span className="num">{lateMaterials.length}</span> 件あります（発注書には入っていません）。押すと出します。
+              </summary>
+              <ul className="mt-1 list-disc pl-5 font-normal">
+                {lateMaterials.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </details>
+          </Notice>
+        )}
+        <details className="rounded-lg border border-rule bg-sheet">
+          <summary className="flex min-h-12 cursor-pointer items-center px-4 font-bold text-ink-soft">この日のお金（材料費・売上・粗利の目安）を見る</summary>
+          <div className="px-2 pb-2">
+            <CostBox s={cost} show={["material", "margin"]} />
+          </div>
+        </details>
+      </div>
 
-      {showMt && (
-        <p className="mb-4 flex items-center gap-2 text-sm text-ink-soft">
-          <MachineTranslated label={t("machine")} />
-          {t("machine_note")}
-        </p>
-      )}
+      {/* ことばのタブと印刷 */}
+      <LangPicker
+        lang={lang}
+        hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))}
+        right={<PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />}
+      />
 
-      {/* 計算の注意（管理者向け・日本語） */}
-      {lateMaterials.length > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="no-print mb-3">
-          <details lang="ja">
-            <summary className="cursor-pointer">
-              間に合わない材料が <span className="num">{lateMaterials.length}</span> 件あります（発注書には入っていません）。押すと一覧を出します。
-            </summary>
-            <ul className="mt-1 list-disc pl-5 font-normal">
-              {lateMaterials.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
-          </details>
-        </Notice>
-      )}
-      {otherWarnings.length > 0 && (
-        <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />} className="no-print mb-4">
-          <ul className="space-y-0.5" lang="ja">
-            {otherWarnings.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
-
+      {/* ここから下が印刷する紙（選んだことば） */}
+      <div lang={langInfo(lang).htmlLang} className="rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-ink pb-2">
+          <div className="text-xl font-black">
+            {t("plan_title")}
+            {lang !== "ja" && <span className="ml-2 text-sm font-normal text-ink-faint">製造計画・工程表</span>}
+          </div>
+          <div className="num font-bold">
+            {t("deliver")}：{fmtDate(date)}
+          </div>
+        </div>
+        {showMt && (
+          <p className="mb-4 flex items-center gap-2 text-sm text-ink-soft">
+            <MachineTranslated label={t("machine")} />
+            {t("machine_note")}
+          </p>
+        )}
 
       {/* 仮発注（製造量には入れない） */}
       {prov.products.length > 0 && (
@@ -178,9 +201,6 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         })}
       </div>
 
-      {/* お金（管理者向け・日本語。印刷しない）。現場の人が見る作る数・時間割より下に置く */}
-      <div className="mt-8">
-        <CostBox s={cost} show={["material", "margin"]} />
       </div>
     </div>
   );
