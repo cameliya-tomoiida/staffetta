@@ -32,12 +32,12 @@ export const ID_PREFIX: Partial<Record<ScreenName, string>> = {
   suppliers: "S", materials: "M", packaging: "K", sheet_sources: "SH", sheet_columns: "SC",
 };
 
-/** 一覧に出す列（多いと読めないので選ぶ） */
+/** 一覧に出す列（多いと読めないので選ぶ）。前の5つがいつも出る大事な列、6つめからは「くわしく」で出す（②） */
 export const LIST_KEYS: Record<ScreenName, string[]> = {
-  suppliers: ["id", "name", "method", "contact", "cutoff", "leadDays", "minLot", "active"],
-  supplierDeliveries: ["supplierId", "id", "name", "cutoff", "leadDays", "arrival", "customerIds"],
-  materials: ["id", "name", "supplierId", "orderUnitLabel", "minLot", "leadDays", "stock", "safetyStock", "location"],
-  packaging: ["id", "name", "supplierId", "orderUnitLabel", "minLot", "leadDays", "stock", "safetyStock", "location"],
+  suppliers: ["name", "method", "cutoff", "leadDays", "minLot", "id", "contact", "active"],
+  supplierDeliveries: ["supplierId", "name", "cutoff", "leadDays", "arrival", "id", "customerIds"],
+  materials: ["name", "stock", "safetyStock", "supplierId", "leadDays", "id", "orderUnitLabel", "minLot", "location"],
+  packaging: ["name", "stock", "safetyStock", "supplierId", "leadDays", "id", "orderUnitLabel", "minLot", "location"],
   sheet_sources: ["id", "label", "sheetName", "customerId", "place", "active"],
   sheet_columns: ["id", "customerId", "header", "productId", "piecesPerUnit", "unit"],
   kirara_items: ["id", "name", "productId", "piecesPerUnit", "dest", "shortName"],

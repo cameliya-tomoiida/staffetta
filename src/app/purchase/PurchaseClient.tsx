@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { splitWarnings } from "@/components/ui/wording";
 import Link from "next/link";
 import type { PurchaseMethod } from "@/data/types";
 import { approvePoAction, markSentAction } from "./actions";
@@ -94,6 +95,7 @@ export function PurchaseClient({
   const shown = pos
     .filter((p) => filter === "all" || st(p.id).status === filter)
     .sort((a, b) => rank[st(a.id).status] - rank[st(b.id).status] || (a.cutoffAt || "9").localeCompare(b.cutoffAt || "9"));
+  const warn = splitWarnings(warnings.filter((w) => !lateMaterials.includes(w)));
   const late = urgent.filter((p) => (minutesLeft(p.cutoffAt, now ?? 0) ?? 0) < 0);
   const soon = urgent.filter((p) => (minutesLeft(p.cutoffAt, now ?? 0) ?? 0) >= 0);
 
@@ -119,17 +121,50 @@ export function PurchaseClient({
       )}
       {lateMaterials.length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
-          <div className="mb-1">間に合わない材料があります（発注書には入っていません）。仕入先に電話で相談してください。</div>
-          <ul className="list-disc pl-5 font-normal">
-            {lateMaterials.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-          </ul>
+          <details>
+            <summary className="cursor-pointer">
+              間に合わない材料が <span className="num text-xl">{lateMaterials.length}</span> 件あります（発注書には入っていません）。仕入先に電話で相談してください。
+              <span className="ml-1 text-sm font-normal underline underline-offset-4">押すと出します</span>
+            </summary>
+            <ul className="mt-1 list-disc pl-5 font-normal">
+              {lateMaterials.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </details>
         </Notice>
       )}
-      {warnings.filter((w) => !lateMaterials.includes(w)).length > 0 && (
+      {warn.incomplete.length > 0 && (
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+          <details>
+            <summary className="cursor-pointer">
+              お店か商品が決まっていない注文が <span className="num text-xl">{warn.incomplete.length}</span> 件あります。この分は発注書に入っていません。
+              <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で直す</Link>
+            </summary>
+            <ul className="mt-1 list-disc pl-5 font-normal">
+              {warn.incomplete.map((o) => (
+                <li key={o.orderId}>
+                  {[o.noCustomer && "お店が決まっていません", o.emptyLines > 0 && `商品が決まっていない行が ${o.emptyLines} 行`].filter(Boolean).join("・")}
+                  <span className="ml-2 text-sm text-ink-faint">（番号 …{o.orderId.slice(-6)}）</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </Notice>
+      )}
+      {warn.others.length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
-          <ul>{warnings.filter((w) => !lateMaterials.includes(w)).map((w, i) => <li key={i}>{w}</li>)}</ul>
+          <details>
+            <summary className="cursor-pointer">
+              製造の注意が <span className="num text-xl">{warn.others.length}</span> 件あります（上限・時刻など）。
+              <span className="ml-1 text-sm font-normal underline underline-offset-4">押すと出します</span>
+            </summary>
+            <ul className="mt-1 list-disc pl-5 font-normal">
+              {warn.others.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </details>
         </Notice>
       )}
       {unconfirmed > 0 && (
@@ -148,7 +183,7 @@ export function PurchaseClient({
           ))}
         </Notice>
       )}
-      {lateMaterials.length > 0 && (
+      {late.length > 0 && (
         <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-3">
           締めを過ぎて、まだ送っていない発注書が <span className="num text-xl">{late.length}</span> 枚あります。仕入先に電話で確かめてください。
         </Notice>
@@ -172,7 +207,7 @@ export function PurchaseClient({
       {shown.length === 0 ? (
         <Empty>{pos.length === 0 ? "今は発注するものがありません。" : "この状態の発注書はありません。"}</Empty>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 xl:grid-cols-2">
           {shown.map((po) => (
             <PoSheet
               key={po.id}

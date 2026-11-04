@@ -26,7 +26,7 @@ function Chip({ href, tone, label, value, sub }: { href: string; tone: "review" 
     <Link href={href} className={`flex min-h-12 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 leading-tight ${cls}`}>
       <span className="text-sm font-bold">{label}</span>
       <span className="num text-xl font-black">{value}</span>
-      {sub && <span className="text-xs font-bold">{sub}</span>}
+      {sub && <span className="hidden text-xs font-bold xl:inline">{sub}</span>}
     </Link>
   );
 }
@@ -68,7 +68,7 @@ export function TodayBar() {
 
   const fax = s.faxToReview + s.faxUnread;
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-2 [scrollbar-width:none] md:justify-end [&::-webkit-scrollbar]:hidden" aria-label="今日やること">
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 pb-2 md:justify-end" aria-label="今日やること">
       <Chip
         href="/orders?status=needs_review"
         tone={s.ordersToReview ? "review" : "ok"}
