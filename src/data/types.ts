@@ -162,3 +162,319 @@ export interface PurchaseOrder {
   approvedAt?: string;
   sentAt?: string;
 }
+
+// ───────── マスタ（現場ごとに登録する：商品・生地・工程・設備・人員・材料・包材・仕入先・取引先） ─────────
+// どれも「1行＝1件」の平たい表にしている（DB のテーブル・CSV の1行にそのまま対応させるため）。
+// 親子の関係（生地の配合・工程・商品の包材など）は、別の表に親の ID を持たせる。
+// 時刻は "HH:MM"（日本時間）。前日の時刻はマイナスの分（-180 = 前日21:00）で持つ項目だけ「…Minute」とする。
+// 初期値（架空のサンプル）は src/lib/masters/seed.ts。CSV の列定義と検証は src/lib/masters/。
+
+/** 製造ライン */
+export type ProductionLineId = "bread" | "pizza";
+
+/** ライン（パン・ピザ）の設定 */
+export interface LineMaster {
+  id: ProductionLineId;
+  name: string;
+  /** 数の単位（個・枚） */
+  unit: string;
+  /** 1日の上限（個・枚）。なければ上限なし */
+  dailyCap?: number;
+  /** 当日の作業開始 "HH:MM"（開始時刻から組むライン用） */
+  startTime: string;
+  /** 工程表の組み方: delivery = 納品時刻から逆算 / start = 開始時刻から順に */
+  scheduleFrom: "delivery" | "start";
+  /** 最後の工程の終わりから納品までの時間（積み込み・配送。分） */
+  shipBufferMinutes: number;
+  /** いちばん早く始められる時刻（0:00 からの分。前日ならマイナス。夜班があれば -180 など） */
+  earliestStartMinute: number;
+  /** 前日の仕込みの開始 "HH:MM" */
+  prevDayStartTime: string;
+}
+
+/** 設備の種類 */
+export type EquipmentKind =
+  | "mixer" // ミキサー
+  | "divider" // 分割機（丸め機を含む）
+  | "moulder" // 成形機・モルダー・シーター
+  | "proofer" // ホイロ
+  | "oven" // オーブン
+  | "cooler" // 冷却（ラック・急速冷凍）
+  | "slicer" // スライサー
+  | "packer" // 包装機
+  | "metal_detector" // 金属検出機
+  | "other";
+
+/** 設備。同じ設備は台数ぶんまでしか同時に使えない */
+export interface Equipment {
+  id: string;
+  name: string;
+  kind: EquipmentKind;
+  /** どのラインで使うか（common = 両方で共用） */
+  line: ProductionLineId | "common";
+  /** 台数 */
+  count: number;
+  /** 使える時間帯 "HH:MM"（前日から使うなら availableFrom > availableTo でよい：22:00〜06:00） */
+  availableFrom: string;
+  availableTo: string;
+  /** 処理能力: 1台・1ラインあたり 1時間に何個（分割機・包装機・スライサー・金属検出機など） */
+  piecesPerHour?: number;
+  /** 分割機などのライン数（1ライン／2ライン）。処理能力はライン数倍になる */
+  lanes?: number;
+  /** 1回に仕込める量 kg（ミキサー） */
+  maxBatchKg?: number;
+  /** 扱える1個の重さ g（分割機の上限・下限） */
+  minPieceGram?: number;
+  maxPieceGram?: number;
+  /** 1回に入る数（オーブン・ホイロの段・天板の数 × 1枚あたり） */
+  capacityPieces?: number;
+  active: boolean;
+  note?: string;
+}
+
+/** 工程の種類（多言語の表示は key から引く） */
+export type ProcessStepKey =
+  | "weigh" | "mix" | "ferment" | "divide" | "bench" | "shape" | "retard" | "proof"
+  | "topping" | "bake" | "cool" | "freeze" | "slice" | "pack" | "metal_check" | "case_pack" | "other";
+
+/**
+ * 生地ごとの工程（1行＝1工程、seq の順に並ぶ）。
+ * 所要時間（分）= setupMinutes ＋ waitMinutes ＋ minutesPerBatch × ミキサーの回数 ＋ 個数 × secondsPerPiece ÷ 60。
+ * secondsPerPiece が空で設備（equipmentId）に処理能力があれば、設備の能力（piecesPerHour × lanes × 台数）から出す。
+ */
+export interface ProcessStepMaster {
+  id: string;
+  doughId: string;
+  seq: number;
+  key: ProcessStepKey;
+  name: string;
+  /** 使う設備（空なら設備なし＝発酵の待ちなど） */
+  equipmentId?: string;
+  /** 必要な人数 */
+  people: number;
+  /** 段取り・調整の時間（分） */
+  setupMinutes: number;
+  /** 待ち時間（発酵・ホイロ・冷却など。量に関係なし。分） */
+  waitMinutes: number;
+  /** ミキサー1回ごとの時間（分） */
+  minutesPerBatch: number;
+  /** 1個あたりの秒数（人の作業・設備の能力が無いとき） */
+  secondsPerPiece?: number;
+  /** 前日に行う作業 */
+  prevDay: boolean;
+  /** CCP（重要管理点） */
+  ccp: boolean;
+  /** 温度・条件など */
+  note?: string;
+}
+
+/** 生地（配合はレシピ明細 RecipeItemMaster、工程は ProcessStepMaster） */
+export interface DoughMaster {
+  id: string;
+  name: string;
+  line: ProductionLineId;
+  /** ロス率（0.05 = 5%） */
+  lossRate: number;
+  /** ミキサー1回の上限 kg（空なら使うミキサーの maxBatchKg） */
+  mixerMaxKg?: number;
+  note?: string;
+}
+
+/** 生地の配合（ベーカーズ％、粉の合計 = 100） */
+export interface RecipeItemMaster {
+  doughId: string;
+  materialId: string;
+  percent: number;
+}
+
+export interface ToppingMaster {
+  id: string;
+  name: string;
+}
+
+/** トッピングの中身（1個あたり g） */
+export interface ToppingItemMaster {
+  toppingId: string;
+  materialId: string;
+  gramsPerPiece: number;
+}
+
+/** 包装のしかた */
+export type PackStyle = "single" | "double" | "bulk" | "other"; // 1枚包装／2枚包装／大袋
+export type PackMethod = "machine" | "hand";
+/** 金属検査のタイミング */
+export type MetalCheckTiming = "after_pack" | "before_pack" | "after_case" | "none";
+
+/**
+ * 商品（自社製造・仕入・食パンの包み直し）。
+ * 使う列は種類で違う: make → doughId・doughGram…／buy → supplierId・packSizes…／repack → sourceProductId・slicesPerPack
+ */
+export interface ProductMaster {
+  id: string;
+  name: string;
+  /** 売る単位（個・枚・斤・包） */
+  unit: string;
+  /** 売価（円/個） */
+  price: number;
+  kind: "make" | "buy" | "repack";
+  line?: ProductionLineId;
+  /** 1袋（P）・1ケース（c/s）の入数 */
+  bagSize?: number;
+  caseSize?: number;
+  /** 注文のリードタイム（日）と締め時刻 "HH:MM" */
+  leadDays?: number;
+  cutoffTime?: string;
+  // 自社製造
+  doughId?: string;
+  doughGram?: number;
+  toppingId?: string;
+  /** この商品がある日のライン上限（個・枚/日） */
+  dailyCap?: number;
+  /** 包装: 1枚／2枚／大袋、機械／手 */
+  packStyle?: PackStyle;
+  packMethod?: PackMethod;
+  /** スライスの厚さ mm（食パン） */
+  sliceMm?: number;
+  /** 金属検査のタイミング */
+  metalCheck?: MetalCheckTiming;
+  /** 人件費（円/個） */
+  laborCost?: number;
+  // 仕入
+  supplierId?: string;
+  /** 仕入先が売る入数（6・8 など、複数可） */
+  packSizes?: number[];
+  /** 1個の仕入値（円）。入数ごとの値段があれば packPrices（"6:144;8:200"） */
+  unitCost?: number;
+  packPrices?: Record<number, number>;
+  /** 1本あたりの枚数（3斤を30枚に切る → 30） */
+  slicesPerItem?: number;
+  // 包み直し
+  sourceProductId?: string;
+  slicesPerPack?: number;
+  active: boolean;
+}
+
+/** 材料・包材の共通の項目（在庫・発注先・リードタイム・ロット） */
+interface StockItemBase {
+  id: string;
+  name: string;
+  /** 在庫の単位（kg・L・個・枚・本） */
+  unit: string;
+  /** 発注先（仕入先 ID。空なら発注しない＝水など） */
+  supplierId: string;
+  /** 発注単位の量（25kg袋なら 25）と表示（"25kg袋"） */
+  orderUnit: number;
+  orderUnitLabel: string;
+  /** 最小ロット（発注単位の数）。空なら仕入先の値 → 1 */
+  minLot?: number;
+  /** リードタイム（日）。空なら仕入先の値 → 1 */
+  leadDays?: number;
+  /** 在庫と安全在庫（在庫の単位） */
+  stock: number;
+  safetyStock: number;
+  /** 単価（円/在庫の単位） */
+  unitCost: number;
+  /** 保管場所（冷蔵庫A・倉庫2階 など） */
+  location?: string;
+  active: boolean;
+}
+
+export interface MaterialMaster extends StockItemBase {
+  /** 1単位の重さ kg（L の油なら 0.91）。空なら 1 */
+  kgPerUnit?: number;
+}
+
+export type PackagingMaterial = StockItemBase;
+
+/** 商品に使う包材（1個・1包・1ケースあたりの数） */
+export interface ProductPackagingMaster {
+  productId: string;
+  packagingId: string;
+  quantity: number;
+  per: "piece" | "pack" | "case";
+}
+
+/** 仕入先（材料・包材・仕入品の発注先） */
+export interface SupplierMaster {
+  id: string;
+  name: string;
+  method: PurchaseMethod;
+  /** 発注サイトの名前など（画面に出す） */
+  siteName?: string;
+  /** FAX 番号・メールなど */
+  contact: string;
+  /** 発注の締め "HH:MM" と、締めから納品までの日数 */
+  cutoff?: string;
+  leadDays?: number;
+  /** 最小ロット（発注単位の数） */
+  minLot?: number;
+  active: boolean;
+}
+
+/** 仕入先の便（1便・2便）。無ければ仕入先の締め・日数の1便だけ */
+export interface SupplierDeliveryMaster {
+  supplierId: string;
+  id: string;
+  name: string;
+  cutoff?: string;
+  leadDays?: number;
+  arrival?: string;
+}
+
+/** 得意先 */
+export interface CustomerMaster {
+  id: string;
+  name: string;
+  channel: OrderChannel;
+  fax?: string;
+  externalCode?: string;
+  lineUserId?: string;
+  /** 前日の何時までに注文が必要か "HH:MM" */
+  cutoff: string;
+  /** 納品時刻 "HH:MM"（工程表の逆算に使う。空なら 08:00） */
+  deliveryTime?: string;
+  /** 配送コース（A・B・D・F・売店 など） */
+  course?: string;
+  note?: string;
+  active: boolean;
+}
+
+/** 班（朝班・夜班）。時間帯と人数 */
+export interface ShiftMaster {
+  id: string;
+  name: string;
+  line: ProductionLineId | "common";
+  /** "HH:MM"。夜班のように日をまたぐなら from > to */
+  from: string;
+  to: string;
+  /** その班の人数 */
+  headcount: number;
+}
+
+/** 工程ごとの配置人数（班ごと）。工程の people より優先する */
+export interface StaffAssignmentMaster {
+  shiftId: string;
+  line: ProductionLineId;
+  stepKey: ProcessStepKey;
+  people: number;
+}
+
+/** マスタ一式（計算関数はこれを引数で受け取る） */
+export interface Masters {
+  lines: LineMaster[];
+  equipment: Equipment[];
+  doughs: DoughMaster[];
+  recipeItems: RecipeItemMaster[];
+  steps: ProcessStepMaster[];
+  toppings: ToppingMaster[];
+  toppingItems: ToppingItemMaster[];
+  products: ProductMaster[];
+  materials: MaterialMaster[];
+  packaging: PackagingMaterial[];
+  productPackaging: ProductPackagingMaster[];
+  suppliers: SupplierMaster[];
+  supplierDeliveries: SupplierDeliveryMaster[];
+  customers: CustomerMaster[];
+  shifts: ShiftMaster[];
+  staffAssignments: StaffAssignmentMaster[];
+}
