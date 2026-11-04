@@ -104,6 +104,10 @@ export const customers: Customer[] = [
   { id: "C07", name: "やまびこ給食（インフォマート）", channel: "infomart", externalCode: "IM-0007", cutoff: "13:00" },
   { id: "C09", name: "めぐみ給食サービス", channel: "fax", fax: "0000-66-6666", cutoff: "15:00", note: "仮発注のあと本発注が来る。初めての様式" },
   { id: "C08", name: "あおい医療フードサービス", channel: "customer_site", externalCode: "NS-1201", cutoff: "11:00", note: "取引先の専用発注サイト" },
+  { id: "C10", name: "ピッツェリア やまのて（デモ）", channel: "email", cutoff: "15:00", note: "PDFの発注書をメールで送ってくる。発注番号あり" },
+  { id: "C11", name: "とうわ工業 社員食堂（デモ）", channel: "email", cutoff: "15:00", note: "Excelの注文書をメールに添付" },
+  { id: "C12", name: "まるしょう食品（デモ）", channel: "email", cutoff: "16:00", note: "本文で数量変更・キャンセルが来る" },
+  { id: "C13", name: "ベーグル工房みなみ 本部（デモ）", channel: "google_sheet", cutoff: "12:00", note: "店舗別・月別のスプレッドシート" },
 ];
 
 export const suppliers: Supplier[] = [
