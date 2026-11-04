@@ -70,6 +70,17 @@
 | マージ途中の package.json が壊れたまま残る | 並行セッションのマージ中の状態を Turbopack がキャッシュ | `.next` を消して再起動 |
 | 画面全体が 500 エラー（Tailwind） | 並行開発の worktree（`.claude/worktrees/`）がリポジトリの中にあり、Tailwind v4 がその `node_modules` まで読みに行っていた | `globals.css` に `@source not "../../.claude";` |
 | トンネルで社内の画面まで外から見える心配 | クイックトンネルは全部の道を外に出す | `src/proxy.ts` で、Cloudflare 経由は受け口（FAX・LINE）だけ通し、受信箱・確認画面・ボタンは 403 |
+| 白黒2値（CCITT）のFAXが確認画面で真っ白 | pdf.js v6 は CCITT の画像を wasm で読み解く。`wasmUrl` を渡していなかったので「JBig2 failed to initialize」→「Dependent image isn't ready yet」で何も描かれなかった（Chrome 標準ビューアでは正しく出るので PDF は正常） | `pdfjs-dist/wasm/` を `public/pdfjs-wasm/` に置き、`getDocument({ wasmUrl: "/pdfjs-wasm/" })`。あわせて描画の取り消し（React の二重実行で描画が重ならないように） |
+
+### 本物の経路での確認（11/4 夜）
+- 担当者の許可をもらい、架空の注文書PDFを添付したメールを fax-inbox に送り、「FAX受信」ラベルを付けた（迷惑メールに入っていたので「迷惑メールではない」に）
+- 約1分で Gmail → GAS（1分おき）→ トンネル → `/api/fax/inbound` → 受信箱 → Claude の読み取り まで届いた。送り主・180°回転・数量（3個入×11袋、2個入×39袋）とも正しかった
+- このとき白黒2値のPDFが真っ白になる不具合が見つかり、上のとおり直した。本物の複合機のFAXも白黒2値で来る可能性が高いので、撮影前に見つかってよかった
+
+### 撮影日の時計（DEMO_NOW）での確認
+- 物語の日付は 2026-11-05（木）11:30。`.env.local` に `DEMO_NOW` と `NEXT_PUBLIC_DEMO_NOW` を入れて起動すると、共通の時計（`src/lib/clock.ts` の `nowIso()` / `nowMs()`）がその時刻から進む
+- ①では、確定・修正・受信の時刻をすべてこの時計から取るように変えた。テスト送信（`npm run fax:simulate`）の受信時刻も時計にそろえる（本物の Gmail はメールの日時のまま）
+- 実際に起動してテスト送信し、受信箱に「Gmail経由・11/5 11:30 受信」と出ること、保存された受信時刻が 2026-11-05T02:30Z（日本時間 11:30）であることを確かめた。確認後は2行を外して元に戻した
 
 ---
 
