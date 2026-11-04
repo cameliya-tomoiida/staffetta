@@ -81,7 +81,7 @@ LINE で届いた文章を、受発注ハブで受け取るための設定です
 4. 同じチャネルの **「LIFF」** タブ →「追加」を押します。
    - LIFFアプリ名：`ご注文`
    - サイズ：**Full**
-   - エンドポイントURL：`https://（公開URL）/liff` ← 作業5で決まるURL。Claude がお伝えします
+   - エンドポイントURL：`https://（公開URL）/liff/order` ← 作業5で決まるURL。Claude がお伝えします
    - Scope：`openid` と `profile` にチェック
    - 友だち追加オプション：**On (Aggressive)**（フォームを開いた人に、公式アカウントの友だち追加をすすめる）
    - 「追加」を押します。
@@ -109,7 +109,7 @@ LINE は「インターネットから見えるURL」にしかメッセージを
 3. **Webhook URL** の「編集」を押し、`https://xxxx.trycloudflare.com/api/line/webhook` を入れて「更新」。
 4. **「検証」** を押して「成功」と出ればOKです。
 5. **「Webhookの利用」** をオンにします。
-6. 作業4の LIFF の「エンドポイントURL」も、`https://xxxx.trycloudflare.com/liff` に直します。
+6. 作業4の LIFF の「エンドポイントURL」も、`https://xxxx.trycloudflare.com/liff/order` に直します。
 
 > cloudflared のURLは起動するたびに変わります。変わったら 3 と 6 をやり直します。
 
@@ -157,7 +157,7 @@ node scripts/line-webhook-test.mjs
 node scripts/line-webhook-test.mjs "明日 ロール 20個、食パン6枚切り 2本"
 ```
 
-- 注文フォームは http://localhost:3103/liff?demoUser=U_demo_kotori で開けます。
+- 注文フォームは http://localhost:3103/liff/order?demoUser=U_demo_kotori で開けます。
 - 届いた注文は受注一覧（`data/db.json`）に「要確認」で入ります。
 - お客さんへ返したはずの文面は `data/line.json` の `outbox` に残ります（デモでは実際には送りません）。
 

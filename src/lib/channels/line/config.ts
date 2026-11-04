@@ -18,4 +18,4 @@ export const lineConfig = {
 export const isLineLive = () => Boolean(lineConfig.channelSecret && lineConfig.accessToken);
 
 /** LIFFのURL（お客さんに送るリンク）。未設定ならローカルの画面 */
-export const liffUrl = () => (lineConfig.liffId ? `https://liff.line.me/${lineConfig.liffId}` : "/liff");
+export const liffUrl = () => (lineConfig.liffId ? `https://liff.line.me/${lineConfig.liffId}` : "/liff/order");
