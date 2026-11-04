@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { nowIso } from "@/lib/clock";
 import { isLineLive, lineConfig, liffUrl } from "@/lib/channels/line/config";
 import { getDisplayName, replyText, verifySignature } from "@/lib/channels/line/client";
 import { ingestTalkMessage } from "@/lib/channels/line/orders";
@@ -79,7 +80,8 @@ export async function POST(request: Request) {
     }
 
     const message = { id: ev.message.id, text: ev.message.text };
-    const receivedAt = new Date(ev.timestamp || Date.now()).toISOString();
+    // 受信日時は共通の時計（撮影日は DEMO_NOW）。LINE の timestamp との差は数秒
+    const receivedAt = nowIso();
     after(async () => {
       // お客さんへは「受け付けました（確認中）」だけを返す（読み取り結果は伝えない）
       if (ev.replyToken && !ev.deliveryContext?.isRedelivery) await replyText(ev.replyToken, userId, ACK);

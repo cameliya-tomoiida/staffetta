@@ -1,4 +1,5 @@
 import "server-only";
+import { nowIso } from "@/lib/clock";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { customers } from "@/data/master";
@@ -71,7 +72,7 @@ export function customerIdForUser(state: LineState, userId: string): string {
 /** メッセージが来るたびに呼ぶ。はじめての人なら記録する */
 export async function touchUser(userId: string, info: { displayName?: string; claimedName?: string } = {}) {
   return updateLineState((s) => {
-    const at = new Date().toISOString();
+    const at = nowIso();
     const u = (s.users[userId] ??= { userId, firstSeenAt: at, lastSeenAt: at });
     u.lastSeenAt = at;
     if (info.displayName) u.displayName = info.displayName;

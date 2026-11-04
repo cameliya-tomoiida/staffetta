@@ -1,4 +1,5 @@
 import "server-only";
+import { now as clockNow, nowIso, todayJst } from "@/lib/clock";
 import { customerById } from "@/data/master";
 import { allProducts, findProduct as productById } from "@/lib/catalog";
 import type { Order, OrderLine, SourceRef } from "@/data/types";
@@ -9,10 +10,10 @@ import { customerIdForUser, readLineState, touchUser, updateLineState } from "./
 
 // LINEから来た注文を、共通の型の Order（channel: "line"、status: "needs_review"）にして store.ts に保存する。
 
-const now = () => new Date().toISOString();
+const now = () => nowIso();
 
 /** 日本時間の YYYY-MM-DD */
-export function jstDate(d: Date = new Date(), addDays = 0) {
+export function jstDate(d: Date = clockNow(), addDays = 0) {
   const t = new Date(d.getTime() + 9 * 3600_000 + addDays * 86400_000);
   return t.toISOString().slice(0, 10);
 }
@@ -133,7 +134,7 @@ export interface LiffOrderInput {
 export async function createLiffOrder(input: LiffOrderInput) {
   const items = input.items.filter((i) => i.quantity > 0 && productById(i.productId));
   if (!items.length) throw new Error("数が入っていません");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate) || input.deliveryDate <= jstDate()) throw new Error("納品日を選んでください");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate) || input.deliveryDate <= todayJst()) throw new Error("納品日を選んでください");
   const { customerId } = await touchUser(input.userId, { displayName: input.displayName, claimedName: input.claimedName });
   const at = now();
   const id = `LF${Date.now()}`;
