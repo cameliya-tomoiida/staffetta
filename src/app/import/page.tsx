@@ -1,7 +1,8 @@
 // 外部の入口（メール・スプレッドシート・きららCSV・インフォマートCSV）の取り込み。確認用の最小限の画面。
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { customerById, productById } from "@/data/master";
+import { customerById } from "@/data/master";
+import { findProduct } from "@/lib/catalog";
 import { readDb } from "@/lib/store";
 import { ImportPanel } from "./ImportPanel";
 import { ChannelBadge, fmtDate, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
@@ -53,7 +54,7 @@ export default async function ImportPage() {
                   <td>
                     {o.lines.map((l) => (
                       <div key={l.id}>
-                        {productById(l.productId)?.name ?? <span className="font-bold text-alert-ink">{l.read?.writtenName}（商品未対応）</span>} {l.quantity}
+                        {findProduct(l.productId)?.name ?? <span className="font-bold text-alert-ink">{l.read?.writtenName}（商品未対応）</span>} {l.quantity}
                         {l.unit}
                         {l.piecesPerUnit > 1 && <span className="text-sm text-ink-soft">（×{l.piecesPerUnit}＝{l.pieces}個）</span>}
                       </div>

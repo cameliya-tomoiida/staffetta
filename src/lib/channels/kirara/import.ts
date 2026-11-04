@@ -126,6 +126,13 @@ export function routingTable(rows: KiraraRow[], prev?: Record<string, number>): 
   return out.sort((a, b) => order.indexOf(a.dest) - order.indexOf(b.dest) || a.itemCode.localeCompare(b.itemCode));
 }
 
+/** 仕入先から何日前に入れる品か（前日分なら 1、それ以外は 0） */
+function prevDaysOf(itemCode: string): number {
+  const item = kiraraItem(itemCode);
+  const sup = item ? KIRARA_SUPPLY[item.dest] : undefined;
+  return sup && sup.dayOffset < 0 ? -sup.dayOffset : 0;
+}
+
 export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promise<KiraraImportResult> {
   const rows = parseKiraraCsv(buf);
   if (!rows.length) throw new Error("きららの注文の行が見つかりませんでした（CSV の形を確認してください）");
@@ -134,17 +141,21 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
   const prev = await readChannelState<{ fileName: string; totals: Record<string, number> }>(stateKey);
   const db = await readDb();
 
-  // 事業所 × センター納品日 で1件の注文にする
+  // 事業所 × センター納品日 で1件の注文にする。
+  // 仕入先から前日に入れる品（前日分）は、同じ事業所・納品日でも別の注文に分ける（③の決まり）。
+  //   id は NS-<事業所>-<センター納品日>-prev、deliveryDate はお客さんへの納品日のまま、
+  //   source.extra.purchaseDaysBefore に「何日前に入れるか」を入れる → ③がその日の発注書に入れる
   const groups = new Map<string, KiraraRow[]>();
   for (const r of rows) {
-    const k = `${r.siteCode}|${r.centerDate}`;
+    const k = `${r.siteCode}|${r.centerDate}|${prevDaysOf(r.itemCode)}`;
     groups.set(k, [...(groups.get(k) ?? []), r]);
   }
   const unknown = new Set<string>();
   const list: ImportedOrder[] = [];
   for (const [k, rs] of groups) {
-    const [siteCode, date] = k.split("|");
-    const baseId = `NS-${siteCode}-${date}`;
+    const [siteCode, date, daysBeforeText] = k.split("|");
+    const daysBefore = Number(daysBeforeText);
+    const baseId = `NS-${siteCode}-${date}${daysBefore > 0 ? "-prev" : ""}`;
     const existing = db.orders.find((o) => o.id === baseId);
     // 人が確定済みの注文に、昼の CSV で数が変わった → 変更として別に入れる（確定済みは書き換えない）
     const changed =
@@ -195,7 +206,10 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
         refs: [{ kind: "csv", fileName, rowStart: Math.min(...rs.map((r) => r.rowNo)), rowEnd: Math.max(...rs.map((r) => r.rowNo)) }],
         externalId: rs[0].slipNo,
         receivedAt: new Date().toISOString(),
-        extra: { site: "kirara", center: rs[0].centerName, bin: rs[0].binName, siteDate: rs[0].siteDate, siteCode },
+        extra: {
+          site: "kirara", center: rs[0].centerName, bin: rs[0].binName, siteDate: rs[0].siteDate, siteCode,
+          ...(daysBefore > 0 ? { purchaseDaysBefore: daysBefore } : {}),
+        },
       },
       lines: linesNow,
     });

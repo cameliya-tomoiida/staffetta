@@ -80,13 +80,27 @@ describe("取引先の発注サイト（EDI CSV、朝 → 昼）", () => {
 
   it("事業所ごとに要確認の注文。共通の決まりに合う。channel は customer_site", async () => {
     const r = await importKiraraCsv(sample("kirara", "SR900S01_20261108_朝.csv"), "朝.csv");
-    expect(r.orderIds.length).toBe(4);
+    // 4事業所＋前日入れの品がある2事業所の「-prev」の注文
+    expect(r.orderIds.length).toBe(6);
     for (const o of mem.db.orders) expectImportedOrder(o, "customer_site");
     const o = order("NS-420D101-2026-11-10");
     expect(o).toMatchObject({ customerId: "C08", deliveryDate: "2026-11-10", intent: "new" });
     // バターロール×2 のパック 12 → 24個、超じゅく 6個入 5パック → 30個
     expect(o.lines.find((l) => l.read?.writtenName.includes("３５ｇ×２"))).toMatchObject({ quantity: 12, piecesPerUnit: 2, pieces: 24 });
     expect(line("NS-420D101-2026-11-10", "P10")).toMatchObject({ quantity: 5, piecesPerUnit: 6, pieces: 30 });
+  });
+
+  it("前日に仕入先から入れる品は別の注文（-prev）。納品日はそのまま、extra.purchaseDaysBefore=1", async () => {
+    await importKiraraCsv(sample("kirara", "SR900S01_20261108_朝.csv"), "朝.csv");
+    const p = order("NS-420D102-2026-11-10-prev");
+    expect(p).toMatchObject({ customerId: "C08", deliveryDate: "2026-11-10", intent: "new" });
+    expect(p.source.extra).toMatchObject({ site: "kirara", purchaseDaysBefore: 1 });
+    expect(p.lines.map((l) => [l.productId, l.quantity, l.piecesPerUnit])).toEqual([["P10", 18, 1]]);
+    // 当日の注文には前日入れの品が入らず、purchaseDaysBefore も付かない
+    const main = order("NS-420D102-2026-11-10");
+    expect(main.source.extra?.purchaseDaysBefore).toBeUndefined();
+    expect(main.lines.some((l) => l.read?.writtenName.includes("１個"))).toBe(false);
+    expect(order("NS-420D104-2026-11-10-prev").lines[0]).toMatchObject({ productId: "P10", quantity: 15, piecesPerUnit: 2, pieces: 30 });
   });
 
   it("コード表で当社の商品にひも付かない品（ミニあんぱん）は商品を空にして要確認", async () => {
