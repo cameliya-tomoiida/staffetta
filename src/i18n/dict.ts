@@ -36,6 +36,8 @@ const ja = {
   unit_個: "個",
   unit_斤: "斤",
   unit_枚: "枚",
+  prov_title: "仮の注文（まだ決まっていません）",
+  prov: "仮",
 };
 export type Key = keyof typeof ja;
 type Dict = Record<Key, string>;
@@ -77,6 +79,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "こ",
       unit_斤: "きん",
       unit_枚: "まい",
+      prov_title: "かりの ちゅうもん（まだ きまって いません）",
+      prov: "かり",
     },
   },
   vi: {
@@ -114,6 +118,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "cái",
       unit_斤: "ổ",
       unit_枚: "cái",
+      prov_title: "Đơn tạm (chưa chốt)",
+      prov: "Tạm",
     },
   },
   id: {
@@ -151,6 +157,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "buah",
       unit_斤: "loaf",
       unit_枚: "lembar",
+      prov_title: "Pesanan sementara (belum pasti)",
+      prov: "Sementara",
     },
   },
   zh: {
@@ -188,6 +196,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "个",
       unit_斤: "条",
       unit_枚: "张",
+      prov_title: "临时订单（尚未确定）",
+      prov: "临时",
     },
   },
   ko: {
@@ -225,6 +235,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "개",
       unit_斤: "근",
       unit_枚: "장",
+      prov_title: "가주문 (아직 확정되지 않음)",
+      prov: "가주문",
     },
   },
   fil: {
@@ -262,6 +274,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "piraso",
       unit_斤: "loaf",
       unit_枚: "piraso",
+      prov_title: "Pansamantalang order (hindi pa tiyak)",
+      prov: "Pansamantala",
     },
   },
   my: {
@@ -299,6 +313,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "ခု",
       unit_斤: "လုံး",
       unit_枚: "ချပ်",
+      prov_title: "ယာယီ အော်ဒါ (မသေချာသေး)",
+      prov: "ယာယီ",
     },
   },
   ne: {
@@ -336,6 +352,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "वटा",
       unit_斤: "लोफ",
       unit_枚: "वटा",
+      prov_title: "अस्थायी अर्डर (अझै पक्का छैन)",
+      prov: "अस्थायी",
     },
   },
   en: {
@@ -373,6 +391,8 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       unit_個: "pcs",
       unit_斤: "loaves",
       unit_枚: "pcs",
+      prov_title: "Provisional orders (not final yet)",
+      prov: "Provisional",
     },
   },
 };

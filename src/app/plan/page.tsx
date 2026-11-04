@@ -28,7 +28,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const lang: Lang = isLang(q.lang) ? q.lang : "ja";
   const { orders, today } = await allOrders();
   const tomorrow = addDays(today, 1);
-  const dates = [...new Set([tomorrow, ...orders.filter((o) => o.status === "confirmed" && o.deliveryDate >= today).map((o) => o.deliveryDate)])].sort();
+  const dates = [...new Set([tomorrow, ...orders.filter((o) => (o.status === "confirmed" || o.status === "provisional") && o.deliveryDate >= today).map((o) => o.deliveryDate)])].sort();
   const date = typeof q.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.date) ? q.date : tomorrow;
 
   // 計算は③の src/lib/plan.ts（同じ入力なら同じ結果）
@@ -36,9 +36,15 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const batches = doughPlan(totals);
   // TODO(③): 開始時刻（パン4:00・ピザ6:00）と工程時間はマスター／③のロジックから取る
   const rows = schedule(batches);
+  // 仮発注は製造量に入れず「仮：○個」として別に見せる
+  // TODO(③): 仮発注の合計は③の関数に置き換える（今は仮発注を確定扱いにして totalsByProduct で数えているだけ）
+  const provTotals = totalsByProduct(
+    orders.filter((o) => o.status === "provisional").map((o) => ({ ...o, status: "confirmed" as const })),
+    date,
+  );
 
   // 辞書に無い名前（商品名・生地名）は Claude で訳して保存。訳せたものには「機械翻訳」と出す
-  const jaNames = [...batches.map((b) => b.dough.name), ...batches.flatMap((b) => b.items.map((i) => productById(i.productId)?.name ?? i.productId))];
+  const jaNames = [...provTotals.map((p) => productById(p.productId)?.name ?? p.productId), ...batches.map((b) => b.dough.name), ...batches.flatMap((b) => b.items.map((i) => productById(i.productId)?.name ?? i.productId))];
   const mt = await translateTerms(lang, jaNames);
   const name = (ja: string) => ({ text: mt[ja] ?? ja, machine: !!mt[ja], ja });
   const t = (k: Parameters<typeof tr>[1]) => tr(lang, k);
@@ -107,6 +113,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         {lines.map(({ line, title, color, icon }) => {
           const bs = batches.filter((b) => b.dough.line === line);
           const rs = rows.filter((r) => r.line === line);
+          const prov = provTotals.filter((p) => doughById(productById(p.productId)?.doughId ?? "")?.line === line);
           return (
             <section key={line} className="break-inside-avoid">
               <div className="mb-3 flex flex-wrap items-center gap-3 border-b border-rule pb-2" style={{ color }}>
@@ -119,6 +126,26 @@ export default async function PlanPage(props: PageProps<"/plan">) {
                   </div>
                 )}
               </div>
+              {prov.length > 0 && (
+                <div className="mb-3 rounded-lg border border-dashed border-prov-line bg-prov-bg px-4 py-2.5 text-prov-ink">
+                  <div className="text-sm font-bold">{t("prov_title")}</div>
+                  <ul className="mt-1 flex flex-wrap gap-x-6 gap-y-1">
+                    {prov.map((p) => {
+                      const pr = productById(p.productId);
+                      const n = name(pr?.name ?? p.productId);
+                      return (
+                        <li key={p.productId} className="flex items-baseline gap-2">
+                          <span className="font-bold">{n.text}</span>
+                          <span className="num text-xl font-black">
+                            {t("prov")}：{fmtNum(p.pieces)}
+                          </span>
+                          <span className="text-sm">{trUnit(lang, pr?.unit ?? "個")}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
               {bs.length === 0 ? (
                 <Empty>{t("nothing")}</Empty>
               ) : (

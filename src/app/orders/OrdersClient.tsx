@@ -5,7 +5,7 @@ import { customerById, customers, productById } from "@/data/master";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
   addDays, buttonClass, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
-  orderStatusRank, PageHeader, Segmented,
+  orderIntent, orderStatusRank, PageHeader, Segmented, Tag,
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
 
@@ -14,6 +14,7 @@ type SortKey = "date" | "customer" | "received";
 
 const barColor: Record<OrderStatus, string> = {
   needs_review: "bg-review-line",
+  provisional: "bg-prov-line",
   confirmed: "bg-ok-line",
   cancelled: "bg-off-line",
 };
@@ -43,6 +44,19 @@ export function OrdersClient({ orders, today }: { orders: Order[]; today: string
       if (sort === "received") return b.source.receivedAt.localeCompare(a.source.receivedAt);
       return a.deliveryDate.localeCompare(b.deliveryDate) || custName(a.customerId).localeCompare(custName(b.customerId), "ja");
     });
+  // 元の注文へ飛ぶ（絞り込みで隠れていたら外してから）
+  const jump = (id: string) => {
+    setStatus("all");
+    setDate("all");
+    setCustomer("all");
+    setChannel("all");
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`order-${id}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.animate([{ outline: "4px solid var(--color-crust-500)" }, { outline: "4px solid transparent" }], { duration: 1800 });
+    });
+  };
   const reviewAll = orders.filter((o) => o.status === "needs_review").length;
 
   const dayName = (d: string) => (d === today ? "今日" : d === addDays(today, 1) ? "明日" : d === addDays(today, 2) ? "あさって" : "");
@@ -71,6 +85,7 @@ export function OrdersClient({ orders, today }: { orders: Order[]; today: string
             options={[
               { value: "all", label: "すべて", count: base.length },
               { value: "needs_review", label: "要確認", count: count("needs_review") },
+              ...(orders.some((o) => o.status === "provisional") ? [{ value: "provisional" as const, label: "仮発注", count: count("provisional") }] : []),
               { value: "confirmed", label: "確定", count: count("confirmed") },
               { value: "cancelled", label: "取消", count: count("cancelled") },
             ]}
@@ -110,7 +125,7 @@ export function OrdersClient({ orders, today }: { orders: Order[]; today: string
       ) : (
         <ul className="space-y-2.5">
           {list.map((o) => (
-            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} />
+            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} />
           ))}
         </ul>
       )}
@@ -118,17 +133,21 @@ export function OrdersClient({ orders, today }: { orders: Order[]; today: string
   );
 }
 
-function OrderRow({ o, custName, dayName }: { o: Order; custName: string; dayName: string }) {
+function OrderRow({ o, custName, dayName, all, onJump }: { o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void }) {
+  const intent = o.intent && o.intent !== "new" ? orderIntent[o.intent] : null;
+  const original = o.changeOf ? all.find((x) => x.id === o.changeOf) : undefined;
+  const followUps = all.filter((x) => x.changeOf === o.id);
   const faxRef = o.source.refs.find((r) => r.kind === "fax_pdf");
   const off = o.status === "cancelled";
   const flagged = o.lines.filter((l) => l.read?.attention || l.confidence < 0.8);
   return (
-    <li className={`relative overflow-hidden rounded-lg border bg-sheet ${o.status === "needs_review" ? "border-review-line" : "border-rule"}`}>
+    <li id={`order-${o.id}`} className={`relative scroll-mt-28 overflow-hidden rounded-lg border bg-sheet ${o.status === "needs_review" ? "border-review-line" : "border-rule"}`}>
       <span className={`absolute inset-y-0 left-0 w-2 ${barColor[o.status]}`} aria-hidden />
       <div className="grid gap-3 py-3 pr-3 pl-5 sm:pr-4 sm:pl-6 md:grid-cols-[1fr_auto] md:items-center">
         <div className={`min-w-0 ${off ? "text-ink-faint" : ""}`}>
           <div className="flex flex-wrap items-center gap-2">
             <OrderStatusTag status={o.status} />
+            {intent && <Tag tone={intent.tone}>{intent.label}</Tag>}
             <ChannelBadge channel={o.source.channel} />
             <span className="text-sm text-ink-soft">{fmtDateTime(o.source.receivedAt)} 受付</span>
           </div>
@@ -153,6 +172,22 @@ function OrderRow({ o, custName, dayName }: { o: Order; custName: string; dayNam
               );
             })}
           </ul>
+          {o.changeOf && (
+            <button type="button" onClick={() => onJump(o.changeOf!)} className="mt-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-md border border-alert-line bg-alert-bg px-3 text-sm font-bold text-alert-ink">
+              元の注文を見る
+              {original && <span className="font-normal">（{fmtDate(original.deliveryDate)}納品・{fmtDateTime(original.source.receivedAt)}受付）</span>}
+            </button>
+          )}
+          {followUps.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {followUps.map((f) => (
+                <button key={f.id} type="button" onClick={() => onJump(f.id)} className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-alert-line bg-sheet px-3 text-sm font-bold text-alert-ink">
+                  <Icon.alert className="h-4 w-4" />
+                  この注文に{f.intent === "cancel" ? "取消" : "変更"}の連絡があります（{fmtDateTime(f.source.receivedAt)}）
+                </button>
+              ))}
+            </div>
+          )}
           {!off &&
             flagged.map((l) =>
               l.read?.attention ? (
