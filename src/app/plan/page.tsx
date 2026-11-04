@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { Line } from "@/data/master";
 import type { ProcessKey } from "@/data/production";
-import { allOrders } from "@/demo/all-orders";
+import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
+import { dayCostSummary } from "@/lib/cost";
+import { CostBox } from "@/components/ui/CostBox";
 import { addDays, Empty, fmtDate, fmtNum, Icon, MachineTranslated, Notice } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf, provisionalForDate } from "@/lib/aggregate";
@@ -39,15 +41,15 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const { orders, today } = await allOrders();
   const tomorrow = addDays(today, 1);
   const provDates = orders.filter((o) => o.status === "provisional").map((o) => o.deliveryDate);
-  const dates = [...new Set([...deliveryDatesOf(orders), ...provDates])].filter((d) => d >= today).sort();
-  const date =
-    typeof q.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.date) ? q.date : dates.includes(tomorrow) ? tomorrow : (dates[0] ?? tomorrow);
+  const dates = visibleDates([...deliveryDatesOf(orders), ...provDates], today);
+  const date = pickDate(q.date, dates, today);
   if (!dates.includes(date)) dates.push(date);
   dates.sort();
 
   // 計算はすべて③（src/lib）。画面は表示するだけ
   const r = runPipeline(orders, date);
   const prov = provisionalForDate(orders, date);
+  const cost = dayCostSummary(r);
 
   // 辞書に無い名前（商品名・生地名）は Claude で訳して保存。訳せたものには「機械翻訳」と出す
   const jaNames = [
@@ -129,6 +131,9 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           </ul>
         </Notice>
       )}
+
+      {/* お金（管理者向け・日本語。印刷しない） */}
+      <CostBox s={cost} show={["material", "margin"]} />
 
       {/* 仮発注（製造量には入れない） */}
       {prov.products.length > 0 && (

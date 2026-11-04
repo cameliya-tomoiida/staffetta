@@ -46,7 +46,7 @@ function minutesLeft(cutoffAt: string, now: number) {
   return Number.isNaN(at) ? null : Math.floor((at - now) / 60000);
 }
 
-export function PurchaseClient({ pos, date, factory, warnings, dateNav }: { pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode }) {
+export function PurchaseClient({ pos, date, factory, warnings, dateNav, costBox }: { pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +93,7 @@ export function PurchaseClient({ pos, date, factory, warnings, dateNav }: { pos:
       </PageHeader>
 
       {dateNav && <div className="no-print mb-4">{dateNav}</div>}
+      {costBox}
       {error && (
         <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
           {error}

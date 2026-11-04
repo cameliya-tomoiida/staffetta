@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FACTORY } from "@/data/master";
-import { allOrders } from "@/demo/all-orders";
+import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
+import { dayCostSummary } from "@/lib/cost";
+import { CostBox } from "@/components/ui/CostBox";
 import { addDays, fmtDate } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf } from "@/lib/aggregate";
@@ -18,9 +20,8 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
   const q = await props.searchParams;
   const { orders, today } = await allOrders();
   const tomorrow = addDays(today, 1);
-  const dates = deliveryDatesOf(orders).filter((d) => d >= today);
-  const date =
-    typeof q.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.date) ? q.date : dates.includes(tomorrow) ? tomorrow : (dates[0] ?? tomorrow);
+  const dates = visibleDates(deliveryDatesOf(orders), today);
+  const date = pickDate(q.date, dates, today);
 
   // 発注書の下書きは③（src/lib）が作る。画面は表示と、人の承認・送信の操作だけ
   const r = runPipeline(orders, date);
@@ -75,6 +76,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       date={date}
       factory={FACTORY.name}
       warnings={r.warnings}
+      costBox={<CostBox s={dayCostSummary(r)} show={["purchase", "material"]} />}
       dateNav={
         dates.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
