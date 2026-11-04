@@ -205,6 +205,21 @@ export async function liffContext(userId: string) {
           items: last.lines.filter((l) => productById(l.productId) && l.quantity > 0).map((l) => ({ productId: l.productId, quantity: l.quantity })),
         }
       : null,
+    /** お客さんに見せる「ご注文の履歴」（新しい順・最大8件。取消・変更の連絡も含む） */
+    history: db.orders
+      .filter((o) => isLineOrderOf(o, userId) || (customerId && o.customerId === customerId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 8)
+      .map((o) => ({
+        id: o.id,
+        deliveryDate: o.deliveryDate,
+        orderedAt: o.source.receivedAt,
+        state: (o.status === "confirmed" ? "confirmed" : o.status === "cancelled" ? "cancelled" : "checking") as "confirmed" | "cancelled" | "checking",
+        intent: o.intent ?? "new",
+        items: o.lines
+          .filter((l) => l.quantity > 0)
+          .map((l) => ({ name: productById(l.productId)?.name ?? l.read?.writtenName ?? "商品", quantity: l.quantity, unit: l.unit })),
+      })),
   };
 }
 
