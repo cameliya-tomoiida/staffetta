@@ -142,7 +142,8 @@ export async function replaceAll(db: Db, who: string) {
   init();
   transaction(() => {
     for (const t of ["faxes", "orders", "purchase_orders", "imported_messages"]) getDb().exec(`DELETE FROM ${t}`);
-    getDb().exec(`DELETE FROM masters WHERE name = '${FAX_FORMATS}'`);
+    getDb().exec(`DELETE FROM masters WHERE name IN ('${FAX_FORMATS}', 'aliases')`);
+    getDb().exec(`DELETE FROM kv WHERE key = 'aliases_migrated'`); // 辞書は様式の対応から作り直す
     for (const f of db.faxes) upsertFax(f);
     for (const o of db.orders) upsertOrder(o);
     for (const p of db.purchaseOrders ?? []) upsertPurchase(p);

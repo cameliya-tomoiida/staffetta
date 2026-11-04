@@ -46,6 +46,7 @@ export async function readFax(
   publicFile: string,
   receivedAt: string,
   knownMappings: Record<string, Record<string, string>>,
+  recentFixes: string[] = [],
 ): Promise<{ read: FaxRead; model: string }> {
   const client = new Anthropic();
   const pdf = await fs.readFile(faxFilePath(publicFile));
@@ -65,7 +66,7 @@ export async function readFax(
           { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.toString("base64") } },
           {
             type: "text",
-            text: `${masterText(knownMappings)}\n\n受信日時: ${receivedAt}\n\nこのFAXを読み取ってください。`,
+            text: `${masterText(knownMappings)}\n\n## スタッフが最近直した例（同じ間違いをしないための参考。値をそのまま使わず、読み方の参考にする）\n${recentFixes.join("\n") || "（まだなし）"}\n\n受信日時: ${receivedAt}\n\nこのFAXを読み取ってください。`,
           },
         ],
       },
