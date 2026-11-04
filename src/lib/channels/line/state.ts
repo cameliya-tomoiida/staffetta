@@ -173,10 +173,11 @@ export async function touchUser(userId: string, info: { displayName?: string; cl
 
 /**
  * 「デモを最初から」で呼ぶ（①の resetDb から）。架空のお客さん（U_demo_… / U-demo-…）の分だけ消す。
- * 本物の LINE の人（ひも付け・送った記録）は残す。
+ * 本物の LINE の人（ひも付け・送った記録）は残す。消したあと、DEMO_LINE_USERS をひも付けた状態で入れ直す。
  */
 export async function resetLineDemo() {
   await init();
+  await listMaster(USERS); // masters の表が無ければ作られる（まっさらなデータベースでも動くように）
   const db = getDb();
   const isDemo = (id: string) => /^U[-_]demo[-_]/i.test(id);
   const ids = (sql: string) => (db.prepare(sql).all() as { id: string }[]).map((r) => r.id).filter(isDemo);
@@ -188,4 +189,16 @@ export async function resetLineDemo() {
     for (const id of outTo) db.prepare("DELETE FROM line_outbox WHERE to_user = ?").run(id);
     for (const id of logUsers) db.prepare("DELETE FROM line_link_log WHERE user_id = ?").run(id);
   });
+  // 撮影・デモ用: 架空のお客さんを、はじめからひも付けた状態にする（リッチメニューの「前回と同じ」がすぐ出るように）
+  const at = nowIso();
+  await upsertMasters<UserRow>(
+    USERS,
+    DEMO_LINE_USERS.map((u) => ({ id: u.userId, userId: u.userId, displayName: u.displayName, firstSeenAt: at, lastSeenAt: at, customerId: u.customerId, linkedAt: at, linkedBy: "デモの初期値" })),
+    "デモを最初から",
+  );
+  const { syncLineUserIds } = await import("./customers");
+  for (const u of DEMO_LINE_USERS) await syncLineUserIds(u.userId, u.customerId, "デモを最初から");
 }
+
+/** デモを最初からにしたとき、ひも付けた状態で入る架空のお客さん（どのお店か分からない人の場面は U_demo_komorebi などで見せる） */
+export const DEMO_LINE_USERS = [{ userId: "U_demo_kotori", displayName: "ことり（デモ）", customerId: "C06" }];
