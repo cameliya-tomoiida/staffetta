@@ -2,6 +2,7 @@
 // 画面の中で「はい／いいえ」を聞くボタン（ブラウザの confirm() は設定によって出ないことがあるため使わない）。
 import { useState, useTransition } from "react";
 import { Button } from "./index";
+import { notifyHubChanged } from "./refresh";
 
 type Variant = "primary" | "ghost" | "ok" | "quiet";
 
@@ -12,6 +13,7 @@ export function ConfirmInline({
   noLabel = "いいえ",
   variant = "ghost",
   busyLabel,
+  align = "left",
   onConfirm,
 }: {
   label: React.ReactNode;
@@ -20,23 +22,30 @@ export function ConfirmInline({
   noLabel?: string;
   variant?: Variant;
   busyLabel?: string;
+  /** パネルをボタンの左はし・右はしのどちらにそろえるか（画面の右にあるボタンは "right"） */
+  align?: "left" | "right";
   /** 「はい」を押したときだけ呼ぶ。エラーは投げてよい（パネルに出す） */
   onConfirm: () => Promise<unknown> | void;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  if (!open)
-    return (
-      <Button variant={variant} disabled={pending} onClick={() => {
+  return (
+    <span className="relative inline-flex">
+      <Button
+        variant={variant}
+        disabled={pending || open}
+        aria-expanded={open}
+        onClick={() => {
           setError(null);
           setOpen(true);
-        }}>
+        }}
+      >
         {pending && busyLabel ? busyLabel : label}
       </Button>
-    );
-  return (
-    <div role="alertdialog" aria-live="polite" className="w-full max-w-md rounded-lg border-2 border-ink bg-sheet p-3 text-left">
+      {/* パネルはボタンの下に重ねて出す（まわりのボタンの幅を変えない） */}
+      {open && (
+    <div role="alertdialog" aria-live="polite" className={`absolute top-full ${align === "right" ? "right-0" : "left-0"} z-30 mt-2 w-[min(26rem,calc(100vw-2rem))] rounded-lg border-2 border-ink bg-sheet p-3 text-left`}>
       <div className="mb-3 font-bold whitespace-pre-wrap">{message}</div>
       {error && <div className="mb-2 text-sm font-bold text-alert-ink">{error}</div>}
       <div className="grid grid-cols-2 gap-2">
@@ -52,6 +61,7 @@ export function ConfirmInline({
               try {
                 await onConfirm();
                 setOpen(false);
+                notifyHubChanged();
               } catch (e) {
                 setError(e instanceof Error ? e.message : String(e));
               }
@@ -62,5 +72,7 @@ export function ConfirmInline({
         </Button>
       </div>
     </div>
+      )}
+    </span>
   );
 }

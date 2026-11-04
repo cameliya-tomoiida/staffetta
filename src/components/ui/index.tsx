@@ -1,5 +1,6 @@
 // 共通の部品（②デザイン）。画面はなるべくここの部品だけで組む。
 import Link from "next/link";
+import { todayJst as clockTodayJst } from "@/lib/clock";
 import type { OrderStatus } from "@/data/types";
 import { orderStatus, purchaseStatus, toneClass, type PurchaseStatus, type Tone } from "./tokens";
 
@@ -160,8 +161,8 @@ export function fmtDateTime(iso: string) {
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
-/** 日本時間の今日（YYYY-MM-DD） */
-export const todayJst = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+/** 日本時間の今日（YYYY-MM-DD）。③の共通の時計（DEMO_NOW があればデモの時刻） */
+export const todayJst = () => clockTodayJst();
 export const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
 export const fmtNum =(n: number, digits = 0) => n.toLocaleString("ja-JP", { maximumFractionDigits: digits, minimumFractionDigits: digits });
 

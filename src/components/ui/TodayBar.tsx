@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { TodaySummary } from "@/demo/today";
 import { fmtDate, fmtDateTime } from "./index";
+import { HUB_CHANGED } from "./refresh";
 
 const left = (iso: string, now: number) => {
   const m = Math.floor((Date.parse(iso) - now) / 60000);
@@ -45,14 +46,20 @@ export function TodayBar() {
         .then((d) => {
           if (!alive || !d) return;
           setS(d);
-          setNow(Date.now());
+          // 時計はサーバーに合わせる（デモの時刻でも、締めまでの残りがずれないように）
+          setNow(d.serverNow ?? Date.now());
         })
         .catch(() => undefined);
     load();
     const t = setInterval(load, 60_000);
+    // 確定・承認・リセットのあと（notifyHubChanged）と、画面に戻ってきたときにも取り直す
+    window.addEventListener(HUB_CHANGED, load);
+    window.addEventListener("focus", load);
     return () => {
       alive = false;
       clearInterval(t);
+      window.removeEventListener(HUB_CHANGED, load);
+      window.removeEventListener("focus", load);
     };
   }, [hidden, path]);
 

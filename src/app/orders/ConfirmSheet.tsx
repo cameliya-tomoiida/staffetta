@@ -10,6 +10,7 @@ import { NumPad } from "@/components/NumPad";
 import { Button, Icon, Notice } from "@/components/ui";
 import { notifyLineConfirmedAction } from "@/lib/channels/line/actions";
 import { confirmOrderAction } from "./actions";
+import { notifyHubChanged } from "@/components/ui/refresh";
 import { easyReasons } from "@/components/ui/wording";
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -49,6 +50,7 @@ export function ConfirmButton({ order, who, custName }: { order: Order; who: str
       if (!r.ok) return setError(r.error);
       setOpen(false);
       router.refresh();
+      notifyHubChanged();
     });
   };
 
@@ -150,6 +152,7 @@ export function LineNotifyButton({ orderId, preview, who }: { orderId: string; p
         await notifyLineConfirmedAction(orderId, who);
         setOpen(false);
         router.refresh();
+        notifyHubChanged();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
