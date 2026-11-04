@@ -29,7 +29,7 @@
 
 - `Button` / `LinkButton` / `buttonClass` … `primary`・`ghost`・`ok`・`quiet`
 - `Tag` / `OrderStatusTag` / `PurchaseStatusTag` … 状態の札
-- `ChannelBadge` / `ChannelIcon` … 入口のアイコン（FAX・LINE・メール・シート・インフォマート・きららサイト・電話・ドライバー）
+- `ChannelBadge` / `ChannelIcon` … 入口のアイコン（FAX・LINE・メール・シート・インフォマート・専用サイト・電話・ドライバー）
 - `MethodIcon` … 発注の送り方（サイト・FAX・メール・電話）
 - `PageHeader` / `SectionTitle` / `Notice` / `Segmented` / `Empty` / `Figure`
 - `MachineTranslated` … 「機械翻訳」の印

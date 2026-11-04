@@ -1,4 +1,4 @@
-// 外部の入口（メール・スプレッドシート・きららCSV・インフォマートCSV）の取り込み。確認用の最小限の画面。
+// 外部の入口（メール・スプレッドシート・専用サイトCSV・インフォマートCSV）の取り込み。確認用の最小限の画面。
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { customerById } from "@/data/master";

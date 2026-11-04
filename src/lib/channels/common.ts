@@ -1,5 +1,5 @@
 import "server-only";
-// 外部の入口（メール・スプレッドシート・きららCSV・インフォマートCSV）で共通に使う部品。
+// 外部の入口（メール・スプレッドシート・専用サイトCSV・インフォマートCSV）で共通に使う部品。
 // どの入口でも「届いたものを、そのまま読み取って、要確認(needs_review)の Order として入れる」だけ。
 // 値を直すのは人。元の値は line.read に残す。
 import { promises as fs } from "node:fs";

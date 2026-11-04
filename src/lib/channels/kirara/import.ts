@@ -1,8 +1,8 @@
 import "server-only";
-// きらら医療食品（デモ: あおい医療フードサービス C08）の専用サイトから落とした EDI CSV を取り込む。
+// 取引先の発注サイト（デモ: あおい医療フードサービス C08）から落とした EDI CSV を取り込む。
 // 今の運用（別PCで CSV を落とす → Excel マクロで便ごとに振り分け → 札を作る）を、ハブの中でやる。
 //  1. 事業所ごと・納品日ごとに「要確認」の注文を作る（伝票番号で二重取り込みしない）
-//  2. コード変換表で、振り分け先（ふじみ本発注・ふじみ前日・自社本・自社包装・菓子パン・ひので）ごとに合計する
+//  2. コード変換表で、振り分け先（仕入先への本発注・前日分・自社 本・自社 包装・菓子パン・ひので）ごとに合計する
 //  3. 前回取り込んだ数と比べて「数量差」を出す（朝の分 → 昼の確定分）
 //  4. 札（センター納品日・品名・数）の一覧を出す
 //  5. 仕入先から買う分（本発注・前日・ひので）は、行き先（仕入先・便・届く日）を表と注文の行に書く。
@@ -129,7 +129,7 @@ export function routingTable(rows: KiraraRow[], prev?: Record<string, number>): 
 
 export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promise<KiraraImportResult> {
   const rows = parseKiraraCsv(buf);
-  if (!rows.length) throw new Error("きららの注文の行が見つかりませんでした（CSV の形を確認してください）");
+  if (!rows.length) throw new Error("取引先の発注サイトの注文の行が見つかりませんでした（CSV の形を確認してください）");
   const centerDate = rows[0].centerDate;
   const stateKey = `kirara:${centerDate}`;
   const prev = await readChannelState<{ fileName: string; totals: Record<string, number> }>(stateKey);

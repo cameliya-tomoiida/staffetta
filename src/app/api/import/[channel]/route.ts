@@ -1,7 +1,7 @@
 // 外部の入口の取り込み口。
 //   POST /api/import/email     … .eml ファイル（form の file）または { sample: "ファイル名" }
 //   POST /api/import/sheet     … { url, sheetName, range?, customerId, place? } または { sample: "v1" | "v2" }
-//   POST /api/import/kirara   … きららの EDI CSV（form の file）または { sample: "ファイル名" }
+//   POST /api/import/kirara   … 取引先の発注サイトの EDI CSV（form の file）または { sample: "ファイル名" }
 //   POST /api/import/infomart  … インフォマートの明細 CSV（form の file）または { sample: "ファイル名" }
 // どれも、取り込んだ注文は「要確認」で db.json に入る。確定は人が画面で行う。
 import { promises as fs } from "node:fs";
