@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { customers, productById } from "@/data/master";
+import { customers } from "@/data/master";
+import { findProduct as productById } from "@/lib/catalog";
 import type { EditRecord, Order, OrderChannel } from "@/data/types";
 import { readFax } from "@/lib/fax-reader";
 import { readDb, resetDb, updateDb } from "@/lib/store";

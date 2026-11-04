@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Order } from "@/data/types";
+import type { Order, PurchaseOrder } from "@/data/types";
 
 /** Claude が FAX 1枚から読み取る内容（値はそのまま。換算や修正はしない） */
 export const FaxKind = z.enum(["order", "change", "provisional_order", "supplier_reply", "not_order"]);
@@ -123,4 +123,6 @@ export interface Db {
   templates: Record<string, FaxTemplate>;
   /** Gmail から受け取り済みのメッセージID（二重取り込み防止） */
   importedMessageIds: string[];
+  /** 仕入先への発注書（③: 承認・送信済みの保存） */
+  purchaseOrders?: PurchaseOrder[];
 }

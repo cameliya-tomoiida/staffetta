@@ -29,6 +29,7 @@ export const emptyDb = (): Db => ({
   faxes: initialFaxes(),
   orders: [],
   importedMessageIds: [],
+  purchaseOrders: [],
   templates: initialTemplates(),
   mappings: Object.fromEntries(Object.values(initialTemplates()).map((t) => [t.customerId, { ...t.items }])),
 });
@@ -42,6 +43,7 @@ export async function readDb(): Promise<Db> {
     db.templates ??= {};
     db.mappings ??= {};
     db.importedMessageIds ??= [];
+    db.purchaseOrders ??= [];
     return db;
   } catch {
     return emptyDb();
