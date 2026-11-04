@@ -68,7 +68,7 @@ export function TodayBar() {
 
   const fax = s.faxToReview + s.faxUnread;
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-2 [scrollbar-width:none] md:flex-wrap md:justify-end md:overflow-visible [&::-webkit-scrollbar]:hidden" aria-label="今日やること">
+    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-2 [scrollbar-width:none] md:justify-end [&::-webkit-scrollbar]:hidden" aria-label="今日やること">
       <Chip
         href="/orders?status=needs_review"
         tone={s.ordersToReview ? "review" : "ok"}
@@ -88,7 +88,7 @@ export function TodayBar() {
         tone={s.overdue ? "alert" : s.purchaseDraft + s.purchaseApproved ? "review" : "ok"}
         label="発注書"
         value={s.purchaseDraft + s.purchaseApproved ? `${s.purchaseDraft + s.purchaseApproved}枚` : "送信済み"}
-        sub={s.overdue ? `締め過ぎ ${s.overdue}枚` : s.nextCutoff ? `締め ${fmtDateTime(s.nextCutoff)}（${left(s.nextCutoff, now)}）` : `${fmtDate(s.purchaseDate)}納品`}
+        sub={s.overdue ? `締め過ぎ ${s.overdue}枚` : s.nextCutoff ? `締め ${fmtDateTime(s.nextCutoff).split(" ").pop()} ${left(s.nextCutoff, now)}` : `${fmtDate(s.purchaseDate)}納品`}
       />
       {s.warnings > 0 && <Chip href={`/plan?date=${s.purchaseDate}`} tone="alert" label="注意" value={`${s.warnings}件`} />}
     </div>

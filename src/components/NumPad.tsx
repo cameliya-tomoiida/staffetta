@@ -17,8 +17,8 @@ export function NumPad({ title, initial, unit, onOk, onClose }: { title: string;
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
       <div className="card w-full max-w-xs p-4" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 text-sm text-black/60">{title}</div>
-        <div className="mb-3 rounded-xl bg-crust-50 px-4 py-3 text-right text-4xl font-black">
+        <div className="mb-1 text-sm text-ink-soft">{title}</div>
+        <div className="mb-3 rounded-lg bg-crust-50 px-4 py-3 text-right text-4xl font-black">
           {value}<span className="ml-1 text-base font-normal">{unit}</span>
         </div>
         <div className="mb-2 grid grid-cols-4 gap-2">
