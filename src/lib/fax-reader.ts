@@ -27,7 +27,18 @@ FAXの種類（kind）の見分け方:
 - 「変更」「訂正」「キャンセル」など、既に出した注文を直す内容 → change。変更前の数が書いてあれば previous_quantity に入れ、quantity は変更後の数にする。
 - こちら（工場）が仕入先に出した発注への返事（注文請書・納期回答・在庫切れの連絡など）→ supplier_reply。lines は空でよい。
 - 広告・キャンペーン・営業案内など注文と関係ないもの → not_order。lines は空でよい。
-- 新しく見る様式でも、layout_summary に様式の特徴をまとめる（あとで人が承認して、この取引先の様式として登録する）。`;
+- 新しく見る様式でも、layout_summary に様式の特徴をまとめる（あとで人が承認して、この取引先の様式として登録する）。
+- 「発注なし」「今週はなし」とだけ書いたFAXも order とし、lines は空、notes にそのことを書く（人が受け取りを確認できるように）。
+
+様式の型（format_kind）の見分け方（実物によくある形）:
+- weekly_table: 行が品名、列が日付（週間・月間の注文表）。日付の列ごとに orders を分ける。
+- order_sheet: 1回分の発注書・発注伝票。納品日が1つ（行ごとに納品日が違えば、納品日ごとに orders を分ける）。
+- order_with_inspection: 「発注書兼検収記録簿」「検収記録簿」。病院・給食で多い。発注数の欄だけを読み、検収数・品温・異常の有無・サインの欄は読まない（受け取る側の記録欄なので空でよい）。
+- corrected_print: 印字された発注書に、手書きで数を書き込んだり訂正したりしたもの。手書きが優先。
+- multi_page_set: 「1/13」のような複数枚つづり。全ページで1件として読み、page_note にページの関係を書く。
+- change_notice: 既に出した注文の数・日付を変える連絡票。
+- handwritten_note: 決まった様式のない手書きのメモ。読みにくい字は confidence を下げ、数字の読み違い（1と7、0と6）に注意する。
+- 単位（個・袋・P（パック）・c/s（ケース）・枚切り）は書いてあるまま unit_written に入れる。「3枚入4袋」のような入数は pieces_per_unit に入れる。`;
 
 function masterText(knownMappings: Record<string, Record<string, string>>) {
   const cust = customers.map((c) => `${c.id}: ${c.name}${c.fax ? `（FAX ${c.fax}）` : ""}`).join("\n");

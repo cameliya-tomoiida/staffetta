@@ -8,11 +8,13 @@ import { readDb } from "./store";
 import type { FaxFormatKind, FaxTemplate } from "./types";
 
 export const formatKindLabel: Record<FaxFormatKind, string> = {
-  weekly_table: "週間表（品名×日付）",
-  order_sheet: "発注書（1回分）",
+  weekly_table: "期間の表（品名×日付・週間／月間）",
+  order_sheet: "発注書・発注伝票（1回分）",
+  order_with_inspection: "発注書兼検収記録簿",
   corrected_print: "印字＋手書きの訂正",
   multi_page_set: "複数枚つづり（仮発注など）",
   change_notice: "変更・訂正の連絡票",
+  handwritten_note: "手書きのメモ（様式なし）",
   other: "その他",
 };
 
