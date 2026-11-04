@@ -102,6 +102,7 @@ export const customers: Customer[] = [
   { id: "C05", name: "グループホームあおば", channel: "driver", cutoff: "16:00" },
   { id: "C06", name: "ベーカリーカフェ ことり", channel: "line", cutoff: "18:00", note: "LINEで注文" },
   { id: "C07", name: "やまびこ給食（インフォマート）", channel: "infomart", externalCode: "IM-0007", cutoff: "13:00" },
+  { id: "C09", name: "めぐみ給食サービス", channel: "fax", fax: "0000-66-6666", cutoff: "15:00", note: "仮発注のあと本発注が来る。初めての様式" },
   { id: "C08", name: "あおい医療フードサービス", channel: "customer_site", externalCode: "NS-1201", cutoff: "11:00", note: "取引先の専用発注サイト" },
   { id: "C09", name: "ピッツェリア やまのて（デモ）", channel: "email", cutoff: "15:00", note: "PDFの発注書をメールで送ってくる。発注番号あり" },
   { id: "C10", name: "とうわ工業 社員食堂（デモ）", channel: "email", cutoff: "15:00", note: "Excelの注文書をメールに添付" },
@@ -116,6 +117,8 @@ export const suppliers: Supplier[] = [
   { id: "S04", name: "まるやま食材（デモ）", method: "infomart", cutoff: "16:00", leadDays: 2, contact: "インフォマート" },
   { id: "S05", name: "みどり包材（デモ）", method: "aspit", cutoff: "15:00", leadDays: 3, contact: "アスピット" },
   { id: "S06", name: "きらら食品（デモ）", method: "kirara_site", cutoff: "12:00", leadDays: 2, contact: "メーカーの発注サイト" },
+  { id: "S07", name: "ふじみ製パン（デモ・ふじみ相当）", method: "fujimi_site", cutoff: "11:00", leadDays: 1, contact: "受発注サイト" },
+  { id: "S08", name: "こがね食品（デモ・こがね相当）", method: "kogane_site", cutoff: "14:00", leadDays: 2, contact: "発注サイト" },
 ];
 
 export const materials: Material[] = [
@@ -180,7 +183,7 @@ export const products: Product[] = [
   { id: "P07", name: "ピザクラスト 23cm", source: "make", doughId: "D04", pieceGram: 180, unit: "枚", price: 120 },
   { id: "P08", name: "たまごサンドロール", source: "buy", supplierId: "S03", packSize: 1, unit: "個", price: 150 },
   { id: "P09", name: "ごまバンズ", source: "buy", supplierId: "S03", packSize: 10, unit: "個", price: 45 },
-  { id: "P10", name: "超じゅくロール 6個入", source: "buy", supplierId: "S03", packSize: 6, unit: "個", price: 35 },
+  { id: "P10", name: "超じゅくロール 6個入", source: "buy", supplierId: "S07", packSize: 6, unit: "個", price: 35 },
 ];
 
 export const productById = (id: string) => products.find((p) => p.id === id);
