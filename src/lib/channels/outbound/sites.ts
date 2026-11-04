@@ -56,6 +56,9 @@ export const SITE_PROFILES: Partial<Record<PurchaseMethod, SiteProfile>> = {
       { itemId: "M08", siteName: "ドライイースト 500g・1／PC", siteCode: "IM-S-0108", section: "A社（12:00締 翌日）" },
       { itemId: "M10", siteName: "ショートニング 15kg・1／缶", siteCode: "IM-S-0110", section: "A社（12:00締 翌日）" },
       { itemId: "M11", siteName: "オリーブオイル 16.5L・1／缶", siteCode: "IM-S-0111", section: "A社（12:00締 翌日）" },
+      { itemId: "M14", siteName: "モッツァレラチーズ 1kg・10／C/S", siteCode: "IM-S-0114", section: "A社（12:00締 翌日）" },
+      { itemId: "M15", siteName: "ミックスチーズ 1kg・10／C/S", siteCode: "IM-S-0115", section: "A社（12:00締 翌日）" },
+      { itemId: "M16", siteName: "乾燥バジル 500g・1／PC", siteCode: "IM-S-0116", section: "A社（12:00締 翌日）" },
     ],
     // 画面調査（docs/infomart-notes.md）: 発注を CSV で一括取り込みする機能はなかった → 入力用リストだけ出す
   },
@@ -65,7 +68,8 @@ export const SITE_PROFILES: Partial<Record<PurchaseMethod, SiteProfile>> = {
     steps: ["受発注サイトにログイン（人）", "便（1便／2便）と納品日を選ぶ", "定番リストの上から順に袋数を入れる", "確認画面で数を見比べて、人が「送信」を押す"],
     items: [
       { itemId: "P10", siteName: "超じゅくロール 6個入", siteCode: "0143", section: "ロール" },
-      { itemId: "P10-1", siteName: "超じゅくロール 1個入（前日）", siteCode: "1292", section: "ロール" },
+      { itemId: "P18", siteName: "ふんわりロール 6個入・8個入", siteCode: "0150", section: "ロール" },
+      { itemId: "P17", siteName: "食パン 3斤 30枚スライス", siteCode: "0024", section: "食パン" },
       { itemId: "BREAD-6", siteName: "超じゅく食パン 6枚切", siteCode: "0017", section: "食パン" },
       { itemId: "BREAD-8", siteName: "超じゅく食パン 8枚切", siteCode: "0018", section: "食パン" },
     ],
@@ -84,8 +88,10 @@ export const SITE_PROFILES: Partial<Record<PurchaseMethod, SiteProfile>> = {
     label: "こがね食品 発注サイト",
     steps: ["こがね食品の発注サイトにログイン（人）", "「定期品」タブ", "下の順で数量を入れてカートへ", "人が「注文を確定」を押す"],
     items: [
-      { itemId: "M11", siteName: "エキストラバージンオリーブオイル 16.5L缶", siteCode: "K-OL-165", section: "油" },
+      { itemId: "M12", siteName: "ピザ用小麦粉 タイプ00 25kg", siteCode: "K-FL-000", section: "粉" },
       { itemId: "M02", siteName: "ピザ用中力粉 25kg", siteCode: "K-FL-025", section: "粉" },
+      { itemId: "M13", siteName: "トマトソース 3kg缶", siteCode: "K-TM-003", section: "トマト" },
+      { itemId: "M11", siteName: "エキストラバージンオリーブオイル 16.5L缶", siteCode: "K-OL-165", section: "油" },
     ],
     csv: {
       encoding: "utf-8",
