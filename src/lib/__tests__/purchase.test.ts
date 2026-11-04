@@ -21,8 +21,10 @@ describe("仕入品の発注書（下書き）", () => {
     });
   });
 
-  it("保育園（1便）の超じゅくロール 18個 → 3袋ちょうど", () => {
-    expect(s07("1").lines.find((l) => l.itemId === "P10")).toMatchObject({ units: 3, surplus: 0 });
+  it("1便の超じゅくロール: 保育園 18個 → 3袋 ＋ インフォマート 15袋（90個）= 18袋ちょうど", () => {
+    const l = s07("1").lines.find((l) => l.itemId === "P10")!;
+    expect(l).toMatchObject({ units: 18, surplus: 0 });
+    expect(l.customers!.map((c) => [c.customerId, c.packs])).toEqual([["C01", 3], ["C07", 15]]);
   });
 
   it("入数の候補が複数（6・8個入）: 20個 → 余りが同じ4なので袋の少ない 8個入×3袋", () => {
@@ -33,9 +35,10 @@ describe("仕入品の発注書（下書き）", () => {
     expect(s07("1").lines.find((l) => l.itemId === "P17")).toMatchObject({ units: 3, unitLabel: "30枚切" });
   });
 
-  it("ごまバンズ 45個（10個入）→ 5袋・余り5", () => {
+  it("ごまバンズ 6P（10個入）→ 6袋ちょうど。たまごサンド 120+6個 → 126個", () => {
     const s03 = drafts().find((d) => d.supplierId === "S03")!;
-    expect(s03.lines.find((l) => l.itemId === "P09")).toMatchObject({ units: 5, surplus: 5 });
+    expect(s03.lines.find((l) => l.itemId === "P09")).toMatchObject({ units: 6, surplus: 0 });
+    expect(s03.lines.find((l) => l.itemId === "P08")).toMatchObject({ units: 126, unitLabel: "個" });
   });
 
   it("得意先ごとに割るか、まとめて割るかを選べる", () => {
