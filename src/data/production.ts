@@ -230,7 +230,7 @@ const pizzaSteps = (o: { topping: boolean }): ProcessStep[] => [
 
 export const doughRecipes: DoughRecipe[] = [
   {
-    id: "DG01", name: "ロール生地", line: "bread", lossRate: 0.04, mixerMaxKg: 60,
+    id: "DG01", name: "ロール生地", line: "bread", lossRate: 0.02, mixerMaxKg: 60,
     items: [
       { materialId: "M01", percent: 100 }, { materialId: "M03", percent: 12 }, { materialId: "M05", percent: 1.6 },
       { materialId: "M06", percent: 12 }, { materialId: "M07", percent: 8 }, { materialId: "M08", percent: 2.5 },
@@ -239,7 +239,7 @@ export const doughRecipes: DoughRecipe[] = [
     steps: breadSteps({ ferment: 50, proof: 45, divide: 1800, shape: 900, bake: 1500, pack: 1200, bakeMin: "200℃ 10分", bakeMinutes: 10 }),
   },
   {
-    id: "DG02", name: "黒糖ロール生地", line: "bread", lossRate: 0.04, mixerMaxKg: 60,
+    id: "DG02", name: "黒糖ロール生地", line: "bread", lossRate: 0.02, mixerMaxKg: 60,
     items: [
       { materialId: "M01", percent: 100 }, { materialId: "M04", percent: 14 }, { materialId: "M05", percent: 1.6 },
       { materialId: "M06", percent: 8 }, { materialId: "M08", percent: 2.5 }, { materialId: "M09", percent: 3 },
@@ -257,7 +257,7 @@ export const doughRecipes: DoughRecipe[] = [
     steps: breadSteps({ ferment: 90, proof: 60, divide: 600, shape: 300, bake: 240, pack: 300, bakeMin: "210℃ 35分", bakeMinutes: 35 }),
   },
   {
-    id: "DG04", name: "ピザ生地", line: "pizza", lossRate: 0.05, mixerMaxKg: 50,
+    id: "DG04", name: "ピザ生地", line: "pizza", lossRate: 0.02, mixerMaxKg: 50,
     items: [
       { materialId: "M12", percent: 100 }, { materialId: WATER_ID, percent: 56 }, { materialId: "M05", percent: 2.5 },
       { materialId: "M08", percent: 0.1 }, { materialId: "M17", percent: 2 },
@@ -265,7 +265,7 @@ export const doughRecipes: DoughRecipe[] = [
     steps: pizzaSteps({ topping: false }),
   },
   {
-    id: "DG05", name: "高加水ピザ生地", line: "pizza", lossRate: 0.05, mixerMaxKg: 45,
+    id: "DG05", name: "高加水ピザ生地", line: "pizza", lossRate: 0.02, mixerMaxKg: 45,
     items: [
       { materialId: "M12", percent: 100 }, { materialId: WATER_ID, percent: 70 }, { materialId: "M05", percent: 2 },
       { materialId: "M03", percent: 2 }, { materialId: "M17", percent: 1 }, { materialId: "M08", percent: 0.3 },

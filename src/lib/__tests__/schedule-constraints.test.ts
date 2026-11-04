@@ -83,8 +83,8 @@ describe("マスタの差し替え", () => {
     const m = patch((m) => (m.doughs.find((d) => d.id === "DG01")!.lossRate = 0.2));
     const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
     expect(r.production.doughs.find((d) => d.doughId === "DG01")!.lossRate).toBe(0.2);
-    expect(findDough("DG01")!.lossRate).toBe(0.04);
-    expect(currentMasters().doughs.find((d) => d.id === "DG01")!.lossRate).toBe(0.04);
+    expect(findDough("DG01")!.lossRate).toBe(0.02);
+    expect(currentMasters().doughs.find((d) => d.id === "DG01")!.lossRate).toBe(0.02);
   });
 
   it("withMasters の中では、そのマスタで引ける", () => {
