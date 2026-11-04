@@ -156,8 +156,13 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   <button
                     key={d.ymd}
                     onClick={() => setDate(d.ymd)}
+                    disabled={late}
                     className={`rounded-2xl px-3 py-4 text-center font-bold ring-2 ${
-                      date === d.ymd ? "bg-crust-600 text-white ring-crust-700" : "bg-white ring-black/15"
+                      late
+                        ? "cursor-not-allowed bg-black/5 text-black/35 ring-black/10"
+                        : date === d.ymd
+                          ? "bg-crust-600 text-white ring-crust-700"
+                          : "bg-white ring-black/15"
                     }`}
                   >
                     <div className="text-xl">{i === 0 ? "あした" : i === 1 ? "あさって" : ""}</div>
@@ -169,8 +174,10 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 );
               })}
             </div>
-            {pastCutoff && date === days[0].ymd && (
-              <p className="mt-3 rounded-xl bg-amber-100 p-3 text-lg text-amber-900">あしたの分は、間に合わないときにお電話します。</p>
+            {pastCutoff && (
+              <p className="mt-3 rounded-xl bg-amber-100 p-3 text-lg text-amber-900">
+                あしたの分は 締め切り（{ctx.cutoff}）を すぎました。いそぎのときは お電話ください。
+              </p>
             )}
           </section>
 
@@ -256,8 +263,13 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             <div>
               <div className="mb-2 text-lg text-black/60">とどける日を かえるとき</div>
               <div className="grid grid-cols-3 gap-2">
-                {days.slice(0, 3).map((d) => (
-                  <button key={d.ymd} onClick={() => setDate(d.ymd)} className={`rounded-xl py-3 text-xl font-bold ring-2 ${date === d.ymd ? "bg-crust-600 text-white ring-crust-700" : "bg-white ring-black/15"}`}>
+                {days.slice(0, 3).map((d, i) => (
+                  <button
+                    key={d.ymd}
+                    onClick={() => setDate(d.ymd)}
+                    disabled={i === 0 && pastCutoff}
+                    className={`rounded-xl py-3 text-xl font-bold ring-2 disabled:cursor-not-allowed disabled:bg-black/5 disabled:text-black/35 disabled:ring-black/10 ${date === d.ymd ? "bg-crust-600 text-white ring-crust-700" : "bg-white ring-black/15"}`}
+                  >
                     {d.m}/{d.d}（{d.wd}）
                   </button>
                 ))}
