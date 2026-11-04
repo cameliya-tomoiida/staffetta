@@ -4,53 +4,57 @@
 
 /*
  * 受発注ハブ デザインの決まり（②デザイン）
- * - 紙の帳票に近い、落ち着いた見た目。飾りのグラデーションや影は使わない。
- * - 主に使うのはタブレット。文字は大きめ（本文 17px）、ボタンは高さ 56px 以上。
- * - 状態の色: 要確認＝黄 / 仮発注＝薄い青（点線） / 確定＝緑 / 取消＝灰。色だけに頼らず、必ず文字も出す。
+ * - 色の元は「椿の花」の深い赤（LINE 注文フォームと同じ #8f1d1d）。地は白、文字は墨。
+ *   赤は「押す所・大事な所」だけ（主ボタン・今いるメニュー・見出しの線）。広い面には使わない。
+ * - ボタン: 主＝赤地に白文字（1画面に1つが原則）／二番目＝白地に赤の線と赤い文字／押せない＝灰色。リンクは下線。
+ * - 飾りのグラデーション・影・絵文字は使わない。罫線と余白で区切る（紙の帳票に近く）。
+ * - 状態の色（彩度を落として赤とけんかしない）: 要確認＝黄 / 仮発注＝薄い青（点線） / 確定＝緑 / 取消＝灰。色だけに頼らず、必ず文字も出す。
+ * - 主に使うのはタブレット。文字は大きめ（本文 17px）、ボタンは高さ 48〜56px。
  * 詳しくは src/components/ui/README.md
  */
 @theme {
-  /* 紙とインク */
-  --color-paper: #f6f3ec; /* 画面の地（わら半紙） */
-  --color-sheet: #fffdf8; /* 帳票の紙 */
-  --color-ink: #26221d; /* 本文 */
-  --color-ink-soft: #5d564c; /* 補足 */
-  --color-ink-faint: #8d8578; /* 注記 */
-  --color-rule: #ddd5c6; /* 罫線 */
-  --color-rule-strong: #b9ad98;
+  /* 紙と墨 */
+  --color-paper: #faf8f5; /* 画面の地（ほぼ白） */
+  --color-sheet: #ffffff; /* 帳票・カード */
+  --color-cream: #f7f3ec; /* うすいクリーム（選んだ行・表の見出し） */
+  --color-ink: #2b2420; /* 本文（墨） */
+  --color-ink-soft: #5f5650; /* 補足 */
+  --color-ink-faint: #7b7067; /* 注記 */
+  --color-rule: #e6e0d8; /* 罫線 */
+  --color-rule-strong: #c9c0b4;
 
-  /* ブランド（焼き色）: 主ボタン・選択中 */
-  --color-crust-50: #fbf6ee;
-  --color-crust-100: #f4e8d6;
-  --color-crust-200: #e9d2ae;
-  --color-crust-500: #b97a35;
-  --color-crust-600: #9a5f22;
-  --color-crust-700: #7a4a1a;
+  /* 椿の赤（押す所・大事な所だけ）。crust という名前は前からの部品のために残す */
+  --color-tsubaki: #8f1d1d;
+  --color-crust-50: #fbf4f3;
+  --color-crust-100: #f4e3e1;
+  --color-crust-200: #e3bdb8;
+  --color-crust-500: #a53a36;
+  --color-crust-600: #8f1d1d;
+  --color-crust-700: #741414;
 
-  /* 状態 */
-  --color-review-bg: #fdf0b8; /* 要確認＝黄 */
-  --color-review-line: #e2c044;
-  --color-review-ink: #6b5200;
-  --color-ok-bg: #dcefdc; /* 確定＝緑 */
-  --color-ok-line: #7fb17f;
-  --color-ok-ink: #24572a;
-  --color-off-bg: #e6e3de; /* 取消＝灰 */
-  --color-off-line: #b6b0a6;
-  --color-off-ink: #5b5650;
-  --color-alert-bg: #f9dcd5; /* 締め切れ・エラー */
-  --color-alert-line: #d27a66;
-  --color-alert-ink: #8a2a17;
-  --color-info-bg: #dde8f2; /* 送信済み・お知らせ */
-  --color-info-line: #86a5c2;
-  --color-info-ink: #24486a;
+  /* 状態（彩度を落とす） */
+  --color-review-bg: #fbf3d8; /* 要確認＝黄 */
+  --color-review-line: #d8bb5c;
+  --color-review-ink: #66500f;
+  --color-ok-bg: #e8f1e6; /* 確定＝緑 */
+  --color-ok-line: #93b38d;
+  --color-ok-ink: #2f5a33;
+  --color-off-bg: #efece8; /* 取消・押せない＝灰 */
+  --color-off-line: #c3bcb3;
+  --color-off-ink: #6b645d;
+  --color-alert-bg: #f7e6e2; /* 締め切れ・エラー（赤より茶に寄せる） */
+  --color-alert-line: #c98b7c;
+  --color-alert-ink: #7a2a1c;
+  --color-info-bg: #e9eef3; /* 送信済み・お知らせ */
+  --color-info-line: #9fb1c2;
+  --color-info-ink: #34506a;
+  --color-prov-bg: #eaf0f6; /* 仮発注＝薄い青 */
+  --color-prov-line: #9db3cc;
+  --color-prov-ink: #34507a;
 
-  --color-prov-bg: #e4eef8; /* 仮発注＝薄い青 */
-  --color-prov-line: #7fa3c9;
-  --color-prov-ink: #2a4f78;
-
-  /* ライン */
-  --color-bread: #9a5f22;
-  --color-pizza: #a33b2a;
+  /* ライン（パンは墨に近い茶、ピザは椿の赤） */
+  --color-bread: #6b4a2e;
+  --color-pizza: #8f1d1d;
 
   --font-sans: "BIZ UDPGothic", "BIZ UDゴシック", "Yu Gothic UI", "Meiryo", "Noto Sans JP", "Noto Sans", "Noto Sans Myanmar",
     "Myanmar Text", "Noto Sans Devanagari", "Nirmala UI", "Malgun Gothic", "Microsoft YaHei", system-ui, sans-serif;
@@ -67,6 +71,14 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 文の中のリンクは下線（押せると分かるように）。ボタンの形のリンクはクラスを付けているので対象外 */
+main a:not([class]),
+.link {
+  color: var(--color-crust-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* 数字は桁がそろうように */
 .num {
   font-variant-numeric: tabular-nums;
@@ -79,14 +91,17 @@ body {
 @utility sheet {
   @apply rounded-sm border border-rule-strong bg-sheet;
 }
+/* 押せないボタンは灰色（うすくするだけだと、押せるのか分からないため） */
 @utility btn {
-  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45;
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border-2 border-transparent px-5 py-2.5 font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:border-off-line disabled:bg-off-bg disabled:text-off-ink;
 }
+/* 主ボタン: 赤地に白文字 */
 @utility btn-primary {
-  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45 bg-crust-600 text-white hover:bg-crust-700;
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border-2 border-crust-600 bg-crust-600 px-5 py-2.5 font-bold text-white transition-colors select-none hover:border-crust-700 hover:bg-crust-700 active:translate-y-px disabled:pointer-events-none disabled:border-off-line disabled:bg-off-bg disabled:text-off-ink;
 }
+/* 二番目のボタン: 白地に赤の線と赤い文字 */
 @utility btn-ghost {
-  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold transition-colors select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-45 border border-rule-strong bg-sheet text-ink hover:bg-crust-50;
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border-2 border-crust-600 bg-sheet px-5 py-2.5 font-bold text-crust-700 transition-colors select-none hover:bg-crust-50 active:translate-y-px disabled:pointer-events-none disabled:border-off-line disabled:bg-off-bg disabled:text-off-ink;
 }
 @utility pill {
   @apply inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm font-bold whitespace-nowrap;
