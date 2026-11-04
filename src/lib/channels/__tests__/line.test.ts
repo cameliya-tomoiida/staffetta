@@ -168,9 +168,7 @@ describe("LINE のトーク → 要確認の注文", () => {
     expect(mem.db.orders[0].customerId).toBe("");
   });
 
-  // ↓ ④への報告: line/orders.ts が master.ts の商品しか知らず、③の catalog にだけある商品
-  //   （P12 ピザ生地玉 など）を、理由なしで空にする。④が直したら it.fails を it に戻す。
-  it.fails("【既知の不具合】catalog にだけある商品（P12 ピザ生地玉）が空になる", async () => {
+  it("catalog にだけある商品（P12 ピザ生地玉）も商品として入る", async () => {
     fixtures["ピザ生地玉 3袋"] = () => ({ is_order: true, notes: "", orders: [order("new", "2026-11-06", [L("ピザ生地玉", "P12", 3, "袋", 0.9, "", 10)])] });
     await send(7, "U_cafe", "ピザ生地玉 3袋");
     expect(mem.db.orders[0].lines[0].productId).toBe("P12");

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { customerById, customers, productById } from "@/data/master";
+import { customerById, customers } from "@/data/master";
+import { findProduct as productById } from "@/lib/catalog";
 import { isLineLive } from "@/lib/channels/line/config";
 import { confirmationText, unlinkedLineUsers } from "@/lib/channels/line/orders";
 import { readLineState } from "@/lib/channels/line/state";

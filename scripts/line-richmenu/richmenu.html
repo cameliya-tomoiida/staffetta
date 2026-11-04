@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<!-- LINEのリッチメニュー画像（2500×1686）。scripts/line-richmenu.mjs が Chrome で画像にする。ロゴ・社名・写真は入れない -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 2500px; height: 1686px; overflow: hidden; background: #f7f3ec; }
+  .serif { font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Noto Serif JP", serif; }
+  .sans { font-family: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo", sans-serif; }
+  .top { position: absolute; left: 0; top: 0; width: 2500px; height: 1000px; background: #8f1d1d; color: #fff; overflow: hidden; }
+  .top .tag { position: absolute; left: 170px; top: 190px; font-size: 64px; letter-spacing: .35em; color: #e3c27a; font-weight: 700; }
+  .top h1 { position: absolute; left: 160px; top: 300px; font-size: 230px; font-weight: 700; letter-spacing: .04em; line-height: 1.1; }
+  .top p { position: absolute; left: 170px; top: 640px; font-size: 76px; color: #f3e6dc; font-weight: 700; }
+  .top .go { position: absolute; right: 150px; top: 330px; width: 340px; height: 340px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .top .art { position: absolute; right: 560px; top: 520px; opacity: .12; }
+  .bottom { position: absolute; left: 0; top: 1000px; width: 2500px; height: 686px; display: flex; }
+  .cell { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 44px; border-left: 6px solid #e6dccb; color: #2b2420; }
+  .cell:first-child { border-left: none; }
+  .cell .ic { width: 230px; height: 230px; border-radius: 60px; background: #fff; display: grid; place-items: center; color: #8f1d1d; box-shadow: 0 10px 0 #ece3d4; }
+  .cell b { font-size: 108px; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <svg class="art" width="720" height="720" viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 40c0-11 10-20 22-20s22 9 22 20c0 3-2 5-5 5H15c-3 0-5-2-5-5Z" />
+      <path d="M24 24c2 6 2 14 0 21M33 21c2 8 2 16 0 24M42 24c2 6 2 14 0 21" />
+    </svg>
+    <div class="tag sans">ORDER</div>
+    <h1 class="serif">パンを注文する</h1>
+    <p class="sans">数をえらぶだけ。前日の締め切りまでに。</p>
+    <div class="go">
+      <svg width="170" height="170" viewBox="0 0 24 24" fill="none" stroke="#8f1d1d" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="cell">
+      <div class="ic"><svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" /></svg></div>
+      <b class="serif">前回と同じ</b>
+    </div>
+    <div class="cell">
+      <div class="ic"><svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2" /><path d="M9 8.5h6M9 12h6M9 15.5h4" /></svg></div>
+      <b class="serif">注文の履歴</b>
+    </div>
+    <div class="cell">
+      <div class="ic"><svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.5M12 16.8v.2" /></svg></div>
+      <b class="serif">使いかた</b>
+    </div>
+  </div>
+</body>
+</html>

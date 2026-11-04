@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { lineConfig } from "./config";
 import { verifyLiffIdToken } from "./client";
 import { createLiffOrder, liffContext, linkUserToCustomer, notifyOrderConfirmed } from "./orders";
@@ -12,6 +13,12 @@ import { createLiffOrder, liffContext, linkUserToCustomer, notifyOrderConfirmed 
  * - デモ（LINEログインのチャネルID未設定）: 画面から渡された userId をそのまま使う
  */
 async function whoIsLiffUser(auth: { idToken?: string; demoUserId?: string }) {
+  // 社内PC（localhost・トンネルを通らない）からのデモは、架空のお客さん（U_demo_…）だけ受ける
+  if (auth.demoUserId && !auth.idToken) {
+    const h = await headers();
+    const local = !h.has("cf-ray") && !h.has("cf-connecting-ip") && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h.get("host") ?? "");
+    if (local && auth.demoUserId.startsWith("U_demo_")) return { userId: auth.demoUserId, displayName: undefined };
+  }
   if (lineConfig.loginChannelId) {
     if (!auth.idToken) throw new Error("LINEアプリから開いてください");
     const v = await verifyLiffIdToken(auth.idToken);

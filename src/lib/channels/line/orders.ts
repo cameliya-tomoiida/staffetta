@@ -1,5 +1,6 @@
 import "server-only";
-import { customerById, productById, products } from "@/data/master";
+import { customerById } from "@/data/master";
+import { allProducts, findProduct as productById } from "@/lib/catalog";
 import type { Order, OrderLine, SourceRef } from "@/data/types";
 import { readDb, updateDb } from "@/lib/store";
 import { pushText } from "./client";
@@ -188,7 +189,8 @@ export async function liffContext(userId: string) {
   const count = new Map<string, number>();
   for (const o of mine) for (const l of o.lines) if (productById(l.productId)) count.set(l.productId, (count.get(l.productId) ?? 0) + 1);
   const usual = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
-  const defaults = products.filter((p) => p.unit !== "枚").map((p) => p.id); // ピザクラストは業務用なので最初は出さない
+  // はじめての人に出す商品: パンだけ（ピザ・OEM・仕入の業務用品は出さない）
+  const defaults = allProducts().filter((p) => !/ピザ|マルゲリータ|OEM|仕入/.test(p.name)).map((p) => p.id);
   // 前回の注文: 人が確定したものを優先（AIの読み取りのままの注文は、確定済みがないときだけ）
   const hasItems = (o: (typeof mine)[number]) => o.lines.some((l) => productById(l.productId) && l.quantity > 0);
   const last = mine.find((o) => o.status === "confirmed" && hasItems(o)) ?? mine.find(hasItems);
@@ -205,6 +207,21 @@ export async function liffContext(userId: string) {
           items: last.lines.filter((l) => productById(l.productId) && l.quantity > 0).map((l) => ({ productId: l.productId, quantity: l.quantity })),
         }
       : null,
+    /** お客さんに見せる「ご注文の履歴」（新しい順・最大8件。取消・変更の連絡も含む） */
+    history: db.orders
+      .filter((o) => isLineOrderOf(o, userId) || (customerId && o.customerId === customerId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 8)
+      .map((o) => ({
+        id: o.id,
+        deliveryDate: o.deliveryDate,
+        orderedAt: o.source.receivedAt,
+        state: (o.status === "confirmed" ? "confirmed" : o.status === "cancelled" ? "cancelled" : "checking") as "confirmed" | "cancelled" | "checking",
+        intent: o.intent ?? "new",
+        items: o.lines
+          .filter((l) => l.quantity > 0)
+          .map((l) => ({ name: productById(l.productId)?.name ?? l.read?.writtenName ?? "商品", quantity: l.quantity, unit: l.unit })),
+      })),
   };
 }
 

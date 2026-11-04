@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import { products } from "@/data/master";
+import { allProducts } from "@/lib/catalog";
 
 // LINEのトークに送られた文章（例:「明日 食パン6枚切り 3本、ロール 20個」）を Claude で読み取る。
 // AIがやるのは「読み取り」と「要確認の印付け」まで。換算・修正はしない。
@@ -61,7 +61,7 @@ export interface RecentOrderBrief {
 }
 
 function masterText(known: Record<string, string>, recent: RecentOrderBrief[]) {
-  const prod = products.map((p) => `${p.id}: ${p.name}（単位 ${p.unit}）`).join("\n");
+  const prod = allProducts().map((p) => `${p.id}: ${p.name}（単位 ${p.unit}）`).join("\n");
   const maps = Object.entries(known).map(([w, pid]) => `「${w}」→ ${pid}`).join("\n");
   const rec = recent.map((o) => `${o.id}: 納品日 ${o.deliveryDate}／${o.status}／受信 ${o.receivedAt}／${o.summary}`).join("\n");
   return `## 商品一覧\n${prod}\n\n## このお客さんについてスタッフが過去に承認した品名の対応（優先する）\n${maps || "（まだなし）"}\n\n## このお客さんの最近の注文（新しい順。変更・取消の対象さがしに使う）\n${rec || "（まだなし）"}`;
