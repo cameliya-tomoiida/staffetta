@@ -144,3 +144,19 @@ describe("Google スプレッドシート（店舗別・月別シート）", () 
     expect(mem.db.orders.find((o) => o.deliveryDate === "2026-11-16")).toMatchObject({ intent: "new", status: "needs_review" });
   });
 });
+
+describe("きららの CSV → ③の発注書（前日入れ）", () => {
+  it("前日の品は納品日の前日の発注書に、当日の品は納品日の発注書に入る（二重にならない）", async () => {
+    const { runPipeline } = await import("@/lib/pipeline");
+    await importKiraraCsv(sample("kirara", "SR900S01_20261108_朝.csv"), "朝.csv");
+    for (const o of mem.db.orders) confirm(o.id);
+    const linesOf = (date: string, supplierId: string) =>
+      runPipeline(mem.db.orders, date).productPurchaseOrders.filter((p) => p.supplierId === supplierId).flatMap((p) => p.lines.filter((l) => l.itemId === "P10"));
+    // 前日（11/9）の発注書: 超じゅくロール 1個パック 18個 ＋ 2個パック 15×2=30個 → 48個 → 6個入×8袋
+    const prev = linesOf("2026-11-09", "S07");
+    expect(prev.reduce((s, l) => s + l.needQuantity, 0)).toBe(48);
+    // 当日（11/10）の発注書: 6個入パック 5＋3=8パック → 48個。前日分は入らない
+    const same = linesOf("2026-11-10", "S07");
+    expect(same.reduce((s, l) => s + l.needQuantity, 0)).toBe(48);
+  });
+});

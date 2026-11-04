@@ -143,10 +143,9 @@ describe("メールの取り込み（読み取り結果は見本）", () => {
     expect(findOriginal([], "C12", r)).toBeUndefined();
   });
 
-  // ↓ ⑤への報告: 取り込み（common.ts の toOrderLine）が master.ts の商品しか知らず、
-  //   ③の catalog にだけある商品（P11〜P18: 27cm・マルゲリータ・食パン包み直しなど）を、理由なしで空にする。
-  //   ⑤が直したら it.fails を it に戻す。
-  it.fails("【既知の不具合】ピッツェリアの PDF の 27cm（P13）が空になり、理由も残らない", async () => {
+  // 以前の不具合（③が it.fails で記録）: 取り込みが master.ts の商品しか知らず、③の catalog にだけある商品
+  //   （P11〜P18）を理由なしで空にしていた。⑤が common.ts を @/lib/catalog の findProduct / allProducts に直した。
+  it("ピッツェリアの PDF の 27cm（P13）が③の catalog の商品として入る", async () => {
     const key = "【発注】11月第2週 ピザクラスト（YM-261105-01）";
     const before = reads[key];
     reads[key] = read({

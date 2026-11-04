@@ -195,6 +195,7 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
         refs: [{ kind: "csv", fileName, rowStart: Math.min(...rs.map((r) => r.rowNo)), rowEnd: Math.max(...rs.map((r) => r.rowNo)) }],
         externalId: rs[0].slipNo,
         receivedAt: new Date().toISOString(),
+        // site: "kirara" は③が行ごとの前日入れ（KIRARA_ITEMS の品名 → KIRARA_SUPPLY の dayOffset）を決めるのに使う。消さない
         extra: { site: "kirara", center: rs[0].centerName, bin: rs[0].binName, siteDate: rs[0].siteDate, siteCode },
       },
       lines: linesNow,

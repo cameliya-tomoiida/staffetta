@@ -4,7 +4,8 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import { customers, products } from "@/data/master";
+import { customers } from "@/data/master";
+import { allProducts } from "@/lib/catalog";
 
 export const EMAIL_READER_MODEL = "claude-opus-5-5";
 
@@ -59,7 +60,7 @@ const SYSTEM = `あなたは中小のパン・ピザ工場で、取引先から�
 
 function masterText() {
   const cust = customers.map((c) => `${c.id}: ${c.name}${c.note ? `（${c.note}）` : ""}`).join("\n");
-  const prod = products.map((p) => `${p.id}: ${p.name}（単位 ${p.unit}）`).join("\n");
+  const prod = allProducts().map((p) => `${p.id}: ${p.name}（単位 ${p.unit}）`).join("\n");
   return `## 得意先一覧\n${cust}\n\n## 商品一覧\n${prod}`;
 }
 

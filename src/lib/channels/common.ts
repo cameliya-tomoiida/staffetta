@@ -4,7 +4,9 @@ import "server-only";
 // 値を直すのは人。元の値は line.read に残す。
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { customers, productById, products } from "@/data/master";
+import { customers } from "@/data/master";
+// 商品は③の catalog から引く（master.ts の商品＋③が足した商品 P11〜 の両方）
+import { allProducts, findProduct } from "@/lib/catalog";
 import type { Order, OrderLine, OrderSource, ReadValue } from "@/data/types";
 import { updateDb } from "@/lib/store";
 
@@ -38,6 +40,9 @@ export interface ImportedOrder {
 
 export function toOrderLine(orderId: string, l: ImportedLine, i: number): OrderLine {
   const ppu = l.piecesPerUnit > 0 ? l.piecesPerUnit : 1;
+  const known = !!findProduct(l.productId);
+  // 読み取りが出した商品IDがマスターにないときは、空にして理由を残す（黙って空にしない）
+  const attention = l.productId && !known ? [l.attention, `商品ID ${l.productId} がマスターにありません`].filter(Boolean).join("・") : l.attention;
   const read: ReadValue = {
     writtenName: l.writtenName,
     quantity: l.quantity,
@@ -45,11 +50,11 @@ export function toOrderLine(orderId: string, l: ImportedLine, i: number): OrderL
     piecesPerUnit: ppu,
     productId: l.productId,
     confidence: l.confidence,
-    attention: l.attention,
+    attention,
   };
   return {
     id: `${orderId}-${i}`,
-    productId: productById(l.productId) ? l.productId : "",
+    productId: known ? l.productId : "",
     quantity: l.quantity,
     unit: l.unitWritten,
     piecesPerUnit: ppu,
@@ -108,6 +113,7 @@ export async function saveImported(list: ImportedOrder[]) {
 /** 品名から商品を探す（完全一致 → 含む）。見つからなければ ""。推測なので confidence を下げて使う */
 export function guessProduct(name: string): { productId: string; exact: boolean } {
   const n = normalize(name);
+  const products = allProducts();
   const exact = products.find((p) => normalize(p.name) === n);
   if (exact) return { productId: exact.id, exact: true };
   const part = products.find((p) => n.includes(normalize(p.name)) || normalize(p.name).includes(n));

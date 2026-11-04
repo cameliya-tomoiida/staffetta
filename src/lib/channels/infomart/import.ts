@@ -2,7 +2,8 @@ import "server-only";
 // インフォマート（受注）の明細 CSV を取り込む。
 // 列の名前は見出し行で探すので、実物の CSV で列の順番や数が違っても、見出しの言い方を INFOMART_HEADERS に足せば読める。
 // 実物の形は、担当者がログインした画面で確認してから合わせる（docs/infomart-notes.md）。いまは架空の CSV で作っている。
-import { customers, productById } from "@/data/master";
+import { customers } from "@/data/master";
+import { findProduct } from "@/lib/catalog";
 import { decodeText, guessProduct, parseCsv, saveImported, toIsoDate, type ImportedOrder } from "../common";
 
 /** 項目 → 見出しの候補（左にあるものほど優先） */
@@ -76,7 +77,7 @@ export async function importInfomartCsv(buf: Uint8Array, fileName: string): Prom
         const code = get(r, "itemCode");
         const name = get(r, "itemName");
         // インフォマートの商品コードは当社が登録したもの（＝当社の商品ID）。なければ品名から推測して要確認
-        const byCode = productById(code);
+        const byCode = findProduct(code);
         const g = byCode ? { productId: byCode.id, exact: true } : guessProduct(name);
         if (!byCode) unknownItems.add(`${code} ${name}`);
         const per = Number(get(r, "perUnit")) || 1;

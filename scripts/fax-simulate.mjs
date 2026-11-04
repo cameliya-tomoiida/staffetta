@@ -8,14 +8,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+// .env.local が無くても、環境変数で FAX_INBOUND_TOKEN を渡していれば動くようにする
+let envText = "";
+try {
+  envText = readFileSync(path.join(root, ".env.local"), "utf8");
+} catch {
+  // .env.local が無いときは環境変数だけを使う
+}
 const env = Object.fromEntries(
-  readFileSync(path.join(root, ".env.local"), "utf8")
+  envText
     .split(/\r?\n/)
     .filter((l) => /^[A-Z_]+=/.test(l))
     .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).trim()]),
 );
 const token = process.env.FAX_INBOUND_TOKEN ?? env.FAX_INBOUND_TOKEN;
-if (!token) throw new Error(".env.local に FAX_INBOUND_TOKEN がありません");
+if (!token) throw new Error("FAX_INBOUND_TOKEN がありません（環境変数か .env.local に入れてください）");
 const hub = process.env.HUB_URL ?? "http://localhost:3100";
 
 const queue = [
