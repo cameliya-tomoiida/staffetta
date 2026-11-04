@@ -66,7 +66,7 @@
 - 開発サーバーは `.claude/launch.json` の「juhacchu-hub」（preview_start）
 
 ## 6. 残っている作業（優先順）
-1. **FAX の様式の管理**（中身と server action。画面の枠は②）: 一覧（`listMaster("fax_formats", { includeDisabled: true })`）・無効化（`deleteMaster`）・戻す・下書き（`status: "template"` の FAX）を承認。実物の様式の種類（印字＋手書き訂正、仮発注13枚つづり、週間表）が扱えること。実物は `オンラインハッカソン\00_元データ\06_注文書写真（ここに入れてください）\`、CCP は `衛生検査資料\工程表\`
+1. ~~FAX の様式の管理~~ **済（src/lib/fax-formats.ts・src/app/formats/actions.ts。画面は②が載せる）**。読み取りで様式の型 format_kind（週間表・発注書・印字＋手書き訂正・複数枚つづり・変更連絡票）と page_note も取るようにした。元のメモ: 一覧（`listMaster("fax_formats", { includeDisabled: true })`）・無効化（`deleteMaster`）・戻す・下書き（`status: "template"` の FAX）を承認。実物の様式の種類（印字＋手書き訂正、仮発注13枚つづり、週間表）が扱えること。実物は `オンラインハッカソン\00_元データ\06_注文書写真（ここに入れてください）\`、CCP は `衛生検査資料\工程表\`
 2. **名寄せ辞書**（masters の `"aliases"`：取引先ID・呼び名・商品ID・出どころ・承認者）を全入口で共通に。確認画面で商品を選んだら「辞書に登録しますか」1タップ、次回から候補の一番上。今の `kv.fax_mappings` をここへ移す。⑤④にも見てもらう
 3. **自信度の色分け**（高=そのまま、中=黄、低=赤枠）と、**その取引先の直近の修正を数件、読み取りの指示文に添える**簡易学習
 4. ③の seed を初期化とリセットから呼ぶ（上記2章）
