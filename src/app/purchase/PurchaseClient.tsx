@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { PurchaseMethod } from "@/data/types";
+import { approveDraft } from "@/lib/purchase";
 import {
   Button, Empty, fmtDate, fmtDateTime, Icon, methodLabel, MethodIcon, Notice, PageHeader, PurchaseStatusTag, Segmented, Tag,
   type PurchaseStatus,
@@ -8,14 +9,18 @@ import {
 
 export interface PoView {
   id: string;
-  supplierId: string;
   supplierName: string;
   method: PurchaseMethod;
+  /** 送り方の表示名（サイト名があればサイト名） */
+  methodText: string;
   contact: string;
-  /** 仕入先マスタの締め時刻 HH:MM（未設定なら ""） */
-  cutoff: string;
+  /** 便（1便・2便など） */
+  deliveryName: string;
+  /** 締めの日時（ISO）。仕入先マスタで未設定なら "" */
+  cutoffAt: string;
   deliveryDate: string;
   kind: "product" | "material";
+  notes: string[];
   lines: { name: string; units: number; unitLabel: string; detail?: string }[];
 }
 
@@ -39,14 +44,13 @@ const load = (): Record<string, PoState> => {
   }
 };
 
-/** 今（日本時間）から締めまでの分。締め未設定なら null */
-function minutesLeft(cutoff: string, today: string, now: number) {
-  if (!/^\d{1,2}:\d{2}$/.test(cutoff)) return null;
-  const at = Date.parse(`${today}T${cutoff.padStart(5, "0")}:00+09:00`);
-  return Math.floor((at - now) / 60000);
+/** 今から締めまでの分。締め未設定なら null */
+function minutesLeft(cutoffAt: string, now: number) {
+  const at = Date.parse(cutoffAt);
+  return Number.isNaN(at) ? null : Math.floor((at - now) / 60000);
 }
 
-export function PurchaseClient({ pos, today, factory }: { pos: PoView[]; today: string; factory: string }) {
+export function PurchaseClient({ pos, factory, warnings, dateNav }: { pos: PoView[]; factory: string; warnings: string[]; dateNav?: React.ReactNode }) {
   const [state, setState] = useState<Record<string, PoState>>({});
   const [now, setNow] = useState<number | null>(null);
   const [who, setWho] = useState(STAFF[0]);
@@ -67,14 +71,18 @@ export function PurchaseClient({ pos, today, factory }: { pos: PoView[]; today: 
       return next;
     });
 
-  const approve = (po: PoView) => save(po.id, { status: "approved", approvedBy: who, approvedAt: new Date().toISOString() });
+  // 承認の決まり（下書きだけ・名前が必要）は③の approveDraft に合わせる
+  const approve = (po: PoView) => {
+    const a = approveDraft({ status: st(po.id).status, approvedBy: undefined as string | undefined }, who);
+    save(po.id, { status: a.status, approvedBy: a.approvedBy, approvedAt: new Date().toISOString() });
+  };
   const unapprove = (po: PoView) => save(po.id, { status: "draft" });
   // TODO(⑤): ここで実際に送る（FAX送信・メール送信・サイトへの入力）。今は「送信済み」の印を付けるだけ
   const send = (po: PoView) => save(po.id, { ...st(po.id), status: "sent", sentAt: new Date().toISOString() });
 
   const counts = { draft: 0, approved: 0, sent: 0 } as Record<PurchaseStatus, number>;
   pos.forEach((p) => counts[st(p.id).status]++);
-  const urgent = now == null ? [] : pos.filter((p) => st(p.id).status !== "sent" && (minutesLeft(p.cutoff, today, now) ?? Infinity) <= WARN_MIN);
+  const urgent = now == null ? [] : pos.filter((p) => st(p.id).status !== "sent" && (minutesLeft(p.cutoffAt, now) ?? Infinity) <= WARN_MIN);
   const shown = pos.filter((p) => filter === "all" || st(p.id).status === filter);
 
   return (
@@ -90,14 +98,20 @@ export function PurchaseClient({ pos, today, factory }: { pos: PoView[]; today: 
         </label>
       </PageHeader>
 
+      {dateNav && <div className="no-print mb-4">{dateNav}</div>}
+      {warnings.length > 0 && (
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
+          <ul>{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+        </Notice>
+      )}
       {urgent.length > 0 && (
         <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-4">
           締め時刻が近い発注書があります：
           {urgent.map((p) => {
-            const m = minutesLeft(p.cutoff, today, now!)!;
+            const m = minutesLeft(p.cutoffAt, now!)!;
             return (
               <span key={p.id} className="ml-2 inline-block">
-                {p.supplierName}（{m < 0 ? `${p.cutoff} 締めを過ぎています` : `あと ${m} 分`}）
+                {p.supplierName}（{m < 0 ? `${fmtDateTime(p.cutoffAt)} 締めを過ぎています` : `あと ${m} 分`}）
               </span>
             );
           })}
@@ -128,9 +142,8 @@ export function PurchaseClient({ pos, today, factory }: { pos: PoView[]; today: 
               key={po.id}
               po={po}
               s={st(po.id)}
-              left={now == null ? null : minutesLeft(po.cutoff, today, now)}
+              left={now == null ? null : minutesLeft(po.cutoffAt, now)}
               factory={factory}
-              today={today}
               onApprove={() => approve(po)}
               onUnapprove={() => unapprove(po)}
               onSend={() => send(po)}
@@ -156,9 +169,9 @@ function Steps() {
 }
 
 function PoSheet({
-  po, s, left, factory, today, onApprove, onUnapprove, onSend,
+  po, s, left, factory, onApprove, onUnapprove, onSend,
 }: {
-  po: PoView; s: PoState; left: number | null; factory: string; today: string; onApprove: () => void; onUnapprove: () => void; onSend: () => void;
+  po: PoView; s: PoState; left: number | null; factory: string; onApprove: () => void; onUnapprove: () => void; onSend: () => void;
 }) {
   const m = methodLabel[po.method];
   const late = left != null && left < 0;
@@ -172,6 +185,7 @@ function PoSheet({
           <div className="flex flex-wrap items-center gap-2">
             <PurchaseStatusTag status={s.status} />
             <Tag tone="plain">{po.kind === "product" ? "仕入品（パン）" : "材料"}</Tag>
+            {po.deliveryName && po.deliveryName !== "通常便" && <Tag tone="plain">{po.deliveryName}</Tag>}
           </div>
           <h2 className="mt-1.5 text-xl font-black">
             {po.supplierName} <span className="text-base font-bold">御中</span>
@@ -190,13 +204,13 @@ function PoSheet({
           <dt className="text-xs text-ink-soft">送り方</dt>
           <dd className="mt-0.5 flex items-center justify-center gap-1.5 font-bold">
             <MethodIcon method={po.method} className="h-5 w-5 shrink-0" />
-            <span className="leading-tight">{m.short}</span>
+            <span className="leading-tight">{po.methodText}</span>
           </dd>
         </div>
         <div className={`border-r border-rule px-2 py-2 ${late || near ? "bg-alert-bg text-alert-ink" : ""}`}>
           <dt className="text-xs">締め時刻</dt>
           <dd className="num mt-0.5 font-black">
-            {po.cutoff ? `${po.cutoff}` : <span className="font-bold text-ink-faint">未設定</span>}
+            {po.cutoffAt ? fmtDateTime(po.cutoffAt) : <span className="font-bold text-ink-faint">未設定</span>}
             {s.status !== "sent" && late && <div className="text-xs font-bold">過ぎています</div>}
             {s.status !== "sent" && near && <div className="text-xs font-bold">あと {left} 分</div>}
           </dd>
@@ -207,6 +221,9 @@ function PoSheet({
         </div>
       </dl>
 
+      {po.notes.length > 0 && (
+        <div className="border-b border-rule bg-review-bg px-4 py-1.5 text-sm font-bold text-review-ink sm:px-5">{po.notes.join("・")}</div>
+      )}
       {/* 明細 */}
       <table className="w-full">
         <thead>
@@ -263,7 +280,6 @@ function PoSheet({
             <b>送信済み</b>（{fmtDateTime(s.sentAt!)}・{po.contact}）／ 承認：{s.approvedBy}
           </div>
         )}
-        {s.status === "draft" && po.deliveryDate < today && <div className="mt-1 text-sm text-alert-ink">届けてほしい日が過ぎています</div>}
       </div>
     </section>
   );

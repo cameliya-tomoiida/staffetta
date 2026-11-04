@@ -1,72 +1,84 @@
-import { FACTORY, materialById, productById, suppliers } from "@/data/master";
-import type { PurchaseMethod } from "@/data/types";
+import Link from "next/link";
+import { FACTORY } from "@/data/master";
 import { allOrders } from "@/demo/all-orders";
-import { addDays } from "@/components/ui";
-import { buyPlan, doughPlan, materialNeeds, totalsByProduct } from "@/lib/plan";
+import { addDays, fmtDate } from "@/components/ui";
+import { runPipeline } from "@/lib/pipeline";
+import { deliveryDatesOf } from "@/lib/aggregate";
+import { findSupplier } from "@/lib/catalog";
+import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
+import { customerById } from "@/data/master";
 import { PurchaseClient, type PoView } from "./PurchaseClient";
 
 export const metadata = { title: "発注書｜受発注ハブ" };
 
-export default async function PurchasePage() {
-  const { orders, today } = await allOrders();
-  const d1 = addDays(today, 1);
-  const d2 = addDays(today, 2);
-  const t1 = totalsByProduct(orders, d1);
-  const t2 = totalsByProduct(orders, d2);
-
-  // 仕入品（ふじみ・ひのでなど）: 明日の納品分を入数で袋に直す
-  const buys = buyPlan(t1);
-  // 材料: 明日とあさっての製造に使う分から、在庫と安全在庫を引いて発注
-  // TODO(③): 何日先までの製造を見て材料を頼むか（リードタイム別）は③のロジックに置き換える
-  const needs = materialNeeds([doughPlan(t1), doughPlan(t2)]);
-
-  const map = new Map<string, PoView>();
-  const get = (supplierId: string, deliveryDate: string) => {
-    const s = suppliers.find((s) => s.id === supplierId)!;
-    let po = map.get(supplierId);
-    if (!po) {
-      po = {
-        id: `PO-${today.replaceAll("-", "")}-${supplierId}`,
-        supplierId,
-        supplierName: s.name,
-        method: s.method as PurchaseMethod,
-        contact: s.contact,
-        cutoff: s.cutoff || "", // 仕入先マスタの締め時刻（未設定なら空）
-        deliveryDate,
-        kind: "material",
-        lines: [],
-      };
-      map.set(supplierId, po);
-    }
-    return po;
-  };
-
-  for (const b of buys) {
-    const p = productById(b.productId)!;
-    const po = get(b.supplierId, d1);
-    po.kind = "product";
-    po.lines.push({
-      name: p.name,
-      units: b.packs,
-      unitLabel: b.packSize > 1 ? `袋（${b.packSize}個入）` : p.unit,
-      detail: b.packSize > 1 ? `注文 ${b.pieces}個 → ${b.packSize}個入 × ${b.packs}袋${b.extra ? `（余り ${b.extra}個）` : ""}` : `注文 ${b.pieces}個`,
-    });
-  }
-  for (const n of needs.filter((n) => n.orderUnits > 0)) {
-    const m = materialById(n.materialId)!;
-    const s = suppliers.find((s) => s.id === m.supplierId)!;
-    const po = get(m.supplierId, addDays(today, s.leadDays));
-    po.lines.push({
-      name: m.name,
-      units: n.orderUnits,
-      unitLabel: m.orderUnitLabel,
-      detail: `使う量 ${round(n.needKg)}${m.unit}・在庫 ${round(n.stock)}${m.unit}・安全在庫 ${round(n.safetyStock)}${m.unit}`,
-    });
-  }
-
-  // 仕入品（パン）の仕入先を先に、そのあと材料
-  const pos = [...map.values()].sort((a, b) => (a.kind === b.kind ? a.supplierId.localeCompare(b.supplierId) : a.kind === "product" ? -1 : 1));
-  return <PurchaseClient pos={pos} today={today} factory={FACTORY.name} />;
-}
-
 const round = (n: number) => Math.round(n * 10) / 10;
+
+export default async function PurchasePage(props: PageProps<"/purchase">) {
+  const q = await props.searchParams;
+  const { orders, today } = await allOrders();
+  const tomorrow = addDays(today, 1);
+  const dates = deliveryDatesOf(orders).filter((d) => d >= today);
+  const date =
+    typeof q.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.date) ? q.date : dates.includes(tomorrow) ? tomorrow : (dates[0] ?? tomorrow);
+
+  // 発注書の下書きは③（src/lib）が作る。画面は表示と、人の承認・送信の操作だけ
+  const r = runPipeline(orders, date);
+  const shortage = new Map(r.shortages.map((s) => [s.materialId, s]));
+
+  const view = (po: PurchaseOrderDraft): PoView => {
+    const s = findSupplier(po.supplierId);
+    return {
+      id: po.id,
+      supplierName: po.supplierName,
+      method: po.method,
+      methodText: po.siteName ?? methodLabel(po.method),
+      contact: s?.contact ?? "",
+      deliveryName: po.deliveryName,
+      cutoffAt: po.cutoffAt,
+      deliveryDate: po.deliveryDate,
+      kind: po.kind,
+      notes: po.notes,
+      lines: po.lines.map((l) => {
+        let detail: string | undefined;
+        if (l.itemType === "product" && l.customers?.length) {
+          const per = l.customers.map((c) => `${customerById(c.customerId)?.name ?? c.customerId} ${c.pieces}個→${c.packs}${l.unitLabel === "個" ? "個" : "袋"}`).join("／");
+          detail = `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}`;
+        } else if (l.notes?.length) {
+          detail = l.notes.join("・");
+        } else if (l.itemType === "material") {
+          const sh = shortage.get(l.itemId);
+          detail = sh
+            ? `使う量 ${round(sh.needUnits)}${sh.unit}・在庫 ${round(sh.stock)}${sh.unit}・安全在庫 ${round(sh.safetyStock)}${sh.unit}`
+            : `使う量 ${round(l.needQuantity)}`;
+        }
+        return { name: l.name, units: l.units, unitLabel: l.itemType === "product" && l.unitLabel.endsWith("入") ? `袋（${l.unitLabel}）` : l.unitLabel, detail };
+      }),
+    };
+  };
+  const pos = [...r.productPurchaseOrders, ...r.materialPurchaseOrders].filter((p) => p.lines.length > 0).map(view);
+
+  return (
+    <PurchaseClient
+      pos={pos}
+      factory={FACTORY.name}
+      warnings={r.warnings}
+      dateNav={
+        dates.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-bold text-ink-soft">納品日</span>
+            {dates.map((d) => (
+              <Link
+                key={d}
+                href={`/purchase?date=${d}`}
+                className={`num inline-flex min-h-12 items-center rounded-lg border px-4 font-bold ${d === date ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"}`}
+              >
+                {fmtDate(d)}
+                {d === tomorrow && <span className="ml-1.5 text-sm opacity-75">明日</span>}
+              </Link>
+            ))}
+          </div>
+        )
+      }
+    />
+  );
+}

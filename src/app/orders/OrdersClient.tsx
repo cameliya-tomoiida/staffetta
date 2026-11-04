@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { customerById, customers, productById } from "@/data/master";
+import { customerById, customers } from "@/data/master";
+import { findProduct } from "@/lib/catalog";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
   addDays, buttonClass, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
@@ -160,14 +161,14 @@ function OrderRow({ o, custName, dayName, all, onJump }: { o: Order; custName: s
           </div>
           <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-0.5">
             {o.lines.map((l) => {
-              const p = productById(l.productId);
+              const p = findProduct(l.productId);
               const warn = !!(l.read?.attention || l.confidence < 0.8);
               return (
                 <li key={l.id} className={warn && !off ? "rounded bg-review-bg px-1" : ""}>
                   {p?.name ?? <span className="text-review-ink">{l.read?.writtenName ?? "（商品未定）"}</span>}
                   <span className="num ml-1.5 font-black">{l.quantity}</span>
                   <span className="text-sm">{l.unit}</span>
-                  {l.piecesPerUnit > 1 && <span className="ml-1 text-sm text-ink-soft">（{l.pieces}個）</span>}
+                  {l.piecesPerUnit > 1 && <span className="ml-1 text-sm text-ink-soft">（{l.pieces}{p?.unit === "枚" ? "枚" : "個"}）</span>}
                 </li>
               );
             })}

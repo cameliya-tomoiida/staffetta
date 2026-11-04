@@ -11,5 +11,5 @@ export async function allOrders(): Promise<{ orders: Order[]; today: string }> {
   const today = todayJst();
   const saved = db.orders;
   const ids = new Set(saved.map((o) => o.id));
-  return { orders: [...saved, ...demoOrders(today).filter((o) => !ids.has(o.id))], today };
+  return { orders: [...saved, ...demoOrders().filter((o) => !ids.has(o.id))], today };
 }
