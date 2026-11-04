@@ -1,26 +1,24 @@
 import Link from "next/link";
-import { customerById, customers } from "@/data/master";
 import { findProduct as productById } from "@/lib/catalog";
-import { isLineLive } from "@/lib/channels/line/config";
+import { isDemoLineUser, isLineLive } from "@/lib/channels/line/config";
+import { listCustomerSettings } from "@/lib/channels/line/customers";
 import { confirmationText, unlinkedLineUsers } from "@/lib/channels/line/orders";
 import { readLineState } from "@/lib/channels/line/state";
 import { readDb } from "@/lib/store";
-import { LinkButton, NotifyButton } from "./buttons";
-import { isDemoLineUser } from "@/lib/channels/line/config";
-import { fmtDate, fmtDateTime, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
+import { NotifyButton } from "./buttons";
+import { fmtDate, fmtDateTime, Notice, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
 
 // LINE受付の画面（工場のスタッフ用）。
-// - はじめてのLINEのお客さんを、得意先に1回だけひも付ける
 // - LINEで来た注文の一覧（中身の確認・確定は受注一覧の画面で行う）
 // - 確定した注文の「確定の連絡」と、LINEで返した文面の記録
+// LINE の人と取引先のひも付けは、取引先マスタの管理画面（/admin/customers）で行う。
 
 const intentText = { new: "", change: "変更", cancel: "取消の連絡" } as const;
 
 export default async function LinePage() {
-  const [db, state, unlinked] = await Promise.all([readDb(), readLineState(), unlinkedLineUsers()]);
+  const [db, state, unlinked, customers] = await Promise.all([readDb(), readLineState(), unlinkedLineUsers(), listCustomerSettings()]);
   const orders = db.orders.filter((o) => o.source.channel === "line").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const lineCustomers = customers.filter((c) => c.channel === "line" || c.channel === "phone" || c.channel === "driver");
-  const others = customers.filter((c) => !lineCustomers.includes(c));
+  const customerById = (id: string) => customers.find((c) => c.id === id);
 
   return (
     <div className="space-y-8">
@@ -30,34 +28,12 @@ export default async function LinePage() {
       />
 
       {unlinked.length > 0 && (
-        <section className="card space-y-4 p-5">
-          <h2 className="text-xl font-black">はじめてのお客さん（どのお店か 1回だけ選んでください）</h2>
-          {unlinked.map((u) => (
-            <div key={u.userId} className="rounded-lg border border-review-line bg-review-bg/60 p-4">
-              <div className="font-bold">
-                {u.claimedName ? `「${u.claimedName}」と入力` : "お店の名前の入力なし"}
-                {u.displayName && <span className="ml-2 text-ink-soft">LINEの名前: {u.displayName}</span>}
-                <span className="ml-2 text-sm text-ink-faint">注文 {u.orders} 件</span>
-              </div>
-              <div className="mt-1 text-sm text-ink-soft">
-                最近のメッセージ: {orders.find((o) => o.source.refs.some((r) => r.kind === "line_message" && r.userId === u.userId))?.source.rawText?.slice(0, 80) ?? "—"}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {lineCustomers.map((c) => (
-                  <LinkButton key={c.id} userId={u.userId} customerId={c.id} label={c.name} />
-                ))}
-                <details className="w-full">
-                  <summary className="cursor-pointer text-sm text-ink-soft">ほかの得意先</summary>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {others.map((c) => (
-                      <LinkButton key={c.id} userId={u.userId} customerId={c.id} label={c.name} />
-                    ))}
-                  </div>
-                </details>
-              </div>
-            </div>
-          ))}
-        </section>
+        <Notice tone="review">
+          どのお店か分からない LINE の人が {unlinked.length} 人います。
+          <Link href="/admin/customers" className="ml-2 underline underline-offset-4">
+            取引先マスタでひも付ける
+          </Link>
+        </Notice>
       )}
 
       <section className="card overflow-hidden">
@@ -81,7 +57,7 @@ export default async function LinePage() {
                     {flagged > 0 && <Tag tone="review">要確認 {flagged} 行</Tag>}
                     {o.source.extra?.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
                   </div>
-                  {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm bg-[#e5f4e1] px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
+                  {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
                   <div className="text-sm">
                     {o.lines.map((l) => `${productById(l.productId)?.name ?? `（${l.read?.writtenName}）`} ${l.quantity}${l.unit}`).join("、") || "（品目なし）"}
                   </div>
@@ -105,7 +81,7 @@ export default async function LinePage() {
         <h2 className="mb-3 text-xl font-black">LINEで返した文面（新しい順）</h2>
         <ul className="space-y-2 text-sm">
           {[...state.outbox].reverse().slice(0, 30).map((m, i) => (
-            <li key={i} className="rounded-lg border border-rule bg-[#e5f4e1]/60 p-3">
+            <li key={i} className="rounded-lg border border-rule bg-cream p-3">
               <div className="text-xs text-ink-soft">
                 {fmtDateTime(m.at)}・{m.via === "reply" ? "返信" : "こちらから送信"}・{m.mode === "live" ? "LINEに送信" : "デモ（記録のみ）"}
                 {!m.ok && <span className="ml-2 text-alert-ink">失敗: {m.error}</span>}

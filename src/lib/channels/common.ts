@@ -10,6 +10,7 @@ import { allProducts, findProduct } from "@/lib/catalog";
 import type { Order, OrderLine, OrderSource, ReadValue } from "@/data/types";
 import { updateDb } from "@/lib/store";
 import { nowIso } from "@/lib/clock";
+import { aliasMapFor, normalizeAlias } from "@/lib/aliases";
 
 export const now = () => nowIso();
 
@@ -89,6 +90,7 @@ export function toOrder(o: ImportedOrder): Order {
  * - 同じ ID が人の手で確定・取消済みなら、上書きしない（人が直した値を守る）
  */
 export async function saveImported(list: ImportedOrder[]) {
+  list = await applyAliases(list);
   return updateDb((db) => {
     let added = 0;
     let replaced = 0;
@@ -108,6 +110,34 @@ export async function saveImported(list: ImportedOrder[]) {
       }
     }
     return { added, replaced, kept, ids: list.map((o) => o.id) };
+  });
+}
+
+/**
+ * 名寄せ辞書（①の aliases。人が確定した「取引先の呼び名 → 商品」）を当てる。
+ * 辞書にある呼び名は、その商品を候補にする（要確認のまま。確定するのは人）。
+ * 読み取りが出した値は read に残るので、辞書で変えたことは attention に書く。
+ */
+export async function applyAliases(list: ImportedOrder[]): Promise<ImportedOrder[]> {
+  const ids = [...new Set(list.map((o) => o.customerId).filter(Boolean))];
+  if (!ids.length) return list;
+  const dict = new Map<string, Map<string, string>>();
+  for (const id of ids) {
+    const m = (await aliasMapFor(id))[id] ?? {};
+    dict.set(id, new Map(Object.entries(m).map(([a, pid]) => [normalizeAlias(a), pid])));
+  }
+  return list.map((o) => {
+    const m = dict.get(o.customerId);
+    if (!m?.size) return o;
+    return {
+      ...o,
+      lines: o.lines.map((l) => {
+        const pid = l.writtenName ? m.get(normalizeAlias(l.writtenName)) : undefined;
+        if (!pid || !findProduct(pid) || (pid === l.productId && l.confidence >= 0.95)) return l;
+        const why = pid === l.productId ? "" : `名寄せ辞書で ${pid}${l.productId ? `（読み取りは ${l.productId}）` : ""}`;
+        return { ...l, productId: pid, confidence: Math.max(l.confidence, 0.95), attention: [why, l.attention].filter(Boolean).join("・") };
+      }),
+    };
   });
 }
 

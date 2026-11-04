@@ -1,31 +1,15 @@
 import "server-only";
 // インフォマート（受注）の明細 CSV を取り込む。
-// 列の名前は見出し行で探すので、実物の CSV で列の順番や数が違っても、見出しの言い方を INFOMART_HEADERS に足せば読める。
+// 列の名前は見出し行で探すので、実物の CSV で列の順番や数が違っても、見出しの言い方をマスタ「インフォマートの列名」に足せば読める（初期値は config.ts）。
 // 実物の形は、担当者がログインした画面で確認してから合わせる（docs/infomart-notes.md）。いまは架空の CSV で作っている。
 import { customers } from "@/data/master";
 import { findProduct } from "@/lib/catalog";
+import { infomartHeaders } from "@/lib/masters/channel-settings";
+import { INFOMART_HEADERS, type InfomartField } from "./config";
 import { decodeText, guessProduct, parseCsv, saveImported, toIsoDate, type ImportedOrder } from "../common";
 import { nowIso } from "@/lib/clock";
 
-/** 項目 → 見出しの候補（左にあるものほど優先） */
-export const INFOMART_HEADERS = {
-  slipNo: ["伝票番号", "伝票No", "発注番号"],
-  orderDate: ["発注日"],
-  deliveryDate: ["納品予定日", "納品日", "納品希望日"],
-  buyerCode: ["発注元企業コード", "取引先コード", "企業コード"],
-  buyerName: ["発注元企業名", "取引先名", "企業名"],
-  placeCode: ["納品先コード", "店舗コード"],
-  placeName: ["納品先名", "店舗名"],
-  lineNo: ["明細行", "行番号", "明細No"],
-  itemCode: ["商品コード", "自社商品コード"],
-  itemName: ["商品名"],
-  spec: ["規格"],
-  perUnit: ["入数"],
-  qty: ["数量", "発注数量"],
-  unit: ["単位"],
-  note: ["備考", "明細備考"],
-} as const;
-type Field = keyof typeof INFOMART_HEADERS;
+type Field = InfomartField;
 
 export interface InfomartImportResult {
   fileName: string;
@@ -39,11 +23,12 @@ export async function importInfomartCsv(buf: Uint8Array, fileName: string): Prom
   const [head, ...rows] = parseCsv(decodeText(buf));
   if (!head) throw new Error("CSV が空です");
   const idx = {} as Record<Field, number>;
-  for (const f of Object.keys(INFOMART_HEADERS) as Field[]) {
-    idx[f] = head.findIndex((h) => (INFOMART_HEADERS[f] as readonly string[]).includes(h.trim()));
+  const HEADERS = await infomartHeaders();
+  for (const f of Object.keys(HEADERS) as Field[]) {
+    idx[f] = head.findIndex((h) => (HEADERS[f] as readonly string[]).includes(h.trim()));
   }
   for (const need of ["slipNo", "deliveryDate", "itemName", "qty"] as Field[]) {
-    if (idx[need] < 0) throw new Error(`CSV に「${INFOMART_HEADERS[need][0]}」の列がありません`);
+    if (idx[need] < 0) throw new Error(`CSV に「${HEADERS[need][0]}」の列がありません`);
   }
   const get = (r: string[], f: Field) => (idx[f] >= 0 ? (r[idx[f]] ?? "").trim() : "");
 
@@ -103,3 +88,5 @@ export async function importInfomartCsv(buf: Uint8Array, fileName: string): Prom
   const saved = await saveImported(list);
   return { fileName, rows: rows.length, orderIds: saved.ids, unknownItems: [...unknownItems], unknownBuyers: [...unknownBuyers] };
 }
+
+export { INFOMART_HEADERS };

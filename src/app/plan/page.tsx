@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { FACTORY } from "@/data/master";
 import type { Line } from "@/data/master";
 import type { ProcessKey } from "@/data/production";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
 import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
-import { addDays, Empty, fmtDate, fmtNum, Icon, MachineTranslated, Notice } from "@/components/ui";
+import { addDays, Empty, fmtDate, fmtNum, Icon, MachineTranslated, Notice, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf, provisionalForDate } from "@/lib/aggregate";
 import { findProduct } from "@/lib/catalog";
@@ -20,20 +21,21 @@ export const metadata = { title: "製造計画・工程表｜受発注ハブ" };
 
 /** 工程の色（落ち着いた色。隣どうしが見分けられるように） */
 const stepColor: Record<ProcessKey, string> = {
-  weigh: "#d8cdb6",
-  mix: "#c9b48a",
-  ferment: "#e3d3a3",
-  divide: "#a9c0a0",
-  bench: "#cfdcc4",
-  shape: "#8fae9b",
-  retard: "#b9cfd9",
-  proof: "#e6c79a",
-  topping: "#d9a98c",
-  bake: "#c98a5a",
-  cool: "#a9bfcf",
-  freeze: "#8fb0cc",
-  pack: "#b8b0c8",
-  metal_check: "#d98f8f",
+  // 落ち着いた生成り・灰色の濃淡。焼成だけ椿の赤に寄せ、冷やす工程は灰青（名前と時刻を必ず一緒に出す）
+  weigh: "#efe9df",
+  mix: "#ddd2c1",
+  ferment: "#ece2cc",
+  divide: "#e4ddd1",
+  bench: "#f3eee6",
+  shape: "#cfc5b5",
+  retard: "#dfe5eb",
+  proof: "#e8dabf",
+  topping: "#ead5d1",
+  bake: "#d4a49b",
+  cool: "#dde4ea",
+  freeze: "#c8d3de",
+  pack: "#e3ddd5",
+  metal_check: "#f7e6e2",
 };
 const STEPS = Object.keys(stepColor) as ProcessKey[];
 
@@ -74,63 +76,115 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const lines: Line[] = ["bread", "pizza"];
   const showMt = lang !== "ja" && (!isReviewed(lang) || Object.keys(mt).length > 0);
 
+  const jaLabel = langInfo(lang).ja;
   return (
-    <div lang={langInfo(lang).htmlLang}>
-      {/* 見出し */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-ink pb-3">
+    <div>
+      {/* 画面の上（見るのは日本人なので日本語） */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
         <div>
-          <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">{t("plan_title")}</h1>
-          {lang !== "ja" && <div className="text-sm text-ink-faint">製造計画・工程表</div>}
+          <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">製造計画・工程表</h1>
+          <p className="mt-1 text-ink-soft">納品日を選び、下のタブでことばを選んで印刷し、現場に渡します。</p>
         </div>
         <div className="no-print flex flex-wrap items-center gap-2">
-          <span className="text-sm font-bold text-ink-soft">{t("deliver")}</span>
+          <span className="text-sm font-bold text-ink-soft">納品日</span>
           {dates.map((d) => (
-            <Link
-              key={d}
-              href={href({ date: d })}
-              className={`num inline-flex min-h-12 items-center rounded-lg border px-4 font-bold ${d === date ? "border-ink bg-ink text-white" : "border-rule-strong bg-sheet hover:bg-crust-50"}`}
-            >
+            <Link key={d} href={href({ date: d })} className={choiceClass(d === date, "num inline-flex min-h-12 items-center px-4")}>
               {fmtDate(d)}
-              {d === tomorrow && <span className="ml-1.5 text-sm opacity-75">{t("tomorrow")}</span>}
+              {d === tomorrow && <span className="ml-1.5 text-sm opacity-75">明日</span>}
             </Link>
           ))}
-          <PrintButton label={t("print")} />
         </div>
       </div>
 
-      {/* ことばの切り替え（選んだことばはタブレットが覚える） */}
-      <LangPicker lang={lang} hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))} />
-
-      {showMt && (
-        <p className="mb-4 flex items-center gap-2 text-sm text-ink-soft">
-          <MachineTranslated label={t("machine")} />
-          {t("machine_note")}
-        </p>
-      )}
-
-      {/* 計算の注意（管理者向け・日本語） */}
-      {lateMaterials.length > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="no-print mb-3">
-          <div lang="ja">
-            <div className="mb-1">間に合わない材料があります（発注書には入っていません）。</div>
-            <ul className="list-disc pl-5 font-normal">
-              {lateMaterials.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
+      {/* 注意とお金は、畳んで件数だけ（押すと開く）。管理者向け・日本語・印刷しない */}
+      <div className="no-print mb-4 space-y-2" lang="ja">
+        {otherWarnings.length > 0 && (
+          <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />}>
+            <details>
+              <summary className="cursor-pointer">
+                製造の注意が <span className="num">{otherWarnings.length}</span> 件あります（ピザの上限・始める時刻など）。押すと出します。
+              </summary>
+              <ul className="mt-1 list-disc pl-5 font-normal">
+                {otherWarnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </details>
+          </Notice>
+        )}
+        {lateMaterials.length > 0 && (
+          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
+            <details>
+              <summary className="cursor-pointer">
+                間に合わない材料が <span className="num">{lateMaterials.length}</span> 件あります（発注書には入っていません）。押すと出します。
+              </summary>
+              <ul className="mt-1 list-disc pl-5 font-normal">
+                {lateMaterials.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </details>
+          </Notice>
+        )}
+        <details className="rounded-lg border border-rule bg-sheet">
+          <summary className="flex min-h-12 cursor-pointer items-center px-4 font-bold text-ink-soft">この日のお金（材料費・売上・粗利の目安）を見る</summary>
+          <div className="px-2 pb-2">
+            <CostBox s={cost} show={["material", "margin"]} />
           </div>
-        </Notice>
-      )}
-      {otherWarnings.length > 0 && (
-        <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />} className="no-print mb-4">
-          <ul className="space-y-0.5" lang="ja">
-            {otherWarnings.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
+        </details>
+      </div>
 
+      {/* ことばのタブと印刷 */}
+      <LangPicker
+        lang={lang}
+        hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))}
+        right={<PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />}
+      />
+
+      {/* ここから下が印刷する紙（選んだことば） */}
+      <div lang={langInfo(lang).htmlLang} className="rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">
+        {/* 紙の頭（現場の製造計画書と同じ並び: 題・報告日・製造日・作った所・担当・確認の印） */}
+        <div className="mb-4 grid gap-3 border-b-2 border-ink pb-3 sm:grid-cols-[1fr_auto]">
+          <div>
+            <div className="text-xl font-black tracking-wide">
+              {t("plan_title")}
+              {lang !== "ja" && <span className="ml-2 text-sm font-normal text-ink-faint">製造計画・工程表</span>}
+            </div>
+            <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 text-sm">
+              <dt className="text-ink-soft">{t("deliver")}</dt>
+              <dd className="num font-black">{fmtDate(date)}</dd>
+              <dt className="text-ink-soft">報告日</dt>
+              <dd className="num">{fmtDate(today)}</dd>
+              <dt className="text-ink-soft">作成</dt>
+              <dd>{FACTORY.name}</dd>
+            </dl>
+          </div>
+          {/* 担当・確認の印（紙に書く・押す欄） */}
+          <table className="self-start border-collapse text-center text-sm">
+            <thead>
+              <tr>
+                {["担当", "確認", "工場長"].map((h) => (
+                  <th key={h} className="w-16 border border-ink px-1 py-0.5 font-bold">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {[0, 1, 2].map((i) => (
+                  <td key={i} className="h-12 border border-ink" />
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {showMt && (
+          <p className="mb-4 flex items-center gap-2 text-sm text-ink-soft">
+            <MachineTranslated label={t("machine")} />
+            {t("machine_note")}
+          </p>
+        )}
 
       {/* 仮発注（製造量には入れない） */}
       {prov.products.length > 0 && (
@@ -175,9 +229,6 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         })}
       </div>
 
-      {/* お金（管理者向け・日本語。印刷しない）。現場の人が見る作る数・時間割より下に置く */}
-      <div className="mt-8">
-        <CostBox s={cost} show={["material", "margin"]} />
       </div>
     </div>
   );
@@ -246,7 +297,7 @@ function MakeTable({ bs, lang, t, name }: { bs: DoughBatchPlan[]; lang: Lang; t:
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("make_list")}</div>
       {bs.map((b) => (
         <div key={b.doughId} className="border-b border-rule-strong last:border-b-0">
-          <div className="flex flex-wrap items-end justify-between gap-2 bg-crust-50 px-4 py-2">
+          <div className="flex flex-wrap items-end justify-between gap-2 bg-cream px-4 py-2">
             <div>
               <span className="text-xs text-ink-soft">{t("dough")}</span>
               <Name n={name(b.name)} lang={lang} big />
@@ -293,6 +344,11 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
   const used = STEPS.filter((k) => todaySteps.some((s) => s.key === k));
   const spaced = !["ja", "ja-easy", "zh", "ko"].includes(lang);
   // 「翌1:00」の「翌」は日本語なので、ほかの言語では「+1 1:00」にする
+  // 目盛りは時刻だけ（前日・翌日の言葉は長くて重なるため）。前日・翌日の分は時刻の表の方で言葉つきで出す
+  const axis = (m: number) => {
+    const r = ((Math.round(m) % 1440) + 1440) % 1440;
+    return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
+  };
   // 「翌1:00」「前日23:52」の「翌」「前日」は日本語なので、辞書の言葉に置きかえる
   const ft = (m: number) =>
     lang === "ja" ? fmtTime(m) : fmtTime(m).replace("翌", `${t("next_day")} `).replace("前日", `${t("prev_day_time")} `);
@@ -313,7 +369,7 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
           <div className="relative ml-36 h-6 text-xs text-ink-soft">
             {hours.map((h) => (
               <span key={h} className="num absolute -translate-x-1/2 whitespace-nowrap" style={{ left: pct(h) }}>
-                {ft(h)}
+                {axis(h)}
               </span>
             ))}
           </div>
@@ -347,7 +403,7 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
                       <span
                         key={`${s.key}-${i}`}
                         title={`${stepName(lang, s.key, s.name)} ${fmtTime(s.start)}–${fmtTime(s.end)}`}
-                        className={`absolute inset-y-1 overflow-hidden rounded-[3px] border px-1 text-[0.7rem] leading-8 font-bold whitespace-nowrap text-ink ${s.ccp ? "border-alert-ink border-2" : "border-black/15"}`}
+                        className={`absolute inset-y-1 overflow-hidden rounded-[3px] border px-1 text-[0.7rem] leading-8 font-bold whitespace-nowrap text-ink ${s.ccp ? "border-2 border-crust-600" : "border-rule-strong"}`}
                         style={{ left: pct(s.start), width: `calc(${pct(s.end)} - ${pct(s.start)})`, background: stepColor[s.key] }}
                       >
                         {s.end - s.start >= 30 ? stepName(lang, s.key, s.name) : ""}
@@ -360,7 +416,7 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
           <div className="mt-2 ml-36 flex flex-wrap gap-x-3 gap-y-1 text-xs">
             {used.map((k) => (
               <span key={k} className="inline-flex items-center gap-1">
-                <span className="inline-block h-3 w-4 rounded-[2px] border border-black/15" style={{ background: stepColor[k] }} />
+                <span className="inline-block h-3 w-4 rounded-[2px] border border-rule-strong" style={{ background: stepColor[k] }} />
                 {tr(lang, k as Key)}
               </span>
             ))}

@@ -26,7 +26,6 @@ declare global {
   }
 }
 
-const RED = "#8f1d1d";
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 function jstDay(n: number) {
   const t = new Date(nowMs() + 9 * 3600_000 + n * 86400_000);
@@ -152,7 +151,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
       : [{ title: "商品", ids: ctx.productIds }];
 
   return (
-    <div className="mx-auto min-h-dvh max-w-[520px] bg-[#f7f3ec] text-[#2b2420] [-webkit-tap-highlight-color:transparent]">
+    <div className="mx-auto min-h-dvh max-w-[520px] bg-cream text-ink [-webkit-tap-highlight-color:transparent]">
       <style>{`
         @keyframes liffPop { 0% { transform: scale(.92) } 60% { transform: scale(1.04) } 100% { transform: scale(1) } }
         @keyframes liffRise { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
@@ -162,19 +161,19 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
       {view === "loading" && (
         <div className="grid min-h-dvh place-items-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[#8f1d1d]/20 border-t-[#8f1d1d]" aria-label="読み込み中" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-crust-200 border-t-crust-600" aria-label="読み込み中" />
         </div>
       )}
 
       {view === "error" && (
         <div className="space-y-5 px-6 pt-16 text-center">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#8f1d1d]/10 text-3xl font-bold text-[#8f1d1d]">!</div>
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-crust-100 text-3xl font-bold text-crust-600">!</div>
           <p className="text-[22px] font-bold" style={serif}>
             うまく ひらけませんでした
           </p>
-          <p className="text-[15px] leading-relaxed text-[#7b7067]">{error}</p>
+          <p className="text-[15px] leading-relaxed text-ink-faint">{error}</p>
           <p className="text-[17px]">お手数ですが、お電話でご注文ください。</p>
-          <button className="h-14 w-full rounded-2xl bg-[#8f1d1d] text-[18px] font-bold text-white" onClick={() => location.reload()}>
+          <button className="h-14 w-full rounded-2xl bg-crust-600 text-[18px] font-bold text-white" onClick={() => location.reload()}>
             もういちど ひらく
           </button>
         </div>
@@ -184,7 +183,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
         <div className="pb-[calc(112px+env(safe-area-inset-bottom))]">
           {/* あいさつ */}
           <div className="px-5 pt-6 pb-1">
-            <p className="text-[12px] font-bold tracking-[.25em] text-[#b8913f]">ORDER</p>
+            <p className="text-[12px] font-bold tracking-[.25em] text-crust-500">ORDER</p>
             <h1 className="mt-1 text-[26px] font-bold leading-tight" style={serif}>
               {ctx.customerName ? (
                 <>
@@ -195,14 +194,14 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 "パンのご注文"
               )}
             </h1>
-            <p className="mt-1 text-[14px] text-[#7b7067]">
+            <p className="mt-1 text-[14px] text-ink-faint">
               {pastCutoff ? `本日の締め切り（${ctx.cutoff}）をすぎました。あさって以降をお選びください。` : `ご注文の締め切りは、前日の ${ctx.cutoff} です。`}
             </p>
           </div>
 
           {/* お届け日 */}
           <section className="pt-4">
-            <h2 className="px-5 text-[15px] font-bold text-[#7b7067]">お届け日</h2>
+            <h2 className="px-5 text-[15px] font-bold text-ink-faint">お届け日</h2>
             <div className="mt-2 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pt-1 pb-3 [scrollbar-width:none]">
               {days.map((d, i) => {
                 const late = i === 0 && pastCutoff;
@@ -215,13 +214,13 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                     onClick={() => setDate(d.ymd)}
                     className={`flex w-[74px] shrink-0 snap-start flex-col items-center rounded-2xl py-2.5 transition ${
                       late
-                        ? "bg-black/[.04] text-black/25"
+                        ? "bg-off-bg text-off-ink"
                         : on
-                          ? "bg-[#8f1d1d] text-white shadow-[0_6px_16px_-6px_rgba(143,29,29,.6)]"
-                          : "bg-white text-[#2b2420] ring-1 ring-[#ece5da]"
+                          ? "bg-crust-600 text-white"
+                          : "bg-white text-ink ring-1 ring-rule"
                     }`}
                   >
-                    <span className={`text-[12px] font-bold ${on ? "text-white/80" : late ? "" : d.dow === 6 ? "text-[#3d5a8a]" : "text-[#7b7067]"}`}>
+                    <span className={`text-[12px] font-bold ${on ? "text-white/80" : late ? "" : d.dow === 6 ? "text-info-ink" : "text-ink-faint"}`}>
                       {i === 0 ? "あした" : i === 1 ? "あさって" : `${d.m}月`}
                     </span>
                     <span className="text-[26px] font-bold leading-none tabular-nums">{d.d}</span>
@@ -235,16 +234,16 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           {/* 前回と同じ */}
           {ctx.lastOrder && (
             <section className="px-5 pt-5">
-              <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-[#ece5da]">
+              <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-rule">
                 <div className="flex items-baseline justify-between gap-2 px-5 pt-4">
                   <h2 className="text-[18px] font-bold" style={serif}>
                     前回と同じ内容で
                   </h2>
-                  <span className="text-[12px] text-[#7b7067]">前回 {fmtYmd(ctx.lastOrder.deliveryDate)}</span>
+                  <span className="text-[12px] text-ink-faint">前回 {fmtYmd(ctx.lastOrder.deliveryDate)}</span>
                 </div>
                 <ul className="flex flex-wrap gap-1.5 px-5 pt-3">
                   {ctx.lastOrder.items.map((i) => (
-                    <li key={i.productId} className="rounded-full bg-[#f7f3ec] px-3 py-1 text-[14px]">
+                    <li key={i.productId} className="rounded-full bg-cream px-3 py-1 text-[14px]">
                       {byId[i.productId]?.name} <b className="tabular-nums">{i.quantity}</b>
                       {byId[i.productId]?.unit}
                     </li>
@@ -256,7 +255,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                       fillLast(ctx);
                       setSheet(true);
                     }}
-                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#8f1d1d]/[.08] text-[17px] font-bold text-[#8f1d1d] active:scale-[.98]"
+                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-crust-50 text-[17px] font-bold text-crust-600 active:scale-[.98]"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
@@ -271,25 +270,25 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           {/* 商品 */}
           {groups.map((g) => (
             <section key={g.title} className="px-5 pt-6">
-              <h2 className="pb-2 text-[15px] font-bold text-[#7b7067]">{g.title}</h2>
-              <ul className="overflow-hidden rounded-3xl bg-white ring-1 ring-[#ece5da]">
+              <h2 className="pb-2 text-[15px] font-bold text-ink-faint">{g.title}</h2>
+              <ul className="overflow-hidden rounded-3xl bg-white ring-1 ring-rule">
                 {g.ids.map((id) => {
                   const p = byId[id];
                   if (!p) return null;
                   const q = qty[id] ?? 0;
                   return (
-                    <li key={id} className="flex items-start gap-3 border-b border-[#f1ebe1] py-3.5 pr-3 pl-3.5 last:border-b-0">
-                      <div className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl transition ${q ? "bg-[#8f1d1d]/[.08] text-[#8f1d1d]" : "bg-[#f7f3ec] text-[#a07a4a]"}`}>
+                    <li key={id} className="flex items-start gap-3 border-b border-rule py-3.5 pr-3 pl-3.5 last:border-b-0">
+                      <div className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl transition ${q ? "bg-crust-50 text-crust-600" : "bg-cream text-crust-500"}`}>
                         <BreadArt name={p.name} className="h-10 w-10" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-[18px] font-bold leading-snug">{p.name}</div>
                         {q === 0 ? (
-                          <div className="text-[13px] text-[#7b7067]">{p.unit}で注文</div>
+                          <div className="text-[13px] text-ink-faint">{p.unit}で注文</div>
                         ) : (
                           <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className="text-[13px] text-[#7b7067]">{p.unit}</span>
-                            <div className="flex items-center rounded-full bg-[#8f1d1d] text-white shadow-[0_6px_16px_-8px_rgba(143,29,29,.7)]">
+                            <span className="text-[13px] text-ink-faint">{p.unit}</span>
+                            <div className="flex items-center rounded-full bg-crust-600 text-white">
                               <button aria-label={`${p.name}を1へらす`} onClick={() => set(id, q - 1)} className="grid h-12 w-12 place-items-center active:scale-90">
                                 <Minus />
                               </button>
@@ -311,7 +310,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                         <button
                           aria-label={`${p.name}を追加`}
                           onClick={() => set(id, 1)}
-                          className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-[#8f1d1d] ring-2 ring-[#8f1d1d] active:scale-95"
+                          className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-crust-600 ring-2 ring-crust-600 active:scale-95"
                         >
                           <Plus className="h-6 w-6" />
                         </button>
@@ -322,18 +321,18 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
               </ul>
             </section>
           ))}
-          <p className="px-6 pt-4 text-center text-[13px] text-[#7b7067]">数字を押すと、まとめて数を入れられます。</p>
-          <button onClick={() => setView("history")} className="mx-auto mt-2 block px-4 py-3 text-[15px] font-bold text-[#8f1d1d] underline underline-offset-4">
+          <p className="px-6 pt-4 text-center text-[13px] text-ink-faint">数字を押すと、まとめて数を入れられます。</p>
+          <button onClick={() => setView("history")} className="mx-auto mt-2 block px-4 py-3 text-[15px] font-bold text-crust-600 underline underline-offset-4">
             ご注文の履歴を見る
           </button>
 
           {/* 下の固定バー */}
           <div className="fixed inset-x-0 bottom-0 z-20">
-            <div className="mx-auto max-w-[520px] bg-white/95 px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(0,0,0,.18)] backdrop-blur">
+            <div className="mx-auto max-w-[520px] bg-white/95 px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur">
               <button
                 disabled={!items.length || !date}
                 onClick={() => setSheet(true)}
-                className="flex h-[60px] w-full items-center justify-between rounded-2xl bg-[#8f1d1d] px-5 text-white transition active:scale-[.98] disabled:bg-[#d9d2c7]"
+                className="flex h-[60px] w-full items-center justify-between rounded-2xl bg-crust-600 px-5 text-white transition active:scale-[.98] disabled:bg-off-bg disabled:text-off-ink"
               >
                 <span className="text-left leading-tight">
                   <span className="block text-[13px] opacity-80">{date ? `${fmtYmd(date)} お届け` : "お届け日をえらぶ"}</span>
@@ -357,23 +356,23 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
       {view === "order" && ctx && sheet && (
         <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/40" style={{ animation: "liffFade .2s ease-out" }} onClick={() => !sending && setSheet(false)}>
           <div
-            className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-[28px] bg-[#f7f3ec] px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom))]"
+            className="max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-[28px] bg-cream px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom))]"
             style={{ animation: "liffRise .25s ease-out" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-black/15" />
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-rule-strong" />
             <h2 className="text-center text-[22px] font-bold" style={serif}>
               ご注文の確認
             </h2>
-            <div className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-[#ece5da]">
-              <div className="text-[13px] font-bold text-[#7b7067]">お届け日</div>
+            <div className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-rule">
+              <div className="text-[13px] font-bold text-ink-faint">お届け日</div>
               <div className="text-[26px] font-bold" style={serif}>
                 {fmtYmd(date)}
               </div>
-              <ul className="mt-3 divide-y divide-[#f1ebe1] border-t border-[#f1ebe1]">
+              <ul className="mt-3 divide-y divide-rule border-t border-rule">
                 {items.map(([id, q]) => (
                   <li key={id} className="flex items-center gap-3 py-3">
-                    <BreadArt name={byId[id]?.name ?? ""} className="h-8 w-8 shrink-0 text-[#a07a4a]" />
+                    <BreadArt name={byId[id]?.name ?? ""} className="h-8 w-8 shrink-0 text-crust-500" />
                     <span className="flex-1 text-[18px]">{byId[id]?.name}</span>
                     <span className="text-[24px] font-bold tabular-nums">
                       {q}
@@ -385,15 +384,15 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             </div>
             {repeat && (
               <div className="mt-4">
-                <div className="mb-2 text-[13px] font-bold text-[#7b7067]">お届け日を変えるとき</div>
+                <div className="mb-2 text-[13px] font-bold text-ink-faint">お届け日を変えるとき</div>
                 <div className="flex gap-2">
                   {days.slice(0, 4).map((d, i) => (
                     <button
                       key={d.ymd}
                       disabled={i === 0 && pastCutoff}
                       onClick={() => setDate(d.ymd)}
-                      className={`h-12 flex-1 rounded-xl text-[15px] font-bold disabled:bg-black/[.04] disabled:text-black/25 ${
-                        date === d.ymd ? "bg-[#8f1d1d] text-white" : "bg-white ring-1 ring-[#ece5da]"
+                      className={`h-12 flex-1 rounded-xl text-[15px] font-bold disabled:bg-off-bg disabled:text-off-ink ${
+                        date === d.ymd ? "bg-crust-600 text-white" : "bg-white ring-1 ring-rule"
                       }`}
                     >
                       {d.m}/{d.d}（{d.wd}）
@@ -405,11 +404,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             <button
               onClick={send}
               disabled={sending || !items.length}
-              className="mt-5 h-[60px] w-full rounded-2xl bg-[#8f1d1d] text-[19px] font-bold text-white shadow-[0_10px_24px_-10px_rgba(143,29,29,.8)] active:scale-[.98] disabled:opacity-60"
+              className="mt-5 h-[60px] w-full rounded-2xl bg-crust-600 text-[19px] font-bold text-white active:scale-[.98] disabled:opacity-60"
             >
               {sending ? "おくっています…" : "この内容で注文する"}
             </button>
-            <button onClick={() => setSheet(false)} disabled={sending} className="mt-2 h-12 w-full text-[16px] font-bold text-[#7b7067]">
+            <button onClick={() => setSheet(false)} disabled={sending} className="mt-2 h-12 w-full text-[16px] font-bold text-ink-faint">
               もどって 直す
             </button>
           </div>
@@ -437,7 +436,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   onClick={() =>
                     setPad((p) => (!p ? p : { ...p, value: k === "C" ? "" : k === "←" ? p.value.slice(0, -1) : (p.value === "0" ? k : p.value + k).slice(0, 3) }))
                   }
-                  className={`h-14 rounded-2xl bg-[#f7f3ec] text-[24px] font-bold active:scale-95 ${k === "C" || k === "←" ? "text-[17px] text-[#7b7067]" : ""}`}
+                  className={`h-14 rounded-2xl bg-cream text-[24px] font-bold active:scale-95 ${k === "C" || k === "←" ? "text-[17px] text-ink-faint" : ""}`}
                 >
                   {k === "C" ? "けす" : k}
                 </button>
@@ -448,7 +447,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 set(pad.id, Number(pad.value || 0));
                 setPad(null);
               }}
-              className="mt-3 h-14 w-full rounded-2xl bg-[#8f1d1d] text-[18px] font-bold text-white"
+              className="mt-3 h-14 w-full rounded-2xl bg-crust-600 text-[18px] font-bold text-white"
             >
               きめる
             </button>
@@ -458,32 +457,32 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
       {view === "history" && ctx && (
         <div className="px-5 pt-6 pb-10">
-          <p className="text-[12px] font-bold tracking-[.25em] text-[#b8913f]">HISTORY</p>
+          <p className="text-[12px] font-bold tracking-[.25em] text-crust-500">HISTORY</p>
           <h1 className="mt-1 text-[26px] font-bold" style={serif}>
             ご注文の履歴
           </h1>
-          {ctx.history.length === 0 && <p className="mt-6 text-[16px] text-[#7b7067]">まだご注文はありません。</p>}
+          {ctx.history.length === 0 && <p className="mt-6 text-[16px] text-ink-faint">まだご注文はありません。</p>}
           <ul className="mt-4 space-y-3">
             {ctx.history.map((h) => (
-              <li key={h.id} className="rounded-3xl bg-white p-4 ring-1 ring-[#ece5da]">
+              <li key={h.id} className="rounded-3xl bg-white p-4 ring-1 ring-rule">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[18px] font-bold" style={serif}>
                     {fmtYmd(h.deliveryDate)} お届け
                   </span>
                   <span
                     className={`shrink-0 rounded-full px-3 py-1 text-[13px] font-bold ${
-                      h.state === "confirmed" ? "bg-[#e3f0e1] text-[#2f6a35]" : h.state === "cancelled" ? "bg-black/[.06] text-black/50" : "bg-[#fbefd2] text-[#7a5a12]"
+                      h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
                     }`}
                   >
                     {h.state === "confirmed" ? "確定" : h.state === "cancelled" ? "取消" : "確認中"}
                   </span>
                 </div>
-                {h.intent !== "new" && <div className="mt-1 text-[13px] text-[#7b7067]">{h.intent === "cancel" ? "取消のご連絡" : "変更のご連絡"}</div>}
+                {h.intent !== "new" && <div className="mt-1 text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : "変更のご連絡"}</div>}
                 <div className="mt-2 text-[15px] leading-relaxed">{h.items.map((i) => `${i.name} ${i.quantity}${i.unit}`).join("、") || "（内容を確認中）"}</div>
               </li>
             ))}
           </ul>
-          <button onClick={() => setView("order")} className="mt-6 h-14 w-full rounded-2xl bg-[#8f1d1d] text-[18px] font-bold text-white">
+          <button onClick={() => setView("order")} className="mt-6 h-14 w-full rounded-2xl bg-crust-600 text-[18px] font-bold text-white">
             注文する
           </button>
         </div>
@@ -491,7 +490,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
       {view === "done" && (
         <div className="px-6 pt-16 pb-10 text-center">
-          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full text-white" style={{ background: RED, animation: "liffPop .4s ease-out" }}>
+          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-crust-600 text-white" style={{ animation: "liffPop .4s ease-out" }}>
             <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M5 12.5l4.5 4.5L19 7.5" />
             </svg>
@@ -499,19 +498,19 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           <h1 className="mt-6 text-[26px] font-bold" style={serif}>
             ご注文を受け付けました
           </h1>
-          <p className="mt-3 text-[16px] leading-relaxed text-[#7b7067]">
+          <p className="mt-3 text-[16px] leading-relaxed text-ink-faint">
             内容を確認して、確定したら
             <br />
             このLINEでお知らせします。
           </p>
-          <div className="mt-6 rounded-3xl bg-white p-5 text-left ring-1 ring-[#ece5da]">
-            <div className="text-[13px] font-bold text-[#7b7067]">お届け日</div>
+          <div className="mt-6 rounded-3xl bg-white p-5 text-left ring-1 ring-rule">
+            <div className="text-[13px] font-bold text-ink-faint">お届け日</div>
             <div className="text-[22px] font-bold" style={serif}>
               {fmtYmd(date)}
             </div>
             <div className="mt-2 text-[15px] leading-relaxed">{items.map(([id, q]) => `${byId[id]?.name} ${q}${byId[id]?.unit}`).join("、")}</div>
           </div>
-          <button onClick={close} className="mt-6 h-14 w-full rounded-2xl bg-[#8f1d1d] text-[18px] font-bold text-white">
+          <button onClick={close} className="mt-6 h-14 w-full rounded-2xl bg-crust-600 text-[18px] font-bold text-white">
             トークにもどる
           </button>
         </div>

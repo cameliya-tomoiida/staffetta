@@ -1,10 +1,9 @@
 import "server-only";
 import { connection } from "next/server";
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Db } from "./types";
 import { clearFaxInbox, FAX_INBOX_DIR, loadDb, resetToDemo, saveDiff } from "./db/hub-store";
-import { DATA_DIR } from "./db/sqlite";
+import { resetLineDemo } from "./channels/line/state";
 
 // 保存先は SQLite（src/lib/db/）。ここは今までどおりの読み書きの口（readDb / updateDb）だけを持つ。
 
@@ -34,12 +33,13 @@ export function updateDb<T>(fn: (db: Db) => T | Promise<T>): Promise<T> {
 
 /**
  * デモを最初の状態に戻す（受信箱の「デモを最初から」ボタン）。npm run demo:reset と同じ状態:
- * 受信箱 F001〜F005・確定済み DO-01〜DO-20・発注書なし・受け取ったFAXのPDFなし・LINEのひも付けなし。
+ * 受信箱 F001〜F005・確定済み DO-01〜DO-20・発注書なし・受け取ったFAXのPDFなし・架空のLINEのお客さんなし（本物のLINEのひも付けは残す）。
  */
 export async function resetDb() {
   await (queue = queue.then(() => resetToDemo()).catch(() => undefined));
   await clearFaxInbox();
-  await fs.writeFile(path.join(DATA_DIR, "line.json"), JSON.stringify({ users: {}, outbox: [] }, null, 2), "utf8");
+  // LINE は架空のお客さん（U_demo_…）の分だけ消す。本物の LINE のひも付け・送った記録は残す（④）
+  await resetLineDemo();
 }
 
 /** FaxDoc.file から、サーバー上のPDFファイルの場所を出す */

@@ -30,17 +30,20 @@ export function OrdersClient({
   const [who, setWho] = useState(STAFF[0]);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
-  const [date, setDate] = useState<string>("all");
+  // 納品日の期間: すべて／今日／明日／今週／今月／指定（から〜まで）
+  const [period, setPeriod] = useState<Period>("all");
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(addDays(today, 6));
+  const range = periodRange(period, today, from, to);
   const [customer, setCustomer] = useState<string>("all");
   const [channel, setChannel] = useState<"all" | OrderChannel>("all");
   const [sort, setSort] = useState<SortKey>("date");
 
-  const dates = useMemo(() => [...new Set(orders.map((o) => o.deliveryDate))].sort(), [orders]);
   const channels = useMemo(() => [...new Set(orders.map((o) => o.source.channel))], [orders]);
   const custName = (id: string) => customerById(id)?.name ?? "（お店が 分かりません）";
 
   const base = orders.filter(
-    (o) => (date === "all" || o.deliveryDate === date) && (customer === "all" || o.customerId === customer) && (channel === "all" || o.source.channel === channel),
+    (o) => (!range || (o.deliveryDate >= range[0] && o.deliveryDate <= range[1])) && (customer === "all" || o.customerId === customer) && (channel === "all" || o.source.channel === channel),
   );
   const count = (s: OrderStatus) => base.filter((o) => o.status === s).length;
   const list = base
@@ -56,7 +59,7 @@ export function OrdersClient({
   // 元の注文へ飛ぶ（絞り込みで隠れていたら外してから）
   const jump = (id: string) => {
     setStatus("all");
-    setDate("all");
+    setPeriod("all");
     setCustomer("all");
     setChannel("all");
     requestAnimationFrame(() => {
@@ -111,12 +114,33 @@ export function OrdersClient({
           />
         </FilterRow>
         <FilterRow label="納品日">
-          <Segmented
-            label="納品日"
-            value={date}
-            onChange={setDate}
-            options={[{ value: "all", label: "すべて" }, ...dates.map((d) => ({ value: d, label: <span>{fmtDate(d)}{dayName(d) && <span className="ml-1 text-sm opacity-75">{dayName(d)}</span>}</span> }))]}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Segmented
+              label="納品日の期間"
+              value={period}
+              onChange={setPeriod}
+              options={[
+                { value: "all", label: "すべて" },
+                { value: "today", label: "今日" },
+                { value: "tomorrow", label: "明日" },
+                { value: "week", label: "今週" },
+                { value: "month", label: "今月" },
+                { value: "custom", label: "日を指定" },
+              ]}
+            />
+            {period === "custom" && (
+              <span className="flex flex-wrap items-center gap-2">
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-2 font-bold" aria-label="この日から" />
+                <span className="font-bold">〜</span>
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-2 font-bold" aria-label="この日まで" />
+              </span>
+            )}
+            {range && (
+              <span className="text-sm text-ink-soft">
+                {fmtDate(range[0])}〜{fmtDate(range[1])}
+              </span>
+            )}
+          </div>
         </FilterRow>
         <details className="group" open={customer !== "all" || channel !== "all" || sort !== "date"}>
           <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-bold text-ink-soft">
@@ -295,4 +319,23 @@ function SelectBox({ label, value, onChange, options }: { label: string; value: 
       </span>
     </label>
   );
+}
+
+type Period = "all" | "today" | "tomorrow" | "week" | "month" | "custom";
+
+/** 期間 → [はじめ, おわり]（YYYY-MM-DD、両はしを含む）。すべてなら null。週は月曜〜日曜 */
+function periodRange(p: Period, today: string, from: string, to: string): [string, string] | null {
+  if (p === "all") return null;
+  if (p === "today") return [today, today];
+  if (p === "tomorrow") return [addDays(today, 1), addDays(today, 1)];
+  if (p === "week") {
+    const dow = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7; // 月=0
+    return [addDays(today, -dow), addDays(today, 6 - dow)];
+  }
+  if (p === "month") {
+    const [y, m] = today.split("-").map(Number);
+    const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return [`${today.slice(0, 7)}-01`, `${today.slice(0, 7)}-${String(last).padStart(2, "0")}`];
+  }
+  return from <= to ? [from, to] : [to, from];
 }

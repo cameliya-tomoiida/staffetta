@@ -12,7 +12,8 @@ import { deliveryFor, findSupplier } from "@/lib/catalog";
 import { addDays } from "@/lib/purchase";
 import { readDb } from "@/lib/store";
 import { decodeText, parseCsv, readChannelState, saveImported, toIsoDate, writeChannelState, type ImportedOrder } from "../common";
-import { KIRARA_COL as C, KIRARA_DESTS, KIRARA_SUPPLY, KIRARA_QTY_SCALE, kiraraItem, type KiraraDest } from "./config";
+import { kiraraItems } from "@/lib/masters/channel-settings";
+import { KIRARA_COL as C, KIRARA_DESTS, KIRARA_ITEMS, KIRARA_SUPPLY, KIRARA_QTY_SCALE, type KiraraDest, type KiraraItem } from "./config";
 import { nowIso } from "@/lib/clock";
 
 export const KIRARA_CUSTOMER_ID = "C08";
@@ -100,7 +101,8 @@ export function routeOf(dest: KiraraDest, centerDate: string): string {
 }
 
 /** 振り分け表（振り分け先 × 品目の合計） */
-export function routingTable(rows: KiraraRow[], prev?: Record<string, number>): RoutingRow[] {
+export function routingTable(rows: KiraraRow[], prev?: Record<string, number>, items: KiraraItem[] = KIRARA_ITEMS): RoutingRow[] {
+  const kiraraItem = (code: string) => items.find((i) => i.code === code.trim());
   const centerDate = rows[0]?.centerDate ?? "";
   const sum = new Map<string, number>();
   for (const r of rows) sum.set(r.itemCode, (sum.get(r.itemCode) ?? 0) + r.qty);
@@ -129,6 +131,11 @@ export function routingTable(rows: KiraraRow[], prev?: Record<string, number>): 
 
 export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promise<KiraraImportResult> {
   const rows = parseKiraraCsv(buf);
+  // コード変換表は、マスタ「専用サイトのコード表」から（画面で変えられる）
+  const items = await kiraraItems();
+  const kiraraItem = (code: string) => items.find((i) => i.code === code.trim());
+  const prevNames = (rs: KiraraRow[]) =>
+    [...new Set(rs.filter((r) => (KIRARA_SUPPLY[kiraraItem(r.itemCode)?.dest as KiraraDest]?.dayOffset ?? 0) < 0).map((r) => r.itemName))];
   if (!rows.length) throw new Error("取引先の発注サイトの注文の行が見つかりませんでした（CSV の形を確認してください）");
   const centerDate = rows[0].centerDate;
   const stateKey = `kirara:${centerDate}`;
@@ -197,14 +204,18 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
         externalId: rs[0].slipNo,
         receivedAt: nowIso(),
         // site: "kirara" は③が行ごとの前日入れ（KIRARA_ITEMS の品名 → KIRARA_SUPPLY の dayOffset）を決めるのに使う。消さない
-        extra: { site: "kirara", center: rs[0].centerName, bin: rs[0].binName, siteDate: rs[0].siteDate, siteCode },
+        extra: {
+          site: "kirara", center: rs[0].centerName, bin: rs[0].binName, siteDate: rs[0].siteDate, siteCode,
+          // 前日に仕入先から入れる行の品名（改行区切り）。コード表をマスタで変えても③が前日入れを判断できるように
+          ...(prevNames(rs).length ? { prevDayItems: prevNames(rs).join("\n") } : {}),
+        },
       },
       lines: linesNow,
     });
   }
   const saved = await saveImported(list);
 
-  const routing = routingTable(rows, prev?.totals);
+  const routing = routingTable(rows, prev?.totals, items);
   const totals: Record<string, number> = {};
   for (const r of routing) totals[r.itemCode] = r.packs;
   await writeChannelState(stateKey, { fileName, totals, at: nowIso() });

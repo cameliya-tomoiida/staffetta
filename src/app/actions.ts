@@ -5,6 +5,7 @@ import { customers } from "@/data/master";
 import { findProduct as productById } from "@/lib/catalog";
 import type { EditRecord, Order, OrderChannel } from "@/data/types";
 import { readFax } from "@/lib/fax-reader";
+import { addAlias, aliasMapFor } from "@/lib/aliases";
 import { readDb, resetDb, updateDb } from "@/lib/store";
 import type { ConfirmedLine, FaxDoc } from "@/lib/types";
 
@@ -24,7 +25,14 @@ export async function readFaxAction(faxId: string) {
     f.error = undefined;
   });
   try {
-    const { read, model } = await readFax(fax.file, fax.receivedAt, db.mappings);
+    // 名寄せ辞書（全入口共通）と、スタッフが最近直した例（簡易学習）を指示文に添える
+    const recentFixes = db.orders
+      .flatMap((o) => o.lines.flatMap((l) => l.edits.map((e) => ({ o, l, e }))))
+      .filter(({ l }) => l.read)
+      .sort((a, b) => b.e.at.localeCompare(a.e.at))
+      .slice(0, 15)
+      .map(({ o, l, e }) => `${o.customerId} の「${l.read!.writtenName}」: ${e.field === "quantity" ? "数量" : e.field === "productId" ? "商品" : e.field} を AI ${e.from} → スタッフ ${e.to} に直した`);
+    const { read, model } = await readFax(fax.file, fax.receivedAt, await aliasMapFor(), recentFixes);
     await updateDb((d) => {
       const f = d.faxes.find((f) => f.id === faxId)!;
       const customerId = customers.some((c) => c.id === read.sender.matched_customer_id) ? read.sender.matched_customer_id : "";
@@ -106,6 +114,8 @@ export async function approveTemplateAction(input: { faxId: string; customerId: 
       customerId: input.customerId,
       title: fax.read.document_title,
       layoutSummary: fax.read.layout_summary,
+      formatKind: fax.read.format_kind,
+      pageNote: fax.read.page_note || undefined,
       items,
       draftedBy: fax.readModel ?? "",
       approvedBy: input.who,
@@ -114,6 +124,15 @@ export async function approveTemplateAction(input: { faxId: string; customerId: 
     db.mappings[input.customerId] = { ...(db.mappings[input.customerId] ?? {}), ...items };
     if (fax.status === "template") fax.status = "review";
   });
+  for (const [alias, productId] of Object.entries(input.items))
+    if (productById(productId)) await addAlias({ customerId: input.customerId, alias, productId, source: "fax", who: input.who });
+  revalidatePath("/", "layout");
+}
+
+/** 確認画面などから「この呼び名を辞書に登録」（1タップ） */
+export async function addAliasAction(input: { customerId: string; alias: string; productId: string; who: string; source?: "fax" | "line" | "email" | "manual" }) {
+  if (!productById(input.productId)) throw new Error("商品を選んでください");
+  await addAlias({ ...input, source: input.source ?? "manual" });
   revalidatePath("/", "layout");
 }
 
@@ -137,6 +156,7 @@ export async function sortFaxAction(input: { faxId: string; as: "supplier_reply"
  */
 export async function confirmFaxAction(input: { faxId: string; customerId: string; rotation: number; lines: ConfirmedLine[]; who: string }) {
   if (!customers.some((c) => c.id === input.customerId)) throw new Error("送り主（取引先）を選んでください");
+  const learned: { alias: string; productId: string }[] = [];
   await updateDb((db) => {
     const fax = db.faxes.find((f) => f.id === input.faxId);
     if (!fax?.read) throw new Error("FAXが見つかりません");
@@ -168,7 +188,10 @@ export async function confirmFaxAction(input: { faxId: string; customerId: strin
         line.productId = c.productId;
         line.piecesPerUnit = c.piecesPerUnit;
         line.pieces = c.quantity * c.piecesPerUnit;
-        if (line.read) (db.mappings[input.customerId] ??= {})[line.read.writtenName] = c.productId;
+        if (line.read) {
+          (db.mappings[input.customerId] ??= {})[line.read.writtenName] = c.productId;
+          learned.push({ alias: line.read.writtenName, productId: c.productId }); // 人が確定した対応は辞書に入れる
+        }
         return [line];
       });
       order.status = order.lines.length ? (provisional ? "provisional" : "confirmed") : "cancelled";
@@ -189,6 +212,7 @@ export async function confirmFaxAction(input: { faxId: string; customerId: strin
     fax.rotation = input.rotation;
     fax.status = "confirmed";
   });
+  for (const l of learned) await addAlias({ customerId: input.customerId, ...l, source: "fax", who: input.who });
   revalidatePath("/", "layout");
 }
 
