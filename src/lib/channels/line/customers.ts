@@ -1,7 +1,7 @@
 import "server-only";
 import { getMaster, listMaster, upsertMasters } from "@/lib/db/masters";
 import { seedCustomers } from "@/lib/db/seed/customers";
-import { CHANNEL_LABEL, CUSTOMERS, validateCustomer, type CustomerRow } from "@/lib/masters/customers";
+import { CHANNEL_LABEL, CUSTOMERS, DEFAULT_CUSTOMER_DELIVERY_TIME, validateCustomer, type CustomerRow } from "@/lib/masters/customers";
 import type { OrderChannel } from "@/data/types";
 
 // 取引先マスタ（①の SQLite・masters の "customers"）を、LINE の画面から読み書きする口。
@@ -14,7 +14,7 @@ export const CHANNEL_OPTIONS: { value: OrderChannel; label: string }[] = (Object
   label: CHANNEL_LABEL[value],
 }));
 
-type SettingsInput = Pick<CustomerRow, "name" | "channel" | "cutoff" | "deliveryTime" | "course">;
+type SettingsInput = { name: string; channel: OrderChannel; cutoff: string; deliveryTime: string; course: string };
 
 async function ready() {
   await seedCustomers(); // 空のときだけ架空の取引先が入る（①の seed と同じ関数）
@@ -63,7 +63,9 @@ export async function syncLineUserIds(userId: string, customerId: string | undef
     const has = c.lineUserIds?.includes(userId) ?? false;
     const want = c.id === customerId;
     if (has === want) return [];
-    return [{ ...c, lineUserIds: want ? [...(c.lineUserIds ?? []), userId] : (c.lineUserIds ?? []).filter((x) => x !== userId) }];
+    const ids = want ? [...(c.lineUserIds ?? []), userId] : (c.lineUserIds ?? []).filter((x) => x !== userId);
+    // ③の CustomerMaster は lineUserId（1人分）なので、先頭の人をそこにも入れる
+    return [JSON.parse(JSON.stringify({ ...c, lineUserIds: ids, lineUserId: ids[0] })) as CustomerRow];
   });
   if (changed.length) await upsertMasters<CustomerRow>(CUSTOMERS, changed, who);
 }
@@ -82,13 +84,13 @@ export async function upsertCustomerRow(
     name: s("name"),
     channel: s("channel") as OrderChannel,
     cutoff: s("cutoff"),
-    deliveryTime: s("deliveryTime") || "08:00",
+    deliveryTime: s("deliveryTime") || DEFAULT_CUSTOMER_DELIVERY_TIME,
     course: s("course"),
     ...(s("fax") ? { fax: s("fax") } : { fax: undefined }),
     ...(s("externalCode") ? { externalCode: s("externalCode") } : { externalCode: undefined }),
     ...(s("note") ? { note: s("note") } : { note: undefined }),
     lineUserIds: cur?.lineUserIds,
-    active: true,
+    active: row.active === false || s("active") === "false" ? false : true,
   };
   const errors = validateCustomer(next);
   if (errors.length) return { ok: false, error: errors.join("／") };

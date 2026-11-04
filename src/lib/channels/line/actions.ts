@@ -69,7 +69,7 @@ export async function unlinkLineUserAction(userId: string, who: string) {
   revalidatePath("/", "layout");
 }
 
-type SettingsInput = Pick<CustomerSettings, "name" | "channel" | "cutoff" | "deliveryTime" | "course">;
+type SettingsInput = { name: string; channel: CustomerSettings["channel"]; cutoff: string; deliveryTime: string; course: string };
 
 /** 管理画面: 新しい取引先として登録して、この LINE の人とひも付ける */
 export async function addCustomerAndLinkAction(userId: string, input: SettingsInput, who: string) {
