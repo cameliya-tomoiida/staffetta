@@ -6,6 +6,7 @@ import { deliveryDatesOf } from "@/lib/aggregate";
 import { listPurchaseOrders } from "@/lib/purchase-store";
 import { allOrders, pickDate, visibleDates } from "./all-orders";
 import { nowMs } from "@/lib/clock";
+import { loadMasters } from "@/lib/masters/seed-db";
 
 export interface TodaySummary {
   /** 要確認の注文（どの入口でも） */
@@ -33,7 +34,7 @@ export interface TodaySummary {
 export async function todaySummary(now = nowMs()): Promise<TodaySummary> {
   const [{ orders, today }, db, stored] = await Promise.all([allOrders(), readDb(), listPurchaseOrders()]);
   const date = pickDate(undefined, visibleDates(deliveryDatesOf(orders), today), today);
-  const r = runPipeline(orders, date);
+  const r = runPipeline(orders, date, { masters: await loadMasters() }); // マスタ画面で直した値で計算
   const status = new Map(stored.map((p) => [p.id, p.status]));
   const pos = [...r.productPurchaseOrders, ...r.materialPurchaseOrders]
     .filter((p) => p.lines.length > 0)

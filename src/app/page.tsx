@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { customerById } from "@/data/master";
+import { customerById, customers } from "@/data/master";
+import { searchFaxes, type FaxSearch, type Period } from "@/lib/db/search";
+import { InboxSearch } from "@/components/ui/InboxSearch";
 import { readDb } from "@/lib/store";
 import { ReadAllButton, ReadButton } from "@/components/ReadButton";
 import { ResetButton } from "@/components/ResetButton";
@@ -17,11 +19,27 @@ const statusLabel = {
   error: { text: "エラー", cls: "bg-alert-bg text-alert-ink" },
 } as const;
 
-export default async function Inbox() {
+const PERIODS = ["recent", "today", "week", "month", "all", "custom"] as const;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+export default async function Inbox(props: PageProps<"/">) {
+  const sp = await props.searchParams;
+  const period = (PERIODS as readonly string[]).includes(one(sp.period)) ? (one(sp.period) as Period) : "recent";
+  const init = { period, from: one(sp.from), to: one(sp.to), customer: one(sp.customer), status: one(sp.status), q: one(sp.q) };
   const db = await readDb();
   const waiting = db.faxes.filter((f) => f.status === "review" || f.status === "template").length;
-  const main = db.faxes.filter((f) => f.status !== "other");
-  const others = db.faxes.filter((f) => f.status === "other");
+  // 一覧は①の検索（受信日の期間・取引先・状態・ことば）。既定は「この1週間」
+  const found = await searchFaxes({
+    period,
+    from: init.from || undefined,
+    to: init.to || undefined,
+    customerId: init.customer || undefined,
+    status: (init.status || undefined) as FaxSearch["status"],
+    q: init.q || undefined,
+    limit: 200,
+  });
+  const main = found.items.filter((f) => f.status !== "other");
+  const others = found.items.filter((f) => f.status === "other");
   return (
     <div className="space-y-6">
       <InboxWatcher />
@@ -38,8 +56,19 @@ export default async function Inbox() {
       {waiting > 0 && (
         <div className="rounded-lg bg-review-bg px-4 py-3 font-bold text-review-ink">確認待ちのFAXが {waiting} 件あります</div>
       )}
+      <InboxSearch
+        init={init}
+        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        statuses={Object.entries(statusLabel).map(([value, v]) => ({ value, label: v.text }))}
+        total={found.total}
+      />
+      {found.items.length === 0 && (
+        <p className="rounded-lg border border-dashed border-rule-strong bg-sheet px-4 py-6 text-center text-ink-soft">
+          この条件のFAXはありません。期間を「すべて」にすると、前のFAXも探せます。
+        </p>
+      )}
       <div className="grid gap-4 md:grid-cols-3">
-        {[...main].reverse().map((f) => {
+        {main.map((f) => {
           const s = statusLabel[f.status];
           const cust = f.customerId ? customerById(f.customerId)?.name : f.read?.sender.name;
           const lines = f.read?.orders.reduce((n, o) => n + o.lines.length, 0) ?? 0;

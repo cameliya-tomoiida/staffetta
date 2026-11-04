@@ -40,3 +40,26 @@ export function easyReasons(attention: string | undefined): string[] {
 
 /** 読み取りの自信が低いのに理由が書いていないとき */
 export const LOW_CONFIDENCE = "字が 読みにくい ところが あります";
+
+/**
+ * 集計の注意（③の warnings）を、画面向けに分ける。
+ * 「注文 L639… 行 …: 商品が空…」のような生の ID の文は、注文ごとに1つにまとめて「データが足りない注文」にする。
+ * それ以外（ピザの上限など）はそのまま。
+ */
+export function splitWarnings(warnings: string[]): { incomplete: { orderId: string; noCustomer: boolean; emptyLines: number }[]; others: string[] } {
+  const byOrder = new Map<string, { orderId: string; noCustomer: boolean; emptyLines: number }>();
+  const others: string[] = [];
+  for (const w of warnings) {
+    const m = /^注文\s+(\S+?)(?:\s+行\s+\S+)?:\s*(.+)$/.exec(w);
+    if (!m) {
+      others.push(w);
+      continue;
+    }
+    const o = byOrder.get(m[1]) ?? { orderId: m[1], noCustomer: false, emptyLines: 0 };
+    if (/得意先が空/.test(m[2])) o.noCustomer = true;
+    else if (/商品が空/.test(m[2])) o.emptyLines++;
+    else others.push(w);
+    byOrder.set(m[1], o);
+  }
+  return { incomplete: [...byOrder.values()].filter((o) => o.noCustomer || o.emptyLines), others };
+}

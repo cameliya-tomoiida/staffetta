@@ -1,3 +1,4 @@
+import { toMastersIfReady } from "@/components/admin/to-masters";
 import { AdminPage } from "@/components/admin/AdminPage";
 import type { ColumnDef, Row } from "@/components/admin/types";
 import { doughRecipes } from "@/data/production";
@@ -7,6 +8,7 @@ export const metadata = { title: "レシピと工程｜マスタ管理" };
 
 // TODO(③): 生地ごとの配合（材料と％）と工程（時間・人数・設備・CCP）を編集できる形に。TODO(①⑤): onSave・onImport
 export default function RecipesAdmin() {
+  toMastersIfReady(["doughs", "recipes", "steps"]); // ⑤の /masters に画面ができたら、そちらへ
   const columns: ColumnDef[] = [
     { key: "id", label: "コード", required: true },
     { key: "name", label: "生地の名前", required: true },

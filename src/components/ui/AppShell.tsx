@@ -79,7 +79,7 @@ function Brand({ factory }: { factory: string }) {
 
 function SideMenu({ path, onPick }: { path: string; onPick?: () => void }) {
   return (
-    <nav aria-label="メニュー" className="space-y-4">
+    <nav aria-label="メニュー" className="space-y-3">
       {MENU.map((g) => (
         <div key={g.title}>
           <div className="mb-1 border-b border-rule px-3 pb-1 text-sm font-black tracking-wider text-ink-faint">{g.title}</div>
@@ -92,7 +92,7 @@ function SideMenu({ path, onPick }: { path: string; onPick?: () => void }) {
                     href={it.href}
                     onClick={onPick}
                     aria-current={on ? "page" : undefined}
-                    className={`flex min-h-12 items-center border-l-4 px-3 font-bold ${
+                    className={`flex min-h-10 items-center border-l-4 px-3 font-bold ${
                       on ? "border-crust-600 bg-crust-50 text-crust-700" : "border-transparent text-ink hover:bg-cream"
                     }`}
                   >
@@ -128,14 +128,17 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
     <div className="flex min-h-full">
       {/* 左のメニュー（タブレット横以上） */}
       {!folded && (
-        <aside className="no-print sticky top-0 hidden h-screen w-60 shrink-0 overflow-y-auto border-r border-rule-strong bg-sheet py-4 lg:block">
-          <div className="mb-5 px-3">
-            <Brand factory={factory} />
+        // 白い帯はページの下まで。中身は画面の高さで止めて、はみ出す分はメニューの中でスクロール
+        <aside className="no-print hidden w-60 shrink-0 border-r border-rule-strong bg-sheet lg:block">
+          <div className="sticky top-0 h-screen overflow-y-auto py-4">
+            <div className="mb-4 px-3">
+              <Brand factory={factory} />
+            </div>
+            <SideMenu path={path} />
+            <button type="button" onClick={toggleFold} className="mt-4 ml-3 min-h-11 px-2 text-sm font-bold text-crust-700 underline underline-offset-4">
+              ◀ メニューをたたむ
+            </button>
           </div>
-          <SideMenu path={path} />
-          <button type="button" onClick={toggleFold} className="mt-6 ml-3 min-h-11 px-2 text-sm font-bold text-crust-700 underline underline-offset-4">
-            ◀ メニューをたたむ
-          </button>
         </aside>
       )}
 

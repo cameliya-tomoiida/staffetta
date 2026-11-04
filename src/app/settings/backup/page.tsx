@@ -1,13 +1,17 @@
-import { PageHeader, Notice } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
+import { lastImportAction } from "@/app/settings/actions";
+import { BackupClient } from "./BackupClient";
 
 export const metadata = { title: "バックアップ｜設定" };
+export const dynamic = "force-dynamic";
 
-// TODO(①): データの書き出し（JSON）・取り込み・自動バックアップの一覧
-export default function BackupPage() {
+// 中身（書き出し・取り込み）は①の /api/backup と src/app/settings/actions.ts。②は画面だけ
+export default async function BackupPage() {
+  const last = await lastImportAction();
   return (
     <div>
-      <PageHeader title="バックアップ" lead="注文・FAX・発注書・マスタのデータを、ファイルに書き出したり、戻したりします。" />
-      <Notice tone="info">この画面は準備中です（データの置き場所を新しくしているところです）。</Notice>
+      <PageHeader title="バックアップ" lead="注文・FAX・発注書・マスタのデータを、ファイルに書き出したり、そのファイルから戻したりします。" />
+      <BackupClient last={last ? JSON.parse(JSON.stringify(last)) : null} />
     </div>
   );
 }
