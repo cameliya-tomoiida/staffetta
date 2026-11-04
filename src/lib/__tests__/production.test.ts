@@ -47,8 +47,8 @@ describe("製造計画", () => {
     expect(plan.doughs.map((d) => d.doughId).sort()).toEqual(["DG01", "DG02", "DG03", "DG04", "DG05"]);
     const bread = plan.lines.find((l) => l.line === "bread")!;
     const pizza = plan.lines.find((l) => l.line === "pizza")!;
-    // パン: P01 420 + P05 80 + P02 30 + P03 6
-    expect(bread.pieces).toBe(536);
+    // パン: P01 700 + P02 75 + P05 310 + P06 33 + P03 16
+    expect(bread.pieces).toBe(1134);
     // ピザ: P07 620 + P12 30 + P11 600 + P14 200 + P13 200
     expect(pizza.pieces).toBe(1650);
     // 仕入品（P08〜P10・P17・P18）は製造に入らない
@@ -120,8 +120,9 @@ describe("工程表", () => {
   });
 
   it("得意先マスタに納品時刻が無ければ 8:00", () => {
-    const kokuto = rows.find((r) => r.doughId === "DG02")!; // 黒糖ロールは喫茶店（C04）だけ
-    expect(kokuto.deliveryMinute).toBe(480);
+    // 黒糖ロールを喫茶店（C04、納品時刻の登録なし）だけが頼んだ日
+    const kokuto = buildSchedule(planProduction({ ...day([["P02", 30]]), products: [{ productId: "P02", name: "", unit: "個", pieces: 30, customers: [{ customerId: "C04", pieces: 30, orderIds: [] }] }] }))[0];
+    expect(kokuto).toMatchObject({ deliveryMinute: 480, deliveryCustomerId: "C04" });
     expect(kokuto.steps.at(-1)!.end).toBeLessThanOrEqual(420);
   });
 
