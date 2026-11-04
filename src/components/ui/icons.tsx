@@ -52,7 +52,7 @@ const paths: Record<string, React.ReactNode> = {
       <path d="M7.5 8.5h7l-2-2M16.5 11.5h-7l2 2" />
     </>
   ),
-  // 取引先サイト（きららなど）: ブラウザ
+  // 取引先の発注サイト: ブラウザ
   customer_site: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="1.5" />
