@@ -1,5 +1,5 @@
 "use client";
-import { getPdfjs } from "@/lib/pdfjs";
+import { getPdfjs, pdfDocOptions } from "@/lib/pdfjs";
 import { useEffect, useRef } from "react";
 
 /** 受信箱のサムネイル（1ページ目を小さく描く） */
@@ -9,7 +9,7 @@ export function PdfThumb({ url, rotation = 0 }: { url: string; rotation?: number
     let cancelled = false;
     (async () => {
       const pdfjs = await getPdfjs();
-      const doc = await pdfjs.getDocument({ url }).promise;
+      const doc = await pdfjs.getDocument({ url, ...pdfDocOptions }).promise;
       const page = await doc.getPage(1);
       const viewport = page.getViewport({ scale: 0.6, rotation: (page.rotate + rotation) % 360 });
       const canvas = ref.current;

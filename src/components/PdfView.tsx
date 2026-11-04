@@ -1,5 +1,5 @@
 "use client";
-import { getPdfjs } from "@/lib/pdfjs";
+import { getPdfjs, pdfDocOptions } from "@/lib/pdfjs";
 import { useEffect, useRef, useState } from "react";
 
 /** 元のFAX(PDF)を表示する。rotation で向きを直し、highlight(0〜100%) の高さに帯を出す */
@@ -10,23 +10,33 @@ export function PdfView({ url, rotation, highlight }: { url: string; rotation: n
 
   useEffect(() => {
     let cancelled = false;
+    let task: { cancel: () => void } | null = null;
+    let destroy: (() => void) | null = null;
     (async () => {
       try {
         const pdfjs = await getPdfjs();
-        const doc = await pdfjs.getDocument({ url }).promise;
+        const loading = pdfjs.getDocument({ url, ...pdfDocOptions });
+        destroy = () => void loading.destroy();
+        const doc = await loading.promise;
         const page = await doc.getPage(1);
         const viewport = page.getViewport({ scale: 2, rotation: (page.rotate + rotation) % 360 });
         const canvas = canvasRef.current;
         if (!canvas || cancelled) return;
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        await page.render({ canvas, viewport }).promise;
+        // 前の描画と重ならないように、1つずつ描く（重なると白黒FAXの画像が描かれないことがある）
+        const t = page.render({ canvas, viewport });
+        task = t;
+        await t.promise;
       } catch (e) {
+        if (cancelled || (e instanceof Error && e.name === "RenderingCancelledException")) return;
         setError(e instanceof Error ? e.message : String(e));
       }
     })();
     return () => {
       cancelled = true;
+      task?.cancel();
+      destroy?.();
     };
   }, [url, rotation]);
 
