@@ -249,7 +249,7 @@ function MakeTable({ bs, lang, t, name }: { bs: DoughBatchPlan[]; lang: Lang; t:
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("make_list")}</div>
       {bs.map((b) => (
         <div key={b.doughId} className="border-b border-rule-strong last:border-b-0">
-          <div className="flex flex-wrap items-end justify-between gap-2 bg-crust-50 px-4 py-2">
+          <div className="flex flex-wrap items-end justify-between gap-2 bg-cream px-4 py-2">
             <div>
               <span className="text-xs text-ink-soft">{t("dough")}</span>
               <Name n={name(b.name)} lang={lang} big />
@@ -296,6 +296,11 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
   const used = STEPS.filter((k) => todaySteps.some((s) => s.key === k));
   const spaced = !["ja", "ja-easy", "zh", "ko"].includes(lang);
   // 「翌1:00」の「翌」は日本語なので、ほかの言語では「+1 1:00」にする
+  // 目盛りは時刻だけ（前日・翌日の言葉は長くて重なるため）。前日・翌日の分は時刻の表の方で言葉つきで出す
+  const axis = (m: number) => {
+    const r = ((Math.round(m) % 1440) + 1440) % 1440;
+    return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
+  };
   // 「翌1:00」「前日23:52」の「翌」「前日」は日本語なので、辞書の言葉に置きかえる
   const ft = (m: number) =>
     lang === "ja" ? fmtTime(m) : fmtTime(m).replace("翌", `${t("next_day")} `).replace("前日", `${t("prev_day_time")} `);
@@ -316,7 +321,7 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
           <div className="relative ml-36 h-6 text-xs text-ink-soft">
             {hours.map((h) => (
               <span key={h} className="num absolute -translate-x-1/2 whitespace-nowrap" style={{ left: pct(h) }}>
-                {ft(h)}
+                {axis(h)}
               </span>
             ))}
           </div>
