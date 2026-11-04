@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { readFaxAction } from "@/app/actions";
 import { receiveFax } from "@/lib/fax-inbound";
+import { nowIso } from "@/lib/clock";
 
 // Google Apps Script（fax-inbox@example.com のラベル「FAX受信」）からFAXを受け取る口。
 // 認証: ヘッダー X-Hub-Token と .env.local の FAX_INBOUND_TOKEN が一致すること。
@@ -27,7 +28,10 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ ok: false, error: "bad request" }, { status: 400 });
   try {
-    const result = await receiveFax({ ...parsed.data, via: parsed.data.via ?? "gmail" });
+    const via = parsed.data.via ?? "gmail";
+    // テスト送信（fax:simulate）は、受け取った時刻をデモの時計（DEMO_NOW）にそろえる。本物の Gmail はメールの日時のまま
+    const receivedAt = via === "simulate" ? nowIso() : parsed.data.receivedAt;
+    const result = await receiveFax({ ...parsed.data, receivedAt, via });
     // 届いたらすぐ読み取りを始める（返事は待たない）
     for (const id of result.faxIds) void readFaxAction(id).catch(() => undefined);
     revalidatePath("/", "layout");

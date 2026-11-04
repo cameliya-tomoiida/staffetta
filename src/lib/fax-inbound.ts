@@ -1,6 +1,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { nowMs } from "./clock";
 import { FAX_INBOX_DIR, updateDb } from "./store";
 import type { FaxDoc } from "./types";
 
@@ -25,7 +26,7 @@ export async function receiveFax(input: InboundFax): Promise<{ duplicated: boole
   return updateDb(async (db) => {
     if (db.importedMessageIds.includes(input.messageId)) return { duplicated: true, faxIds: [] };
     const faxIds: string[] = [];
-    const stamp = Date.now().toString(36);
+    const stamp = nowMs().toString(36);
     for (const [i, a] of pdfs.entries()) {
       const id = `R${stamp}${i}`;
       const buf = Buffer.from(a.base64, "base64");

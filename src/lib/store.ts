@@ -67,7 +67,7 @@ export function updateDb<T>(fn: (db: Db) => T | Promise<T>): Promise<T> {
 
 /**
  * デモを最初の状態に戻す（受信箱の「デモを最初から」ボタン）。npm run demo:reset と同じ状態:
- * 受信箱 F001〜F005・確定済み DO-01〜DO-18・発注書なし・受け取ったFAXのPDFなし・LINEのひも付けなし。
+ * 受信箱 F001〜F005・確定済み DO-01〜DO-20・発注書なし・受け取ったFAXのPDFなし・LINEのひも付けなし。
  */
 export async function resetDb() {
   await updateDb((db) => {

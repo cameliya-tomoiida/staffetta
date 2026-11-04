@@ -1,4 +1,5 @@
 "use server";
+import { nowIso, nowMs } from "@/lib/clock";
 import { revalidatePath } from "next/cache";
 import { customers } from "@/data/master";
 import { findProduct as productById } from "@/lib/catalog";
@@ -7,7 +8,8 @@ import { readFax } from "@/lib/fax-reader";
 import { readDb, resetDb, updateDb } from "@/lib/store";
 import type { ConfirmedLine, FaxDoc } from "@/lib/types";
 
-const now = () => new Date().toISOString();
+// 時刻は共通の時計から（撮影日は DEMO_NOW で「今日」をそろえる）
+const now = () => nowIso();
 const isOrderKind = (f: FaxDoc) => f.read?.kind === "order" || f.read?.kind === "provisional_order";
 
 /** FAXをClaudeで読み取る。注文・仮発注なら納品日ごとに「要確認」の注文を作る（変更FAX・注文以外は作らない） */
@@ -266,7 +268,7 @@ export async function addManualOrderAction(input: {
   if (!p || input.quantity <= 0 || !input.deliveryDate || !customers.some((c) => c.id === input.customerId)) throw new Error("入力を確認してください");
   const at = now();
   const order: Order = {
-    id: `M${Date.now()}`,
+    id: `M${nowMs()}`,
     intent: "new",
     customerId: input.customerId,
     deliveryDate: input.deliveryDate,
@@ -276,7 +278,7 @@ export async function addManualOrderAction(input: {
     confirmedBy: input.who,
     edits: [],
     source: { channel: input.channel, refs: [{ kind: "manual" }], receivedAt: at },
-    lines: [{ id: `M${Date.now()}-0`, productId: p.id, quantity: input.quantity, unit: p.unit, piecesPerUnit: 1, pieces: input.quantity, confidence: 1, edits: [] }],
+    lines: [{ id: `M${nowMs()}-0`, productId: p.id, quantity: input.quantity, unit: p.unit, piecesPerUnit: 1, pieces: input.quantity, confidence: 1, edits: [] }],
   };
   await updateDb((db) => {
     db.orders.push(order);
