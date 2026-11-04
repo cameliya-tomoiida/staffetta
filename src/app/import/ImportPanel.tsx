@@ -86,8 +86,8 @@ export function ImportPanel({ samples }: Props) {
         </section>
 
         <section className="card space-y-2 p-4">
-          <h2 className="text-lg font-black">きらら（専用サイトの CSV）</h2>
-          <p className="text-sm text-ink-soft">サイトから落とした CSV を入れると、事業所ごとの注文と、振り分け表（ふじみ本発注・ふじみ前日・自社本・包装・菓子パン・ひので）を作ります。</p>
+          <h2 className="text-lg font-black">得意先の専用サイト（CSV）</h2>
+          <p className="text-sm text-ink-soft">あおい医療フードサービスの発注サイトから落とした CSV を入れると、事業所ごとの注文と、振り分け表（仕入先への本発注・前日分・自社製造・包装・菓子パン）を作ります。</p>
           <div className="flex flex-wrap gap-2">
             {samples.kirara.map((s) => (
               <button key={s} className={sub} disabled={!!busy} onClick={() => run("kirara", s, { sample: s })}>{s}</button>
@@ -146,13 +146,13 @@ function ResultView({ title, data }: { title: string; data: unknown }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left">
-              <th>振り分け先</th><th>品目</th><th className="text-right">パック</th><th className="text-right">個数</th><th className="text-right">前回との差</th>
+              <th>振り分け先</th><th>行き先（便・届く日）</th><th>品目</th><th className="text-right">パック</th><th className="text-right">個数</th><th className="text-right">前回との差</th>
             </tr>
           </thead>
           <tbody>
-            {(d.routing as { destLabel: string; shortName: string; packs: number; pieces: number; diff: number | null; productId: string }[]).map((r, i) => (
+            {(d.routing as { destLabel: string; route: string; shortName: string; packs: number; pieces: number; diff: number | null; productId: string }[]).map((r, i) => (
               <tr key={i} className={`border-t border-dashed border-rule ${r.productId ? "" : "bg-review-bg"}`}>
-                <td>{r.destLabel}</td><td>{r.shortName}</td><td className="text-right">{r.packs}</td><td className="text-right">{r.pieces}</td>
+                <td>{r.destLabel}</td><td className="text-sm">{r.route}</td><td>{r.shortName}</td><td className="text-right">{r.packs}</td><td className="text-right">{r.pieces}</td>
                 <td className={`text-right ${r.diff ? "font-bold text-alert-ink" : ""}`}>{r.diff == null ? "—" : r.diff > 0 ? `+${r.diff}` : r.diff}</td>
               </tr>
             ))}

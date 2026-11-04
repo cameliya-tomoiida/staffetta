@@ -5,7 +5,9 @@ import { OrdersClient } from "./OrdersClient";
 
 export const metadata = { title: "受注一覧｜受発注ハブ" };
 
-export default async function OrdersPage() {
+export default async function OrdersPage(props: PageProps<"/orders">) {
+  const q = await props.searchParams;
+  const st = ["needs_review", "provisional", "confirmed", "cancelled"].includes(String(q.status)) ? (q.status as "needs_review") : "all";
   const [{ orders, today }, db] = await Promise.all([allOrders(), readDb()]);
   // 保存されている注文（＝確定ボタンで確定できる注文。見本の注文は確定できない）
   const storedIds = db.orders.map((o) => o.id);
@@ -15,5 +17,5 @@ export default async function OrdersPage() {
       .filter((o) => o.source.channel === "line" && o.status === "confirmed" && !o.source.extra?.lineNotifiedAt)
       .map((o) => [o.id, confirmationText(o)]),
   );
-  return <OrdersClient orders={orders} today={today} storedIds={storedIds} linePreviews={linePreviews} />;
+  return <OrdersClient key={st} orders={orders} today={today} storedIds={storedIds} linePreviews={linePreviews} initialStatus={st} />;
 }

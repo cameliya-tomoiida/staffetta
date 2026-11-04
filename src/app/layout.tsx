@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import "./globals.css";
+import "./print.css";
 import { FACTORY } from "@/data/master";
 import { AppNav } from "@/components/ui/AppNav";
+import { TodayBar } from "@/components/ui/TodayBar";
 
 export const metadata: Metadata = {
   title: "受発注ハブ",
@@ -16,15 +18,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ja" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
-        <header className="no-print sticky top-0 z-20 border-b border-rule-strong bg-sheet">
-          <div className="mx-auto flex max-w-7xl flex-col gap-x-6 px-4 pt-2 sm:px-5 md:flex-row md:items-end">
-            <Link href="/" className="flex shrink-0 items-center gap-2.5 pb-2">
-              <span className="grid h-10 w-10 place-items-center rounded-md border-2 border-crust-600 text-lg font-black text-crust-600">受</span>
-              <span className="leading-tight">
-                <span className="block text-lg font-black tracking-wider">受発注ハブ</span>
-                <span className="block text-xs text-ink-faint">{FACTORY.name}</span>
-              </span>
-            </Link>
+        <header className="no-print z-20 md:sticky md:top-0 border-b border-rule-strong bg-sheet">
+          <div className="mx-auto max-w-7xl px-4 pt-2 sm:px-5">
+            {/* 上の段: 名前と「今日やること」 */}
+            <div className="flex flex-col gap-x-5 md:flex-row md:items-center">
+              <Link href="/" className="flex shrink-0 items-center gap-2.5 pb-2">
+                <span className="grid h-10 w-10 place-items-center rounded-md border-2 border-crust-600 text-lg font-black text-crust-600">受</span>
+                <span className="leading-tight">
+                  <span className="block text-lg font-black tracking-wider">受発注ハブ</span>
+                  <span className="block text-xs text-ink-faint">{FACTORY.name}</span>
+                </span>
+              </Link>
+              <TodayBar />
+            </div>
+            {/* 下の段: メニュー（受ける → まとめる → 作る → 頼む） */}
             <AppNav />
           </div>
         </header>

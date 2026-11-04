@@ -4,14 +4,25 @@
 
 /** 振り分け先（製造部門）。現役マクロのシート名に合わせた分け方 */
 export const KIRARA_DESTS = [
-  { key: "fujimi_main", label: "ふじみ 本発注", note: "ふじみ（仕入先）にそのまま発注する品" },
-  { key: "fujimi_prev", label: "ふじみ 前日", note: "前日にふじみから入れて、バラ・2個入に包み直す品" },
+  { key: "fujimi_main", label: "ふじみ 本発注", note: "ふじみ製パン（仕入先）にそのまま発注する品" },
+  { key: "fujimi_prev", label: "ふじみ 前日", note: "前日にふじみ製パンから入れて、バラ・2個入に包み直す品" },
   { key: "self_main", label: "自社 本", note: "自社製造（食パン・ロール）" },
   { key: "self_pack", label: "自社 包装", note: "自社で包装（バラ・小分け）" },
   { key: "kashipan", label: "菓子パン", note: "自社の菓子パン" },
-  { key: "hinode", label: "ひので", note: "ひので（仕入先）に発注する品" },
+  { key: "hinode", label: "ひので", note: "ひので製パン（仕入先）に発注する品" },
 ] as const;
 export type KiraraDest = (typeof KIRARA_DESTS)[number]["key"];
+
+/**
+ * 仕入先から買う振り分け先の行き先。発注書そのものは③の通常の発注書（buildProductPurchaseOrders）でまとめて作る。
+ * ここは「どの仕入先から・いつ届く分か」を画面と注文の行に書くためだけに使う。
+ * dayOffset: センター納品日から何日ずらして届くか（前日分は -1）
+ */
+export const KIRARA_SUPPLY: Partial<Record<KiraraDest, { supplierId: string; dayOffset: number }>> = {
+  fujimi_main: { supplierId: "S07", dayOffset: 0 },
+  fujimi_prev: { supplierId: "S07", dayOffset: -1 },
+  hinode: { supplierId: "S03", dayOffset: 0 },
+};
 
 export interface KiraraItem {
   /** きらら側の商品コード（架空） */

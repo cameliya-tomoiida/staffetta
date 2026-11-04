@@ -5,10 +5,14 @@ import "server-only";
 //  2. コード変換表で、振り分け先（ふじみ本発注・ふじみ前日・自社本・自社包装・菓子パン・ひので）ごとに合計する
 //  3. 前回取り込んだ数と比べて「数量差」を出す（朝の分 → 昼の確定分）
 //  4. 札（センター納品日・品名・数）の一覧を出す
+//  5. 仕入先から買う分（本発注・前日・ひので）は、行き先（仕入先・便・届く日）を表と注文の行に書く。
+//     発注書は作らない（確定した注文から③の通常の発注書がまとめて作る。二重にしないため）
 import { createHash } from "node:crypto";
+import { deliveryFor, findSupplier } from "@/lib/catalog";
+import { addDays } from "@/lib/purchase";
 import { readDb } from "@/lib/store";
 import { decodeText, parseCsv, readChannelState, saveImported, toIsoDate, writeChannelState, type ImportedOrder } from "../common";
-import { KIRARA_COL as C, KIRARA_DESTS, KIRARA_QTY_SCALE, kiraraItem, type KiraraDest } from "./config";
+import { KIRARA_COL as C, KIRARA_DESTS, KIRARA_SUPPLY, KIRARA_QTY_SCALE, kiraraItem, type KiraraDest } from "./config";
 
 export const KIRARA_CUSTOMER_ID = "C08";
 
@@ -56,6 +60,8 @@ export function parseKiraraCsv(buf: Uint8Array): KiraraRow[] {
 export interface RoutingRow {
   dest: KiraraDest;
   destLabel: string;
+  /** 行き先（仕入先・便・届く日 / 自社製造） */
+  route: string;
   itemCode: string;
   shortName: string;
   productId: string;
@@ -79,8 +85,22 @@ export interface KiraraImportResult {
 
 const hash = (s: string) => createHash("sha1").update(s).digest("hex").slice(0, 8);
 
+/**
+ * 行き先の説明。仕入先から買う分は「仕入先 便・届く日」、自社で作る分は「自社で製造」。
+ * 発注書は③の通常の発注書で作る（ここは表示と注文の行のメモだけ）。
+ */
+export function routeOf(dest: KiraraDest, centerDate: string): string {
+  const sup = KIRARA_SUPPLY[dest];
+  if (!sup) return `自社で製造（${centerDate} 納品）`;
+  const s = findSupplier(sup.supplierId);
+  const bin = deliveryFor(sup.supplierId, KIRARA_CUSTOMER_ID)?.name ?? "";
+  const name = (s?.name ?? sup.supplierId).replace(/（[^）]*）/, "");
+  return `${name} ${bin}・${addDays(centerDate, sup.dayOffset)} 着${sup.dayOffset < 0 ? "（前日）" : ""}`;
+}
+
 /** 振り分け表（振り分け先 × 品目の合計） */
 export function routingTable(rows: KiraraRow[], prev?: Record<string, number>): RoutingRow[] {
+  const centerDate = rows[0]?.centerDate ?? "";
   const sum = new Map<string, number>();
   for (const r of rows) sum.set(r.itemCode, (sum.get(r.itemCode) ?? 0) + r.qty);
   const codes = new Set([...sum.keys(), ...Object.keys(prev ?? {})]);
@@ -92,6 +112,7 @@ export function routingTable(rows: KiraraRow[], prev?: Record<string, number>): 
     out.push({
       dest: item?.dest ?? "self_main",
       destLabel: item ? KIRARA_DESTS.find((d) => d.key === item.dest)!.label : "（コード表になし）",
+      route: item ? routeOf(item.dest, centerDate) : "",
       itemCode: code,
       shortName: item?.shortName ?? rows.find((r) => r.itemCode === code)?.itemName ?? code,
       productId: item?.productId ?? "",
@@ -152,7 +173,7 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
         ]
           .filter(Boolean)
           .join("・"),
-        note: item ? `振り分け: ${KIRARA_DESTS.find((d) => d.key === item.dest)!.label}` : undefined,
+        note: item ? `振り分け: ${KIRARA_DESTS.find((d) => d.key === item.dest)!.label}（${routeOf(item.dest, r.centerDate)}）` : undefined,
       };
     });
     // 確定済みにあって、今回の CSV から消えた品 → 0 で入れる（取消の候補）

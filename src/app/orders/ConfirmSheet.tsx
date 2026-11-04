@@ -10,6 +10,7 @@ import { NumPad } from "@/components/NumPad";
 import { Button, Icon, Notice } from "@/components/ui";
 import { notifyLineConfirmedAction } from "@/lib/channels/line/actions";
 import { confirmOrderAction } from "./actions";
+import { easyReasons } from "@/components/ui/wording";
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -100,12 +101,12 @@ export function ConfirmButton({ order, who, custName }: { order: Order; who: str
                     </button>
                   </div>
                   {changed && <div className="mt-1 text-right text-sm text-crust-700">読んだ値 {l.quantity}{l.unit} → {v}{l.unit}</div>}
-                  {l.read?.attention && (
-                    <div className="mt-1 flex items-start gap-1.5 text-sm font-bold text-review-ink">
-                      <Icon.alert className="mt-0.5 h-4 w-4 shrink-0" />
-                      {l.read.attention}
+                  {easyReasons(l.read?.attention).map((t, i) => (
+                    <div key={i} className="mt-1 flex items-start gap-1.5 font-bold text-review-ink">
+                      <Icon.alert className="mt-1 h-4 w-4 shrink-0" />
+                      {t}
                     </div>
-                  )}
+                  ))}
                 </li>
               );
             })}
