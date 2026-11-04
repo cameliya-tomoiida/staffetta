@@ -3,31 +3,54 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button, buttonClass, fmtDateTime, Notice, Tag } from "@/components/ui";
-import type { ColumnDef, Preview, RefIndex } from "@/lib/masters/csv";
+import type { ColumnType } from "@/lib/masters/columns";
+import type { Preview } from "@/lib/masters/csv";
 
 type Rec = Record<string, unknown> & { id: string; disabled?: boolean };
+type RefIndex = Record<string, { id: string; name?: string }[]>;
+/** 画面に渡す列の説明（③の ColumnDef から関数を除いたもの） */
+export interface ClientColumn {
+  key: string;
+  label: string;
+  type: ColumnType;
+  required: boolean;
+  options?: { value: string; label: string }[];
+  ref?: string;
+  help?: string;
+  example?: string;
+}
 const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 
-const get = (o: unknown, key: string): unknown => key.split(".").reduce<unknown>((x, k) => (x == null ? undefined : (x as Record<string, unknown>)[k]), o);
-function show(c: ColumnDef, v: unknown, refs: RefIndex): string {
+/** 値を CSV と同じ書き方の文字にする（フォームの初期値・一覧の表示） */
+function cellText(c: ClientColumn, v: unknown): string {
   if (v == null || v === "") return "";
-  if (c.type === "boolean") return v ? "はい" : "いいえ";
-  if (c.type === "enum") return c.options?.find((o) => o.value === v)?.label ?? String(v);
-  if (c.type === "ref") {
-    const r = refs[c.ref ?? ""]?.find((x) => x.id === v);
-    return r ? `${r.name ?? r.id}` : String(v);
+  switch (c.type) {
+    case "boolean":
+      return v ? "はい" : "いいえ";
+    case "enum":
+      return c.options?.find((o) => o.value === v)?.label ?? String(v);
+    case "list":
+    case "textlist":
+      return Array.isArray(v) ? v.join(";") : String(v);
+    case "map":
+      return typeof v === "object" ? Object.entries(v as Record<string, unknown>).map(([k, x]) => `${k}:${x}`).join(";") : String(v);
+    default:
+      return String(v);
   }
-  return String(v);
+}
+/** 一覧の表示（参照は名前も出す） */
+function show(c: ClientColumn, v: unknown, refs: RefIndex): string {
+  const t = cellText(c, v);
+  if (c.ref && t) {
+    const r = refs[c.ref]?.find((x) => x.id === v);
+    return r?.name ? `${r.id} ${r.name}` : t;
+  }
+  return t;
 }
 
-/** 一覧に出す列（多すぎると読めないので、マスタごとに選ぶ） */
-const LIST_KEYS: Record<string, string[]> = {
-  suppliers: ["id", "name", "method", "fax", "email", "minLot", "deliveries.0.cutoff", "deliveries.0.leadDays", "deliveries.1.cutoff"],
-  materials: ["id", "name", "supplierId", "orderUnitLabel", "minLot", "leadDays", "stock", "safetyStock", "location"],
-  packaging: ["id", "name", "spec", "supplierId", "orderUnitLabel", "minLot", "leadDays", "stock", "safetyStock", "location"],
-};
-
-export function MasterClient({ name, label, columns, rows, refs }: { name: string; label: string; columns: ColumnDef[]; rows: Rec[]; refs: RefIndex }) {
+export function MasterClient({ name, label, columns, listKeys, keyColumns, hasStock, rows, refs }: {
+  name: string; label: string; columns: ClientColumn[]; listKeys: string[]; keyColumns: string[]; hasStock: boolean; rows: Rec[]; refs: RefIndex;
+}) {
   const router = useRouter();
   const [who, setWho] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,12 +58,12 @@ export function MasterClient({ name, label, columns, rows, refs }: { name: strin
   const [editing, setEditing] = useState<{ id?: string; values: Record<string, string> } | null>(null);
   const [formErrors, setFormErrors] = useState<{ column: string; message: string }[]>([]);
   const [counting, setCounting] = useState<{ id: string; value: string } | null>(null);
-  const [preview, setPreview] = useState<(Preview<Rec> & { hash: string }) | null>(null);
+  const [preview, setPreview] = useState<(Preview & { hash: string }) | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const hasStock = name === "materials" || name === "packaging";
-  const listCols = (LIST_KEYS[name] ?? columns.map((c) => c.key)).map((k) => columns.find((c) => c.key === k)!).filter(Boolean);
+  const listCols = listKeys.map((k) => columns.find((c) => c.key === k)).filter((c): c is ClientColumn => !!c);
+  const get = (r: Rec, key: string) => r[key];
   const visible = rows.filter((r) => showDisabled || !r.disabled);
 
   async function post(body: Record<string, unknown> | FormData) {
@@ -96,7 +119,7 @@ export function MasterClient({ name, label, columns, rows, refs }: { name: strin
   // ── 1件の編集 ──
   const openEdit = (r?: Rec) => {
     setFormErrors([]);
-    setEditing({ id: r?.id, values: Object.fromEntries(columns.map((c) => [c.key, r ? show({ ...c, type: c.type === "ref" ? "string" : c.type }, get(r, c.key), refs) : ""])) });
+    setEditing({ id: r?.id, values: Object.fromEntries(columns.map((c) => [c.key, r ? cellText(c, r[c.key]) : ""])) });
   };
   const saveEdit = () =>
     editing &&
@@ -161,7 +184,7 @@ export function MasterClient({ name, label, columns, rows, refs }: { name: strin
                     </td>
                     <td className="num pr-2">{r.id ?? ""}</td>
                     <td>
-                      {r.kind === "add" && <span>{String(r.record.name ?? "")}</span>}
+                      {r.kind === "add" && <span>{String(r.record.name ?? r.record.label ?? r.record.header ?? "")}</span>}
                       {r.kind === "update" && r.changes.map((c) => <div key={c.column}>{c.column}：{c.before || "（空）"} → <b>{c.after || "（空）"}</b></div>)}
                       {r.kind === "error" && r.errors.map((e, i) => <div key={i} className="font-bold text-alert-ink">{e.column && `${e.column}：`}{e.message}</div>)}
                     </td>
@@ -186,21 +209,21 @@ export function MasterClient({ name, label, columns, rows, refs }: { name: strin
           <h2 className="text-xl font-black">{editing.id ? `${label}を直す（${editing.id}）` : `${label}を追加`}</h2>
           {formErrors.map((e, i) => <Notice key={i} tone="alert">{e.column && `${e.column}：`}{e.message}</Notice>)}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {columns.filter((c) => !(editing.id && c.key === "id")).map((c) => (
+            {columns.filter((c) => !(editing.id && keyColumns.includes(c.key))).map((c) => (
               <label key={c.key} className="block text-sm font-bold text-ink-soft">
-                {c.label}{c.required && <span className="text-alert-ink">＊</span>}{c.unit && <span className="font-normal">（{c.unit}）</span>}
-                {c.type === "enum" || c.type === "boolean" || c.type === "ref" ? (
+                {c.label}{c.required && <span className="text-alert-ink">＊</span>}
+                {c.type === "enum" || c.type === "boolean" || c.ref ? (
                   <select className={field} value={editing.values[c.key] ?? ""} onChange={(e) => setEditing({ ...editing, values: { ...editing.values, [c.key]: e.target.value } })}>
                     <option value="">（なし）</option>
                     {c.type === "enum" && c.options?.map((o) => <option key={o.value} value={o.label}>{o.label}</option>)}
                     {c.type === "boolean" && ["はい", "いいえ"].map((o) => <option key={o}>{o}</option>)}
-                    {c.type === "ref" && refs[c.ref ?? ""]?.map((o) => <option key={o.id} value={o.id}>{o.id} {o.name}</option>)}
+                    {c.ref && refs[c.ref]?.map((o) => <option key={o.id} value={o.id}>{o.id} {o.name ?? ""}</option>)}
                   </select>
                 ) : (
                   <input
                     className={field}
                     inputMode={c.type === "number" || c.type === "integer" ? "decimal" : undefined}
-                    placeholder={c.example ?? (c.key === "id" ? "空なら自動" : "")}
+                    placeholder={c.key === "id" ? "空なら自動で振ります" : (c.example ?? "")}
                     value={editing.values[c.key] ?? ""}
                     onChange={(e) => setEditing({ ...editing, values: { ...editing.values, [c.key]: e.target.value } })}
                   />

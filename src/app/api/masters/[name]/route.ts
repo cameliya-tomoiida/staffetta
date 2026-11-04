@@ -1,4 +1,4 @@
-// マスタの API（⑤）。name は suppliers | materials | packaging。
+// マスタの API（⑤）。name は src/lib/masters/screens.ts の SCREEN_NAMES（仕入先・便・材料・包材・取り込みの設定）。
 //   GET  ?format=csv            … 今の登録を CSV で書き出す（Excel で開ける UTF-8 BOM）。&encoding=shift_jis も可
 //   GET  ?format=template       … 空のテンプレート CSV
 //   GET  ?format=history&id=..  … 変更の記録
@@ -10,7 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  applyUpload, exportFile, history, isMasterName, previewUpload, remove, restore, saveOne, stocktake, templateFile,
+  applyUpload, exportFile, history, isScreenName, previewUpload, remove, restore, saveOne, stocktake, templateFile,
 } from "@/lib/masters/service";
 
 const csvResponse = (buf: Buffer, fileName: string) =>
@@ -22,13 +22,13 @@ const csvResponse = (buf: Buffer, fileName: string) =>
   });
 
 const LABEL: Record<string, string> = {
-  suppliers: "仕入先", materials: "材料", packaging: "包材",
+  suppliers: "仕入先", supplierDeliveries: "仕入先の便", materials: "材料", packaging: "包材",
   sheet_sources: "読みに行くシート", sheet_columns: "シートの列と商品", kirara_items: "専用サイトのコード表", infomart_headers: "インフォマートの列名",
 };
 
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/masters/[name]">) {
   const { name } = await ctx.params;
-  if (!isMasterName(name)) return NextResponse.json({ error: "知らないマスタです" }, { status: 404 });
+  if (!isScreenName(name)) return NextResponse.json({ error: "知らないマスタです" }, { status: 404 });
   const q = req.nextUrl.searchParams;
   const format = q.get("format");
   if (format === "csv") {
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/masters/[nam
 
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[name]">) {
   const { name } = await ctx.params;
-  if (!isMasterName(name)) return NextResponse.json({ error: "知らないマスタです" }, { status: 404 });
+  if (!isScreenName(name)) return NextResponse.json({ error: "知らないマスタです" }, { status: 404 });
   try {
     let result: unknown;
     if ((req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
@@ -59,10 +59,8 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
       if (b.action === "save") result = await saveOne(name, b.id, b.input ?? {}, who);
       else if (b.action === "delete") result = await remove(name, b.id ?? "", who);
       else if (b.action === "restore") result = await restore(name, b.id ?? "", who);
-      else if (b.action === "stocktake") {
-        if (name !== "materials" && name !== "packaging") throw new Error("棚卸は材料・包材だけです");
-        result = await stocktake(name, b.id ?? "", Number(b.counted), who, b.note);
-      } else throw new Error(`知らない操作です: ${b.action}`);
+      else if (b.action === "stocktake") result = await stocktake(name, b.id ?? "", Number(b.counted), who, b.note);
+      else throw new Error(`知らない操作です: ${b.action}`);
     }
     revalidatePath(`/masters/${name}`);
     return NextResponse.json(result ?? { ok: true });

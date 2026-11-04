@@ -1,65 +1,61 @@
-// マスタの窓口（service.ts）を、①の SQLite（メモリ上）で通しで確かめる。
+// マスタの窓口（service.ts）を、①の SQLite（メモリ上。vitest.config の HUB_DB_PATH）で通しで確かめる。
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { beforeAll, describe, expect, it, vi } from "vitest";
-
-vi.mock("server-only", () => ({}));
-beforeAll(() => {
-  process.env.HUB_DB_PATH = ":memory:";
-});
+import { describe, expect, it } from "vitest";
 
 const file = (n: string) => new Uint8Array(readFileSync(path.join(process.cwd(), "public", "samples", "masters", n)));
 
 describe("マスタの窓口（SQLite）", () => {
-  it("初期値が入り、CSV はプレビューでは保存されず、確定で保存される。記録が残る", async () => {
+  it("③のサンプルが入り、CSV はプレビューでは保存されず、確定で保存される。記録が残る", async () => {
     const s = await import("../service");
-    const before = await s.list("materials");
-    expect(before.find((m) => m.id === "M01")?.stock).toBe(60);
+    const before = await s.list("suppliers");
+    expect(before.find((r) => r.id === "S01")?.cutoff).toBe("15:00");
 
-    const buf = file("材料マスタ_追加と在庫.csv");
-    const p = await s.previewUpload("materials", buf, "材料.csv");
-    expect(p.counts).toMatchObject({ add: 3, update: 1, error: 0 });
-    expect((await s.list("materials")).length).toBe(before.length); // まだ保存していない
+    const buf = file("01_仕入先マスタ.csv");
+    const p = await s.previewUpload("suppliers", buf, "仕入先.csv");
+    expect(p.counts).toMatchObject({ add: 10, update: 1, error: 0 });
+    expect((await s.list("suppliers")).length).toBe(before.length); // まだ保存していない
 
-    await expect(s.applyUpload("materials", buf, "材料.csv", "")).rejects.toThrow(/人/);
-    await expect(s.applyUpload("materials", buf, "材料.csv", "専務 はやし", "違うハッシュ")).rejects.toThrow(/違います/);
-    const r = await s.applyUpload("materials", buf, "材料.csv", "専務 はやし", p.hash);
-    expect(r).toEqual({ added: 3, updated: 1 });
-    const after = await s.list("materials");
-    expect(after.length).toBe(before.length + 3);
-    expect(after.find((m) => m.id === "M01")?.stock).toBe(45);
-    const h = await s.history("materials", "M01");
-    expect(h[0]).toMatchObject({ action: "update", who: "専務 はやし（CSV: 材料.csv）" });
+    await expect(s.applyUpload("suppliers", buf, "仕入先.csv", "")).rejects.toThrow(/人/);
+    await expect(s.applyUpload("suppliers", buf, "仕入先.csv", "専務 はやし", "違うハッシュ")).rejects.toThrow(/違います/);
+    expect(await s.applyUpload("suppliers", buf, "仕入先.csv", "専務 はやし", p.hash)).toEqual({ added: 10, updated: 1 });
+    expect((await s.list("suppliers")).find((r) => r.id === "S01")?.cutoff).toBe("12:00");
+    const h = await s.history("suppliers", "S01");
+    expect(h[0]).toMatchObject({ action: "update", who: "専務 はやし（CSV: 仕入先.csv）" });
+
+    // 参照（材料 → 仕入先）が、入れたばかりの仕入先でも通る
+    const mat = await s.previewUpload("materials", file("03_材料マスタ.csv"), "材料.csv");
+    expect(mat.counts.error).toBe(0);
   });
 
   it("エラーのある CSV は確定できない", async () => {
     const s = await import("../service");
-    const buf = file("包材マスタ_エラーあり.csv");
-    await expect(s.applyUpload("packaging", buf, "x.csv", "事務 たなか")).rejects.toThrow(/確定できません/);
+    await expect(s.applyUpload("packaging", file("06_包材マスタ_エラーあり.csv"), "x.csv", "事務 たなか")).rejects.toThrow(/確定できません/);
   });
 
-  it("1件の追加・修正（CSV と同じ検証）、棚卸、使わない／戻す", async () => {
+  it("1件の追加（ID は自動）・修正、棚卸、使わない／戻す", async () => {
     const s = await import("../service");
-    const ng = await s.saveOne("suppliers", undefined, { name: "テスト油（デモ）", method: "FAX" }, "事務 たなか");
-    expect(ng.ok).toBe(false);
-    const ok = await s.saveOne("suppliers", undefined, { name: "テスト油（デモ）", method: "FAX", fax: "000-1" }, "事務 たなか");
+    const ng = await s.saveOne("suppliers", undefined, { name: "テスト油（デモ）" }, "事務 たなか");
+    expect(ng.ok).toBe(false); // 発注方法が必須
+    const ok = await s.saveOne("suppliers", undefined, { name: "テスト油（デモ）", method: "FAX", contact: "FAX 000-1" }, "事務 たなか");
     expect(ok.ok && ok.record.id).toMatch(/^S\d+$/);
+    const fix = await s.saveOne("suppliers", "S01", { leadDays: "2" }, "事務 たなか");
+    expect(fix.ok && fix.record).toMatchObject({ id: "S01", leadDays: 2, name: "米田製粉（デモ）" });
 
-    const t = await s.stocktake("packaging", "K07", 3, "課長 こばやし");
-    expect(t).toEqual({ before: 6, after: 3 });
-    const k07 = (await s.list("packaging")).find((k) => k.id === "K07")!;
-    expect(k07).toMatchObject({ stock: 3, stockCountedBy: "課長 こばやし" });
+    const t = await s.stocktake("packaging", "K01", 1500, "課長 こばやし");
+    expect(t.after).toBe(1500);
+    expect((await s.list("packaging")).find((k) => k.id === "K01")).toMatchObject({ stock: 1500, stockCountedBy: "課長 こばやし" });
+    await expect(s.stocktake("suppliers", "S01", 1, "課長 こばやし")).rejects.toThrow(/材料・包材/);
 
-    await s.remove("packaging", "K07", "課長 こばやし");
-    expect((await s.list("packaging")).some((k) => k.id === "K07")).toBe(false);
-    await s.restore("packaging", "K07", "課長 こばやし");
-    expect((await s.list("packaging")).some((k) => k.id === "K07")).toBe(true);
+    await s.remove("packaging", "K01", "課長 こばやし");
+    expect((await s.list("packaging")).some((k) => k.id === "K01")).toBe(false);
+    await s.restore("packaging", "K01", "課長 こばやし");
+    expect((await s.list("packaging")).some((k) => k.id === "K01")).toBe(true);
   });
 
   it("書き出した CSV を読み直すと「変化なし」（往復できる）", async () => {
     const s = await import("../service");
-    const out = await s.exportFile("suppliers");
-    const p = await s.previewUpload("suppliers", out, "out.csv");
+    const p = await s.previewUpload("materials", await s.exportFile("materials"), "out.csv");
     expect(p.counts.error).toBe(0);
     expect(p.counts.add + p.counts.update).toBe(0);
   });

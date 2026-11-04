@@ -8,7 +8,10 @@ import { findProduct } from "@/lib/catalog";
 import { DEMO_SHEETS, SHEET_COLUMN_MAP } from "@/lib/channels/google_sheet/config";
 import { INFOMART_HEADERS } from "@/lib/channels/infomart/config";
 import { KIRARA_DESTS, KIRARA_ITEMS } from "@/lib/channels/kirara/config";
-import type { MasterDef } from "./csv";
+import type { MasterDef as BaseDef } from "./columns";
+
+/** 取り込みの設定のマスタの名前は③の Masters に無いので、名前だけ文字にした定義 */
+type MasterDef<T> = Omit<BaseDef<T>, "name"> & { name: string };
 
 const productCheck = (id: unknown, label = "商品ID") => (id && !findProduct(String(id)) ? [`${label} ${String(id)} が商品マスタにありません`] : []);
 
@@ -26,20 +29,18 @@ export interface SheetSourceRecord extends Record<string, unknown> {
 export const sheetSourceDef: MasterDef<SheetSourceRecord> = {
   name: "sheet_sources",
   label: "読みに行くシート",
-  keyField: "id",
-  idPrefix: "SH",
-  nameField: "label",
+  keyColumns: ["id"],
   columns: [
-    { key: "id", label: "シートID", type: "string" },
-    { key: "label", label: "呼び名", type: "string", required: true, example: "さかえ店 11月" },
-    { key: "url", label: "シートのURL", type: "string", required: true, example: "https://docs.google.com/spreadsheets/d/…", help: "「リンクを知っている全員が閲覧可」にしたシートの URL" },
-    { key: "sheetName", label: "シート名", type: "string", required: true, example: "2026年11月_さかえ店", help: "下のタブの名前" },
-    { key: "range", label: "範囲", type: "string", example: "A1:H40", help: "空なら全部" },
-    { key: "customerId", label: "得意先ID", type: "string", required: true, example: "C13" },
-    { key: "place", label: "納品先", type: "string", example: "さかえ店" },
+    { key: "id", label: "シートID", type: "text" },
+    { key: "label", label: "呼び名", type: "text", required: true, example: "さかえ店 11月" },
+    { key: "url", label: "シートのURL", type: "text", required: true, example: "https://docs.google.com/spreadsheets/d/…", help: "「リンクを知っている全員が閲覧可」にしたシートの URL" },
+    { key: "sheetName", label: "シート名", type: "text", required: true, example: "2026年11月_さかえ店", help: "下のタブの名前" },
+    { key: "range", label: "範囲", type: "text", example: "A1:H40", help: "空なら全部" },
+    { key: "customerId", label: "得意先ID", type: "text", required: true, example: "C13" },
+    { key: "place", label: "納品先", type: "text", example: "さかえ店" },
     { key: "active", label: "使う", type: "boolean", example: "はい" },
   ],
-  validate: (r) => (/^(https:\/\/docs\.google\.com\/spreadsheets\/d\/|demo:)/.test(r.url) ? [] : ["シートの URL は https://docs.google.com/spreadsheets/d/ で始まる形にしてください"]),
+  check: (r) => (/^(https:\/\/docs\.google\.com\/spreadsheets\/d\/|demo:)/.test(r.url) ? [] : ["シートの URL は https://docs.google.com/spreadsheets/d/ で始まる形にしてください"]),
 };
 
 export interface SheetColumnRecord extends Record<string, unknown> {
@@ -53,18 +54,16 @@ export interface SheetColumnRecord extends Record<string, unknown> {
 export const sheetColumnDef: MasterDef<SheetColumnRecord> = {
   name: "sheet_columns",
   label: "シートの列と商品",
-  keyField: "id",
-  idPrefix: "SC",
-  nameField: "header",
+  keyColumns: ["id"],
   columns: [
-    { key: "id", label: "対応ID", type: "string" },
-    { key: "customerId", label: "得意先ID", type: "string", required: true, example: "C13" },
-    { key: "header", label: "シートの列見出し", type: "string", required: true, example: "バターロール（10個入）", help: "シートの1行目に書いてあるとおり" },
-    { key: "productId", label: "商品ID", type: "string", required: true, example: "P01" },
+    { key: "id", label: "対応ID", type: "text" },
+    { key: "customerId", label: "得意先ID", type: "text", required: true, example: "C13" },
+    { key: "header", label: "シートの列見出し", type: "text", required: true, example: "バターロール（10個入）", help: "シートの1行目に書いてあるとおり" },
+    { key: "productId", label: "商品ID", type: "text", required: true, example: "P01" },
     { key: "piecesPerUnit", label: "入数", type: "integer", required: true, min: 1, example: "10", help: "1ケースの個数" },
-    { key: "unit", label: "単位", type: "string", required: true, example: "ケース" },
+    { key: "unit", label: "単位", type: "text", required: true, example: "ケース" },
   ],
-  validate: (r) => productCheck(r.productId),
+  check: (r) => productCheck(r.productId),
 };
 
 // ───────── 取引先の発注サイトの CSV ─────────
@@ -79,17 +78,16 @@ export interface KiraraItemRecord extends Record<string, unknown> {
 export const kiraraItemDef: MasterDef<KiraraItemRecord> = {
   name: "kirara_items",
   label: "専用サイトのコード表",
-  keyField: "id",
-  nameField: "shortName",
+  keyColumns: ["id"],
   columns: [
-    { key: "id", label: "先方の商品コード", type: "string", required: true, example: "910001" },
-    { key: "name", label: "CSV の品名", type: "string", required: true, example: "バターロール（３５ｇ）／Ｐ", help: "CSV に出てくる品名と1字も違わないように（前日入れの判断に使う）" },
-    { key: "productId", label: "当社の商品ID", type: "string", example: "P01", help: "空なら取り込み時に要確認" },
+    { key: "id", label: "先方の商品コード", type: "text", required: true, example: "910001" },
+    { key: "name", label: "CSV の品名", type: "text", required: true, example: "バターロール（３５ｇ）／Ｐ", help: "CSV に出てくる品名と1字も違わないように（前日入れの判断に使う）" },
+    { key: "productId", label: "当社の商品ID", type: "text", example: "P01", help: "空なら取り込み時に要確認" },
     { key: "piecesPerUnit", label: "1パックの個数", type: "integer", required: true, min: 1, example: "1" },
     { key: "dest", label: "振り分け先", type: "enum", required: true, options: KIRARA_DESTS.map((d) => ({ value: d.key, label: d.label })), example: "自社 包装" },
-    { key: "shortName", label: "札の名前", type: "string", required: true, example: "バターロール①" },
+    { key: "shortName", label: "札の名前", type: "text", required: true, example: "バターロール①" },
   ],
-  validate: (r) => productCheck(r.productId, "当社の商品ID"),
+  check: (r) => productCheck(r.productId, "当社の商品ID"),
 };
 
 // ───────── インフォマートの CSV ─────────
@@ -106,12 +104,11 @@ export interface InfomartHeaderRecord extends Record<string, unknown> {
 export const infomartHeaderDef: MasterDef<InfomartHeaderRecord> = {
   name: "infomart_headers",
   label: "インフォマートの列名",
-  keyField: "id",
-  nameField: "label",
+  keyColumns: ["id"],
   columns: [
     { key: "id", label: "項目", type: "enum", required: true, options: Object.entries(INFOMART_FIELD_LABEL).map(([value, label]) => ({ value, label })) },
-    { key: "label", label: "説明", type: "string" },
-    { key: "aliases", label: "CSV の列名（・区切り）", type: "string", required: true, example: "伝票番号・伝票No", help: "実物の CSV の1行目の言い方を足す。左ほど優先" },
+    { key: "label", label: "説明", type: "text" },
+    { key: "aliases", label: "CSV の列名（・区切り）", type: "text", required: true, example: "伝票番号・伝票No", help: "実物の CSV の1行目の言い方を足す。左ほど優先" },
   ],
 };
 

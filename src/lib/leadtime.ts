@@ -7,9 +7,8 @@
 //           商品に leadDays があればそちらを使う
 // - 食パンの包み直し: 元の食パン（3斤）の仕入先の締め
 // - 仮発注（provisional）: 概数で先に入れて当日に確定する運用なので、間に合わなくても「警告」だけ（late にしない）
-import { customerById } from "@/data/master";
 import type { Order, OrderLine } from "@/data/types";
-import { deliveryFor, findProduct } from "./catalog";
+import { deliveryFor, findCustomer, findProduct } from "./catalog";
 import { cutoffIso } from "./purchase";
 
 export type LeadTimeStatus = "ok" | "late" | "warn" | "unknown";
@@ -35,7 +34,7 @@ const fmt = (iso: string) => `${md(iso)} ${hm(iso)}`;
 export function orderDeadline(productId: string, customerId: string, deliveryDate: string): { deadline: string; basis: string } {
   const spec = findProduct(productId)?.spec;
   if (!spec) return { deadline: "", basis: "作り方・仕入れ方が未登録" };
-  const customerCutoff = customerById(customerId)?.cutoff;
+  const customerCutoff = findCustomer(customerId)?.cutoff;
 
   const byDays = (leadDays: number, time: string | undefined, label: string) => {
     const t = time ?? customerCutoff ?? DEFAULT_ORDER_CUTOFF;

@@ -172,6 +172,8 @@ export interface ProcessStep {
   people?: number;
   /** 同時に1つしか使えない設備（ミキサー・オーブン等）。同じ名前の工程は順番待ちになる */
   resource?: string;
+  /** 使う設備の ID（マスタの設備。使える時間帯の確認に使う） */
+  equipmentId?: string;
   /** 前日に行う作業（ピザ生地の仕込みなど） */
   prevDay?: boolean;
   /** 温度・条件などのメモ */

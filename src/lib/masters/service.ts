@@ -1,50 +1,69 @@
 import "server-only";
-// マスタ画面とAPIが使う窓口（⑤）。保存は①の src/lib/db/masters.ts（SQLite）、検証は csv.ts の共通エンジン。
+// マスタ画面とAPIが使う窓口（⑤）。保存は①の src/lib/db/masters.ts（SQLite）、列定義は③の defs.ts、
+// ファイルの読み書きとプレビュー→確定は csv.ts。
 //
 // CSV の一括登録は2段階:
 //   1. preview … ファイルを読んで「追加／更新／変化なし／エラー」を返すだけ。保存しない
-//   2. apply   … 同じファイルをもう一度受け取り、もう一度検証してから保存する（その間に登録が変わっていても安全）。
+//   2. apply   … 同じファイルをもう一度受け取り（ハッシュで確かめる）、もう一度検証してから保存する。
 //                エラーが1件でもあれば保存しない。
 import { createHash } from "node:crypto";
-import { deleteMaster, getMaster, getMasterHistory, listMaster, restoreMaster, seedMastersIfEmpty, upsertMasters } from "@/lib/db/masters";
+import type { Masters } from "@/data/types";
 import { nowIso } from "@/lib/clock";
-import { exportCsv, previewCsv, recordsToApply, templateCsv, validateForm, type MasterDef, type Preview, type RefIndex } from "./csv";
-import { MASTER_DEFS, SEEDS, type MasterName } from "./defs";
+import { deleteMaster, getMaster, getMasterHistory, listMaster, restoreMaster, seedMastersIfEmpty, upsertMasters } from "@/lib/db/masters";
+import { exportCsv, previewCsv, recordsToApply, templateCsv, validateForm, type MasterDef, type Preview } from "./csv";
+import { loadMasters, seedSampleMasters } from "./seed-db";
+import { CHANNEL_SEEDS, ID_PREFIX, isChannelMaster, SCREEN_DEFS, SCREEN_NAMES, STOCK_MASTERS, type ScreenName } from "./screens";
 
 type Rec = Record<string, unknown> & { id: string };
 
-export function defOf(name: string): MasterDef<Rec> {
-  const d = (MASTER_DEFS as unknown as Record<string, MasterDef<Rec>>)[name];
+export function defOf(name: ScreenName): MasterDef {
+  const d = SCREEN_DEFS[name];
   if (!d) throw new Error(`知らないマスタです: ${name}`);
   return d;
 }
 
-/** まだ空なら、今の架空データをサンプルとして入れる */
-export async function ensureSeeded(name: MasterName) {
-  await seedMastersIfEmpty(name, SEEDS[name]() as Rec[]);
+export const isScreenName = (s: string): s is ScreenName => (SCREEN_NAMES as string[]).includes(s);
+
+let seeded = false;
+/** まだ空なら、サンプル（架空データ）を入れる。③のマスタは③の seedSampleMasters、取り込みの設定は⑤の初期値 */
+export async function ensureSeeded(name: ScreenName) {
+  if (isChannelMaster(name)) {
+    await seedMastersIfEmpty(name, (CHANNEL_SEEDS[name]() as Rec[]).map((r) => ({ ...r })));
+    return;
+  }
+  if (!seeded) {
+    await seedSampleMasters();
+    seeded = true;
+  }
 }
 
-export async function list(name: MasterName, includeDisabled = false): Promise<Rec[]> {
+export async function list(name: ScreenName, includeDisabled = false): Promise<Rec[]> {
   await ensureSeeded(name);
   return listMaster<Rec>(name, { includeDisabled });
 }
 
-/** ref の列（仕入先など）を照合するための一覧 */
-export async function refIndex(): Promise<RefIndex> {
-  const sup = await list("suppliers");
-  return { suppliers: sup.map((s) => ({ id: s.id, name: String(s.name ?? "") })) };
+/** 参照の確認と、画面の選択肢に使うマスタ一式 */
+async function allMasters(): Promise<Partial<Masters>> {
+  await ensureSeeded("suppliers");
+  return loadMasters();
+}
+
+/** 画面の選択肢（ref の列）: 参照先のマスタの id と名前 */
+export async function refOptions(name: ScreenName): Promise<Record<string, { id: string; name?: string }[]>> {
+  const all = (await allMasters()) as unknown as Record<string, { id: string; name?: string }[]>;
+  const refs = [...new Set(defOf(name).columns.flatMap((c) => (c.ref ? [c.ref] : [])))];
+  return Object.fromEntries(refs.map((r) => [r, (all[r] ?? []).map((x) => ({ id: x.id, name: x.name }))]));
 }
 
 export const fileHash = (buf: Uint8Array) => createHash("sha1").update(buf).digest("hex").slice(0, 12);
 
-export async function previewUpload(name: MasterName, buf: Uint8Array, fileName: string): Promise<Preview<Rec> & { hash: string }> {
-  const def = defOf(name);
-  const p = previewCsv(def, buf, await list(name, true), { fileName, refs: await refIndex() });
+export async function previewUpload(name: ScreenName, buf: Uint8Array, fileName: string): Promise<Preview & { hash: string }> {
+  const p = previewCsv(defOf(name), buf, await list(name, true), await allMasters(), { fileName });
   return { ...p, hash: fileHash(buf) };
 }
 
 /** 確定。プレビューと同じファイル（hash）かを確かめ、もう一度検証してから保存する */
-export async function applyUpload(name: MasterName, buf: Uint8Array, fileName: string, who: string, expectedHash?: string) {
+export async function applyUpload(name: ScreenName, buf: Uint8Array, fileName: string, who: string, expectedHash?: string) {
   if (!who.trim()) throw new Error("登録する人を選んでください");
   if (expectedHash && expectedHash !== fileHash(buf)) throw new Error("プレビューしたファイルと違います。もう一度読み込んでください");
   const p = await previewUpload(name, buf, fileName);
@@ -54,28 +73,27 @@ export async function applyUpload(name: MasterName, buf: Uint8Array, fileName: s
   return { added: p.counts.add, updated: p.counts.update };
 }
 
-export async function exportFile(name: MasterName, encoding: "utf-8" | "shift_jis" = "utf-8") {
-  return exportCsv(defOf(name), await list(name), { refs: await refIndex(), encoding });
+export async function exportFile(name: ScreenName, encoding: "utf-8" | "shift_jis" = "utf-8") {
+  return exportCsv(defOf(name), await list(name), encoding);
 }
 
-export function templateFile(name: MasterName) {
+export function templateFile(name: ScreenName) {
   return templateCsv(defOf(name));
 }
 
-/** 画面のフォームから1件を追加・修正する（CSV と同じ検証） */
-export async function saveOne(name: MasterName, id: string | undefined, input: Record<string, string>, who: string) {
+/** 画面のフォームから1件を追加・修正する（CSV と同じ検証）。新規で ID が空なら振る */
+export async function saveOne(name: ScreenName, id: string | undefined, input: Record<string, string>, who: string) {
   if (!who.trim()) throw new Error("登録する人を選んでください");
   const def = defOf(name);
   const all = await list(name, true);
   const base = id ? all.find((r) => r.id === id) : undefined;
   if (id && !base) throw new Error("見つかりません");
-  const v = validateForm(def, input, base, await refIndex());
-  if (!v.record) return { ok: false as const, errors: v.errors };
-  if (!base) {
-    const wanted = (input[def.keyField] ?? "").trim();
-    if (wanted && all.some((r) => r.id === wanted)) return { ok: false as const, errors: [{ column: def.columns[0].label, message: "同じ ID がもうあります" }] };
-    v.record.id = wanted || nextId(def.idPrefix ?? "X", all.map((r) => r.id));
+  const values = { ...input };
+  if (!base && def.keyColumns.length === 1 && def.keyColumns[0] === "id" && !values.id?.trim() && ID_PREFIX[name]) {
+    values.id = nextId(ID_PREFIX[name]!, all.map((r) => r.id));
   }
+  const v = validateForm(def, values, base, all, await allMasters());
+  if (!v.record) return { ok: false as const, errors: v.errors };
   await upsertMasters(name, [v.record], who);
   return { ok: true as const, record: v.record };
 }
@@ -85,23 +103,22 @@ function nextId(prefix: string, ids: string[]) {
   return `${prefix}${String(max + 1).padStart(2, "0")}`;
 }
 
-export async function remove(name: MasterName, id: string, who: string) {
+export async function remove(name: ScreenName, id: string, who: string) {
   if (!who.trim()) throw new Error("操作する人を選んでください");
   await deleteMaster(name, id, who);
 }
 
-export async function restore(name: MasterName, id: string, who: string) {
+export async function restore(name: ScreenName, id: string, who: string) {
   if (!who.trim()) throw new Error("操作する人を選んでください");
   await restoreMaster(name, id, who);
 }
 
-/**
- * 棚卸（在庫の手修正）。数えた実数を入れる。いつ・誰が数えたかを残し、前の値は履歴に残る。
- * 材料・包材だけ。
- */
-export async function stocktake(name: "materials" | "packaging", id: string, counted: number, who: string, note?: string) {
+/** 棚卸（在庫の手修正）。数えた実数を入れる。いつ・誰が数えたかを残し、前の値は記録に残る。材料・包材だけ */
+export async function stocktake(name: ScreenName, id: string, counted: number, who: string, note?: string) {
+  if (!STOCK_MASTERS.includes(name)) throw new Error("棚卸は材料・包材だけです");
   if (!who.trim()) throw new Error("数えた人を選んでください");
   if (!Number.isFinite(counted) || counted < 0) throw new Error("在庫は 0 以上の数で入れてください");
+  await ensureSeeded(name);
   const cur = await getMaster<Rec>(name, id);
   if (!cur) throw new Error("見つかりません");
   const next: Rec = { ...cur, stock: counted, stockCountedAt: nowIso(), stockCountedBy: who, ...(note ? { stockNote: note } : {}) };
@@ -109,9 +126,6 @@ export async function stocktake(name: "materials" | "packaging", id: string, cou
   return { before: Number(cur.stock ?? 0), after: counted };
 }
 
-export async function history(name: MasterName, id?: string) {
+export async function history(name: ScreenName, id?: string) {
   return getMasterHistory(name, id);
 }
-
-export const MASTER_NAMES = Object.keys(MASTER_DEFS) as MasterName[];
-export const isMasterName = (s: string): s is MasterName => (MASTER_NAMES as string[]).includes(s);

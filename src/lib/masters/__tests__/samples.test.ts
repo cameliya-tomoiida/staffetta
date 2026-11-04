@@ -1,43 +1,61 @@
-// デモ用のサンプル CSV（public/samples/masters/）が、初期データに対して思ったとおりの結果になるか。
+// デモ用のサンプル CSV（public/samples/masters/）を、③の初期データに対して番号の順に読み込むと、思ったとおりになるか。
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { previewCsv, type RefIndex } from "../csv";
-import { materialDef, packagingDef, seedMaterials, seedPackaging, seedSuppliers, supplierDef } from "../defs";
+import type { Masters } from "@/data/types";
+import { rowId } from "../columns";
+import { previewCsv, recordsToApply } from "../csv";
+import { MASTER_DEFS } from "../defs";
+import { sampleMasters } from "../seed";
 
 const file = (n: string) => new Uint8Array(readFileSync(path.join(process.cwd(), "public", "samples", "masters", n)));
-const sups = seedSuppliers();
-const refs: RefIndex = { suppliers: sups.map((s) => ({ id: s.id, name: s.name })) };
+type Rec = Record<string, unknown> & { id: string };
 
-describe("マスタのサンプル CSV", () => {
-  it("仕入先: 1件更新（締め 15:00→14:00）・2件追加", () => {
-    const p = previewCsv(supplierDef, file("仕入先マスタ_追加と変更.csv"), sups, { refs });
-    expect(p.counts).toMatchObject({ add: 2, update: 1, error: 0 });
-    expect(p.rows[0].kind === "update" && p.rows[0].changes.map((c) => c.column)).toContain("1便 締め");
-    expect(p.canApply).toBe(true);
+describe("マスタのサンプル CSV（01〜06 を順に）", () => {
+  it("仕入先 → 便 → 材料 → 包材 の順に読むと、エラー無しで入る。エラーありのファイルは止まる", () => {
+    const m = sampleMasters() as unknown as Record<string, Rec[]>;
+    for (const [name, def] of Object.entries(MASTER_DEFS)) m[name] = (m[name] ?? []).map((r) => ({ ...r, id: rowId(def, r) }));
+    const load = (name: keyof Masters, f: string) => {
+      const p = previewCsv(MASTER_DEFS[name], file(f), m[name], m as unknown as Partial<Masters>, { fileName: f });
+      if (p.canApply) {
+        const rows = recordsToApply(p);
+        const by = new Map(m[name].map((r) => [r.id, r]));
+        for (const r of rows) by.set(r.id, r);
+        m[name] = [...by.values()];
+      }
+      return p;
+    };
+    const sup = load("suppliers", "01_仕入先マスタ.csv");
+    expect(sup.counts).toMatchObject({ add: 10, update: 1, error: 0 });
+    expect(sup.rows[0].kind === "update" && sup.rows[0].changes.map((c) => c.column)).toContain("締め時刻");
+
+    const del = load("supplierDeliveries", "02_仕入先の便.csv");
+    expect(del.counts.error).toBe(0);
+    expect(del.counts.add + del.counts.update).toBeGreaterThan(0);
+
+    const mat = load("materials", "03_材料マスタ.csv");
+    expect(mat.counts).toMatchObject({ add: 15, update: 1, error: 0 });
+
+    const pk = load("packaging", "04_包材マスタ.csv");
+    expect(pk.counts).toMatchObject({ add: 13, update: 1, error: 0 });
+
+    const sj = load("materials", "05_材料の在庫_ShiftJIS.csv");
+    expect(sj.encoding).toBe("shift_jis");
+    expect(sj.counts).toMatchObject({ error: 0 });
+    expect(sj.counts.update).toBeGreaterThan(0);
+
+    const ng = load("packaging", "06_包材マスタ_エラーあり.csv");
+    expect(ng.rows.map((r) => r.kind)).toEqual(["error", "error", "error"]);
+    expect(ng.canApply).toBe(false);
   });
 
-  it("材料: 在庫の更新と、仕入先を名前で書いた新規3件", () => {
-    const p = previewCsv(materialDef, file("材料マスタ_追加と在庫.csv"), seedMaterials(), { refs });
-    expect(p.counts).toMatchObject({ add: 3, error: 0 });
-    expect(p.counts.update).toBe(1);
-    expect(p.canApply).toBe(true);
-  });
-
-  it("材料: Shift_JIS（Excel で保存した CSV）も読める", () => {
-    const p = previewCsv(materialDef, file("材料マスタ_ShiftJIS.csv"), seedMaterials(), { refs });
-    expect(p.encoding).toBe("shift_jis");
-    expect(p.counts).toMatchObject({ update: 2, error: 0 });
-  });
-
-  it("包材: 2件追加・棚卸の更新1件", () => {
-    const p = previewCsv(packagingDef, file("包材マスタ_追加.csv"), seedPackaging(), { refs });
-    expect(p.counts).toMatchObject({ add: 2, update: 1, error: 0 });
-  });
-
-  it("包材: エラーのある行を行番号・列名つきで返し、確定させない", () => {
-    const p = previewCsv(packagingDef, file("包材マスタ_エラーあり.csv"), seedPackaging(), { refs });
-    expect(p.rows.map((r) => r.kind)).toEqual(["error", "error", "error"]);
-    expect(p.canApply).toBe(false);
+  it("商品・取引先・設備のサンプルも③の列名で読める（参照の確認なし）", () => {
+    const m = sampleMasters() as unknown as Record<string, Rec[]>;
+    for (const [name, f] of [["products", "07_商品マスタ.csv"], ["customers", "08_取引先マスタ.csv"], ["equipment", "09_設備マスタ.csv"]] as const) {
+      const p = previewCsv(MASTER_DEFS[name], file(f), [], m as unknown as Partial<Masters>);
+      const errs = p.rows.flatMap((r) => (r.kind === "error" ? r.errors.map((e) => `${r.line}行 ${e.column}: ${e.message}`) : []));
+      expect(errs, `${f}`).toEqual([]);
+      expect(p.counts.add).toBe(p.rows.length);
+    }
   });
 });
