@@ -38,7 +38,10 @@ export interface KiraraItem {
   shortName: string;
 }
 
-/** コード変換表（架空）。新しい商品が CSV に出てきたら、ここに1行足す */
+/**
+ * コード変換表（架空）。新しい商品が CSV に出てきたら、ここに1行足す。
+ * name は CSV の品名と一致させたままにする（③が注文の行の品名からこの表を引いて、前日入れかどうかを決めるため）
+ */
 export const KIRARA_ITEMS: KiraraItem[] = [
   { code: "910001", name: "バターロール（３５ｇ）／Ｐ", productId: "P01", piecesPerUnit: 1, dest: "self_pack", shortName: "バターロール①" },
   { code: "910002", name: "バターロール（３５ｇ×２）／Ｐ", productId: "P01", piecesPerUnit: 2, dest: "self_pack", shortName: "バターロール②" },
