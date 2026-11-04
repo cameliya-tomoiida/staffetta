@@ -5,9 +5,12 @@ import "server-only";
 //  2. コード変換表で、振り分け先（ふじみ本発注・ふじみ前日・自社本・自社包装・菓子パン・ひので）ごとに合計する
 //  3. 前回取り込んだ数と比べて「数量差」を出す（朝の分 → 昼の確定分）
 //  4. 札（センター納品日・品名・数）の一覧を出す
+//  5. ふじみ本発注・ふじみ前日・ひのでの分は、③の計算で仕入先への発注書の下書きを作る（kirara/purchase.ts）
 import { createHash } from "node:crypto";
+import { savePurchaseOrders } from "@/lib/purchase-store";
 import { readDb } from "@/lib/store";
 import { decodeText, parseCsv, readChannelState, saveImported, toIsoDate, writeChannelState, type ImportedOrder } from "../common";
+import { kiraraPurchaseDrafts } from "./purchase";
 import { KIRARA_COL as C, KIRARA_DESTS, KIRARA_QTY_SCALE, kiraraItem, type KiraraDest } from "./config";
 
 export const KIRARA_CUSTOMER_ID = "C08";
@@ -75,6 +78,9 @@ export interface KiraraImportResult {
   routing: RoutingRow[];
   labels: { dest: string; centerDate: string; siteName: string; shortName: string; packs: number }[];
   previousFile?: string;
+  /** 振り分けから作った仕入先への発注書の下書き（③の保存先に入れたもの） */
+  purchaseOrders: { id: string; supplierName: string; deliveryDate: string; deliveryName: string; lines: string[]; saved: boolean }[];
+  purchaseWarnings: string[];
 }
 
 const hash = (s: string) => createHash("sha1").update(s).digest("hex").slice(0, 8);
@@ -199,9 +205,22 @@ export async function importKiraraCsv(buf: Uint8Array, fileName: string): Promis
     })
     .sort((a, b) => a.dest.localeCompare(b.dest) || a.shortName.localeCompare(b.shortName));
 
+  // 4. ふじみ本発注・ふじみ前日・ひのでの分は、③の計算で発注書の下書きにして③の保存先に入れる（承認済みは上書きしない）
+  const po = kiraraPurchaseDrafts(rows, { customerId: KIRARA_CUSTOMER_ID, fileName });
+  const savedPo = await savePurchaseOrders(po.drafts, `きららCSV ${fileName}`);
+
   return {
     fileName,
     rows: rows.length,
+    purchaseOrders: po.drafts.map((d) => ({
+      id: d.id,
+      supplierName: d.supplierName,
+      deliveryDate: d.deliveryDate,
+      deliveryName: d.deliveryName,
+      lines: d.lines.map((l) => `${l.name} ${l.unitLabel}×${l.units}（必要 ${l.needQuantity}個・余り ${l.surplus}個）`),
+      saved: savedPo.find((x) => x.id === d.id)?.saved ?? false,
+    })),
+    purchaseWarnings: po.warnings,
     centerDate,
     bins: [...new Set(rows.map((r) => r.binName))],
     orderIds: saved.ids,

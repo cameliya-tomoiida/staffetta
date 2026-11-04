@@ -83,8 +83,8 @@ export function ImportPanel({ samples }: Props) {
         </section>
 
         <section className="card space-y-2 p-4">
-          <h2 className="font-black">きらら（専用サイトの CSV）</h2>
-          <p className="text-sm text-black/60">サイトから落とした CSV を入れると、事業所ごとの注文と、振り分け表（ふじみ本発注・ふじみ前日・自社本・包装・菓子パン・ひので）を作ります。</p>
+          <h2 className="font-black">得意先の専用サイト（CSV）</h2>
+          <p className="text-sm text-black/60">あおい医療フードサービスの発注サイトから落とした CSV を入れると、事業所ごとの注文と、振り分け表（仕入先への本発注・前日分・自社製造・包装・菓子パン）を作ります。仕入先に発注する分は、発注書の下書きになります。</p>
           <div className="flex flex-wrap gap-2">
             {samples.kirara.map((s) => (
               <button key={s} className={sub} disabled={!!busy} onClick={() => run("kirara", s, { sample: s })}>{s}</button>
@@ -157,6 +157,20 @@ function ResultView({ title, data }: { title: string; data: unknown }) {
         </table>
       )}
       {Array.isArray(d.orderIds) && <p className="text-sm">受注一覧に「要確認」で入った注文: {(d.orderIds as string[]).length} 件</p>}
+      {Array.isArray(d.purchaseOrders) && (d.purchaseOrders as unknown[]).length > 0 && (
+        <div>
+          <p className="font-bold">仕入先への発注書の下書き（承認は「発注の送り出し」で人が行います）</p>
+          <ul className="text-sm">
+            {(d.purchaseOrders as { id: string; supplierName: string; deliveryDate: string; deliveryName: string; lines: string[]; saved: boolean }[]).map((p) => (
+              <li key={p.id}>
+                ・{p.supplierName.replace(/・[^（）]*相当/, "")}（{p.deliveryName}・{p.deliveryDate} 着）：{p.lines.join("、")}
+                {!p.saved && <span className="text-black/50">（承認済みのため上書きしていません）</span>}
+              </li>
+            ))}
+          </ul>
+          <a className="text-sm font-bold underline" href="/outbound">発注の送り出しへ</a>
+        </div>
+      )}
       <details>
         <summary className="cursor-pointer text-sm text-black/60">中身をすべて見る</summary>
         <pre className="max-h-96 overflow-auto rounded bg-gray-50 p-2 text-xs">{JSON.stringify(data, null, 2)}</pre>

@@ -4,12 +4,12 @@
 
 /** 振り分け先（製造部門）。現役マクロのシート名に合わせた分け方 */
 export const KIRARA_DESTS = [
-  { key: "fujimi_main", label: "ふじみ 本発注", note: "ふじみ（仕入先）にそのまま発注する品" },
-  { key: "fujimi_prev", label: "ふじみ 前日", note: "前日にふじみから入れて、バラ・2個入に包み直す品" },
+  { key: "fujimi_main", label: "ふじみ 本発注", note: "ふじみ製パン（仕入先）にそのまま発注する品" },
+  { key: "fujimi_prev", label: "ふじみ 前日", note: "前日にふじみ製パンから入れて、バラ・2個入に包み直す品" },
   { key: "self_main", label: "自社 本", note: "自社製造（食パン・ロール）" },
   { key: "self_pack", label: "自社 包装", note: "自社で包装（バラ・小分け）" },
   { key: "kashipan", label: "菓子パン", note: "自社の菓子パン" },
-  { key: "hinode", label: "ひので", note: "ひので（仕入先）に発注する品" },
+  { key: "hinode", label: "ひので", note: "ひので製パン（仕入先）に発注する品" },
 ] as const;
 export type KiraraDest = (typeof KIRARA_DESTS)[number]["key"];
 
