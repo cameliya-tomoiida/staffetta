@@ -19,6 +19,8 @@ import { demoDb } from "../demo-reset";
 import { emptyDb } from "./initial";
 import { initMasters, listMaster, upsertMasters } from "./masters";
 import { DATA_DIR, ensureTables, getDb, kvGet, kvSet, transaction } from "./sqlite";
+import { seedSampleMasters } from "../masters/seed-db";
+import { seedCustomers } from "./seed/customers";
 
 const SQL = `
 CREATE TABLE IF NOT EXISTS faxes (
@@ -159,7 +161,14 @@ export async function replaceAll(db: Db, who: string) {
 /** デモの最初の状態（受信箱 F001〜F005・デモ注文・発注書なし・いつもの3社の様式）にする */
 export async function resetToDemo() {
   await replaceAll(demoDb(emptyDb()), "デモを最初から");
+  await seedAllMasters();
   kvSet("store_initialized", { at: new Date().toISOString(), from: "demo" });
+}
+
+/** マスタの初期値（③の商品・生地・材料など、④の取引先）。どれも「空のときだけ」入れる＝人が直したマスタは消さない */
+export async function seedAllMasters() {
+  await seedSampleMasters();
+  await seedCustomers();
 }
 
 /** 初めて開いたとき: data/db.json があれば取り込み（名前を変えて残す）、無ければデモの状態で始める */
@@ -175,6 +184,7 @@ async function migrateOnce() {
       old.importedMessageIds ??= [];
       old.purchaseOrders ??= [];
       await replaceAll(old, "db.json から移行");
+      await seedAllMasters();
       renameSync(jsonPath, path.join(DATA_DIR, `db.json.migrated-${new Date().toISOString().slice(0, 10)}`));
       kvSet("store_initialized", { at: new Date().toISOString(), from: "db.json" });
     } else {
