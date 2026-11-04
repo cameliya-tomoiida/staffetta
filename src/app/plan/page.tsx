@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FACTORY } from "@/data/master";
 import type { Line } from "@/data/master";
 import type { ProcessKey } from "@/data/production";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
@@ -142,14 +143,41 @@ export default async function PlanPage(props: PageProps<"/plan">) {
 
       {/* ここから下が印刷する紙（選んだことば） */}
       <div lang={langInfo(lang).htmlLang} className="rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-ink pb-2">
-          <div className="text-xl font-black">
-            {t("plan_title")}
-            {lang !== "ja" && <span className="ml-2 text-sm font-normal text-ink-faint">製造計画・工程表</span>}
+        {/* 紙の頭（現場の製造計画書と同じ並び: 題・報告日・製造日・作った所・担当・確認の印） */}
+        <div className="mb-4 grid gap-3 border-b-2 border-ink pb-3 sm:grid-cols-[1fr_auto]">
+          <div>
+            <div className="text-xl font-black tracking-wide">
+              {t("plan_title")}
+              {lang !== "ja" && <span className="ml-2 text-sm font-normal text-ink-faint">製造計画・工程表</span>}
+            </div>
+            <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 text-sm">
+              <dt className="text-ink-soft">{t("deliver")}</dt>
+              <dd className="num font-black">{fmtDate(date)}</dd>
+              <dt className="text-ink-soft">報告日</dt>
+              <dd className="num">{fmtDate(today)}</dd>
+              <dt className="text-ink-soft">作成</dt>
+              <dd>{FACTORY.name}</dd>
+            </dl>
           </div>
-          <div className="num font-bold">
-            {t("deliver")}：{fmtDate(date)}
-          </div>
+          {/* 担当・確認の印（紙に書く・押す欄） */}
+          <table className="self-start border-collapse text-center text-sm">
+            <thead>
+              <tr>
+                {["担当", "確認", "工場長"].map((h) => (
+                  <th key={h} className="w-16 border border-ink px-1 py-0.5 font-bold">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {[0, 1, 2].map((i) => (
+                  <td key={i} className="h-12 border border-ink" />
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
         {showMt && (
           <p className="mb-4 flex items-center gap-2 text-sm text-ink-soft">
