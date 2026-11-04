@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     environment: "node",
+    // パソコンの負担を軽くする（同時に動かすテストの数を 2 までに）
+    maxWorkers: 2,
     // テストの「今」は締めより前に固定（共通の時計 clock.ts）。日によって結果が変わらないように
     env: { DEMO_NOW: "2026-11-01T09:00:00+09:00" },
   },

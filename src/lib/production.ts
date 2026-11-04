@@ -3,7 +3,7 @@
 // 工程の時間割（工程表）を出す。全部ふつうの計算で、同じ入力なら必ず同じ結果になる。
 import type { Line, ProcessKey } from "@/data/production";
 import type { DayTotals } from "./aggregate";
-import { allLines, customerDeliveryMinute, findDough, findLine, findMaterial, findProduct, findTopping } from "./catalog";
+import { allLines, allShifts, customerDeliveryMinute, findDough, findEquipment, findLine, findMaterial, findProduct, findTopping } from "./catalog";
 
 export interface DoughItem {
   productId: string;
@@ -197,6 +197,8 @@ export interface ScheduleStep {
   end: number;
   people: number;
   resource?: string;
+  /** 使う設備の ID（マスタの設備） */
+  equipmentId?: string;
   note?: string;
   ccp?: boolean;
   prevDay: boolean;
@@ -232,8 +234,8 @@ export interface ScheduleOptions {
 const stepMinutes = (s: { minutes?: number; minutesPerBatch?: number; piecesPerHour?: number }, b: DoughBatchPlan) =>
   (s.minutes ?? 0) + (s.minutesPerBatch ?? 0) * b.batches + (s.piecesPerHour ? Math.ceil((b.pieces / s.piecesPerHour) * 60) : 0);
 
-const toStep = (s: { key: ProcessKey; name: string; people?: number; resource?: string; note?: string; ccp?: boolean }, start: number, end: number, prevDay: boolean): ScheduleStep => ({
-  key: s.key, name: s.name, start, end, people: s.people ?? 0, resource: s.resource, note: s.note, ccp: s.ccp, prevDay,
+const toStep = (s: { key: ProcessKey; name: string; people?: number; resource?: string; equipmentId?: string; note?: string; ccp?: boolean }, start: number, end: number, prevDay: boolean): ScheduleStep => ({
+  key: s.key, name: s.name, start, end, people: s.people ?? 0, resource: s.resource, ...(s.equipmentId ? { equipmentId: s.equipmentId } : {}), note: s.note, ccp: s.ccp, prevDay,
 });
 
 /**
@@ -245,7 +247,6 @@ const toStep = (s: { key: ProcessKey; name: string; people?: number; resource?: 
  * 開始が 0:00 より前になったら（前日にかかる）warnings に出す。
  */
 export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}): ScheduleRow[] {
-  const prevStart = opts.prevDayStartMinute ?? 13 * 60;
   const rows = new Map<string, ScheduleRow>();
   const freeAfter = new Map<string, number>(); // 前から積む: 設備 → 空く時刻
   const busyFrom = new Map<string, number>(); // 後ろから積む: 設備 → これより前なら空いている
@@ -254,7 +255,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   // 前日の作業（ピザの仕込みなど）は、どのラインも前日 13:00 から前へ順に積む
   const prevSteps = new Map<string, ScheduleStep[]>();
   for (const b of plan.doughs) {
-    let t = prevStart;
+    let t = opts.prevDayStartMinute ?? findLine(b.line).prevDayStartMinute;
     prevSteps.set(b.doughId, findDough(b.doughId)!.steps.filter((s) => s.prevDay).map((s) => {
       const key = s.resource ? `prev:${s.resource}` : undefined;
       const start = Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0);
@@ -313,7 +314,74 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     });
   }
 
-  return plan.doughs.map((b) => rows.get(b.doughId)!);
+  const out = plan.doughs.map((b) => rows.get(b.doughId)!);
+  checkScheduleConstraints(out);
+  return out;
+}
+
+const tod = (min: number) => ((Math.round(min) % 1440) + 1440) % 1440;
+/** 時刻（0:00 からの分。前日・翌日でもよい）が "HH:MM"〜"HH:MM" の中か（日をまたぐ時間帯もよい） */
+function inWindow(min: number, from: string, to: string): boolean {
+  const m = tod(min);
+  const f = hhmm(from);
+  const t = hhmm(to);
+  return f <= t ? m >= f && m <= t : m >= f || m <= t;
+}
+const hhmm = (s: string) => {
+  const [h, m] = s.split(":").map(Number);
+  return h * 60 + (m || 0);
+};
+
+/**
+ * 工程表の制約を確かめて、各生地の warnings に足す（並びは変えない）。
+ * - 設備の使える時間帯の外で使っている
+ * - 同じ設備（同時に動かせないグループ）が重なっている
+ * - 同じ時間に要る人数が、その時間の班の人数を超えている（班が登録されているラインだけ）
+ */
+export function checkScheduleConstraints(rows: ScheduleRow[]): void {
+  type Use = { row: ScheduleRow; step: ScheduleStep };
+  const uses: Use[] = rows.flatMap((row) => row.steps.map((step) => ({ row, step })));
+
+  // 設備の使える時間帯
+  for (const { row, step } of uses) {
+    if (!step.equipmentId || step.end <= step.start) continue;
+    const eq = findEquipment(step.equipmentId);
+    if (!eq) continue;
+    if (!inWindow(step.start, eq.availableFrom, eq.availableTo) || !inWindow(step.end - 1, eq.availableFrom, eq.availableTo))
+      row.warnings.push(`${row.doughName}: ${step.name}（${fmtTime(step.start)}〜${fmtTime(step.end)}）は ${eq.name} の使える時間（${eq.availableFrom}〜${eq.availableTo}）の外です`);
+  }
+
+  // 設備の重なり（前日と当日は別に見る）
+  const byRes = new Map<string, Use[]>();
+  for (const u of uses) if (u.step.resource && u.step.end > u.step.start) {
+    const k = `${u.step.prevDay ? "prev" : "today"}:${u.step.resource}`;
+    byRes.set(k, [...(byRes.get(k) ?? []), u]);
+  }
+  for (const list of byRes.values()) {
+    list.sort((a, b) => a.step.start - b.step.start);
+    for (let i = 1; i < list.length; i++) {
+      const a = list[i - 1], b = list[i];
+      if (b.step.start < a.step.end && a.row !== b.row) {
+        const eq = b.step.equipmentId ? findEquipment(b.step.equipmentId) : undefined;
+        b.row.warnings.push(`${b.row.doughName}: ${b.step.name}（${fmtTime(b.step.start)}〜）が ${a.row.doughName} と ${eq?.exclusiveGroup ?? eq?.name ?? b.step.resource} で重なっています`);
+      }
+    }
+  }
+
+  // 人数（当日の作業。班が登録されているラインだけ）
+  const shifts = allShifts();
+  for (const { row, step } of uses) {
+    if (step.prevDay || step.people <= 0 || step.end <= step.start) continue;
+    const lineShifts = shifts.filter((s) => s.line === row.line || s.line === "common");
+    if (!lineShifts.length) continue;
+    const at = step.start;
+    const need = uses
+      .filter((u) => !u.step.prevDay && u.row.line === row.line && u.step.start <= at && at < u.step.end)
+      .reduce((s, u) => s + u.step.people, 0);
+    const have = lineShifts.filter((s) => inWindow(at, s.from, s.to)).reduce((s, x) => s + x.headcount, 0);
+    if (need > have)
+      row.warnings.push(`${row.doughName}: ${step.name}（${fmtTime(step.start)}〜）の時間に人が足りません（同じ時間に ${need}人 要る・班は ${have}人）`);
+  }
 }
 
 /** 工程表の注意（前日にかかる など）をまとめて返す */
