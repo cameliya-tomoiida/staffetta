@@ -164,3 +164,20 @@ export function fmtDateTime(iso: string) {
 export const todayJst = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 export const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
 export const fmtNum =(n: number, digits = 0) => n.toLocaleString("ja-JP", { maximumFractionDigits: digits, minimumFractionDigits: digits });
+
+/**
+ * 数と単位。単位が数字で始まるとき（25kg袋・30枚切）は「1 × 25kg袋」と出す
+ * （「125kg袋」「330枚切」と読み間違えないように）。
+ */
+export function Qty({ units, unit, size = "text-2xl" }: { units: number; unit: string; size?: string }) {
+  const times = /^[0-9０-９]/.test(unit);
+  return (
+    <span className="whitespace-nowrap">
+      <span className={`num font-black ${size}`}>{fmtNum(units)}</span>
+      <span className="ml-1 text-sm">
+        {times && <span className="mr-1 font-bold">×</span>}
+        {unit}
+      </span>
+    </span>
+  );
+}
