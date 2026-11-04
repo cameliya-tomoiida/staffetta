@@ -5,6 +5,7 @@ import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
 import { addDays, fmtDate, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
+import { loadMasters } from "@/lib/masters/seed-db";
 import { deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
 import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
@@ -25,7 +26,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
   const date = pickDate(q.date, dates, today);
 
   // 発注書の下書きは③（src/lib）が作る。画面は表示と、人の承認・送信の操作だけ
-  const r = runPipeline(orders, date);
+  const r = runPipeline(orders, date, { masters: await loadMasters() });
   const shortage = new Map(r.shortages.map((s) => [s.materialId, s]));
   // 承認・送信済みの記録は③の purchase-store から（承認済みのものは中身も保存した方を見せる）
   const stored = new Map((await listPurchaseOrders()).map((p) => [p.id, p]));

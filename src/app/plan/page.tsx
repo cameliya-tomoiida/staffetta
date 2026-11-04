@@ -8,6 +8,7 @@ import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
 import { addDays, Empty, fmtDate, fmtNum, Icon, MachineTranslated, Notice, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
+import { loadMasters } from "@/lib/masters/seed-db";
 import { deliveryDatesOf, provisionalForDate } from "@/lib/aggregate";
 import { findProduct } from "@/lib/catalog";
 import { fmtTime, type DoughBatchPlan, type LinePlan, type ScheduleRow } from "@/lib/production";
@@ -53,7 +54,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   dates.sort();
 
   // 計算はすべて③（src/lib）。画面は表示するだけ
-  const r = runPipeline(orders, date);
+  const r = runPipeline(orders, date, { masters: await loadMasters() });
   const prov = provisionalForDate(orders, date);
   const cost = dayCostSummary(r);
   // 材料の締めに間に合わないもの（③の materialPlan.lateItems）は黄色で別に出す

@@ -11,6 +11,10 @@ import type { Masters } from "@/data/types";
 import { nowIso } from "@/lib/clock";
 import { deleteMaster, getMaster, getMasterHistory, listMaster, restoreMaster, seedMastersIfEmpty, upsertMasters } from "@/lib/db/masters";
 import { exportCsv, previewCsv, recordsToApply, templateCsv, validateForm, type MasterDef, type Preview } from "./csv";
+import { seedCustomers } from "@/lib/db/seed/customers";
+import { rowId } from "./columns";
+import { recipeItemDef } from "./defs";
+import { recipeSummary } from "./recipe";
 import { loadMasters, seedSampleMasters } from "./seed-db";
 import { CHANNEL_SEEDS, ID_PREFIX, isChannelMaster, SCREEN_DEFS, SCREEN_NAMES, STOCK_MASTERS, type ScreenName } from "./screens";
 
@@ -33,6 +37,7 @@ export async function ensureSeeded(name: ScreenName) {
   }
   if (!seeded) {
     await seedSampleMasters();
+    await seedCustomers(); // 取引先は④が初期値を入れる
     seeded = true;
   }
 }
@@ -92,10 +97,15 @@ export async function saveOne(name: ScreenName, id: string | undefined, input: R
   if (!base && def.keyColumns.length === 1 && def.keyColumns[0] === "id" && !values.id?.trim() && ID_PREFIX[name]) {
     values.id = nextId(ID_PREFIX[name]!, all.map((r) => r.id));
   }
-  const v = validateForm(def, values, base, all, await allMasters());
-  if (!v.record) return { ok: false as const, errors: v.errors };
-  await upsertMasters(name, [v.record], who);
-  return { ok: true as const, record: v.record };
+  const masters = await allMasters();
+  const v = validateForm(def, values, base, all, masters);
+  // 生地の「配合が無い・粉が無い」は、配合をあとからレシピの画面で入れるので、ここでは注意にとどめる（生地が先にないと配合を入れられない）
+  const later = name === "doughs" ? v.errors.filter((e) => /^配合/.test(e.message)) : [];
+  const errors = v.errors.filter((e) => !later.includes(e));
+  const record = v.record ?? (later.length && !errors.length ? validateForm({ ...def, check: undefined }, values, base, all, masters).record : undefined);
+  if (!record) return { ok: false as const, errors };
+  await upsertMasters(name, [record], who);
+  return { ok: true as const, record, warnings: later.map((e) => e.message) };
 }
 
 function nextId(prefix: string, ids: string[]) {
@@ -128,4 +138,46 @@ export async function stocktake(name: ScreenName, id: string, counted: number, w
 
 export async function history(name: ScreenName, id?: string) {
   return getMasterHistory(name, id);
+}
+
+/** 1つの生地の配合（材料と％）。画面の親子の編集用 */
+export interface RecipeLineInput {
+  materialId: string;
+  percent: number | string;
+}
+
+/**
+ * 生地1つの配合を、画面で編集した行の一覧でまとめて置き換える。
+ * - 変わった行・足した行は保存、画面から消した行は「使わない」（論理削除。記録は残る）
+ * - 1行ずつ CSV と同じ検証（材料があるか・％が数か）をし、全部よければ保存する。エラーがあれば何も保存しない
+ */
+export async function saveRecipe(doughId: string, lines: RecipeLineInput[], who: string) {
+  if (!who.trim()) throw new Error("登録する人を選んでください");
+  const all = await allMasters();
+  if (!all.doughs?.some((d) => d.id === doughId)) throw new Error(`生地 ${doughId} がありません`);
+  const errors: { line: number; column: string; message: string }[] = [];
+  const seen = new Set<string>();
+  const current = await list("recipeItems", true);
+  const records: Rec[] = [];
+  lines.forEach((l, i) => {
+    const input = { doughId, materialId: String(l.materialId ?? "").trim(), percent: String(l.percent ?? "").trim() };
+    if (!input.materialId && !input.percent) return; // 空の行は無視
+    if (seen.has(input.materialId)) {
+      errors.push({ line: i + 1, column: "材料ID", message: `${input.materialId} が2回あります` });
+      return;
+    }
+    seen.add(input.materialId);
+    const id = rowId(recipeItemDef as unknown as MasterDef, input);
+    const base = current.find((r) => r.id === id);
+    const v = validateForm(recipeItemDef as unknown as MasterDef, input, base, current, all);
+    if (!v.record) errors.push(...v.errors.map((e) => ({ line: i + 1, ...e })));
+    else records.push(v.record);
+  });
+  if (!records.length && !errors.length) errors.push({ line: 0, column: "配合", message: "材料の行を1つ以上入れてください" });
+  if (errors.length) return { ok: false as const, errors };
+  const keep = new Set(records.map((r) => r.id));
+  const removed = current.filter((r) => r.doughId === doughId && !r.disabled && !keep.has(r.id));
+  await upsertMasters("recipeItems", records, `${who}（レシピ）`);
+  for (const r of removed) await deleteMaster("recipeItems", r.id, `${who}（レシピ）`);
+  return { ok: true as const, saved: records.length, removed: removed.length, summary: recipeSummary(records as unknown as { materialId: unknown; percent: unknown }[], all.materials ?? []) };
 }
