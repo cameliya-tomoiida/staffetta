@@ -88,7 +88,8 @@ export function materialShortages(reqs: MaterialRequirement[], opts: ShortageOpt
       const safety = opts.ignoreSafetyStock ? 0 : (m?.safetyStock ?? 0);
       const short = round(r.needUnits + safety - stock);
       const packSize = m?.orderUnit ?? 1;
-      const orderPacks = short > 0 ? Math.ceil(round(short / packSize, 6)) : 0;
+      // 最小ロット（材料 → 仕入先 → 1）より少なくは頼めない
+      const orderPacks = short > 0 ? Math.max(m?.minLot ?? 1, Math.ceil(round(short / packSize, 6))) : 0;
       const orderUnits = round(orderPacks * packSize);
       return {
         materialId: r.materialId,

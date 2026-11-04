@@ -2,7 +2,7 @@
 // 画面からも、商品名・仕入先名・材料名はここから引けば両方のマスターを見られる。
 import { materials as masterMaterials, products as masterProducts, suppliers as masterSuppliers } from "@/data/master";
 import {
-  customerDelivery, doughRecipes, materialExtras, newMaterials, newProducts, newSuppliers, productSpecs,
+  customerDelivery, customerDeliveryTime, DEFAULT_DELIVERY_TIME, doughRecipes, materialExtras, newMaterials, newProducts, newSuppliers, productSpecs,
   supplierExtras, toppingRecipes,
   type DoughRecipe, type ProductSpec, type SupplierDelivery, type SupplierMethod, type ToppingRecipe,
 } from "@/data/production";
@@ -24,6 +24,8 @@ export interface CatalogSupplier {
   siteName?: string;
   contact: string;
   deliveries: SupplierDelivery[];
+  /** 最小ロット（1品目あたり最低何単位から）。なければ 1 */
+  minLot: number;
 }
 
 export interface CatalogMaterial {
@@ -38,6 +40,8 @@ export interface CatalogMaterial {
   unitCost: number;
   /** 1単位の重さ kg（L の油なら 0.91） */
   kgPerUnit: number;
+  /** 最小ロット（材料 → 仕入先 → 1 の順） */
+  minLot: number;
   noPurchase: boolean;
 }
 
@@ -50,19 +54,24 @@ const supplierList: CatalogSupplier[] = [
   ...masterSuppliers.map((s) => {
     const x = supplierExtras[s.id];
     return {
-      id: s.id, name: s.name, method: x?.method ?? s.method, siteName: x?.siteName, contact: s.contact,
+      id: s.id, name: s.name, method: x?.method ?? s.method, siteName: x?.siteName, contact: s.contact, minLot: x?.minLot ?? 1,
       // 便の締め・日数が未設定なら master.ts の値を使う
       deliveries: (x?.deliveries ?? [{ id: "1", name: "通常便" }]).map((d) => ({
         ...d, cutoff: d.cutoff ?? s.cutoff, leadDays: d.leadDays ?? s.leadDays,
       })),
     };
   }),
-  ...newSuppliers,
+  ...newSuppliers.map((s) => ({ ...s, minLot: s.minLot ?? 1 })),
 ];
 
+const supplierMinLot = (id: string) => supplierList.find((s) => s.id === id)?.minLot ?? 1;
+
 const materialList: CatalogMaterial[] = [
-  ...masterMaterials.map((m) => ({ ...m, kgPerUnit: materialExtras[m.id]?.kgPerUnit ?? 1, noPurchase: false })),
-  ...newMaterials.map((m) => ({ ...m, kgPerUnit: m.kgPerUnit ?? 1, noPurchase: m.noPurchase ?? false })),
+  ...masterMaterials.map((m) => ({
+    ...m, kgPerUnit: materialExtras[m.id]?.kgPerUnit ?? 1, noPurchase: false,
+    minLot: materialExtras[m.id]?.minLot ?? supplierMinLot(m.supplierId),
+  })),
+  ...newMaterials.map((m) => ({ ...m, kgPerUnit: m.kgPerUnit ?? 1, noPurchase: m.noPurchase ?? false, minLot: m.minLot ?? supplierMinLot(m.supplierId) })),
 ];
 
 export const allProducts = (): CatalogProduct[] => productList;
@@ -82,6 +91,15 @@ export function deliveryFor(supplierId: string, customerId: string): SupplierDel
   const id = customerDelivery[supplierId]?.[customerId];
   return s.deliveries.find((d) => d.id === id) ?? s.deliveries[0];
 }
+
+/** "HH:MM" → 0:00 からの分 */
+export const hhmmToMinute = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + (m || 0);
+};
+
+/** 得意先の納品時刻（0:00 からの分）。得意先マスタに無ければ 8:00 */
+export const customerDeliveryMinute = (customerId: string) => hhmmToMinute(customerDeliveryTime[customerId] ?? DEFAULT_DELIVERY_TIME);
 
 /** 商品の並び順（マスターの順） */
 export const productOrder = (id: string) => {
