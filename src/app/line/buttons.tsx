@@ -19,15 +19,15 @@ export function LinkButton({ userId, customerId, label }: { userId: string; cust
 }
 
 /** 確定した注文の「確定の連絡」。文面を見せてから、人が押したときだけ送る */
-export function NotifyButton({ orderId, preview }: { orderId: string; preview: string }) {
+export function NotifyButton({ orderId, preview, demo = false }: { orderId: string; preview: string; demo?: boolean }) {
   return (
     <ConfirmInline
       variant="primary"
       align="right"
-      label="確定の連絡をLINEで送る"
+      label={demo ? "確定の連絡（デモ・記録だけ）" : "確定の連絡をLINEで送る"}
       message={
         <>
-          お客さんのLINEに、次の文面を送ります。
+          {demo ? "架空のお客さん（デモ）なので、LINEには送らず記録だけします。" : "お客さんのLINEに、次の文面を送ります。"}
           <div className="mt-2 rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-3 font-normal">{preview}</div>
         </>
       }

@@ -6,6 +6,7 @@ import { confirmationText, unlinkedLineUsers } from "@/lib/channels/line/orders"
 import { readLineState } from "@/lib/channels/line/state";
 import { readDb } from "@/lib/store";
 import { LinkButton, NotifyButton } from "./buttons";
+import { isDemoLineUser } from "@/lib/channels/line/config";
 import { fmtDate, fmtDateTime, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
 
 // LINE受付の画面（工場のスタッフ用）。
@@ -65,12 +66,14 @@ export default async function LinePage() {
         <ul className="divide-y divide-rule">
           {orders.map((o) => {
             const notified = o.source.extra?.lineNotifiedAt;
+            const demo = o.source.refs.some((r) => r.kind === "line_message" && isDemoLineUser(r.userId));
             const flagged = o.lines.filter((l) => l.confidence < 0.8 || l.read?.attention).length;
             return (
               <li key={o.id} className="grid gap-3 p-5 md:grid-cols-[1fr_auto]">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <OrderStatusTag status={o.status} />
+                    {demo && <Tag tone="off">（デモ）架空のお客さん</Tag>}
                     {o.intent && intentText[o.intent] && <Tag tone="alert">{intentText[o.intent]}</Tag>}
                     <Tag>{o.source.extra?.via === "liff" ? "注文フォーム" : "トーク（Claudeが読み取り）"}</Tag>
                     <span className="text-lg font-black">{o.customerId ? customerById(o.customerId)?.name : <span className="text-review-ink">得意先 未確認</span>}</span>
@@ -89,7 +92,7 @@ export default async function LinePage() {
                     (notified ? (
                       <Tag tone="info">確定の連絡ずみ</Tag>
                     ) : (
-                      <NotifyButton orderId={o.id} preview={confirmationText(o)} />
+                      <NotifyButton orderId={o.id} preview={confirmationText(o)} demo={demo} />
                     ))}
                 </div>
               </li>
