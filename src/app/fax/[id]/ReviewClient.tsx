@@ -2,7 +2,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Customer, Product } from "@/data/master";
+import type { Customer } from "@/data/master";
 import type { Order } from "@/data/types";
 import type { FaxDoc, FaxTemplate } from "@/lib/types";
 import { approveTemplateAction, confirmChangeAction, confirmFaxAction, sortFaxAction } from "@/app/actions";
@@ -47,7 +47,7 @@ export function ReviewClient({
   others: Order[]; // ほかの注文（変更FAXの元の注文・仮発注を探すため）
   templates: Record<string, FaxTemplate>;
   customers: Customer[];
-  products: Product[];
+  products: { id: string; name: string }[];
 }) {
   const read = fax.read!;
   const kind = read.kind;
