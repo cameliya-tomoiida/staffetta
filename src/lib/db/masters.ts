@@ -35,6 +35,8 @@ CREATE INDEX IF NOT EXISTS master_history_by_row ON master_history (name, id, se
 `;
 
 const init = () => ensureTables("masters", SQL);
+/** masters / master_history の表を作る（ほかのモジュールがトランザクションの前に呼ぶ用） */
+export const initMasters = init;
 const nowIso = () => new Date().toISOString();
 
 export interface HistoryRow {
