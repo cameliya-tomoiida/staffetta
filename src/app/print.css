@@ -206,3 +206,17 @@
     white-space: pre;
   }
 }
+
+/* 製造計画書・人員配置表は A4 よこ（現場の帳票と同じ）。それぞれ新しい紙から */
+@page landscape {
+  size: A4 landscape;
+  margin: 10mm 10mm 12mm;
+}
+@media print {
+  .print-landscape {
+    page: landscape;
+  }
+  .print-page {
+    break-before: page;
+  }
+}

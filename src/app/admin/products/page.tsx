@@ -1,3 +1,4 @@
+import { toMastersIfReady } from "@/components/admin/to-masters";
 import { AdminPage } from "@/components/admin/AdminPage";
 import type { ColumnDef, Row } from "@/components/admin/types";
 import { allProducts, allSuppliers } from "@/lib/catalog";
@@ -7,6 +8,7 @@ export const metadata = { title: "商品｜マスタ管理" };
 
 // TODO(③): 列の定義と検証は③の決まりに置き換える。TODO(①⑤): onSave・onImport をつなぐ
 export default function ProductsAdmin() {
+  toMastersIfReady(["products"]); // ⑤の /masters に画面ができたら、そちらへ
   const columns: ColumnDef[] = [
     { key: "id", label: "コード", required: true },
     { key: "name", label: "商品名", required: true },

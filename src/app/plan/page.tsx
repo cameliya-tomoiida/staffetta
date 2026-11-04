@@ -9,14 +9,16 @@ import { CostBox } from "@/components/ui/CostBox";
 import { addDays, Empty, fmtDate, fmtNum, Icon, MachineTranslated, Notice, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf, provisionalForDate } from "@/lib/aggregate";
-import { findProduct } from "@/lib/catalog";
-import { fmtTime, type DoughBatchPlan, type LinePlan, type ScheduleRow } from "@/lib/production";
+import { allProducts, withMasters } from "@/lib/catalog";
+import { fmtTime, type DoughBatchPlan, type LinePlan, type ScheduleRow, type ScheduleStep } from "@/lib/production";
 import { isLang, LANG_COOKIE, langInfo, LANGS, type Lang } from "@/i18n/langs";
 import { isReviewed, tr, trUnit, type Key } from "@/i18n/dict";
 import { translateTerms } from "@/i18n/translate";
 import { PrintButton } from "./PrintButton";
+import { DailySheet, EquipmentChart, PlanSheet, StaffSheet, type MakeRow } from "./Forms";
 import { LangPicker } from "./LangPicker";
 import { cookies } from "next/headers";
+import { loadMasters } from "@/lib/masters/seed-db";
 
 export const metadata = { title: "製造計画・工程表｜受発注ハブ" };
 
@@ -53,18 +55,23 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   dates.sort();
 
   // 計算はすべて③（src/lib）。画面は表示するだけ
-  const r = runPipeline(orders, date);
-  const prov = provisionalForDate(orders, date);
-  const cost = dayCostSummary(r);
+  const masters = await loadMasters(); // マスタ画面で直した値で計算（③の loadMasters）
+  const r = runPipeline(orders, date, { masters });
+  const prov = withMasters(masters, () => provisionalForDate(orders, date));
+  const cost = withMasters(masters, () => dayCostSummary(r));
+  const units = new Map(withMasters(masters, () => allProducts()).map((p) => [p.id, p.unit]));
+  const unitOf = (productId: string) => units.get(productId) ?? "個";
   // 材料の締めに間に合わないもの（③の materialPlan.lateItems）は黄色で別に出す
   const lateMaterials = r.materialPlan.lateItems.map((x) => x.message);
   const warn = splitWarnings(r.warnings.filter((w) => !lateMaterials.includes(w)));
   const otherWarnings = warn.others;
 
   // 辞書に無い名前（商品名・生地名）は Claude で訳して保存。訳せたものには「機械翻訳」と出す
+  const eqName = (s: ScheduleStep) => masters.equipment.find((e) => e.id === s.equipmentId)?.name ?? s.resource ?? "";
   const jaNames = [
     ...prov.products.map((p) => p.name),
     ...r.production.doughs.flatMap((d) => [d.name, ...d.items.map((i) => i.name)]),
+    ...r.schedule.flatMap((row) => row.steps.map(eqName)).filter(Boolean),
   ];
   const mt = await translateTerms(lang, jaNames);
   const name: NameFn = (ja) => ({ text: mt[ja] ?? ja, machine: !!mt[ja], ja });
@@ -76,6 +83,39 @@ export default async function PlanPage(props: PageProps<"/plan">) {
     pizza: { title: t("line_pizza"), color: "var(--color-pizza)", icon: <Icon.pizza className="h-7 w-7" /> },
   };
   const lines: Line[] = ["bread", "pizza"];
+
+  // 帳票（製造計画書・日報）の行: 生地ごとの商品。取引先の内訳は③の totals から
+  const productMaster = new Map(masters.products.map((p) => [p.id, p]));
+  const customerName = new Map(masters.customers.map((c) => [c.id, c.name]));
+  const totalOf = new Map(r.totals.products.map((p) => [p.productId, p]));
+  const makeRows: MakeRow[] = lines.flatMap((line) =>
+    (r.production.lines.find((l) => l.line === line)?.doughs ?? []).flatMap((b) =>
+      b.items.map((i) => ({
+        productId: i.productId,
+        name: name(i.name).text,
+        unit: unitOf(i.productId),
+        pieces: i.pieces,
+        doughName: name(b.name).text,
+        doughGram: i.doughGram,
+        bagSize: productMaster.get(i.productId)?.bagSize,
+        caseSize: productMaster.get(i.productId)?.caseSize,
+        customers: (totalOf.get(i.productId)?.customers ?? []).map((c) => ({ name: customerName.get(c.customerId) ?? c.customerId, pieces: c.pieces })),
+      })),
+    ),
+  );
+  // 班の人数（その時刻にいる人の合計）。班が登録されていないラインは null
+  const inWindow = (min: number, from: string, to: string) => {
+    const m = ((Math.round(min) % 1440) + 1440) % 1440;
+    const hm = (x: string) => Number(x.split(":")[0]) * 60 + Number(x.split(":")[1] || 0);
+    const f = hm(from), t2 = hm(to);
+    return f <= t2 ? m >= f && m < t2 : m >= f || m < t2;
+  };
+  const headcount = (line: Line) => (minute: number) => {
+    const sh = masters.shifts.filter((x) => x.line === line || x.line === "common");
+    return sh.length ? sh.filter((x) => inWindow(minute, x.from, x.to)).reduce((n, x) => n + x.headcount, 0) : null;
+  };
+  const dow = new Date(`${r.production.date}T00:00:00+09:00`).toLocaleDateString(langInfo(lang).htmlLang, { weekday: "short", timeZone: "Asia/Tokyo" });
+  const shortName = (ja: string) => name(ja).text;
   const showMt = lang !== "ja" && (!isReviewed(lang) || Object.keys(mt).length > 0);
 
   const jaLabel = langInfo(lang).ja;
@@ -194,6 +234,12 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           </p>
         )}
 
+      {makeRows.length > 0 && (
+        <div className="mb-8">
+          <PlanSheet rows={makeRows} date={fmtDate(r.production.date)} dow={dow} lang={lang} unitLabel={(u) => trUnit(lang, u)} />
+        </div>
+      )}
+
       {/* 仮発注（製造量には入れない） */}
       {prov.products.length > 0 && (
         <div className="mb-5 rounded-lg border border-dashed border-prov-line bg-prov-bg px-4 py-2.5 text-prov-ink">
@@ -227,14 +273,43 @@ export default async function PlanPage(props: PageProps<"/plan">) {
               {!lp || lp.doughs.length === 0 ? (
                 <Empty>{t("nothing")}</Empty>
               ) : (
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-                  <MakeTable bs={lp.doughs} lang={lang} t={t} name={name} />
-                  <Timetable rows={rs} bs={lp.doughs} lang={lang} t={t} name={name} />
+                <div className="space-y-4">
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+                    <MakeTable bs={lp.doughs} lang={lang} t={t} name={name} unitOf={unitOf} />
+                    <Timetable rows={rs} bs={lp.doughs} lang={lang} t={t} name={name} />
+                  </div>
+                  <EquipmentChart
+                    rows={rs}
+                    lang={lang}
+                    colors={stepColor}
+                    equipmentName={(s) => shortName(eqName(s))}
+                    headcountAt={headcount(line)}
+                    shortName={shortName}
+                  />
                 </div>
               )}
             </section>
           );
         })}
+      </div>
+
+      <div className="mt-10 space-y-10">
+        <div className="print-page">
+          <StaffSheet
+            rows={lines.map((line) => ({ lineTitle: lineView[line].title, rows: r.schedule.filter((x) => x.line === line) }))}
+            date={fmtDate(r.production.date)}
+            lang={lang}
+            colors={stepColor}
+            stepLabel={(s) => stepName(lang, s.key, s.name)}
+            shortName={shortName}
+            headcountAt={(li, m) => headcount(lines[li])(m)}
+          />
+        </div>
+        {makeRows.length > 0 && (
+          <div className="print-page">
+            <DailySheet rows={makeRows} date={fmtDate(r.production.date)} lang={lang} unitLabel={(u) => trUnit(lang, u)} />
+          </div>
+        )}
       </div>
 
       </div>
@@ -245,7 +320,6 @@ export default async function PlanPage(props: PageProps<"/plan">) {
 type T = (k: Key) => string;
 type NameFn = (ja: string) => { text: string; machine: boolean; ja: string };
 const stepName = (lang: Lang, key: ProcessKey, ja: string) => (key in stepColor ? tr(lang, key as Key) : ja);
-const unitOf = (productId: string) => findProduct(productId)?.unit ?? "個";
 
 function Stat({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -299,7 +373,7 @@ function Name({ n, lang, big }: { n: ReturnType<NameFn>; lang: Lang; big?: boole
 }
 
 /** 作るもの（生地ごとに、商品と数、生地と粉の量、ミキサー回数） */
-function MakeTable({ bs, lang, t, name }: { bs: DoughBatchPlan[]; lang: Lang; t: T; name: NameFn }) {
+function MakeTable({ bs, lang, t, name, unitOf }: { bs: DoughBatchPlan[]; lang: Lang; t: T; name: NameFn; unitOf: (id: string) => string }) {
   return (
     <div className="overflow-hidden rounded-sm border border-rule-strong bg-sheet">
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("make_list")}</div>
