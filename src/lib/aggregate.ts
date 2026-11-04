@@ -8,6 +8,10 @@ export interface CustomerQty {
   pieces: number;
   /** どの注文から来た数か（元をたどる用） */
   orderIds: string[];
+  /** 仕入の集計（purchaseTotalsForDate）だけ: 注文で指定された仕入先の便 */
+  supplierDeliveryId?: string;
+  /** 仕入の集計だけ: 前日に入れる注文のとき、お客さんへの納品日 */
+  forDeliveryDate?: string;
 }
 
 export interface ProductTotal {

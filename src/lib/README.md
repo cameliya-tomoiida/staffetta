@@ -67,6 +67,14 @@ const r = runPipeline(db.orders, "2026-11-06");
 | `methodLabel(method)` | → 発注方法の表示名 |
 | `addDays(date, n)` | 日付の足し算 |
 
+| `purchaseTotalsForDate(orders, date)` | → その日に**仕入先から入れる分**の集計（`DayTotals`）。前日入れの指定がある注文は「納品日 − 日数」の日に入る。`runPipeline` の仕入品の発注書はこれを使う |
+| `purchaseDaysBefore(order)` | → 注文の前日入れの日数（`source.extra.purchaseDaysBefore`、無ければ 0） |
+
+**前日入れ**（取引先サイトの「前日」振り分けの行など。前日に仕入先から入れて、バラ・2個入に包み直す品）:
+注文の `source.extra` に `purchaseDaysBefore: 1`（何日前に入れるか）と、必要なら `supplierBin: "2"`（仕入先の便の ID）を入れる。
+取引先サイト（`source.extra.site === "kirara"`）の注文は、注文を分けなくてよい。行の品名から⑤のコード変換表（`KIRARA_ITEMS`）の振り分け先を引き、`KIRARA_SUPPLY` の `dayOffset`（前日 = -1）で行ごとに前日入れを決める（`lineDaysBefore`）。
+製造・納品の集計（`totalsForDate`）は今までどおり納品日に入る。仕入の発注書だけが前日に入り、行の `notes` に「前日入れ: 得意先 の 11/10 納品分 18個（3袋）」が付く。
+
 `PurchaseOrderDraft` は types.ts の `PurchaseOrder` に、画面用の項目（`supplierName`・`siteName`・`deliveryName`・`cutoffSet`・`kind`・行ごとの `needQuantity`/`surplus`/`customers`）を足したもの。
 **状態は必ず `draft`**。送信は人の承認のあと（⑤の担当）。
 

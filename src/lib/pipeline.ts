@@ -5,7 +5,7 @@ import { totalsForDate, type DayTotals } from "./aggregate";
 import { materialRequirements, materialShortages, type MaterialRequirement, type MaterialShortage, type ShortageOptions } from "./materials";
 import { planMaterialOrders, type MaterialPlan } from "./material-plan";
 import { buildSchedule, planProduction, scheduleSummary, scheduleWarnings, type ProductionOptions, type ProductionPlan, type ScheduleOptions, type ScheduleRow } from "./production";
-import { addDays, buildProductPurchaseOrders, type ProductPurchaseOptions, type PurchaseOrderDraft } from "./purchase";
+import { addDays, buildProductPurchaseOrders, purchaseTotalsForDate, type ProductPurchaseOptions, type PurchaseOrderDraft } from "./purchase";
 
 export interface PipelineOptions {
   /** 製造日 = 納品日 + この日数（初期値 0: 当日の朝に作る） */
@@ -45,7 +45,8 @@ export interface PipelineResult {
 export function runPipeline(orders: Order[], date: string, opts: PipelineOptions = {}): PipelineResult {
   const totals = totalsForDate(orders, date);
   const productionDate = addDays(date, opts.productionOffsetDays ?? 0);
-  const productPurchaseOrders = buildProductPurchaseOrders(totals, opts.purchase);
+  // 仕入品は「その日に入れる分」（前日入れの指定がある注文は、納品日の前日の分に入る）
+  const productPurchaseOrders = buildProductPurchaseOrders(purchaseTotalsForDate(orders, date), opts.purchase);
   const production = { ...planProduction(totals, opts.production), date: productionDate };
   const schedule = buildSchedule(production, opts.schedule);
   const materials = materialRequirements([production]);
