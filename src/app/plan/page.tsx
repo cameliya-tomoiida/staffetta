@@ -1,3 +1,4 @@
+import { HolidayNotice } from "@/components/HolidayNotice";
 import Link from "next/link";
 import { splitWarnings } from "@/components/ui/wording";
 import { FACTORY } from "@/data/master";
@@ -178,6 +179,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const jaLabel = langInfo(lang).ja;
   return (
     <div>
+      <HolidayNotice dates={[{ date, label: "納品日" }, ...(r.productionDate !== date ? [{ date: r.productionDate, label: "製造日" }] : [])]} what="注文と製造の日を確かめてください。" />
       {/* 画面の上（見るのは日本人なので日本語） */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
         <div>

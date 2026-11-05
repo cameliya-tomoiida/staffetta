@@ -36,9 +36,14 @@ async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
     const r = getCostRequest(productId);
     return r ? r.supplierIds.map((supplierId) => ({ id: `${productId}:${supplierId}`, productId, supplierId, requestedAt: r.at })) : [];
   });
-  const alerts = evaluateAlerts(await loadDb(), await loadMasters(), now, {
+  const masters = await loadMasters();
+  const alerts = evaluateAlerts(await loadDb(), masters, now, {
     isOn: (k) => on(alertFeatureKey(k)),
-    dayOffs: listDayOffs().map(({ customerId, date }) => ({ customerId, date })),
+    dayOffs: [
+      ...listDayOffs().map(({ customerId, date }) => ({ customerId, date })),
+      // 工場の休業日は、どの取引先も「休み」と同じ扱い（「いつもの注文がまだ」を出さない）
+      ...(await import("./holidays")).factoryHolidays().flatMap((date) => (masters.customers ?? []).map((c) => ({ customerId: c.id, date }))),
+    ],
     reviewRequests,
   });
   const hrefOf = (kind: string, p: Record<string, unknown>): string | undefined => {

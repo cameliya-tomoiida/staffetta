@@ -31,6 +31,8 @@ export async function preparePlanIfDue(now: string): Promise<PreparedPlan | unde
   const date = new Date(Date.parse(`${j.slice(0, 10)}T00:00:00Z`) + 86400_000).toISOString().slice(0, 10);
   const key = `plan_prepared_${date}`;
   if (kvGet(key)) return undefined;
+  const { isFactoryHoliday } = await import("./holidays");
+  if (isFactoryHoliday(date)) return undefined; // 工場の休業日の分は作らない
 
   // allOrders()（readRecentDb）は画面用で connection() を呼ぶため、5分ごとの判定（リクエストの外）からは使えない。
   // 同じ中身（最近の分＋見本の注文）を、保存先から直接読んで作る。

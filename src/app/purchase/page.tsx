@@ -1,3 +1,4 @@
+import { HolidayNotice } from "@/components/HolidayNotice";
 import Link from "next/link";
 import { FACTORY } from "@/data/master";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
@@ -75,15 +76,17 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
   const pos = drafts.filter((p) => p.lines.length > 0).map(view);
 
   return (
-    <PurchaseClient
-      pos={pos}
-      date={date}
-      factory={FACTORY.name}
-      warnings={r.warnings}
-      serverNow={nowMs()}
-      lateMaterials={r.materialPlan.lateItems.map((x) => x.message)}
-      unconfirmed={orders.filter((o) => o.deliveryDate === date && (o.status === "needs_review" || o.status === "provisional")).length}
-      costBox={<CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} />}
+    <>
+      <HolidayNotice dates={[{ date, label: "届けてほしい日" }]} what="仕入先が届けられるか、届く日を確かめてください。" />
+      <PurchaseClient
+        pos={pos}
+        date={date}
+        factory={FACTORY.name}
+        warnings={r.warnings}
+        serverNow={nowMs()}
+        lateMaterials={r.materialPlan.lateItems.map((x) => x.message)}
+        unconfirmed={orders.filter((o) => o.deliveryDate === date && (o.status === "needs_review" || o.status === "provisional")).length}
+        costBox={<CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} />}
       dateNav={
         dates.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
@@ -102,5 +105,6 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
         )
       }
     />
+    </>
   );
 }

@@ -14,8 +14,9 @@ import { currentMasters, findLine, findProduct, withMasters } from "./catalog";
 import { deliveryDayProblem, orderDeadline } from "./leadtime";
 import { planProduction } from "./production";
 import { addDays } from "./purchase";
+import { factoryHolidays, holidayReason } from "./holidays";
 
-export type AlternativeProblem = "deadline" | "weekday" | "capacity";
+export type AlternativeProblem = "deadline" | "weekday" | "capacity" | "holiday";
 
 export interface LineAlternative {
   lineId: string;
@@ -49,6 +50,8 @@ export interface AlternativeOptions {
   maxDays?: number;
   /** 前の日に作るのを、何日前まで見るか（既定 3） */
   makeEarlierDays?: number;
+  /** 工場の休業日（YYYY-MM-DD）。渡さなければ「設定 → 工場の休業日」 */
+  holidays?: string[];
 }
 
 const W = "日月火水木金土";
@@ -100,10 +103,12 @@ function run(order: Order, now: string, opts: AlternativeOptions): AlternativeRe
   const maxDays = opts.maxDays ?? 14;
   const back = opts.makeEarlierDays ?? 3;
   const today = jstDate(now);
+  const holidays = new Set(opts.holidays ?? factoryHolidays());
 
   /** この行が、この納品日に受けられるか。だめなら問題の一覧 */
   const check = (productId: string, date: string): { kind: AlternativeProblem; reason: string }[] => {
     const probs: { kind: AlternativeProblem; reason: string }[] = [];
+    if (holidays.has(date)) probs.push({ kind: "holiday", reason: `工場の休業日です（${holidayReason(date) ?? "休業"}）` });
     const day = order.customerId ? deliveryDayProblem(order.customerId, date) : undefined;
     if (day) probs.push({ kind: "weekday", reason: day });
     const { deadline, basis } = orderDeadline(productId, order.customerId, date);
@@ -148,6 +153,7 @@ function run(order: Order, now: string, opts: AlternativeOptions): AlternativeRe
           for (let k = 1; k <= back; k++) {
             const pd = addDays(order.deliveryDate, -k);
             if (pd <= today) break; // 今日より前・今日は作れない
+            if (holidays.has(pd)) continue; // 工場の休業日には作れない
             const room = roomOnDay(pd, others, doughLine, order.id, l.productId);
             // 冷凍庫が登録されていれば、その日に作る分＋作りだめの分が冷凍庫に入るかも見る
             const fz = planProduction(totalsForDate(others.filter((o) => o.id !== order.id && countsInTotals(o)), pd)).lines.find((x) => x.line === doughLine)?.freezerCases
