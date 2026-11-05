@@ -64,6 +64,9 @@ export interface Alert {
   relatedIds: string[];
 }
 
+/** ①の機能の ON/OFF 一覧（src/lib/settings/features.ts）の key。evaluateAlerts の isOn には (k) => isOn(alertFeatureKey(k)) を渡す */
+export const alertFeatureKey = (kind: AlertKind) => `alert_${kind}` as const;
+
 export interface AlertKindInfo {
   kind: AlertKind;
   /** 設計書の番号 */

@@ -1,4 +1,5 @@
 import { exportAll, importAll } from "@/lib/db/backup";
+import { kvSet } from "@/lib/db/sqlite";
 
 // 全データのバックアップ（社内のPCからだけ。トンネル経由は proxy で 403）
 //   GET  /api/backup                      … JSON を書き出す（データだけ。受信FAXのPDFは入れない）
@@ -15,6 +16,7 @@ export async function GET(req: Request) {
   } catch (e) {
     return Response.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 400 });
   }
+  kvSet("last_export", { at: data.exportedAt, files: includeFiles, month: month ?? null }); // 仕組みの見張り（7日ない）用
   const stamp = data.exportedAt.slice(0, 16).replace(/[-:T]/g, "") + (includeFiles ? (month ? `-pdf${month}` : "-pdf") : "");
   return new Response(JSON.stringify(data), {
     headers: {

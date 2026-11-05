@@ -81,7 +81,9 @@ export const MENU: Group[] = [
     title: "設定",
     fold: true,
     items: [
+      { href: "/settings/fax", label: "FAX の自動確定" },
       { href: "/settings/backup", label: "バックアップ" },
+      { href: "/settings/line", label: "LINE の自動" },
       { href: "/settings/demo", label: "デモ" },
     ],
   },
@@ -126,12 +128,14 @@ function MenuItems({ items, path, onPick }: { items: Item[]; path: string; onPic
   );
 }
 
-function SideMenu({ path, onPick }: { path: string; onPick?: () => void }) {
+function SideMenu({ path, onPick, hidden = [] }: { path: string; onPick?: () => void; hidden?: string[] }) {
   // たたむまとまりは、今いる画面が中にあるときだけ開く（押せば開け閉めできる）
   const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
     <nav aria-label="メニュー" className="space-y-3">
-      {MENU.map((g) => {
+      {MENU.map((g0) => {
+        const g = { ...g0, items: g0.items.filter((it) => !hidden.includes(it.href)) };
+        if (g.items.length === 0) return null;
         const active = g.items.some((it) => isOn(it, path));
         if (!g.fold)
           return (
@@ -162,6 +166,15 @@ function SideMenu({ path, onPick }: { path: string; onPick?: () => void }) {
 
 export function AppShell({ factory, children }: { factory: string; children: React.ReactNode }) {
   const path = usePathname() ?? "/";
+  // 使わない機能のページはメニューから隠す（①の機能の一覧 /api/features）
+  const [hidden, setHidden] = useState<string[]>([]);
+  useEffect(() => {
+    if (path.startsWith("/liff")) return;
+    fetch("/api/features", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setHidden(d.hidden ?? []))
+      .catch(() => undefined);
+  }, [path]);
   const [folded, setFolded] = useState(false);
   const [open, setOpen] = useState(false); // せまい画面で開いているか
 
@@ -186,7 +199,7 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
             <div className="mb-4 px-3">
               <Brand factory={factory} />
             </div>
-            <SideMenu path={path} />
+            <SideMenu path={path} hidden={hidden} />
             <button type="button" onClick={toggleFold} className="mt-4 ml-3 min-h-11 px-2 text-sm font-bold text-crust-700 underline underline-offset-4">
               ◀ メニューをたたむ
             </button>
@@ -204,7 +217,7 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
                 とじる
               </button>
             </div>
-            <SideMenu path={path} onPick={() => setOpen(false)} />
+            <SideMenu path={path} hidden={hidden} onPick={() => setOpen(false)} />
           </aside>
           <div className="flex-1 bg-ink/40" />
         </div>

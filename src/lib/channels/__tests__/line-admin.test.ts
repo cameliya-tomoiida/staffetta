@@ -35,6 +35,20 @@ describe("取引先マスタ（customers）", () => {
     expect((await getMasterHistory("customers", "C04"))[0]).toMatchObject({ action: "update", who: "事務" });
   });
 
+  it("取引先の画面から「受けたら返事が要る」と「納品する曜日」を保存できる（外すと消える）", async () => {
+    const c = await import("@/lib/channels/line/customers");
+    const { adminCustomerColumns } = await import("@/lib/masters/customers");
+    expect(adminCustomerColumns().find((x) => x.key === "replyRequired")).toMatchObject({ label: "受けたら返事が要る", type: "bool" });
+    const base = { id: "C03", name: "みなと給食センター", channel: "fax", cutoff: "14:00", deliveryTime: "09:00", course: "", active: true };
+    expect(await c.upsertCustomerRow({ ...base, replyRequired: true, deliveryWeekdays: "月;水;金" }, "事務")).toMatchObject({ ok: true });
+    expect(await c.getCustomerSettings("C03")).toMatchObject({ replyRequired: true, deliveryWeekdays: [1, 3, 5] });
+    expect(await c.upsertCustomerRow({ ...base, replyRequired: false, deliveryWeekdays: "" }, "事務")).toMatchObject({ ok: true });
+    const after = await c.getCustomerSettings("C03");
+    expect(after?.replyRequired).toBe(false);
+    expect(after?.deliveryWeekdays).toBeUndefined();
+    expect(await c.upsertCustomerRow({ ...base, deliveryWeekdays: "月;祝" }, "事務")).toMatchObject({ ok: false, field: "deliveryWeekdays" });
+  });
+
   it("おかしな時刻は保存しない", async () => {
     const c = await import("@/lib/channels/line/customers");
     await expect(c.saveCustomerSettings("C04", { name: "喫茶こもれび", channel: "line", cutoff: "25:00", deliveryTime: "07:00", course: "" }, "事務")).rejects.toThrow(/締め時刻/);

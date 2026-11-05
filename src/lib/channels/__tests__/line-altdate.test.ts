@@ -31,6 +31,8 @@ const line = (written_name: string, product_id: string, quantity: number, unit_w
 
 beforeAll(async () => {
   process.env.HUB_DB_PATH = ":memory:";
+  // この試験は人が確定する流れを見る（自動確定は line-auto.test.ts）
+  (await import("@/lib/channels/line/auto")).setLineAutoSettings({ autoConfirm: false }, "試験");
   process.env.DEMO_NOW = "2026-11-05T11:30:00+09:00";
   process.env.LINE_CHANNEL_SECRET = "test-secret";
   process.env.LINE_CHANNEL_ACCESS_TOKEN = "test-token";
@@ -110,5 +112,8 @@ describe("確定の連絡の「代わりの日の提案」と、その返事", (
     expect(o.alternativeOffers(ok)).toEqual([]);
     expect(o.confirmationText(ok)).not.toContain("お届けできない");
     expect(o.alternativeOffers({ ...base, intent: "cancel" })).toEqual([]);
+    // 受け付けたときは間に合っていた（11/4 朝）なら、連絡がいま（締め 11/5 11:00 のあと）でも提案しない
+    const intime = { ...base, lines: [{ ...base.lines[0], id: "x3", productId: "P10", quantity: 2, unit: "袋" }] };
+    expect(o.alternativeOffers(intime)).toEqual([]);
   });
 });

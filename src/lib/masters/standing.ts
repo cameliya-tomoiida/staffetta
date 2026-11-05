@@ -3,6 +3,7 @@ import "server-only";
 // 作るのは要確認（needs_review）の注文だけ。あしたより前の納品日は作らない。確定するのは人。ID が 得意先×納品日 なので、何回押しても二重にならない。
 import { withMasters } from "@/lib/catalog";
 import { nowIso, todayJst } from "@/lib/clock";
+import { isOn } from "@/lib/settings/features";
 import { generateStandingOrders, mondayOf, type StandingSkip } from "@/lib/standing-orders";
 import { readDb, updateDb } from "@/lib/store";
 import { loadMasters } from "./seed-db";
@@ -16,6 +17,7 @@ export interface StandingRunResult {
 
 export async function createStandingOrdersForWeek(input: { who: string; customerId?: string; weekOf?: string }): Promise<StandingRunResult> {
   if (!input.who.trim()) throw new Error("操作する人を選んでください");
+  if (!isOn("standing_orders")) throw new Error("定期注文は使わない設定です（設定 → 機能の ON/OFF）");
   const weekStart = mondayOf(input.weekOf ?? todayJst());
   const masters = await loadMasters();
   const existingOrders = (await readDb()).orders;

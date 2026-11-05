@@ -63,6 +63,41 @@ export async function notifyLineConfirmedAction(orderId: string, who: string) {
   return r;
 }
 
+/** 設定画面: LINE の自動確定・確定の連絡の自動送信のスイッチ */
+export async function setLineAutoAction(next: { autoConfirm?: boolean; autoNotify?: boolean }, who: string) {
+  const { setLineAutoSettings } = await import("./auto");
+  const v = setLineAutoSettings(next, who);
+  revalidatePath("/", "layout");
+  return v;
+}
+
+/** 設定画面: アラートをスタッフの LINE に送るスイッチ */
+export async function setStaffAlertAction(enabled: boolean, who: string) {
+  const { setStaffAlertSettings } = await import("./staff-alerts");
+  const v = setStaffAlertSettings({ enabled }, who);
+  revalidatePath("/settings/line");
+  return v;
+}
+
+/** 設定画面: LINE の人をスタッフとして登録する・外す */
+export async function addStaffLineAction(input: { userId: string; name: string; allDanger: boolean }, who: string) {
+  const { addStaffLine } = await import("./staff-alerts");
+  await addStaffLine(input, who);
+  revalidatePath("/", "layout");
+}
+export async function removeStaffLineAction(userId: string) {
+  const { removeStaffLine } = await import("./staff-alerts");
+  removeStaffLine(userId);
+  revalidatePath("/", "layout");
+}
+
+/** LINE受付: 自動で確定した注文を、要確認に戻す */
+export async function undoAutoConfirmAction(orderId: string, who: string) {
+  const { undoAutoConfirm } = await import("./auto");
+  await undoAutoConfirm(orderId, who);
+  revalidatePath("/", "layout");
+}
+
 /** 管理画面: ひも付けを外す（人違いだったとき） */
 export async function unlinkLineUserAction(userId: string, who: string) {
   await unlinkUser(userId, who);

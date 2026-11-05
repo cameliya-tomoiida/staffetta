@@ -355,11 +355,11 @@ export interface ProductMaster {
   // 包み直し
   sourceProductId?: string;
   slicesPerPack?: number;
-  /** 原価・見積りを最後に見直した日（YYYY-MM-DD）。年1回の見直しのお知らせに使う */
-  lastCostReviewAt?: string;
-  /** 見直しの担当（名前） */
-  costReviewer?: string;
   active: boolean;
+  /** 最後に原価・見積りを見直した日 YYYY-MM-DD（11か月でお知らせ） */
+  lastCostReviewAt?: string;
+  /** 見直しの担当 */
+  costReviewOwner?: string;
 }
 
 /** 材料・包材の共通の項目（在庫・発注先・リードタイム・ロット） */
@@ -415,6 +415,8 @@ export interface SupplierMaster {
   siteName?: string;
   /** FAX 番号・メールなど */
   contact: string;
+  /** 依頼・問い合わせのメールの宛先（あれば） */
+  email?: string;
   /** 発注の締め "HH:MM" と、締めから納品までの日数 */
   cutoff?: string;
   leadDays?: number;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { evaluateAlerts, ALERT_KINDS, type AlertKind } from "..";
+import { evaluateAlerts, ALERT_KINDS, alertFeatureKey, type AlertKind } from "..";
+import { FEATURES } from "@/lib/settings/features";
 import { sampleMasters } from "@/lib/masters/seed";
 import { demoOrders } from "@/data/demo-orders";
 import type { Order, PurchaseOrder } from "@/data/types";
@@ -26,6 +27,9 @@ describe("アラートの判定", () => {
   it("種類の一覧は #1〜#14 で、key がかぶらない", () => {
     expect(ALERT_KINDS.map((k) => k.no)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
     expect(new Set(ALERT_KINDS.map((k) => k.kind)).size).toBe(14);
+    // ①の機能の ON/OFF 一覧に、種類ごとのスイッチがある
+    const keys = new Set<string>(FEATURES.map((f) => f.key));
+    expect(ALERT_KINDS.filter((k) => !keys.has(alertFeatureKey(k.kind)))).toEqual([]);
   });
 
   it("OFF の種類は出さない・同じ中身なら同じ id", () => {
@@ -78,7 +82,7 @@ describe("アラートの判定", () => {
   });
 
   it("#4 原価の見直し: 11か月で warn・12か月で danger・日付が無い商品はまとめて info", () => {
-    const m = { ...masters, products: masters.products.map((p) => (p.id === "P01" ? { ...p, lastCostReviewAt: "2025-11-20" } : p.id === "P02" ? { ...p, lastCostReviewAt: "2025-10-01", costReviewer: "工場長" } : p.id === "P03" ? { ...p, lastCostReviewAt: "2026-06-01" } : p)) };
+    const m = { ...masters, products: masters.products.map((p) => (p.id === "P01" ? { ...p, lastCostReviewAt: "2025-11-20" } : p.id === "P02" ? { ...p, lastCostReviewAt: "2025-10-01", costReviewOwner: "工場長" } : p.id === "P03" ? { ...p, lastCostReviewAt: "2026-06-01" } : p)) };
     const a = evaluateAlerts(db(), m, NOW, { isOn: only("cost_review_due") });
     const p1 = a.find((x) => x.relatedIds[0] === "P01")!;
     const p2 = a.find((x) => x.relatedIds[0] === "P02")!;

@@ -3,12 +3,18 @@
 // 「Claude が返すはずの形」の見本に差し替える（テストで API を呼ばない・毎回同じ結果にする）。
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EmailRead } from "@/lib/channels/email/reader";
 import { mem, resetMem } from "./memdb";
 import { expectImportedOrder } from "./rules";
 
 vi.mock("@/lib/store", () => import("./memdb"));
+
+// ここでは「取り込みそのもの」を確かめる。自動の確定（A8・A9）は automation のテストで確かめるので止めておく
+beforeAll(async () => {
+  const { saveAutomationSettings } = await import("@/lib/automation/settings");
+  saveAutomationSettings({ importAutoConfirm: false, emailAutoConfirm: false }, "テスト");
+});
 
 /** 件名ごとの「Claude の読み取り結果」の見本 */
 const reads: Record<string, EmailRead> = {};

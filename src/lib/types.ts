@@ -124,6 +124,10 @@ export interface FaxDoc {
   /** 注文以外として仕分けた理由（人が仕分けを確定したら入る） */
   sortedAs?: "supplier_reply" | "not_order";
   sortedBy?: string;
+  /** 迷わなかったので自動で確定した（src/lib/fax-auto.ts）。1タップで取り消すと消える */
+  autoConfirmed?: { at: string; reason: string; mode: "order" | "no_order" | "change" };
+  /** 自動で確定しなかった理由と、迷った行（"注文の番号-行の番号"）。確認画面で迷った行だけを上に出す */
+  autoReview?: { at: string; reasons: string[]; flagged: string[] };
 }
 
 /** 確認画面で人が確定した1行（FAX確認画面 → confirmFaxAction） */

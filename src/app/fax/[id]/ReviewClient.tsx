@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Customer } from "@/data/master";
 import type { Order } from "@/data/types";
 import type { FaxDoc, FaxTemplate } from "@/lib/types";
+import { AutoConfirmBadge } from "@/components/AutoConfirmBadge";
 import { addAliasAction, approveTemplateAction, confirmChangeAction, confirmFaxAction, sortFaxAction } from "@/app/actions";
 import { PdfView } from "@/components/PdfView";
 import { NumPad } from "@/components/NumPad";
@@ -107,7 +108,10 @@ export function ReviewClient({
 
   const update = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "（商品を選んでください）";
-  const needsLook = (r: Row) => r.level !== "high" || !r.productId;
+  // 迷った行: 自信が高くない・商品が決まっていない・自動確定の判定で止まった行（締め・辞書に無いなど）
+  const autoFlagged = new Set(fax.autoReview?.flagged ?? []);
+  const needsLook = (r: Row) => r.level !== "high" || !r.productId || autoFlagged.has(`${r.orderIndex}-${r.lineIndex}`);
+  const [showOk, setShowOk] = useState(false);
   const inDict = (r: Row) => (learned[`${customerId}|${r.writtenName}`] ?? aliases[customerId]?.[r.writtenName]) === r.productId;
   const changed = (r: Row) => r.quantity !== r.aiQuantity || r.productId !== r.aiProductId || r.piecesPerUnit !== r.aiPieces || r.removed;
   const flagged = rows.filter((r) => !r.removed && needsLook(r)).length;
@@ -238,6 +242,15 @@ export function ReviewClient({
             <div className="text-xs text-ink-faint">判定の根拠: {read.sender.evidence}</div>
             <div className="text-xs text-ink-faint">種類の判断: {read.kind_reason}</div>
             {read.notes && <div className="rounded-lg border border-rule bg-cream px-3 py-2 text-sm"><b className="mr-1">メモ：</b>{read.notes}</div>}
+            {fax.autoConfirmed && fax.status === "confirmed" && <AutoConfirmBadge faxId={fax.id} reason={fax.autoConfirmed.reason} />}
+            {!done && fax.autoReview && fax.autoReview.reasons.length > 0 && (
+              <div className="rounded-lg bg-review-bg px-3 py-2 text-sm text-review-ink">
+                <div className="font-bold">自動で確定しなかった理由（ここだけ見てください）</div>
+                <ul className="mt-1 list-disc pl-5">
+                  {fax.autoReview.reasons.slice(0, 6).map((r, k) => <li key={k}>{r}</li>)}
+                </ul>
+              </div>
+            )}
             {!done && isOrderish && !needsTemplate && (
               <div className={`rounded-lg px-3 py-2 text-sm font-bold ${flagged ? "bg-review-bg text-review-ink" : "bg-ok-bg text-ok-ink"}`}>
                 {kind === "change"
@@ -342,7 +355,12 @@ export function ReviewClient({
 
             {isOrderish && dates.map((key) => {
               const [oi, date] = key.split("|");
-              const idxs = rows.map((_, i) => i).filter((i) => rows[i].orderIndex === Number(oi));
+              const all = rows.map((_, i) => i).filter((i) => rows[i].orderIndex === Number(oi));
+              // 確定前は、迷った行だけを上に出し、迷わなかった行は「確認済み」として畳む（開けば全部見られる）
+              const fold = !done && isOrderish && all.some((i) => needsLook(rows[i]));
+              const lookIdxs = fold ? all.filter((i) => needsLook(rows[i])) : all;
+              const okIdxs = fold ? all.filter((i) => !needsLook(rows[i])) : [];
+              const idxs = [...lookIdxs, ...(showOk ? okIdxs : [])];
               return (
                 <div key={key} className="mb-5">
                   <div className="mb-2 flex items-center gap-2">
@@ -470,6 +488,15 @@ export function ReviewClient({
                           </tr>
                         );
                       })}
+                      {okIdxs.length > 0 && (
+                        <tr className="border-t border-rule">
+                          <td colSpan={6} className="py-2">
+                            <button className="w-full rounded-lg bg-ok-bg px-3 py-2 text-left text-sm font-bold text-ok-ink" onClick={() => setShowOk((v) => !v)}>
+                              {showOk ? "▲ 迷わなかった行をたたむ" : `✓ 迷わなかった ${okIdxs.length} 行は確認済み（開いて見る）`}
+                            </button>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

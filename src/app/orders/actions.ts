@@ -55,6 +55,8 @@ export async function confirmOrderAction(input: { orderId: string; who: string; 
       return o.source.channel;
     });
     for (const a of learned) await addAlias({ ...a, who: input.who });
+    // LINE の注文: 全部受けられるなら確定の連絡を自動で送る（④。設定が「する」のときだけ。受けられない行があれば人が見て送る）
+    if (channel === "line") await (await import("@/lib/channels/line/auto")).autoNotifyIfAllowed(input.orderId);
     revalidatePath("/", "layout");
     return { ok: true, channel };
   } catch (e) {

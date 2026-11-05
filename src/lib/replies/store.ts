@@ -8,12 +8,16 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Order } from "@/data/types";
 import { findCustomer, withMasters } from "@/lib/catalog";
+import { suggestAlternatives } from "@/lib/alternatives";
 import { buildEml } from "@/lib/channels/eml";
 import { HUB_SENDER } from "@/lib/channels/outbound/render";
 import { outputPath } from "@/lib/channels/outbound/workflow";
 import { makeSimplePdf } from "@/lib/channels/pdf";
 import { nowIso } from "@/lib/clock";
 import { ensureTables, getDb } from "@/lib/db/sqlite";
+import { getAutomationSettings } from "@/lib/automation/settings";
+import { isOn } from "@/lib/settings/features";
+import { logAuto } from "@/lib/automation/log";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { demoOrders } from "@/demo/orders";
 import { readDb } from "@/lib/store";
@@ -39,6 +43,10 @@ export interface StoredReply {
   late: number;
   changed: number;
   altDate?: string;
+  /** D1: 全行そのまま受けられる（変更・受けられない品が無い）＝そのまま送ってよい返事 */
+  ready?: boolean;
+  /** 社内向けのメモ（前の日に作っておけば受けられる、など。返事には書いていない） */
+  memo?: string[];
 }
 
 const SQL = `CREATE TABLE IF NOT EXISTS order_replies (id TEXT PRIMARY KEY, order_id TEXT NOT NULL, json TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);`;
@@ -117,7 +125,10 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
   const prev = getReply(id);
   if (prev?.status === "sent") throw new Error("この注文の返事はもう送っています");
   // 中身（品名・締めの判定）は DB のマスタで計算する
-  const content = withMasters(masters, () => buildReply(order, nowIso()));
+  // 受けられない品と代わりの日は③の suggestAlternatives（締め・納品しない曜日・ラインの上限）
+  const now = nowIso();
+  const alt = suggestAlternatives(order, now, { masters, otherOrders: (await readDb()).orders });
+  const content = withMasters(masters, () => buildReply(order, now, { alt }));
   const fileName = await writeFiles(id, content);
   const r: StoredReply = {
     id, orderId: order.id, customerId: order.customerId, customerName: content.customerName, kind: content.kind, to: content.to,
@@ -125,6 +136,8 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
     late: content.lines.filter((l) => l.status === "late").length,
     changed: content.lines.filter((l) => l.status === "changed" || l.status === "removed").length,
     ...(content.altDate ? { altDate: content.altDate } : {}),
+    ...(content.memo.length ? { memo: content.memo } : {}),
+    ready: content.lines.every((l) => l.status === "ok"),
   };
   save(r);
   return r;
@@ -133,6 +146,7 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
 /** 受注一覧の「返事を作る」。確定・仮発注の注文だけ */
 export async function createReply(orderId: string, who: string): Promise<StoredReply> {
   if (!who.trim()) throw new Error("返事を作る人を選んでください");
+  if (!isOn("order_reply_drafts")) throw new Error("受注の確認の返事は使わない設定です（設定 → 機能の ON/OFF）");
   // 保存した注文、なければ画面に出している見本の注文
   const order = (await readDb()).orders.find((o) => o.id === orderId) ?? demoOrders().find((o) => o.id === orderId);
   if (!order) throw new Error("注文が見つかりません");
@@ -145,6 +159,7 @@ export async function createReply(orderId: string, who: string): Promise<StoredR
 
 /** 取引先マスタで「受けたら返事が要る」の先の、まだ返事の無い仮発注・確定の注文に下書きを作る。作った数を返す */
 export async function ensureAutoReplies(): Promise<StoredReply[]> {
+  if (!getAutomationSettings().replyAutoQueue) return [];
   const masters = await loadMasters();
   const need = new Set(masters.customers.filter((c) => (c as { replyRequired?: boolean }).replyRequired).map((c) => c.id));
   if (!need.size) return [];
@@ -154,7 +169,9 @@ export async function ensureAutoReplies(): Promise<StoredReply[]> {
   const out: StoredReply[] = [];
   for (const o of orders) {
     if (!withMasters(masters, () => replyKindOf(o)).kind) continue;
-    out.push(await create(o, "自動（受けたら返事が要る先）", true, masters));
+    const r = await create(o, "自動（受けたら返事が要る先）", true, masters);
+    logAuto("reply", r.id, r.ready ? "done" : "held", r.ready ? "全部そのまま受けられるので、返事を送信待ちに入れました（送るのは人）" : "変更・受けられない品があるので、下書きを人が見てから送ります");
+    out.push(r);
   }
   return out;
 }

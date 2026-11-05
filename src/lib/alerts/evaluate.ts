@@ -224,7 +224,7 @@ function costReviewDue(masters: Masters, now: string, opts: AlertOptions): Alert
     const suppliers = [...new Set(materialSuppliersOf(masters, p.id))];
     res.push(mk("cost_review_due", `${p.id}|${last.slice(0, 10)}`, over ? "danger" : "warn",
       over ? `${p.name}の原価の見直しが過ぎています` : `${p.name}の原価の見直し時期です`,
-      `最後に見直したのは ${last.slice(0, 10)}${p.lastCostReviewAt ? "" : "（登録した日）"}です。${md(due)}までに、原価と見積りを見直してください。${p.costReviewer ? `担当: ${p.costReviewer}` : "担当が決まっていません。"}`,
+      `最後に見直したのは ${last.slice(0, 10)}${p.lastCostReviewAt ? "" : "（登録した日）"}です。${md(due)}までに、原価と見積りを見直してください。${p.costReviewOwner ? `担当: ${p.costReviewOwner}` : "担当が決まっていません。"}`,
       [
         { label: "見直しを始める", kind: "start_cost_review", payload: { productId: p.id } },
         { label: "担当者にお願いする", kind: "assign", payload: { alertId: `cost_review_due:${p.id}|${last.slice(0, 10)}`, role: "cost_review" } },
