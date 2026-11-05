@@ -7,6 +7,7 @@ import { Button, buttonClass, fmtDate, fmtDateTime, MethodIcon, Notice, Purchase
 
 const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 import type { EntryRow } from "@/lib/channels/outbound/render";
+import { ReceivePanel } from "./ReceivePanel";
 import type { OutboundRecord } from "@/lib/channels/outbound/workflow";
 
 type View = OutboundRecord & {
@@ -15,6 +16,8 @@ type View = OutboundRecord & {
   deliveryName: string;
   notes: string[];
   entry?: { profileLabel: string; steps: string[]; rows: EntryRow[] };
+  /** 送信済みの材料の発注書だけ。入荷の記録（まだなら lines が null） */
+  receipt?: { lines: { itemId: string; quantity: number }[] | null; at: string | null; who: string | null };
 };
 
 const methodLabel: Record<string, string> = {
@@ -162,6 +165,14 @@ export function OutboundClient({ records, dates }: { records: View[]; dates: str
                   </Button>
                 )}
                 {po.status === "approved" && po.method === "fax" && <Notice tone="review">上の「FAX 送信待ち」から送ってください</Notice>}
+                {po.status === "sent" && r.receipt && (
+                  <ReceivePanel
+                    lines={po.lines.filter((l) => l.itemType === "material").map((l) => ({ itemId: l.itemId, name: l.name, quantity: l.quantity, units: l.units, unitLabel: l.unitLabel }))}
+                    receipt={r.receipt}
+                    disabled={busy || !who}
+                    onSubmit={(lines) => act({ action: "arrived", poId: po.id, lines })}
+                  />
+                )}
               </div>
             )}
           </section>
