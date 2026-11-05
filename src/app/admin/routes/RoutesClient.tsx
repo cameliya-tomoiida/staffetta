@@ -10,8 +10,9 @@ import { buildTimeline, suggestOrder, toHHMM, type Depot, type RouteSettings, ty
 import { geocodeMissingAction, moveCustomerAction, roadRouteAction, saveStopsAction } from "./actions";
 import { RouteMap, type MapPin } from "./RouteMap";
 import { CourseForm, DepotForm, ImportPanel } from "./RoutePanels";
+import { OptimizePanel } from "./OptimizePanel";
 
-export type RouteCustomer = Stop & { course?: string; deliveryMethod?: DeliveryMethod };
+export type RouteCustomer = Stop & { course?: string; deliveryMethod?: DeliveryMethod; deliveryWeekdays?: number[] };
 
 const WD = "日月火水木金土";
 const METHOD: Record<DeliveryMethod, string> = { own: "自社便", frozen: "冷凍便", parcel: "宅配・路線便", pickup: "引き取り" };
@@ -27,7 +28,9 @@ function initialOrder(course: CourseMaster, customers: RouteCustomer[]): string[
   return [...head, ...mine.map((c) => c.id).filter((id) => !head.includes(id)).sort()];
 }
 
-export function RoutesClient({ courses, customers, depot, settings }: { courses: CourseMaster[]; customers: RouteCustomer[]; depot: Depot; settings: RouteSettings }) {
+export function RoutesClient({
+  courses, customers, depot, settings, optWeekday, optRun,
+}: { courses: CourseMaster[]; customers: RouteCustomer[]; depot: Depot; settings: RouteSettings; optWeekday?: number; optRun?: boolean }) {
   // 地図に出すのは当日に走る便（前日に出す宅配便・冷凍便は除く）
   const own = courses.filter((c) => c.dayOffset === 0);
   const count = (id: string) => customers.filter((x) => x.course === id).length;
@@ -323,6 +326,8 @@ export function RoutesClient({ courses, customers, depot, settings }: { courses:
           </ul>
         </details>
       )}
+
+      <OptimizePanel courses={courses} customers={customers} depot={depot} settings={settings} initialWeekday={optWeekday} autoRun={optRun} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <CourseForm key={courseId} course={course} />

@@ -109,7 +109,7 @@ export async function upsertCustomerRow(
     if (wd.error) return { ok: false, error: wd.error, field: "closedWeekdays" };
     next.closedWeekdays = (wd.value as number[] | undefined)?.length ? (wd.value as number[]) : undefined;
   }
-  for (const k of ["lat", "lng"] as const) {
+  for (const k of ["lat", "lng", "serviceMinutes"] as const) {
     if (!(k in row)) continue;
     const v = s(k);
     next[k] = v === "" ? undefined : Number(v);

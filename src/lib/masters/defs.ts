@@ -313,6 +313,7 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "deliveryWindowTo", label: "納品時間の希望（まで）", type: "time", example: "09:00" },
     { key: "deliveryHowTo", label: "納品の仕方", type: "text", example: "裏口の棚に置く。番重は前回分を回収", help: "新しい人に教えるときに地図に出す" },
     { key: "deliveryCaution", label: "注意事項", type: "text", example: "8時までは正面に車を止めない" },
+    { key: "serviceMinutes", label: "納品にかかる時間（分）", type: "integer", min: 0, example: "15", help: "空なら便の「1件の納品の時間」（それも空なら 10 分）" },
     { key: "lat", label: "緯度", type: "number", min: 20, max: 46, example: "35.1681", help: "空なら住所から出す" },
     { key: "lng", label: "経度", type: "number", min: 122, max: 154, example: "136.9083", help: "空なら住所から出す" },
     ACTIVE,

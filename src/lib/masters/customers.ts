@@ -48,7 +48,7 @@ export function adminCustomerColumns(): AdminColumn[] {
   const cols: AdminColumn[] = customerDef.columns.map((c) => ({
     key: c.key,
     label: c.label,
-    type: c.type === "enum" ? "select" : c.type === "time" ? "time" : c.type === "boolean" ? "bool" : c.type === "number" ? "number" : TEXTAREA_KEYS.has(c.key) ? "textarea" : "text",
+    type: c.type === "enum" ? "select" : c.type === "time" ? "time" : c.type === "boolean" ? "bool" : c.type === "number" || c.type === "integer" ? "number" : TEXTAREA_KEYS.has(c.key) ? "textarea" : "text",
     ...(c.options ? { options: c.options.map((o) => ({ value: o.value, label: o.label })) } : {}),
     ...(c.required ? { required: true } : {}),
     ...(c.help ? { help: c.help } : {}),
