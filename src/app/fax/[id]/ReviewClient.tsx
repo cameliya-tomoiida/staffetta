@@ -218,17 +218,18 @@ export function ReviewClient({
         <div className="card flex h-[60vh] min-h-0 flex-col overflow-hidden lg:h-auto">
           <PdfView url={fax.file} rotation={rotation} highlight={selected != null ? rows[selected]?.y : null} />
           {!done && (
-            <div className="flex items-center gap-2 border-t border-rule px-3 py-2 text-sm">
-              <span className="text-ink-soft">向きがおかしいときは:</span>
-              <button className="btn-ghost px-3 py-1" onClick={() => setRotation((r) => (r + 270) % 360)}>↺ 左に回す</button>
-              <button className="btn-ghost px-3 py-1" onClick={() => setRotation((r) => (r + 90) % 360)}>↻ 右に回す</button>
+            <div className="flex flex-wrap items-center gap-2 border-t border-rule px-3 py-2 text-sm">
+              <span className="hidden whitespace-nowrap text-ink-soft xl:inline">向きがおかしいときは:</span>
+              <button className="btn-ghost whitespace-nowrap px-3 py-1" onClick={() => setRotation((r) => (r + 270) % 360)}>↺ 左に回す</button>
+              <button className="btn-ghost whitespace-nowrap px-3 py-1" onClick={() => setRotation((r) => (r + 90) % 360)}>↻ 右に回す</button>
             </div>
           )}
         </div>
 
         {/* 右: 読み取り結果 */}
         <div className="card flex min-h-0 flex-col overflow-hidden">
-          <div className="space-y-2 border-b border-rule p-4">
+          {/* 上の説明が長いと行の表が見えなくなるので、説明は高さの4割までにして、それ以上は説明の中でスクロール */}
+          <div className="max-h-[40%] shrink-0 space-y-2 overflow-y-auto border-b border-rule p-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="w-16 text-sm font-bold text-ink-soft">送り主</span>
               {isOrderish ? (
@@ -365,7 +366,7 @@ export function ReviewClient({
               return (
                 <div key={key} className="mb-5">
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="text-sm font-bold text-ink-soft">納品日</span>
+                    <span className="whitespace-nowrap text-sm font-bold text-ink-soft">納品日</span>
                     <input type="date" disabled={done} value={date}
                       onChange={(e) => setRows((rs) => rs.map((r) => (r.orderIndex === Number(oi) ? { ...r, deliveryDate: e.target.value } : r)))}
                       className="rounded-lg border px-2 py-1 font-bold" />
