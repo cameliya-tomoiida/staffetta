@@ -32,7 +32,7 @@ export const CHANNEL_OPTIONS = opts({
   fax: "FAX", line: "LINE", infomart: "インフォマート", customer_site: "取引先の発注サイト", email: "メール",
   google_sheet: "スプレッドシート", phone: "電話", driver: "ドライバー",
 });
-export const DELIVERY_METHOD_OPTIONS = opts({ own: "自社便", frozen: "冷凍便", parcel: "宅配・路線便", pickup: "引き取り" });
+export const DELIVERY_METHOD_OPTIONS = opts({ own: "自社便", frozen: "冷凍便", parcel: "宅配・路線便", pickup: "引き取り", oc: "オフィス自社便" });
 export const PER_OPTIONS = opts({ piece: "1個", pack: "1包・1袋", case: "1ケース" });
 export const SCHEDULE_FROM_OPTIONS = opts({ delivery: "納品時刻から逆算", start: "開始時刻から順に" });
 
