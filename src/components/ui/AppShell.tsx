@@ -81,6 +81,7 @@ export const MENU: Group[] = [
     title: "設定",
     fold: true,
     items: [
+      { href: "/settings/fax", label: "FAX の自動確定" },
       { href: "/settings/backup", label: "バックアップ" },
       { href: "/settings/line", label: "LINE の自動" },
       { href: "/settings/demo", label: "デモ" },

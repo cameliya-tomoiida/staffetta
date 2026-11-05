@@ -8,6 +8,8 @@ import { readFax } from "@/lib/fax-reader";
 import { addAlias, aliasMapFor } from "@/lib/aliases";
 import { readDb, resetDb, updateDb } from "@/lib/store";
 import type { ConfirmedLine, FaxDoc } from "@/lib/types";
+import { AUTO_WHO, judgeAutoConfirm } from "@/lib/fax-auto";
+import { autoConfirmEnabled } from "@/lib/fax-auto-setting";
 
 // 時刻は共通の時計から（撮影日は DEMO_NOW で「今日」をそろえる）
 const now = () => nowIso();
@@ -88,6 +90,8 @@ export async function readFaxAction(faxId: string) {
         });
       });
     });
+    // 迷わなかった FAX は、人を待たずに確定する（迷った所だけ人が見る）
+    await autoConfirm(faxId).catch(() => undefined); // 自動確定で失敗しても、読み取りは成功のまま（人が確定できる）
   } catch (e) {
     await updateDb((d) => {
       const f = d.faxes.find((f) => f.id === faxId)!;
@@ -215,6 +219,8 @@ export async function confirmFaxAction(input: { faxId: string; customerId: strin
     fax.status = "confirmed";
   });
   for (const l of learned) await addAlias({ customerId: input.customerId, ...l, source: "fax", who: input.who });
+  // 元の注文が確定したので、待っていた変更 FAX を自動で反映できるか、もう一度見る
+  await retryChangeFaxes(input.customerId);
   revalidatePath("/", "layout");
 }
 
@@ -336,3 +342,111 @@ export async function resetDemoAction(input?: { understood?: boolean }) {
   await resetDb();
   revalidatePath("/", "layout");
 }
+
+// ───────── 自動確定（担当者の方針 11/5：迷わなかった FAX は人を待たない） ─────────
+
+/**
+ * 読み取りのあとに呼ぶ。迷わなかった FAX は読み取りのまま確定する（AI は値を書き換えない）。
+ * 迷った FAX は「要確認」のまま、理由と迷った行を fax.autoReview に残す（確認画面で迷った行だけを上に出す）。
+ */
+async function autoConfirm(faxId: string) {
+  const db = await readDb();
+  const fax = db.faxes.find((f) => f.id === faxId);
+  if (!fax?.read || fax.status !== "review") return; // 新しい様式（template）・注文以外の仕分けは人
+  const decision = judgeAutoConfirm({ fax, orders: db.orders, templates: db.templates, aliases: await aliasMapFor(), now: now() });
+  const at = now();
+  if (!decision.ok || !autoConfirmEnabled()) {
+    const reasons = decision.ok ? ["自動確定は「しない」に設定されています"] : decision.reasons;
+    const flagged = decision.ok ? [] : decision.flagged;
+    await updateDb((d) => {
+      const f = d.faxes.find((x) => x.id === faxId);
+      if (f) f.autoReview = { at, reasons, flagged };
+    });
+    return;
+  }
+  const customerId = fax.customerId!;
+  const rotation = fax.rotation ?? 0;
+  try {
+    if (decision.mode === "change") {
+      await confirmChangeAction({ faxId, customerId, rotation, who: AUTO_WHO, changes: decision.changes.map(({ orderId, lineId, newQuantity }) => ({ orderId, lineId, newQuantity })), additions: [] });
+    } else {
+      const lines: ConfirmedLine[] = fax.read.orders.flatMap((o, oi) =>
+        o.lines.map((l, li) => ({ orderIndex: oi, lineIndex: li, deliveryDate: o.delivery_date, productId: l.product_id, quantity: l.quantity, piecesPerUnit: l.pieces_per_unit || 1 })),
+      );
+      await confirmFaxAction({ faxId, customerId, rotation, lines, who: AUTO_WHO });
+    }
+    await updateDb((d) => {
+      const f = d.faxes.find((x) => x.id === faxId)!;
+      f.autoConfirmed = { at, reason: decision.reason, mode: decision.mode };
+      f.autoReview = undefined;
+      // 自動で確定した理由を、作った注文（変更なら書き換えた元の注文）に残す
+      const touched = decision.mode === "change" ? new Set(decision.changes.map((c) => c.orderId)) : new Set<string>();
+      for (const o of d.orders) {
+        if (o.id.startsWith(`${faxId}-`) || touched.has(o.id)) o.edits.push({ at, who: AUTO_WHO, field: "note", from: "", to: `${decision.reason}（FAX ${faxId}）` });
+      }
+    });
+  } catch (e) {
+    await updateDb((d) => {
+      const f = d.faxes.find((x) => x.id === faxId);
+      if (f) f.autoReview = { at, reasons: [`自動で確定できませんでした: ${e instanceof Error ? e.message : String(e)}`], flagged: [] };
+    });
+  }
+}
+
+/** 元の注文が確定したあと、同じ取引先の「要確認」の変更 FAX を自動で反映できるか見直す */
+async function retryChangeFaxes(customerId: string) {
+  const db = await readDb();
+  for (const f of db.faxes.filter((x) => x.status === "review" && x.read?.kind === "change" && x.customerId === customerId)) await autoConfirm(f.id);
+}
+
+/**
+ * 自動確定を取り消して「要確認」に戻す（受信箱・確認画面の1タップ）。
+ * 注文は要確認に戻し、本発注で置き換えた仮発注は仮発注に戻す。変更 FAX は、書き換えた元の注文の数を元に戻す。
+ */
+export async function undoAutoConfirmAction(input: { faxId: string; who: string }) {
+  if (!input.who?.trim()) throw new Error("誰が取り消したか（名前）を選んでください");
+  await updateDb((db) => {
+    const fax = db.faxes.find((f) => f.id === input.faxId);
+    if (!fax?.autoConfirmed) throw new Error("自動で確定した FAX ではありません");
+    const at = now();
+    const note = (o: Order) => o.edits.push({ at, who: input.who, field: "note", from: "自動確定", to: "自動確定を取り消して要確認に戻した" });
+    if (fax.autoConfirmed.mode === "change") {
+      for (const o of db.orders) {
+        let changed = false;
+        for (const l of o.lines) {
+          const last = l.edits.at(-1);
+          if (last?.who === AUTO_WHO && last.field === "quantity" && l.note?.includes(fax.id)) {
+            l.edits.push({ at, who: input.who, field: "quantity", from: String(l.quantity), to: last.from });
+            l.quantity = Number(last.from);
+            l.pieces = l.quantity * l.piecesPerUnit;
+            l.note = undefined;
+            changed = true;
+          }
+        }
+        if (changed) {
+          if (o.status === "cancelled" && o.lines.some((l) => l.quantity > 0)) o.status = "confirmed";
+          o.source.refs = o.source.refs.filter((r) => !(r.kind === "fax_pdf" && r.faxId === fax.id));
+          note(o);
+        }
+      }
+    }
+    for (const o of db.orders.filter((x) => x.id.startsWith(`${fax.id}-`))) {
+      // 本発注で置き換えた仮発注を戻す
+      for (const old of db.orders.filter((x) => x.supersededBy === o.id)) {
+        old.status = "provisional";
+        old.supersededBy = undefined;
+        old.edits.push({ at, who: input.who, field: "note", from: "置き換え", to: "本発注の自動確定を取り消したので仮発注に戻した" });
+      }
+      o.supersedes = undefined;
+      o.status = "needs_review";
+      o.confirmedAt = undefined;
+      o.confirmedBy = undefined;
+      note(o);
+    }
+    fax.status = "review";
+    fax.autoReview = { at, reasons: [`${input.who}さんが自動確定を取り消しました（${fax.autoConfirmed.reason}）`], flagged: [] };
+    fax.autoConfirmed = undefined;
+  });
+  revalidatePath("/", "layout");
+}
+

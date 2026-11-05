@@ -5,6 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { importAll, type ImportReport } from "@/lib/db/backup";
 import { kvGet } from "@/lib/db/sqlite";
+import { autoConfirmEnabled, setAutoConfirmEnabled } from "@/lib/fax-auto-setting";
 
 export async function importBackupAction(formData: FormData): Promise<{ ok: true; report: ImportReport } | { ok: false; error: string }> {
   const file = formData.get("file");
@@ -22,4 +23,15 @@ export async function importBackupAction(formData: FormData): Promise<{ ok: true
 /** 最後に取り込んだときの記録（設定画面に「○月○日 ○○さんが取り込み」と出す用） */
 export async function lastImportAction() {
   return kvGet<{ at: string; who: string; exportedAt: string; report: ImportReport }>("last_import") ?? null;
+}
+
+/** FAX の自動確定のスイッチ（既定は「する」） */
+export async function getAutoConfirmAction() {
+  return autoConfirmEnabled();
+}
+
+export async function setAutoConfirmAction(enabled: boolean, who: string) {
+  if (!who?.trim()) throw new Error("誰が変えたか（名前）を選んでください");
+  setAutoConfirmEnabled(enabled, who);
+  revalidatePath("/", "layout");
 }
