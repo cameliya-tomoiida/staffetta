@@ -99,6 +99,8 @@ export const doughDef: MasterDef<DoughMaster> = {
     { key: "line", label: "ライン", type: "enum", options: LINE_OPTIONS, required: true, example: "パン" },
     { key: "lossRate", label: "ロス率", type: "number", min: 0, max: 0.5, required: true, example: "0.04", help: "4% なら 0.04" },
     { key: "mixerMaxKg", label: "ミキサー1回の上限（kg）", type: "number", min: 0.1, example: "60", help: "空なら使うミキサーの上限" },
+    { key: "kneadTargetC", label: "目標の捏上温度（℃）", type: "number", example: "26", help: "製品カードで、捏上温度がこの ± 許す幅から外れたら赤" },
+    { key: "kneadToleranceC", label: "捏上温度の許す幅（±℃）", type: "number", min: 0, example: "2", help: "空なら 2" },
     { key: "note", label: "メモ", type: "text" },
   ],
   check: (d, all) => {
@@ -136,6 +138,9 @@ export const stepDef: MasterDef<ProcessStepMaster> = {
     { key: "prevDay", label: "前日の作業", type: "boolean", default: false, example: "いいえ" },
     { key: "ccp", label: "CCP", type: "boolean", default: false, example: "いいえ" },
     { key: "note", label: "条件・メモ", type: "text", example: "捏ね上げ 26℃" },
+    { key: "tempTargetC", label: "確かめる温度（℃）", type: "number", example: "-26", help: "製品カードでこの工程の温度を書く欄を出す（急速冷凍など）" },
+    { key: "tempMinC", label: "温度の下限（℃）", type: "number", example: "-28" },
+    { key: "tempMaxC", label: "温度の上限（℃）", type: "number", example: "-24" },
   ],
   check: (s, all) => {
     const eq = s.equipmentId ? all.equipment?.find((e) => e.id === s.equipmentId) : undefined;
@@ -187,6 +192,9 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "sliceMm", label: "スライス幅（mm）", type: "number", min: 1, example: "" },
     { key: "metalCheck", label: "金属検査", type: "enum", options: METAL_CHECK_OPTIONS, example: "包装のあと" },
     { key: "laborCost", label: "人件費（円/個）", type: "number", min: 0 },
+    { key: "bakeTempC", label: "焼成の温度（℃）", type: "number", example: "200", help: "製品カードの焼成の目安。ピザは 450 など" },
+    { key: "bakeMinutes", label: "焼成の時間（分）", type: "number", min: 0, example: "12" },
+    { key: "bakeToleranceC", label: "焼成の温度の許す幅（±℃）", type: "number", min: 0, example: "10", help: "空なら 10" },
     { key: "supplierId", label: "仕入先ID", type: "text", ref: "suppliers", requiredWhen: (r) => kind("buy")(r) && "仕入は「仕入先ID」が必須です" },
     { key: "packSizes", label: "仕入の入数", type: "list", example: "6;8", requiredWhen: (r) => kind("buy")(r) && "仕入は「仕入の入数」が必須です（1個ずつなら 1）" },
     { key: "unitCost", label: "仕入値（円/個）", type: "number", min: 0 },

@@ -68,7 +68,7 @@ export default async function CardsPage(props: PageProps<"/cards">) {
                 <p className="text-2xl font-bold">{base.doughName}</p>
                 <p className="mt-1 text-lg text-ink-soft">
                   {base.line === "pizza" ? "ピザ" : "パン"}・{base.items.length}品・<span className="num">{base.items.reduce((a, i) => a + i.orders, 0).toLocaleString()}</span>個
-                  {base.planned.mix ? `・ミキサー ${base.planned.mix}` : ""}
+                  {base.processes?.find((x) => x.key === "mix")?.plannedStart ? `・ミキサー ${base.processes.find((x) => x.key === "mix")!.plannedStart}` : base.planned?.mix ? `・ミキサー ${base.planned.mix}` : ""}
                 </p>
                 <p className={`mt-3 inline-block rounded-md border-2 px-3 py-1 text-lg font-bold ${st.cls}`}>{st.label}</p>
                 {problems.length > 0 && <p className="mt-2 text-lg font-bold text-alert-ink">！ 目標から外れている所が {problems.length}か所</p>}

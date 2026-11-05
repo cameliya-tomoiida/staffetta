@@ -74,6 +74,8 @@ export function sampleSteps(): ProcessStepMaster[] {
         prevDay: !!s.prevDay,
         ccp: !!s.ccp,
         ...(s.note ? { note: s.note } : {}),
+        // 急速冷凍の温度の基準（見本）
+        ...(s.key === "freeze" ? { tempTargetC: -26, tempMinC: -28, tempMaxC: -24 } : {}),
       });
       // 食パンは冷ましたあとにスライス
       if (d.id === "DG03" && s.key === "cool")
@@ -184,6 +186,8 @@ export function sampleMasters(): Masters {
 
   const doughs: DoughMaster[] = doughRecipes.map((d) => ({
     id: d.id, name: d.name, line: d.line, lossRate: d.lossRate,
+    // 目標の捏上温度（見本。⑦の製品カード）
+    kneadTargetC: d.line === "pizza" ? 24 : 26, kneadToleranceC: 2,
     // ミキサーの上限は、使うミキサー（設備）の値を使う
   }));
   const recipeItems = doughRecipes.flatMap((d) => d.items.map((i) => ({ doughId: d.id, materialId: i.materialId, percent: i.percent })));
@@ -202,6 +206,8 @@ export function sampleMasters(): Masters {
         packStyle: shokupan ? "single" : "bulk", packMethod: "machine", metalCheck: "after_pack",
         ...(p.id === "P03" ? { sliceMm: 15 } : p.id === "P04" ? { sliceMm: 20 } : {}),
         ...(s.laborCost !== undefined ? { laborCost: s.laborCost } : {}),
+        // 焼成の目安（見本。⑦の製品カード）: ピザ 450℃・2分、食パン 210℃・35分、ほか 200℃・12分
+        ...(d?.line === "pizza" ? { bakeTempC: 450, bakeMinutes: 2 } : shokupan ? { bakeTempC: 210, bakeMinutes: 35 } : { bakeTempC: 200, bakeMinutes: 12 }),
       };
     }
     if (s.kind === "buy")

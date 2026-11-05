@@ -99,7 +99,8 @@ export async function loadCards(date: string, opts: { weather?: boolean } = {}):
     const s = saved.get(d.key);
     const live = buildCardBase({
       date, productionDate: r.productionDate, dough: d, schedule: r.schedule.find((x) => x.key === d.key),
-      steps: masters.steps, shifts: masters.shifts, assignments: masters.staffAssignments, yeast: yeastOf(masters, d.doughId), weather,
+      steps: masters.steps, shifts: masters.shifts, assignments: masters.staffAssignments, doughs: masters.doughs, products: masters.products,
+      yeast: yeastOf(masters, d.doughId), weather,
     });
     // 責任者が確認したカードは、そのときの中身のまま（あとで注文が変わっても記録は変えない）
     const input = s ? (JSON.parse(s.json) as CardInput) : undefined;

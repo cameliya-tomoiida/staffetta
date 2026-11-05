@@ -282,6 +282,10 @@ export interface ProcessStepMaster {
   ccp: boolean;
   /** 温度・条件など */
   note?: string;
+  /** この工程で確かめる温度の基準（⑦の製品カード。急速冷凍 −26・管理 −28〜−24 など） */
+  tempTargetC?: number;
+  tempMinC?: number;
+  tempMaxC?: number;
 }
 
 /** 生地（配合はレシピ明細 RecipeItemMaster、工程は ProcessStepMaster） */
@@ -293,6 +297,9 @@ export interface DoughMaster {
   lossRate: number;
   /** ミキサー1回の上限 kg（空なら使うミキサーの maxBatchKg） */
   mixerMaxKg?: number;
+  /** 目標の捏上温度（℃）と許す幅（±℃。空なら 2）。製品カードで外れたら赤（⑦） */
+  kneadTargetC?: number;
+  kneadToleranceC?: number;
   note?: string;
 }
 
@@ -355,6 +362,10 @@ export interface ProductMaster {
   metalCheck?: MetalCheckTiming;
   /** 人件費（円/個） */
   laborCost?: number;
+  /** 焼成の温度（℃）・時間（分）と許す幅（±℃。空なら 10）。製品カードの目安と赤（⑦） */
+  bakeTempC?: number;
+  bakeMinutes?: number;
+  bakeToleranceC?: number;
   // 仕入
   supplierId?: string;
   /** 仕入先が売る入数（6・8 など、複数可） */
