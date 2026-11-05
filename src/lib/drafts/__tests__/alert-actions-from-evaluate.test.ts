@@ -7,6 +7,8 @@ import { mem, resetMem } from "@/lib/channels/__tests__/memdb";
 vi.mock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
 
 const NOW = "2026-11-05T14:30:00+09:00";
+// 見本の注文で「足りなくなりそう（注文しますか？）」が出る時刻（11/5 には締めを過ぎて「電話」になる）
+const STOCK_NOW = "2026-11-03T09:00:00+09:00";
 const WHO = "課長 こばやし";
 const po = (id: string, p: Partial<PurchaseOrder>): PurchaseOrder => ({
   id, supplierId: "S01", method: "fax", deliveryDate: "2026-11-06", cutoffAt: "2026-11-05T15:00:00+09:00", status: "draft",
@@ -40,6 +42,28 @@ describe("③のアラートのボタン → ⑤のボタンの先", () => {
     // LINE のお客さんへの確認は LINE で連絡するので下書きを作らない（④）。それ以外で失敗は無い
     expect(errors.filter((e) => !/LINE/.test(e))).toEqual([]);
     expect([...kinds].some((k) => k.startsWith("open_"))).toBe(true);
+  });
+
+  it("「足りなくなりそう」のお知らせが出た材料は、押せば必ずその材料の下書きができる（③と同じ計算）", async () => {
+    resetMem();
+    const { evaluateAlerts } = await import("@/lib/alerts");
+    const { runAlertAction } = await import("../../alert-actions");
+    const { loadMasters, seedSampleMasters } = await import("@/lib/masters/seed-db");
+    await seedSampleMasters();
+    mem.db.orders = structuredClone(demoOrders);
+    const alerts = evaluateAlerts(mem.db, await loadMasters(), STOCK_NOW).filter((a) => a.kind === "stock_shortage");
+    const asks = alerts.flatMap((a) => a.actions.filter((x) => x.kind === "create_po_draft").map((x) => ({ title: a.title, payload: x.payload })));
+    expect(asks.length).toBeGreaterThan(0);
+    for (const q of asks) {
+      const r = await runAlertAction({ kind: "create_po_draft", payload: q.payload, who: WHO, now: STOCK_NOW });
+      expect(r.poIds?.length, `${q.title}: ${r.message}`).toBeGreaterThan(0);
+      const pos = (mem.db.purchaseOrders ?? []).filter((p) => r.poIds!.includes(p.id));
+      const mid = (q.payload.materialIds as string[])[0];
+      expect(pos.some((p) => p.supplierId === q.payload.supplierId && p.deliveryDate === q.payload.arriveDate && p.lines.some((l) => l.itemId === mid && l.units > 0)), q.title).toBe(true);
+    }
+    // 下書きができたら、③の判定ではその材料・届く日は「頼んである」になり、同じお知らせは出ない
+    const again = evaluateAlerts(mem.db, await loadMasters(), STOCK_NOW).filter((a) => a.kind === "stock_shortage" && a.actions.some((x) => x.kind === "create_po_draft"));
+    expect(again.map((a) => a.id).filter((id) => alerts.some((b) => b.id === id))).toEqual([]);
   });
 
   it("③の名前で、下書き・承認・入荷・休みの記録ができる", async () => {

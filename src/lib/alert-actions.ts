@@ -19,6 +19,7 @@ import { kvGet, kvSet } from "@/lib/db/sqlite";
 import { createDraft, type OutgoingDraft } from "@/lib/drafts/store";
 import { loadMasters, seedSampleMasters } from "@/lib/masters/seed-db";
 import { runPipeline } from "@/lib/pipeline";
+import { planMaterialOrders } from "@/lib/material-plan";
 import { getPurchaseOrder } from "@/lib/purchase-store";
 import { replyKindOf, fmtJpDate } from "@/lib/replies/content";
 import { getReceipt } from "@/lib/stock/store";
@@ -43,6 +44,8 @@ export interface AlertActionInput {
   productId?: string;
   poId?: string;
   orderId?: string;
+  /** 判定した時刻（①の evaluateAlerts と同じ時刻で計算するため。省くと今） */
+  now?: string;
 }
 
 export interface AlertActionResult {
@@ -109,8 +112,9 @@ export async function runAlertAction(input: AlertActionInput): Promise<AlertActi
   switch (input.kind) {
     // ───── ③の名前 → ⑤の処理 ─────
     case "create_po_draft": {
-      const arrive = str(a.arriveDate);
-      const r = await legacy({ kind: "draft_po", who: input.who, date: arrive ? addDays(arrive, 1) : str(a.date), materialIds: strs(a.materialIds) }, { supplierId: str(a.supplierId) });
+      // ③の「在庫が足りなくなりそう」と同じ計算（保存した注文・あしたから7日・届く日ごと）で下書きを作る。
+      // 前は1日分の計算（runPipeline）を使っていて、③が「足りない」と出したのに「頼む材料はありません」になることがあった
+      const r = await draftFromMaterialPlan({ arriveDate: str(a.arriveDate), supplierId: str(a.supplierId), materialIds: strs(a.materialIds), now: input.now }, input.who);
       return { ...r, kind: input.kind };
     }
     case "draft_request_email":
@@ -164,6 +168,41 @@ export async function runAlertAction(input: AlertActionInput): Promise<AlertActi
     default:
       return legacy({ ...input, productId: str(a.productId), poId: str(a.poId), orderId: str(a.orderId), date: str(a.date), materialIds: strs(a.materialIds) });
   }
+}
+
+/** ③の stockShortage と同じ材料の計画（planMaterialOrders：保存した注文・あしたから stockDays 日）から、発注書の下書きを作る */
+export const STOCK_PLAN_DAYS = 7;
+async function draftFromMaterialPlan(q: { arriveDate?: string; supplierId?: string; materialIds?: string[]; now?: string }, who: string): Promise<AlertActionResult> {
+  await seedSampleMasters();
+  const masters = await loadMasters();
+  const now = q.now ?? nowIso();
+  const today = new Date(Date.parse(now) + 9 * 3600_000).toISOString().slice(0, 10);
+  const orders = (await readDb()).orders; // ①の判定（loadDb）と同じく、保存した注文だけ
+  const plan = withMasters(masters, () => planMaterialOrders(orders, addDays(today, 1), { days: STOCK_PLAN_DAYS, now }));
+  const drafts = plan.purchaseOrders
+    .filter((po) => (!q.arriveDate || po.deliveryDate === q.arriveDate) && (!q.supplierId || po.supplierId === q.supplierId))
+    .map((po) => (q.materialIds?.length ? { ...po, lines: po.lines.filter((l) => q.materialIds!.includes(l.itemId)) } : po))
+    .filter((po) => po.lines.some((l) => l.units > 0));
+  if (!drafts.length) {
+    const late = plan.lateItems.filter((x) => !q.materialIds?.length || q.materialIds.includes(x.materialId));
+    return {
+      kind: "create_po_draft",
+      message: late.length ? `締めを過ぎているため、発注書には入れられません。仕入先に電話で間に合うか確かめてください（${late.map((x) => x.message).join("・")}）` : "いまの在庫と注文では、頼む材料はありません",
+      href: "/outbound",
+    };
+  }
+  // 同じ仕入先・同じ届く日の下書きがもうあれば、その行を残して足す（材料ごとにお知らせを押すと、前の材料の行が消えていた）
+  const merged = [];
+  for (const d of drafts) {
+    const cur = await getPurchaseOrder(d.id);
+    if (cur && cur.status !== "draft") {
+      return { kind: "create_po_draft", message: `${d.supplierName}の ${d.deliveryDate} 着の発注書は、もう承認・送信してあります。足りない分は、発注書の画面で別に頼んでください`, href: "/outbound" };
+    }
+    const keep = (cur?.lines ?? []).filter((l) => !d.lines.some((x) => x.itemId === l.itemId));
+    merged.push({ ...d, lines: [...keep, ...d.lines] });
+  }
+  await receiveDrafts(merged, who);
+  return { kind: "create_po_draft", message: `発注書の下書きを ${merged.length} 枚作りました（承認するまで送りません）`, href: "/outbound", poIds: merged.map((d) => d.id) };
 }
 
 /** ⑤の処理の本体（前の名前） */
