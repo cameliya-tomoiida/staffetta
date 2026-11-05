@@ -6,6 +6,26 @@ FAX・LINE・メール・スプレッドシート・受発注サイト・電話�
 > ハッカソン「Built with Claude: Japan 2026」の応募作品です。
 > データ（得意先・仕入先・商品・単価・レシピ）は、すべて架空のものです。
 
+## ひと目で
+
+中小の食品工場の「受注 → 発注 → 製造」を、1つの画面でつなぎます。Claude が読んで印を付け、人は確かめて押すだけです。
+
+<table>
+  <tr>
+    <td width="50%"><b>FAX を読んで、迷った所だけ人が見る</b><br><img src="docs/screenshots/readme/01-fax-review.png" alt="FAX の確認画面"></td>
+    <td width="50%"><b>忘れていることを、急ぐ順に知らせる</b><br><img src="docs/screenshots/readme/02-alerts.png" alt="お知らせ"></td>
+  </tr>
+  <tr>
+    <td><b>作る数・始める時刻・人が足りるかを1画面で</b><br><img src="docs/screenshots/readme/03-plan.png" alt="製造計画・工程表"></td>
+    <td><b>自動にするか・人に聞くかを、ここで切り替える</b><br><img src="docs/screenshots/readme/05-features.png" alt="機能の ON/OFF"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>お客さんは LINE で、届け日と数を押すだけ</b><br><img src="docs/screenshots/readme/04-line-order.png" alt="LINE の注文フォーム" width="300"></td>
+  </tr>
+</table>
+
+写真は架空のデータ（あさひ製パン工場・デモ）で撮ったものです。
+
 ## 何を解決するか
 
 愛知の中小のパン・ピザ工場では、注文の入口がばらばらです（FAX・メール・スプレッドシート・受発注サイト・電話・ドライバーの聞き取り）。
@@ -20,19 +40,48 @@ FAX は逆さまや横向きで届くこともあり、単位も「個・P・袋
 
 ## 注文の入口と流れ
 
+```mermaid
+flowchart TB
+  subgraph IN["注文の入口"]
+    direction LR
+    fax["FAX<br>（複合機 → PDF）"]
+    line["LINE<br>（トーク・注文フォーム）"]
+    mail["メール・スプレッドシート<br>受発注サイトの CSV"]
+    tel["電話・ドライバー<br>（手で入れる）"]
+  end
+
+  subgraph HUB["受発注ハブ"]
+    direction LR
+    read["① Claude が読み取り<br>あやしい所に印を付ける"]
+    check["② 人が確かめて確定<br>（迷わなかったものは自動で確定・取り消せる）"]
+    sum["③ 集計<br>確定した注文だけ・単位をそろえる"]
+    conv["④ 入数の換算<br>65個 → 6個入×11袋・余り1"]
+    read --> check --> sum --> conv
+  end
+
+  subgraph OUT["発注・製造"]
+    direction LR
+    po["仕入先別の発注書（下書き）<br>→ 人が承認 → 送る"]
+    plan["製造計画<br>生地 kg・材料・人の数"]
+    tt["工程表<br>時刻・設備・10 の言葉"]
+    mat["材料の発注書（下書き）<br>→ 人が承認 → 送る"]
+    plan --> tt
+    plan --> mat
+  end
+
+  fax --> read
+  line --> read
+  mail --> read
+  tel --> check
+  conv --> po
+  conv --> plan
+
+  alert(["お知らせ<br>発注忘れ・いつもと違う数・在庫不足"])
+  HUB -.-> alert
+  OUT -.-> alert
 ```
- 入口（受注）                         ハブ                                      出口（発注・製造）
- ─────────────                       ──────────────────────────────            ──────────────────
- FAX（複合機→Gmail→PDF）  ─┐
- LINE（公式アカウント・LIFF）─┤      ① Claude が読み取り・要確認の印付け
- メール（本文・PDF・Excel）  ─┤        （元の値 read はそのまま残す）
- Googleスプレッドシート     ─┼──→   ② 人が確認・修正・確定                  ┌→ 仕入先別の発注書（下書き）
- 受発注サイト（CSV）        ─┤        （タップ＋テンキー・候補から選ぶ。       │    → 人が承認 → 送信
- 取引先の専用発注サイト     ─┤          直した跡 edits を残す）               │      （受発注サイト・FAX・メール）
- 電話・ドライバー（手入力） ─┘      ③ 集計（確定の注文だけ・単位をそろえる）─┼→ 製造計画・工程表（パン／ピザ）
-                                     ④ 入数の換算（65個 → 6個入×11袋・余り1）  └→ 材料の所要量 → 材料の発注書（下書き）
-                                                                                    → 人が承認 → 送信
-```
+
+（GitHub では上の図がそのまま絵になります。同じ図の画像は [docs/screenshots/readme/flow.svg](docs/screenshots/readme/flow.svg)）
 
 - 変更・キャンセルの連絡は、新しい注文（`intent: change / cancel`）として入れます。人が確定するまで、元の注文は書き換えません。
 - 仮発注（概数で先に来て、当日に確定する注文）は集計に入れず、「仮：○個」として別枠で見せます。

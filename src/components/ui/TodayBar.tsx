@@ -28,9 +28,9 @@ function Chip({ href, tone, label, short, value, sub }: { href: string; tone: "r
       <span className="text-xs font-bold sm:text-sm">
         {short ? (
           <>
-            {/* 帯が2段にならないように、広い画面（xl）まで短い名前 */}
-            <span className="xl:hidden">{short}</span>
-            <span className="hidden xl:inline">{label}</span>
+            {/* 帯が2段にならないように、とても広い画面（2xl）まで短い名前 */}
+            <span className="2xl:hidden">{short}</span>
+            <span className="hidden 2xl:inline">{label}</span>
           </>
         ) : (
           label
