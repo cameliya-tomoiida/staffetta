@@ -6,6 +6,7 @@ import "server-only";
 // - デモの人・LINE が未設定のときは、送らずに記録だけ（client.ts の決まりのまま）。
 // アラートの判定（③）・保存（①）とは、下の StaffAlert の形でつなぐ（どんな形のアラートでも、ここに直して渡せばよい）。
 import { kvGet, kvSet } from "@/lib/db/sqlite";
+import { isOn, setFlag } from "@/lib/settings/features";
 import { nowIso, nowMs } from "@/lib/clock";
 import { pushText } from "./client";
 import { customerIdForUser, readLineState } from "./state";
@@ -41,15 +42,14 @@ export interface StaffAlertSettings {
   enabled: boolean;
 }
 
-const K_SETTINGS = "staff_alert_settings";
 const K_STAFF = "staff_line";
 const K_SENT = "staff_alert_sent"; // { "YYYY-MM-DD": { "key|userId": at } }
 
-export const getStaffAlertSettings = (): StaffAlertSettings => ({ enabled: false, ...(kvGet<Partial<StaffAlertSettings>>(K_SETTINGS) ?? {}) });
+/** 設定は①の機能の ON/OFF の一覧（alert_line_notify。アラートそのもの alerts が OFF なら OFF） */
+export const getStaffAlertSettings = (): StaffAlertSettings => ({ enabled: isOn("alert_line_notify") });
 export const setStaffAlertSettings = (v: Partial<StaffAlertSettings>, who: string) => {
-  const next = { ...getStaffAlertSettings(), ...v };
-  kvSet(K_SETTINGS, { ...next, updatedBy: who, updatedAt: nowIso() });
-  return next;
+  if (v.enabled !== undefined) setFlag("alert_line_notify", v.enabled, who);
+  return getStaffAlertSettings();
 };
 
 export const listStaffLine = (): StaffLine[] => kvGet<StaffLine[]>(K_STAFF) ?? [];
@@ -79,10 +79,9 @@ export const isQuietHours = (ms = nowMs()) => {
   return h >= 22 || h < 6;
 };
 
-const appUrl = (href = "/") => `${(process.env.HUB_APP_URL ?? "http://localhost:3100").replace(/\/$/, "")}${href.startsWith("/") ? href : `/${href}`}`;
 
 /** 送る文（短く） */
-export const staffAlertText = (a: StaffAlert) => `【受発注ハブ】${a.title}${a.action ? `。${a.action}` : ""}\n${appUrl(a.href)}`;
+export const staffAlertText = (a: StaffAlert) => `【受発注ハブ】${a.title}${a.action ? `。${a.action}` : ""}\n${staffLink(a.href)}`;
 
 export interface StaffAlertResult {
   sent: { key: string; to: string; name: string; mode: "live" | "demo" }[];
@@ -140,4 +139,23 @@ export async function sendAlertsToStaff(alerts: StaffAlert[]): Promise<StaffAler
   const yesterday = jst(ms - 86400_000).ymd;
   kvSet(K_SENT, { ...(log[yesterday] ? { [yesterday]: log[yesterday] } : {}), [ymd]: today });
   return out;
+}
+
+/**
+ * 「LINE でログイン」できる人か（④）。登録してあって使う状態のスタッフで、お客さんにひも付いていない人だけ。
+ * /api/line/staff-login が、LINE に確かめてもらった userId で呼ぶ。
+ */
+export async function staffLoginCheck(userId: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
+  const s = listStaffLine().find((x) => x.userId === userId && x.active);
+  if (!s) return { ok: false, error: "この LINE は、スタッフとして登録されていません。工場の事務に登録をお願いしてください" };
+  if (customerIdForUser(await readLineState(), userId)) return { ok: false, error: "この LINE はお客さんとして登録されています。スタッフとしては開けません" };
+  return { ok: true, name: s.name };
+}
+
+/** スタッフに送るリンク。外（トンネル）の URL があれば「LINE でログイン」を通る形、無ければ工場の中の URL */
+export function staffLink(href = "/") {
+  const pub = process.env.HUB_PUBLIC_URL?.replace(/\/$/, "");
+  const path = href.startsWith("/") ? href : `/${href}`;
+  if (pub) return `${pub}/liff/staff?to=${encodeURIComponent(path)}`;
+  return `${(process.env.HUB_APP_URL ?? "http://localhost:3100").replace(/\/$/, "")}${path}`;
 }
