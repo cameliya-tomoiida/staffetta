@@ -98,7 +98,8 @@ describe("段取り替え・洗浄・休けい（ラインと班の設定）", (
     const big = [mOrder("A", "C10", [["P07", 1800]])];
     const warn = (mm: Masters) => runPipeline(big, DATE, { masters: mm }).schedule.flatMap((r) => r.warnings).filter((w) => /たりません/.test(w));
     const withBreak: Masters = { ...m, shifts: m.shifts.map((s) => (s.line === "pizza" ? { ...s, breaks: ["10:00-11:00"] } : s)) };
-    expect(warn(withBreak).some((w) => /10:00|11:00|〜11:00/.test(w))).toBe(true);
+    // 工程の途中でも、休けいの始め・終わりの時刻で区切って数える
+    expect(warn(withBreak).some((w) => /10:00〜11:00 は人が/.test(w))).toBe(true);
     expect(warn(withBreak).length).toBeGreaterThan(warn(m).length);
   });
 });

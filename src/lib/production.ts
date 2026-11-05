@@ -592,6 +592,13 @@ function inWindow(min: number, from: string, to: string): boolean {
   const t = hhmm(to);
   return f <= t ? m >= f && m <= t : m >= f || m <= t;
 }
+/** inWindow と同じだが、終わりの時刻は含めない（人数の区切りに使う） */
+function inSpan(min: number, from: string, to: string): boolean {
+  const m = tod(min);
+  const f = hhmm(from);
+  const t = hhmm(to);
+  return f <= t ? m >= f && m < t : m >= f || m < t;
+}
 const hhmm = (s: string) => {
   const [h, m] = s.split(":").map(Number);
   return h * 60 + (m || 0);
@@ -648,15 +655,22 @@ export function checkScheduleConstraints(rows: ScheduleRow[]): void {
     const lineShifts = shifts.filter((s) => s.line === line || s.line === "common");
     if (!lineShifts.length) continue;
     const act = uses.filter((u) => u.row.line === line && !u.step.prevDay && u.step.people > 0 && u.step.end > u.step.start);
-    const points = [...new Set(act.flatMap((u) => [u.step.start, u.step.end]))].sort((a, b) => a - b);
+    // 区切り: 工程の始め・終わりと、班の出入り・休けいの始め・終わり（人数が変わる時刻）
+    const lo = Math.min(...act.map((u) => u.step.start));
+    const hi = Math.max(...act.map((u) => u.step.end));
+    const shiftPoints = lineShifts.flatMap((x) => [x.from, x.to, ...(x.breaks ?? []).flatMap((w) => w.split("-").map((y) => y.trim()))])
+      .filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map(hhmm)
+      .flatMap((m) => [m - 1440, m, m + 1440]).filter((m) => m > lo && m < hi);
+    const points = [...new Set([...act.flatMap((u) => [u.step.start, u.step.end]), ...shiftPoints])].sort((a, b) => a - b);
     type Seg = { from: number; to: number; need: number; have: number; uses: Use[] };
     const short: Seg[] = [];
     for (let i = 0; i + 1 < points.length; i++) {
       const from = points[i], to = points[i + 1];
       const on = act.filter((u) => u.step.start <= from && from < u.step.end);
       const need = on.reduce((s, u) => s + u.step.people, 0);
+      // 班の時間・休けいは「始め以上・終わり未満」で数える（18:00 に帰る班は 18:00 からの区切りに入れない）
       const have = lineShifts
-        .filter((s) => inWindow(from, s.from, s.to) && !(s.breaks ?? []).some((w) => { const [a, b] = w.split("-").map((x) => x.trim()); return !!a && !!b && inWindow(from, a, b); }))
+        .filter((s) => inSpan(from, s.from, s.to) && !(s.breaks ?? []).some((w) => { const [a, b] = w.split("-").map((x) => x.trim()); return !!a && !!b && inSpan(from, a, b); }))
         .reduce((s, x) => s + x.headcount, 0);
       if (need <= have) continue;
       const last = short[short.length - 1];
