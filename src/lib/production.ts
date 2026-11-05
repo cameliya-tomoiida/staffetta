@@ -75,6 +75,8 @@ export interface LinePlan {
   capReason?: string;
   /** 上限を超えた数（超えていなければ 0） */
   overBy: number;
+  /** 上限に数える数（「ラインの上限に数えない」商品があるときだけ。無ければ pieces と同じ） */
+  capPieces?: number;
   /** 冷凍庫（設備の種類「冷凍庫」の「入るケース数」）が登録されているとき: この日に作るケース数と上限 */
   freezerCases?: { need: number; cap: number };
   doughs: DoughBatchPlan[];
@@ -147,6 +149,11 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
     const ls = findLine(line);
     const lineDoughs = doughs.filter((d) => d.line === line);
     const pieces = lineDoughs.reduce((s, d) => s + d.pieces, 0);
+    // 上限に数える数（「ラインの上限に数えない」商品＝生地玉など は除く）
+    const excluded = lineDoughs.flatMap((d) => d.items)
+      .filter((it) => currentMasters().products.find((p) => p.id === it.productId)?.excludeFromDailyCap)
+      .reduce((s, it) => s + it.pieces, 0);
+    const capPieces = pieces - excluded;
     let cap = opts.lineCaps?.[line] ?? ls.dailyCap;
     let capReason = cap !== undefined ? `${ls.name}の1日の上限` : undefined;
     // 商品によっては、その商品がある日は上限が下がる（例: 27cm の日は 1,200枚）
@@ -158,12 +165,12 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
           capReason = `${it.name}がある日の上限`;
         }
       }
-    const overBy = cap !== undefined ? Math.max(0, pieces - cap) : 0;
+    const overBy = cap !== undefined ? Math.max(0, capPieces - cap) : 0;
     const lw: string[] = [];
-    if (overBy > 0) lw.push(`${ls.name} ${fmtNum(pieces)}${ls.unit}: ${capReason} ${fmtNum(cap!)}${ls.unit}を ${fmtNum(overBy)}${ls.unit} 超えています`);
+    if (overBy > 0) lw.push(`${ls.name} ${fmtNum(capPieces)}${ls.unit}${capPieces !== pieces ? `（上限に数えない ${fmtNum(pieces - capPieces)}${ls.unit} を除く）` : ""}: ${capReason} ${fmtNum(cap!)}${ls.unit}を ${fmtNum(overBy)}${ls.unit} 超えています`);
     const fz = freezerFor(line, lineDoughs);
     if (fz && fz.need > fz.cap) lw.push(`${ls.name}: この日に作る ${fmtNum(fz.need)}ケース が、冷凍庫（${fz.names}）の ${fmtNum(fz.cap)}ケース に入りきりません`);
-    return { line, name: ls.name, unit: ls.unit, pieces, cap, capReason, overBy, ...(fz ? { freezerCases: { need: fz.need, cap: fz.cap } } : {}), doughs: lineDoughs, warnings: lw };
+    return { line, name: ls.name, unit: ls.unit, pieces, ...(capPieces !== pieces ? { capPieces } : {}), cap, capReason, overBy, ...(fz ? { freezerCases: { need: fz.need, cap: fz.cap } } : {}), doughs: lineDoughs, warnings: lw };
   });
 
   return {
@@ -556,7 +563,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     if (!last) continue;
     last.row.steps.push({ key: "cleanup", name: "洗浄・片付け（1日の終わり）", start: last.step.end, end: last.step.end + mins, people: Math.max(1, last.step.people), prevDay: false, note: `ラインの設定「1日の終わりの洗浄・片付け」${mins}分` });
   }
-  checkScheduleConstraints(out);
+  checkScheduleConstraints(out, plan.date);
   return out;
 }
 
@@ -613,7 +620,7 @@ const hhmm = (s: string) => {
  * - 同じ設備（同時に動かせないグループ）が重なっている
  * - 同じ時間に要る人数が、その時間の班の人数を超えている（班が登録されているラインだけ）
  */
-export function checkScheduleConstraints(rows: ScheduleRow[]): void {
+export function checkScheduleConstraints(rows: ScheduleRow[], date?: string): void {
   type Use = { row: ScheduleRow; step: ScheduleStep };
   const uses: Use[] = rows.flatMap((row) => row.steps.map((step) => ({ row, step })));
 
@@ -655,8 +662,11 @@ export function checkScheduleConstraints(rows: ScheduleRow[]): void {
   // 人数（当日の作業。班が登録されているラインだけ）。足りない時間帯は、続いている区間ごとに1行にまとめる
   const shifts = allShifts();
   for (const line of [...new Set(rows.map((r) => r.line))]) {
-    const lineShifts = shifts.filter((s) => s.line === line || s.line === "common");
-    if (!lineShifts.length) continue;
+    // 曜日のある班は、その曜日（製造日）だけ数える
+    const wd = date ? new Date(`${date}T00:00:00Z`).getUTCDay() : undefined;
+    const lineShifts = shifts.filter((s) => (s.line === line || s.line === "common") && (wd === undefined || !s.weekdays?.length || s.weekdays.includes(wd)));
+    // 班が1つも登録されていないラインは見ない（その曜日に出る班が無いだけなら「0人」として見る）
+    if (!shifts.some((s) => s.line === line || s.line === "common")) continue;
     const act = uses.filter((u) => u.row.line === line && !u.step.prevDay && u.step.people > 0 && u.step.end > u.step.start);
     // 区切り: 工程の始め・終わりと、班の出入り・休けいの始め・終わり（人数が変わる時刻）
     const lo = Math.min(...act.map((u) => u.step.start));

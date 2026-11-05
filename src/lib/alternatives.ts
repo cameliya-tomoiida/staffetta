@@ -70,7 +70,7 @@ function roomOnDay(date: string, others: Order[], line: ProductionLineId, exclud
   const plan = planProduction(totalsForDate(others.filter((o) => o.id !== excludeId && countsInTotals(o)), date));
   const lp = plan.lines.find((l) => l.line === line);
   const cap = lp?.cap ?? findLine(line).dailyCap;
-  return cap === undefined ? Infinity : Math.max(0, cap - (lp?.pieces ?? 0));
+  return cap === undefined ? Infinity : Math.max(0, cap - (lp?.capPieces ?? lp?.pieces ?? 0));
 }
 
 /**
