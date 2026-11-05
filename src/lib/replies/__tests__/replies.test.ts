@@ -71,7 +71,7 @@ describe("受注の確認返信", () => {
     await expect(createReply("T-R3", WHO)).rejects.toThrow(/LINE/);
     await expect(createReply("T-R4", WHO)).rejects.toThrow(/確定/);
     const r = await createReply("T-R5", WHO);
-    expect(markReplySent(r.id, "こばやし")).toMatchObject({ status: "sent", sentBy: "こばやし" });
+    expect(markReplySent(r.id, "うえの")).toMatchObject({ status: "sent", sentBy: "うえの" });
     await expect(createReply("T-R5", WHO)).rejects.toThrow(/もう送って/);
   });
 

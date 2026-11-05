@@ -114,7 +114,7 @@ async function main() {
       const sent = date <= END;
       db.purchaseOrders!.push({
         ...po, status: sent ? "sent" : "draft",
-        ...(sent ? { approvedBy: "こばやし", approvedAt: `${addDays(date, -1)}T18:30:00+09:00`, sentAt: `${addDays(date, -1)}T18:40:00+09:00` } : {}),
+        ...(sent ? { approvedBy: "うえの", approvedAt: `${addDays(date, -1)}T18:30:00+09:00`, sentAt: `${addDays(date, -1)}T18:40:00+09:00` } : {}),
         history: [{ at: `${addDays(date, -1)}T18:00:00+09:00`, who: "system", action: "saved" }],
       } as never);
     }

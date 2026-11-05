@@ -86,9 +86,9 @@ describe("スタッフの登録", () => {
   });
 
   it("無効にした人は選ぶ所に出ない。同じ名前は2人入れられない", () => {
-    saveStaff(SAMPLE_STAFF.map((s) => (s.name === "さとう" ? { ...s, active: false } : s)), "はやし");
-    expect(listStaff().map((s) => s.name)).not.toContain("さとう");
-    expect(listStaff(true).map((s) => s.name)).toContain("さとう");
+    saveStaff(SAMPLE_STAFF.map((s) => (s.name === "こばやし" ? { ...s, active: false } : s)), "はやし");
+    expect(listStaff().map((s) => s.name)).not.toContain("こばやし");
+    expect(listStaff(true).map((s) => s.name)).toContain("こばやし");
     expect(() => saveStaff([...SAMPLE_STAFF, { ...SAMPLE_STAFF[0], id: "ST99" }], "はやし")).toThrow(/同じ名前/);
     expect(() => saveStaff(SAMPLE_STAFF, "")).toThrow();
   });

@@ -3,7 +3,7 @@
 // 1回だけ /api/staff を取りに行き、ほかの画面でも使い回す。取れるまでは見本の名前。
 import { useSyncExternalStore } from "react";
 
-const FALLBACK = ["たなか", "こばやし", "はやし"];
+const FALLBACK = ["たなか", "うえの", "はやし"];
 let names: string[] = FALLBACK;
 let loading: Promise<void> | null = null;
 const listeners = new Set<() => void>();

@@ -42,14 +42,14 @@ describe("マスタの窓口（SQLite）", () => {
     const fix = await s.saveOne("suppliers", "S01", { leadDays: "2" }, "たなか");
     expect(fix.ok && fix.record).toMatchObject({ id: "S01", leadDays: 2, name: "米田製粉（デモ）" });
 
-    const t = await s.stocktake("packaging", "K01", 1500, "こばやし");
+    const t = await s.stocktake("packaging", "K01", 1500, "うえの");
     expect(t.after).toBe(1500);
-    expect((await s.list("packaging")).find((k) => k.id === "K01")).toMatchObject({ stock: 1500, stockCountedBy: "こばやし" });
-    await expect(s.stocktake("suppliers", "S01", 1, "こばやし")).rejects.toThrow(/材料・包材/);
+    expect((await s.list("packaging")).find((k) => k.id === "K01")).toMatchObject({ stock: 1500, stockCountedBy: "うえの" });
+    await expect(s.stocktake("suppliers", "S01", 1, "うえの")).rejects.toThrow(/材料・包材/);
 
-    await s.remove("packaging", "K01", "こばやし");
+    await s.remove("packaging", "K01", "うえの");
     expect((await s.list("packaging")).some((k) => k.id === "K01")).toBe(false);
-    await s.restore("packaging", "K01", "こばやし");
+    await s.restore("packaging", "K01", "うえの");
     expect((await s.list("packaging")).some((k) => k.id === "K01")).toBe(true);
   });
 

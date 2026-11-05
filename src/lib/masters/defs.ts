@@ -203,7 +203,7 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "sourceProductId", label: "元の仕入品ID", type: "text", ref: "products", requiredWhen: (r) => kind("repack")(r) && "包み直しは「元の仕入品ID」が必須です" },
     { key: "slicesPerPack", label: "1包の枚数", type: "integer", min: 1, requiredWhen: (r) => kind("repack")(r) && "包み直しは「1包の枚数」が必須です" },
     { key: "lastCostReviewAt", label: "最後に原価を見直した日", type: "text", example: "2026-04-01", help: "YYYY-MM-DD。11か月たつとお知らせが出る（期限は12か月）" },
-    { key: "costReviewOwner", label: "見直しの担当", type: "text", example: "こばやし" },
+    { key: "costReviewOwner", label: "見直しの担当", type: "text", example: "うえの" },
     ACTIVE,
   ],
   check: (p, all) => {

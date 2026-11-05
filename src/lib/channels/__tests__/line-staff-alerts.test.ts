@@ -29,7 +29,7 @@ beforeAll(async () => {
   const st = await import("@/lib/channels/line/state");
   await st.resetLineDemo(); // U_demo_kotori はお客さん（C06）
   await st.touchUser(MORITA, { displayName: "もりた（架空）" });
-  await st.touchUser(SATO, { displayName: "さとう（架空）" });
+  await st.touchUser(SATO, { displayName: "こばやし（架空）" });
 });
 afterEach(() => {
   process.env.DEMO_NOW = NOON;
@@ -48,7 +48,7 @@ describe("スタッフの LINE へのアラート", () => {
     const s = await sa();
     await expect(s.addStaffLine({ userId: "U_demo_kotori", name: "ことり" }, "事務")).rejects.toThrow(/お客さん/);
     await s.addStaffLine({ userId: MORITA, name: "もりた", allDanger: true }, "事務");
-    await s.addStaffLine({ userId: SATO, name: "さとう", allDanger: false }, "事務");
+    await s.addStaffLine({ userId: SATO, name: "こばやし", allDanger: false }, "事務");
     const { unlinkedLineUsers } = await import("@/lib/channels/line/orders");
     const waiting = (await unlinkedLineUsers()).map((u) => u.userId);
     expect(waiting).not.toContain(MORITA);
@@ -73,7 +73,7 @@ describe("スタッフの LINE へのアラート", () => {
     const s = await sa();
     const warn = { key: "review:30min", level: "warn" as const, title: "要確認が30分たまっています" };
     expect((await s.sendAlertsToStaff([warn])).sent).toHaveLength(0);
-    const assigned = { key: "review:assigned", level: "warn" as const, title: "原価の見直しをお願いします：バターロール", assignee: "さとう", href: "/alerts" };
+    const assigned = { key: "review:assigned", level: "warn" as const, title: "原価の見直しをお願いします：バターロール", assignee: "こばやし", href: "/alerts" };
     const r = await s.sendAlertsToStaff([assigned]);
     expect(r.sent.map((x) => x.to)).toEqual([SATO]);
   });
@@ -95,7 +95,7 @@ describe("スタッフの LINE へのアラート", () => {
     await st.updateLineState((x) => {
       x.users[SATO] = { ...x.users[SATO], customerId: "C04" };
     });
-    const r = await s.sendAlertsToStaff([{ key: "x:1", level: "warn", title: "見本", assignee: "さとう" }]);
+    const r = await s.sendAlertsToStaff([{ key: "x:1", level: "warn", title: "見本", assignee: "こばやし" }]);
     expect(r.sent).toHaveLength(0);
     expect(r.skipped[0].why).toBe("お客さんにひも付いている");
   });

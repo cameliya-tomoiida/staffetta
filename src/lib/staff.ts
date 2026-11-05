@@ -35,9 +35,9 @@ const KEY = "staff_members";
 /** 架空の初期値（見本） */
 export const SAMPLE_STAFF: StaffMember[] = [
   { id: "ST01", name: "たなか", role: "事務", courses: [], active: true },
-  { id: "ST02", name: "こばやし", role: "事務", courses: [], active: true },
+  { id: "ST02", name: "うえの", role: "事務", courses: [], active: true },
   { id: "ST03", name: "グエン", role: "配送", courses: ["東コース（朝便）"], active: true },
-  { id: "ST04", name: "さとう", role: "配送", courses: ["西コース"], active: true },
+  { id: "ST04", name: "こばやし", role: "配送", courses: ["西コース"], active: true },
   { id: "ST05", name: "もりた", role: "工場", courses: [], active: true },
   { id: "ST06", name: "はやし", role: "管理者", courses: [], active: true },
 ];

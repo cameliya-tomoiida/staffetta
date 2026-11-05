@@ -11,7 +11,7 @@ const FIELDS: { key: keyof Company; label: string; placeholder: string; wide?: b
   { key: "tel", label: "電話", placeholder: "000-000-0000" },
   { key: "fax", label: "FAX", placeholder: "000-000-0000" },
   { key: "email", label: "メール（発注・返事の差出人）", placeholder: "order@example.com", wide: true },
-  { key: "contact", label: "発注書に載せる担当（空なら載せない）", placeholder: "例: 購買 こばやし" },
+  { key: "contact", label: "発注書に載せる担当（空なら載せない）", placeholder: "例: 購買 うえの" },
 ];
 
 export function CompanyClient({ initial }: { initial: Company }) {

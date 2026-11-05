@@ -96,7 +96,7 @@ export const FACTORY = {
 
 export const customers: Customer[] = [
   { id: "C01", name: "ひまわり保育園", channel: "fax", fax: "0000-11-1111", cutoff: "15:00", note: "週間の定番表で届く。空欄は注文なし" },
-  { id: "C02", name: "さくら総合病院 栄養科（みどり給食サービス）", channel: "fax", fax: "0000-22-2222", cutoff: "12:00", note: "逆さまで届くことがある。袋の入数指定あり" },
+  { id: "C02", name: "さくら総合病院 栄養科（みどり給食サービス・デモ）", channel: "fax", fax: "0000-22-2222", cutoff: "12:00", note: "逆さまで届くことがある。袋の入数指定あり" },
   { id: "C03", name: "みなと給食センター", channel: "fax", fax: "0000-33-3333", cutoff: "14:00", note: "1枚に納品日が複数。仕入品も混ざる" },
   { id: "C04", name: "喫茶こもれび", channel: "phone", cutoff: "17:00", note: "ドライバーが電話・LINEで聞き取り" },
   { id: "C05", name: "グループホームあおば", channel: "driver", cutoff: "16:00" },

@@ -18,7 +18,7 @@ export function driverDemoOrders(): Order[] {
     deliveryDate: date,
     status,
     createdAt: at,
-    ...(status === "confirmed" || status === "provisional" ? { confirmedAt: at, confirmedBy: "こばやし" } : {}),
+    ...(status === "confirmed" || status === "provisional" ? { confirmedAt: at, confirmedBy: "うえの" } : {}),
     edits: [],
     source: { channel, refs: [{ kind: "manual", note: "ドライバーの聞き取り（見本）" }], receivedAt: at, extra: { takenBy: "グエン" } },
     lines: lines.map(([productId, quantity], n) => ({

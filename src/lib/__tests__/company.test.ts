@@ -11,8 +11,8 @@ describe("自社の情報", () => {
   it("初期値は架空の工場。保存すると発注書・返事の差出人（HUB_SENDER）も変わる", () => {
     expect(getCompany().name).toBe(DEFAULT_COMPANY.name);
     expect(HUB_SENDER.name).toBe(DEFAULT_COMPANY.name);
-    setCompany({ name: "みどり製パン（テスト）", postalCode: "123-4567", address: "愛知県テスト市1-2", tel: "052-000-0000", fax: "052-000-0001", email: "order@test.example", contact: "購買 こばやし" }, "はやし");
-    expect(HUB_SENDER).toMatchObject({ name: "みどり製パン（テスト）", tel: "052-000-0000", fax: "052-000-0001", email: "order@test.example", contact: "購買 こばやし" });
+    setCompany({ name: "みどり製パン（テスト）", postalCode: "123-4567", address: "愛知県テスト市1-2", tel: "052-000-0000", fax: "052-000-0001", email: "order@test.example", contact: "購買 うえの" }, "はやし");
+    expect(HUB_SENDER).toMatchObject({ name: "みどり製パン（テスト）", tel: "052-000-0000", fax: "052-000-0001", email: "order@test.example", contact: "購買 うえの" });
     expect(HUB_SENDER.address).toBe("〒123-4567 愛知県テスト市1-2");
   });
 
