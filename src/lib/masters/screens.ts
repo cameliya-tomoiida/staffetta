@@ -39,7 +39,7 @@ export const LIST_KEYS: Record<ScreenName, string[]> = {
   toppingItems: ["toppingId", "materialId", "gramsPerPiece", "id"],
   productPackaging: ["productId", "packagingId", "quantity", "per", "id"],
   lines: ["name", "startTime", "scheduleFrom", "dailyCap", "id", "unit", "shipBufferMinutes", "earliestStartMinute", "prevDayStartTime"],
-  equipment: ["name", "kind", "line", "count", "piecesPerHour", "id", "availableFrom", "availableTo", "maxBatchKg", "lanes", "capacityPieces", "exclusiveGroup", "active"],
+  equipment: ["name", "kind", "line", "count", "piecesPerHour", "id", "availableFrom", "availableTo", "downtimes", "maxBatchKg", "lanes", "capacityPieces", "exclusiveGroup", "active"],
   shifts: ["name", "line", "from", "to", "headcount", "id"],
   staffAssignments: ["shiftId", "line", "stepKey", "people", "id"],
   customers: ["name", "channel", "cutoff", "deliveryTime", "course", "deliveryWeekdays", "id", "fax", "externalCode", "note", "active"],
