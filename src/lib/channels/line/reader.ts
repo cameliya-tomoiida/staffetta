@@ -50,7 +50,8 @@ const SYSTEM = `あなたは中小のパン工場で、お客さん（喫茶店�
 - 「いつもの」「前と同じ」など中身が分からない注文は lines を空にし、notes に書く。
 - 「さっきの注文」「明日の分」などの変更・追加・取消は intent を change / cancel にし、下の「このお客さんの最近の注文」から対象を選んで change_of_order_id に入れる。対象が分からないときは空文字にして attention に書く。
 - change の lines には、変更・追加する品目だけを変更後の数で入れる（変わらない品目は入れない）。cancel で一部の品目だけ取消なら、その品目を数量0で入れる。全部の取消なら lines は空。
-- 取消・変更の連絡は notes にも必ず書く。`;
+- 取消・変更の連絡は notes にも必ず書く。
+- 最近の注文に「工場からの代わりの日の提案」がついていて、お客さんがそれに応じる返事（「お願いします」「それで」「○日でいいです」など）をしたときは、intent を change、change_of_order_id をその注文、delivery_date を提案の日にし、lines に提案の商品と数を入れる。提案と違う日・数を書いてきたら、書いてあるほうを読み、attention に「提案と違う」と書く。`;
 
 export interface RecentOrderBrief {
   id: string;
@@ -58,12 +59,14 @@ export interface RecentOrderBrief {
   status: string;
   receivedAt: string;
   summary: string;
+  /** 確定の連絡で工場が出した代わりの日の提案（例: 超じゅくロール 6個入 2袋 → 2026-11-09） */
+  altOffer?: string;
 }
 
 function masterText(known: Record<string, string>, recent: RecentOrderBrief[]) {
   const prod = allProducts().map((p) => `${p.id}: ${p.name}（単位 ${p.unit}）`).join("\n");
   const maps = Object.entries(known).map(([w, pid]) => `「${w}」→ ${pid}`).join("\n");
-  const rec = recent.map((o) => `${o.id}: 納品日 ${o.deliveryDate}／${o.status}／受信 ${o.receivedAt}／${o.summary}`).join("\n");
+  const rec = recent.map((o) => `${o.id}: 納品日 ${o.deliveryDate}／${o.status}／受信 ${o.receivedAt}／${o.summary}${o.altOffer ? `／工場からの代わりの日の提案: ${o.altOffer}` : ""}`).join("\n");
   return `## 商品一覧\n${prod}\n\n## このお客さんについてスタッフが過去に承認した品名の対応（優先する）\n${maps || "（まだなし）"}\n\n## このお客さんの最近の注文（新しい順。変更・取消の対象さがしに使う）\n${rec || "（まだなし）"}`;
 }
 
