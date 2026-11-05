@@ -199,7 +199,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
         <div className="pb-[calc(112px+env(safe-area-inset-bottom))]">
           {/* あいさつ */}
           <div className="px-5 pt-6 pb-1">
-            <p className="text-[12px] font-bold tracking-[.25em] text-crust-500">ORDER</p>
+            <p className="flex items-center gap-2 text-[12px] font-bold tracking-[.25em] text-crust-500">
+              {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
+              <img src="/brand/staffetta-mark.svg" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
+              ORDER
+            </p>
             <h1 className="mt-1 text-[26px] font-bold leading-tight" style={serif}>
               {ctx.customerName ? (
                 <>
@@ -492,7 +496,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
       {view === "history" && ctx && (
         <div className="px-5 pt-6 pb-10">
-          <p className="text-[12px] font-bold tracking-[.25em] text-crust-500">HISTORY</p>
+          <p className="flex items-center gap-2 text-[12px] font-bold tracking-[.25em] text-crust-500">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
+            <img src="/brand/staffetta-mark.svg" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
+            HISTORY
+          </p>
           <h1 className="mt-1 text-[26px] font-bold" style={serif}>
             ご注文の履歴
           </h1>

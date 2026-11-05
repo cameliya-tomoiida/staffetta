@@ -45,7 +45,8 @@ export function StaffLogin({ liffId, next }: { liffId: string; next: string }) {
     <div className="mx-auto grid min-h-dvh max-w-[480px] place-items-center bg-cream px-6 text-center text-ink">
       {liffId && <Script src="https://static.line-scdn.net/liff/edge/2/sdk.js" onLoad={() => void login()} />}
       <div className="space-y-5">
-        <p className="text-[13px] font-bold tracking-[.25em] text-crust-500">STAFFETTA</p>
+        {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
+        <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={225} height={48} className="mx-auto h-12 w-auto" />
         <h1 className="text-[24px] font-bold">スタッフの ログイン</h1>
         {state === "loading" && <div className="mx-auto h-8 w-8 animate-spin rounded-full border-[3px] border-crust-200 border-t-crust-600" aria-label="確かめています" />}
         {state === "button" && (

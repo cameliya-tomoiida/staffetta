@@ -96,10 +96,10 @@ const KEY = "hub.menu.folded";
 function Brand({ factory }: { factory: string }) {
   return (
     <Link href="/" className="flex shrink-0 items-center gap-2.5">
-      <span className="grid h-10 w-10 place-items-center rounded-md border-2 border-crust-600 text-lg font-black text-crust-600">S</span>
       <span className="leading-tight">
-        <span className="block text-lg font-black tracking-wider text-ink">STAFFETTA</span>
-        <span className="block text-xs text-ink-faint">{factory}</span>
+        {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴなので、そのまま出す */}
+        <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={188} height={40} className="block h-10 w-auto" />
+        <span className="block pl-[50px] text-xs text-ink-faint">{factory}</span>
       </span>
     </Link>
   );
@@ -243,7 +243,12 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
             <TodayBar />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-5 sm:py-6">{children}</main>
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-5 sm:py-6">
+          {/* 印刷物の見出し（画面では出さない） */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
+          <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={150} height={32} className="mb-2 hidden h-8 w-auto print:block" />
+          {children}
+        </main>
       </div>
     </div>
   );
