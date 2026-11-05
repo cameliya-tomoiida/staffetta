@@ -475,7 +475,7 @@ export interface CustomerMaster {
   postalCode?: string;
   /** 納品先の住所 */
   address?: string;
-  /** 納品の方法: own = 自社便（どの便かは course）、frozen = 冷凍便、parcel = 宅配・路線便、pickup = 引き取り */
+  /** 納品の方法: own = 自社便（どの便かは course）、frozen = 冷凍便、parcel = 宅配・路線便、pickup = 引き取り、oc = オフィス自社便（設置先。別のアプリのコースが回る） */
   deliveryMethod?: DeliveryMethod;
   /** 定休日（0=日〜6=土） */
   closedWeekdays?: number[];
@@ -495,7 +495,7 @@ export interface CustomerMaster {
 }
 
 /** 納品の方法 */
-export type DeliveryMethod = "own" | "frozen" | "parcel" | "pickup";
+export type DeliveryMethod = "own" | "frozen" | "parcel" | "pickup" | "oc";
 
 /**
  * 便（配送コース）。工程表は、得意先の便の出発時刻から逆算する（積み込みの時間を引いた時刻までに作り終える）。

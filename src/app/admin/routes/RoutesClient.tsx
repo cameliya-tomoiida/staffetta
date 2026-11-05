@@ -15,7 +15,7 @@ import { OptimizePanel } from "./OptimizePanel";
 export type RouteCustomer = Stop & { course?: string; deliveryMethod?: DeliveryMethod; deliveryWeekdays?: number[] };
 
 const WD = "日月火水木金土";
-const METHOD: Record<DeliveryMethod, string> = { own: "自社便", frozen: "冷凍便", parcel: "宅配・路線便", pickup: "引き取り" };
+const METHOD: Record<DeliveryMethod, string> = { own: "自社便", frozen: "冷凍便", parcel: "宅配・路線便", pickup: "引き取り", oc: "オフィス自社便" };
 const dur = (min: number) => {
   const m = Math.round(min);
   return m >= 60 ? `${Math.floor(m / 60)}時間${m % 60 ? `${m % 60}分` : ""}` : `${m}分`;
