@@ -70,6 +70,13 @@ describe("アラートの判定", () => {
     const a = evaluateAlerts(db({ orders: demoOrders }), m, early, { isOn: only("stock_shortage") });
     expect(a.length).toBeGreaterThan(0);
     expect(a[0].actions[0].kind).toMatch(/create_po_draft|call_memo/);
+    // 文の数が合う: 在庫 − 使う量 ＝ 残り で、残りが安全在庫より少ない（頼む分を足した在庫を出さない）
+    for (const x of a) {
+      const g = x.message.match(/を ([\d.]+)\S+ 使うと、在庫（([\d.-]+)\S+）が ([\d.-]+)\S+ になり、安全在庫（([\d.]+)/)!;
+      const [need, have, left, safety] = g.slice(1).map(Number);
+      expect(Math.abs(have - need - left)).toBeLessThan(0.11);
+      expect(left).toBeLessThan(safety);
+    }
     // 発注書がもう保存されている材料は出さない
     const ids = a.filter((x) => x.actions[0].kind === "create_po_draft").map((x) => x.relatedIds[0]);
     const arrive = a.find((x) => x.actions[0].kind === "create_po_draft")!.actions[0].payload.arriveDate as string;
