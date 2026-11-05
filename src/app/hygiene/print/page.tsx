@@ -154,7 +154,8 @@ function GridSheet({ def, rec, days, run }: { def: SheetDef; rec: SheetRecord; d
   const items = def.items ?? [];
   const isRun = new Set(run.map((d) => d.date));
   const mark = def.kind === "check" ? "✓" : "●";
-  const rowH = items.length > 14 ? "h-[7.5mm]" : items.length > 10 ? "h-[10mm]" : "h-[12mm]";
+  const many = items.length > 16;
+  const rowH = many ? "h-[6.3mm]" : items.length > 14 ? "h-[7.5mm]" : items.length > 10 ? "h-[10mm]" : "h-[12mm]";
   return (
     <>
       <table className="w-full table-fixed border-collapse text-center">
@@ -184,7 +185,7 @@ function GridSheet({ def, rec, days, run }: { def: SheetDef; rec: SheetRecord; d
               <td className={`${B} ${rowH} px-[1mm] text-left`}>
                 {it.group && (i === 0 || items[i - 1].group !== it.group) ? <b className="mr-[1mm]">【{it.group}】</b> : null}
                 {it.name}
-                {it.note && def.kind === "clean" ? <span className="block text-[6.5pt] text-[#444]">{it.note}</span> : null}
+                {it.note && def.kind === "clean" && !many ? <span className="block text-[6.5pt] text-[#444]">{it.note}</span> : null}
               </td>
               <td className={`${B} text-[7.5pt]`}>{def.kind === "clean" ? FREQ_LABEL[it.freq ?? "daily"] : (it.qty ?? it.note ?? "")}</td>
               {days.map((d) => {
