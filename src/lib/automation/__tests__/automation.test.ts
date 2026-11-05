@@ -42,6 +42,17 @@ describe("A8・A9 取り込みの自動確定", () => {
     await expect(undoAutoConfirm("IM-1", WHO)).rejects.toThrow(/自動で確定/);
   });
 
+  it("LINE で確定の連絡を送ったあとの注文は、自動の確定を取り消さない", async () => {
+    const { saveImported } = await import("@/lib/channels/common");
+    const { undoAutoConfirm } = await import("../orders");
+    await saveImported([imported("IM-L", "infomart", [{}])]);
+    const o = mem.db.orders.find((x) => x.id === "IM-L")!;
+    expect(o.status).toBe("confirmed");
+    o.source.extra = { ...(o.source.extra ?? {}), lineNotifiedAt: "2026-11-01T09:10:00+09:00" };
+    await expect(undoAutoConfirm("IM-L", WHO)).rejects.toThrow(/お客さんに連絡してから、受注一覧で直してください/);
+    expect(mem.db.orders.find((x) => x.id === "IM-L")?.status).toBe("confirmed");
+  });
+
   it("シートの変更は、元の注文が確定済みなら自動で反映（元の行の数を直し、記録を残す）", async () => {
     const { saveImported } = await import("@/lib/channels/common");
     await saveImported([imported("GS-1", "google_sheet", [{}])]);

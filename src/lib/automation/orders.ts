@@ -111,6 +111,8 @@ export async function undoAutoConfirm(orderId: string, who: string) {
     const o = db.orders.find((x) => x.id === orderId);
     if (!o) throw new Error("注文が見つかりません");
     if (o.status !== "confirmed" || !isAuto(o.confirmedBy)) throw new Error("自動で確定した注文ではありません");
+    // LINE で確定の連絡をもう送った注文は、黙って戻さない（お客さんは確定したと思っている）
+    if (o.source.extra?.lineNotifiedAt) throw new Error("LINE で確定の連絡を送ったあとです。お客さんに連絡してから、受注一覧で直してください");
     o.edits.push({ at: nowIso(), who, field: "note", from: o.confirmedBy ?? "", to: "自動の確定を取り消して要確認に戻した" });
     o.status = "needs_review";
     delete o.confirmedAt;

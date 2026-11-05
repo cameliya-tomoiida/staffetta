@@ -9,6 +9,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { migrateRenamedNames } from "./rename-migration";
 
 export const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = process.env.HUB_DB_PATH ?? path.join(DATA_DIR, "hub.sqlite");
@@ -23,6 +24,8 @@ export function getDb(): DatabaseSync {
     db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;");
     g.__hubDb = db;
     g.__hubSchemas = new Set();
+    // 公開前の名前の付け替え（実在の社名 → 架空の名前）を、古い DB に1回だけ当てる（⑤。kv に済みの印）
+    migrateRenamedNames(db, DB_PATH === ":memory:" ? undefined : path.dirname(DB_PATH));
   }
   return g.__hubDb;
 }
