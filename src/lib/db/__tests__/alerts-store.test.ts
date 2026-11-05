@@ -27,6 +27,16 @@ describe("アラートの保存", () => {
     expect(listAlerts().find((r) => r.dedupeKey === "b")?.history.at(-1)?.what).toBe("また出ました");
   });
 
+  it("記録の時刻は日本時間（UTC で渡しても +09:00 にそろえる）", () => {
+    syncAlerts("logic", [c("a")], "2026-11-05T03:00:00.000Z");
+    const r = listAlerts()[0];
+    expect(r.createdAt).toBe("2026-11-05T12:00:00.000+09:00");
+    expect(r.history[0].at).toBe("2026-11-05T12:00:00.000+09:00");
+    const s = updateAlert("a", { snoozeUntil: "2026-11-05T05:00:00.000Z" }, "事務 たなか", "2026-11-05T03:30:00.000Z");
+    expect(s.snoozeUntil).toBe("2026-11-05T14:00:00.000+09:00");
+    expect(s.history.at(-1)?.what).toContain("11/5 14:00");
+  });
+
   it("ほかの判定元のアラートは、解消の判定に巻き込まない", () => {
     syncAlerts("system", [c("s")], T(9));
     syncAlerts("logic", [], T(9));

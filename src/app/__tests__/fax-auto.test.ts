@@ -11,7 +11,8 @@ import { readFaxAction, undoAutoConfirmAction } from "../actions";
 import { readDb, updateDb } from "@/lib/store";
 import { resetToDemo } from "@/lib/db/hub-store";
 import { AUTO_WHO } from "@/lib/fax-auto";
-import { setAutoConfirmEnabled } from "@/lib/fax-auto-setting";
+import { setFlag } from "@/lib/settings/features";
+const setAutoConfirmEnabled = (on: boolean, who: string) => setFlag("fax_auto_confirm", on, who);
 import type { FaxDoc } from "@/lib/types";
 
 type L = [written: string, productId: string, qty: number, opts?: { conf?: number; attention?: string; prev?: number }];

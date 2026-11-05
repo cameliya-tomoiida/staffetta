@@ -79,6 +79,15 @@ CREATE INDEX IF NOT EXISTS alerts_state ON alerts (state, level);
 const init = () => ensureTables("alerts", SQL);
 
 const SYSTEM = "システム";
+/** 記録の時刻は日本時間で残す（"2026-11-05T12:30:00.000+09:00"）。受け取った時刻がどの形でもそろえる */
+export const toJst = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOString().replace("Z", "+09:00");
+/** 時刻の比べ方（文字ではなく時刻で比べる。形が UTC と日本時間で混ざっても正しく） */
+const le = (a: string, b: string) => Date.parse(a) <= Date.parse(b);
+/** 画面・履歴に出す「11/6 09:00」 */
+const md = (iso: string) => {
+  const j = toJst(iso);
+  return `${Number(j.slice(5, 7))}/${Number(j.slice(8, 10))} ${j.slice(11, 16)}`;
+};
 const LEVELS: AlertLevel[] = ["info", "warn", "danger"];
 const up = (l: AlertLevel): AlertLevel => LEVELS[Math.min(LEVELS.length - 1, LEVELS.indexOf(l) + 1)];
 
@@ -107,8 +116,9 @@ export function setAlertSettings(v: Partial<AlertSettings>, who: string) {
  * その判定元のアラートで、今回の一覧に無い・まだ済んでいないものは「済み」（解消）にする。
  * 返り値: 新しく出たもの・また出たもの（通知に使う）
  */
-export function syncAlerts(source: string, candidates: AlertCandidate[], now: string): AlertRow[] {
+export function syncAlerts(source: string, candidates: AlertCandidate[], now0: string): AlertRow[] {
   init();
+  const now = toJst(now0);
   const fresh: AlertRow[] = [];
   transaction(() => {
     const seen = new Set<string>();
@@ -117,7 +127,7 @@ export function syncAlerts(source: string, candidates: AlertCandidate[], now: st
       seen.add(c.dedupeKey);
       const cur = getRow(c.dedupeKey);
       if (!cur) {
-        const r: AlertRow = { ...c, source, state: "new", baseLevel: c.level, createdAt: now, updatedAt: now, history: [{ at: now, who: SYSTEM, what: "出しました" }] };
+        const r: AlertRow = { ...c, dueAt: c.dueAt ? toJst(c.dueAt) : undefined, source, state: "new", baseLevel: c.level, createdAt: now, updatedAt: now, history: [{ at: now, who: SYSTEM, what: "出しました" }] };
         put(r);
         fresh.push(r);
         continue;
@@ -127,7 +137,7 @@ export function syncAlerts(source: string, candidates: AlertCandidate[], now: st
         ...cur,
         // 判定が出す中身は新しくする。人が付けた担当者・期限は残す
         kind: c.kind, title: c.title, detail: c.detail, action: c.action, href: c.href, actions: c.actions,
-        dueAt: cur.dueAt ?? c.dueAt,
+        dueAt: cur.dueAt ?? (c.dueAt ? toJst(c.dueAt) : undefined),
         assignee: cur.assignee ?? c.assignee,
         source,
         baseLevel: c.level,
@@ -156,8 +166,9 @@ export function syncAlerts(source: string, candidates: AlertCandidate[], now: st
  * 時間で変わるもの: 「あとで」の時刻が来たら「見た」に戻す。期限を過ぎたら level を上げ、上の人に知らせる印を付ける。
  * 返り値: 今回、期限切れで上げたもの（上の人への通知に使う）
  */
-export function tickAlerts(now: string): AlertRow[] {
+export function tickAlerts(now0: string): AlertRow[] {
   init();
+  const now = toJst(now0);
   const escalated: AlertRow[] = [];
   const to = getAlertSettings().escalateTo;
   transaction(() => {
@@ -165,11 +176,11 @@ export function tickAlerts(now: string): AlertRow[] {
     for (const { json } of open) {
       let r = JSON.parse(json) as AlertRow;
       let changed = false;
-      if (r.state === "snoozed" && r.snoozeUntil && r.snoozeUntil <= now) {
+      if (r.state === "snoozed" && r.snoozeUntil && le(r.snoozeUntil, now)) {
         r = { ...r, state: "seen", snoozeUntil: undefined, history: [...r.history, { at: now, who: SYSTEM, what: "「あとで」の時刻になったので戻しました" }] };
         changed = true;
       }
-      if (r.dueAt && r.dueAt <= now && !r.escalatedTo && r.state !== "snoozed") {
+      if (r.dueAt && le(r.dueAt, now) && !r.escalatedTo && r.state !== "snoozed") {
         r = { ...r, level: up(r.baseLevel), escalatedTo: to, history: [...r.history, { at: now, who: SYSTEM, what: `期限を過ぎたので、${to}さんにも知らせます` }] };
         escalated.push(r);
         changed = true;
@@ -185,18 +196,19 @@ export function updateAlert(
   key: string,
   change: { state?: Exclude<AlertState, "snoozed">; snoozeUntil?: string; assignee?: string; dueAt?: string | null; note?: string },
   who: string,
-  now: string,
+  now0: string,
 ): AlertRow {
   init();
+  const now = toJst(now0);
   if (!who?.trim()) throw new Error("誰が変えたか（名前）を選んでください");
   const cur = getRow(key);
   if (!cur) throw new Error("お知らせが見つかりません");
   const what: string[] = [];
   let r: AlertRow = { ...cur };
   if (change.snoozeUntil) {
-    if (change.snoozeUntil <= now) throw new Error("「あとで」は、これから先の時刻を選んでください");
-    r = { ...r, state: "snoozed", snoozeUntil: change.snoozeUntil };
-    what.push(`あとで（${change.snoozeUntil.slice(5, 16).replace("T", " ")} まで）`);
+    if (le(change.snoozeUntil, now)) throw new Error("「あとで」は、これから先の時刻を選んでください");
+    r = { ...r, state: "snoozed", snoozeUntil: toJst(change.snoozeUntil) };
+    what.push(`あとで（${md(change.snoozeUntil)} まで）`);
   } else if (change.state) {
     r = { ...r, state: change.state, snoozeUntil: undefined, resolvedAt: change.state === "done" ? now : undefined };
     what.push({ new: "新しいに戻す", seen: "見た", done: "済み" }[change.state]);
@@ -206,10 +218,10 @@ export function updateAlert(
     what.push(change.assignee ? `担当を ${change.assignee} に` : "担当を外す");
   }
   if (change.dueAt !== undefined) {
-    r.dueAt = change.dueAt ?? undefined;
+    r.dueAt = change.dueAt ? toJst(change.dueAt) : undefined;
     r.escalatedTo = undefined;
     r.level = r.baseLevel;
-    what.push(change.dueAt ? `期限を ${change.dueAt.slice(5, 16).replace("T", " ")} に` : "期限を外す");
+    what.push(change.dueAt ? `期限を ${md(change.dueAt)} に` : "期限を外す");
   }
   if (change.note) what.push(`メモ: ${change.note}`);
   r = { ...r, updatedAt: now, history: [...r.history, { at: now, who, what: what.join("・") || "変更なし" }] };

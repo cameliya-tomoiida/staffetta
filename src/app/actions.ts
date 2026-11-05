@@ -9,7 +9,7 @@ import { addAlias, aliasMapFor } from "@/lib/aliases";
 import { readDb, resetDb, updateDb } from "@/lib/store";
 import type { ConfirmedLine, FaxDoc } from "@/lib/types";
 import { AUTO_WHO, judgeAutoConfirm } from "@/lib/fax-auto";
-import { autoConfirmEnabled } from "@/lib/fax-auto-setting";
+import { isOn } from "@/lib/settings/features";
 import { checkAlertsSoon } from "@/lib/scheduler";
 
 // 時刻は共通の時計から（撮影日は DEMO_NOW で「今日」をそろえる）
@@ -357,7 +357,7 @@ async function autoConfirm(faxId: string) {
   if (!fax?.read || fax.status !== "review") return; // 新しい様式（template）・注文以外の仕分けは人
   const decision = judgeAutoConfirm({ fax, orders: db.orders, templates: db.templates, aliases: await aliasMapFor(), now: now() });
   const at = now();
-  if (!decision.ok || !autoConfirmEnabled()) {
+  if (!decision.ok || !isOn("fax_auto_confirm")) {
     const reasons = decision.ok ? ["自動確定は「しない」に設定されています"] : decision.reasons;
     const flagged = decision.ok ? [] : decision.flagged;
     await updateDb((d) => {
