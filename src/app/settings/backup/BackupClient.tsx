@@ -44,10 +44,10 @@ export function BackupClient({ last }: { last: Last }) {
           注文・受信したFAX・発注書・マスタを、1つのファイルにまとめてパソコンに保存します。USBメモリなど、別の場所にも写しておくと安心です。
         </p>
         <div className="flex flex-wrap gap-3">
-          <a href="/api/backup" download className={buttonClass("primary", "lg")}>
+          <a href="/api/backup?files=1" download className={buttonClass("primary", "lg")}>
             全部を書き出す（FAXのPDFも入れる）
           </a>
-          <a href="/api/backup?files=0" download className={buttonClass("ghost", "lg")}>
+          <a href="/api/backup" download className={buttonClass("ghost", "lg")}>
             データだけ書き出す（軽い）
           </a>
         </div>
