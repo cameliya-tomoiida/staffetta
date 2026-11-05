@@ -71,7 +71,7 @@ export function CustomerProductsClient({ customers, selected, rows, summary, pro
     }, "商品を足しました");
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
+    <div className="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
       {/* 取引先を選ぶ */}
       <aside className="space-y-4">
         <label className="flex flex-col gap-1 text-xl font-bold">
@@ -125,16 +125,16 @@ export function CustomerProductsClient({ customers, selected, rows, summary, pro
         {msg && <p role="status" className={`rounded-md border-2 p-3 text-lg ${msg.ok ? "border-ok-line bg-ok-bg text-ok-ink" : "border-alert-line bg-alert-bg text-alert-ink"}`}>{msg.text}</p>}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] border-collapse">
+          <table className="w-full min-w-[860px] border-collapse">
             <thead>
               <tr>
                 <th className={TH}>商品</th>
-                <th className={`${TH} w-32`}>卸価格（円）</th>
-                <th className={`${TH} w-32`}>原価（円）</th>
-                <th className={`${TH} w-28 text-right`}>粗利</th>
-                <th className={`${TH} w-28 text-right`}>期間の数量</th>
-                <th className={`${TH} w-24`}>よく出る曜日</th>
-                <th className={`${TH} w-40`}></th>
+                <th className={`${TH} w-28`}>卸価格（円）</th>
+                <th className={`${TH} w-28`}>原価（円）</th>
+                <th className={`${TH} w-24 text-right`}>粗利</th>
+                <th className={`${TH} w-24 text-right`}>期間の数量</th>
+                <th className={`${TH} w-20`}>曜日</th>
+                <th className={`${TH} w-32`}></th>
               </tr>
             </thead>
             <tbody>

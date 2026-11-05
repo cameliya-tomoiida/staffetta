@@ -276,14 +276,17 @@ function sampleCustomerProducts(products: ProductMaster[], customers: CustomerMa
   const byId = new Map(products.map((p) => [p.id, p]));
   const make = products.filter((p) => p.kind === "make");
   const pairs = new Map<string, { customerId: string; productId: string; weekdays: number[] }>();
+  // 取引先マスタの見本（C01 など）だけ。動画用の取引先などは入れない
+  const known = new Set(customers.filter((c) => /^C\d+$/.test(c.id)).map((c) => c.id));
   for (const s of SAMPLE_STANDING_ORDERS) {
+    if (!known.has(s.customerId)) continue;
     const k = `${s.customerId}|${s.productId}`;
     const cur = pairs.get(k) ?? { customerId: s.customerId, productId: s.productId, weekdays: [] };
     if (!cur.weekdays.includes(s.weekday)) cur.weekdays.push(s.weekday);
     pairs.set(k, cur);
   }
   customers.forEach((c, i) => {
-    if ([...pairs.values()].some((x) => x.customerId === c.id)) return;
+    if (!known.has(c.id) || [...pairs.values()].some((x) => x.customerId === c.id)) return;
     for (let j = 0; j < 3 && make.length; j++) {
       const p = make[(i * 3 + j) % make.length];
       pairs.set(`${c.id}|${p.id}`, { customerId: c.id, productId: p.id, weekdays: [] });
@@ -294,6 +297,8 @@ function sampleCustomerProducts(products: ProductMaster[], customers: CustomerMa
     if (!p) return [];
     return [{
       customerId, code: p.id, name: p.name, productId: p.id, unit: p.unit, price: p.price, cost: Math.round(p.price * 0.55 * 10) / 10, source: p.kind === "buy" ? "仕入" : "自社",
+      // 期間（3か月・13週）の数量の見本: 曜日の数 × 13週 × 20
+      quantity: (weekdays.length || 3) * 13 * 20,
       ...(weekdays.length ? { weekdays: weekdays.sort((a, b) => a - b) } : {}), active: true,
     }];
   });
