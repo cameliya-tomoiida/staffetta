@@ -53,7 +53,7 @@ export const FaxReadSchema = z.object({
           attention: z
             .string()
             .describe(
-              "人が確認すべき点（訂正の跡・かすれ・丸の選択・商品の対応が推測、など）。なければ空文字",
+              "人が元のFAXを見て確かめるべき点だけ（訂正の跡・丸の選択・まぎらわしい字・かすれ・本当に迷う商品の対応）。説明やメモは notes へ。なければ空文字",
             ),
           y_percent: z
             .number()
