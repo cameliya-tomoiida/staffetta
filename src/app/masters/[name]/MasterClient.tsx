@@ -322,7 +322,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
                         <Button variant="quiet" onClick={() => setCounting(null)}>×</Button>
                       </span>
                     ) : (
-                      <span className="flex flex-col items-stretch gap-1 whitespace-nowrap lg:flex-row lg:items-start">
+                      <span className="flex flex-col items-stretch gap-1 whitespace-nowrap xl:flex-row xl:items-start">
                         {hasStock && <Button variant="ghost" disabled={busy} onClick={() => setCounting({ id: r.id, value: String(r.stock ?? "") })}>棚卸</Button>}
                         <Button variant="ghost" disabled={busy} onClick={() => openEdit(r)}>直す</Button>
                         <Button variant="quiet" disabled={busy || !who} onClick={() => confirm(`${r.id} ${String(r.name ?? "")} を「使わない」にしますか？（記録は残り、あとで戻せます）`) && run(() => post({ action: "delete", id: r.id, who }), () => `${r.id} を使わないにしました`)}>使わない</Button>
