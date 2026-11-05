@@ -9,6 +9,7 @@ import { readLineText } from "./reader";
 import { customerIdForUser, readLineState, touchUser, updateLineState } from "./state";
 import { isDemoLineUser } from "./config";
 import { addCustomer, getCustomerSettings, syncLineUserIds } from "./customers";
+import { checkLeadTime, deliveryDayProblem, type LeadTimeCheck } from "@/lib/leadtime";
 
 // LINEから来た注文を、共通の型の Order（channel: "line"、status: "needs_review"）にして store.ts に保存する。
 
@@ -128,6 +129,42 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
   return { duplicated: false, orders };
 }
 
+// ───────── 締め・配送曜日（③の checkLeadTime） ─────────
+
+/** 注文の行ごとの締めの判定（いまの時刻で）。LINE受付の画面・LIFF で使う。判定するだけで注文は変えない */
+export function lineLeadTimes(order: Order): Record<string, LeadTimeCheck> {
+  return Object.fromEntries(checkLeadTime(order, nowIso()).map((c) => [c.lineId, c]));
+}
+
+export interface LiffDay {
+  ymd: string;
+  /** この日は納品しない（お客さんに見せる短い理由） */
+  closed?: string;
+  /** この日に間に合わない商品（productId → 理由） */
+  late: Record<string, string>;
+}
+
+/** LIFF のお届け日ごとに「選べない日」「選べない商品」を出す（あした〜8日先） */
+export function liffDays(customerId: string, productIds: string[], span = 8): LiffDay[] {
+  const out: LiffDay[] = [];
+  for (let n = 1; n <= span; n++) {
+    const ymd = todayJst(n);
+    const closed = customerId ? deliveryDayProblem(customerId, ymd) : undefined;
+    if (closed) {
+      out.push({ ymd, closed: "お届けのない曜日です", late: {} });
+      continue;
+    }
+    const probe = {
+      id: "probe", customerId, deliveryDate: ymd, status: "needs_review",
+      lines: productIds.map((productId) => ({ id: productId, productId })),
+    } as unknown as Order;
+    const late: Record<string, string> = {};
+    for (const c of checkLeadTime(probe, nowIso())) if (c.status === "late") late[c.productId] = c.reason;
+    out.push({ ymd, late });
+  }
+  return out;
+}
+
 // ───────── (a) LIFFの注文フォーム ─────────
 
 export interface LiffOrderInput {
@@ -146,6 +183,12 @@ export async function createLiffOrder(input: LiffOrderInput) {
   const items = input.items.filter((i) => i.quantity > 0 && productById(i.productId));
   if (!items.length) throw new Error("数が入っていません");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate) || input.deliveryDate <= todayJst()) throw new Error("納品日を選んでください");
+  // 締めを過ぎた商品・納品しない曜日は受けない（画面でも選べないようにしてある。古い画面から送られたときの守り）
+  const known = customerIdForUser(await readLineState(), input.userId) ?? "";
+  const day = liffDays(known, items.map((i) => i.productId), 31).find((d) => d.ymd === input.deliveryDate);
+  if (day?.closed) throw new Error(`${input.deliveryDate} は${day.closed}`);
+  const lateNames = items.filter((i) => day?.late[i.productId]).map((i) => productById(i.productId)!.name);
+  if (lateNames.length) throw new Error(`${lateNames.join("・")}は、この日のお届けの締め切りを過ぎました。ほかの日をお選びください`);
   const { customerId } = await touchUser(input.userId, {
     displayName: input.displayName,
     claimedName: input.claimedName,
@@ -215,6 +258,8 @@ export async function liffContext(userId: string) {
     customerName: customer?.name ?? state.users[userId]?.claimedName ?? "",
     linked: Boolean(customer),
     cutoff: customer?.cutoff ?? "17:00",
+    /** お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日） */
+    days: liffDays(customerId ?? "", allProducts().map((p) => p.id)),
     productIds: usual.length ? [...usual, ...defaults.filter((id) => !usual.includes(id))] : defaults,
     usualCount: usual.length,
     lastOrder: last

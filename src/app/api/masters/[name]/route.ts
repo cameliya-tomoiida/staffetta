@@ -1,4 +1,4 @@
-// マスタの API（⑤）。name は src/lib/masters/screens.ts の SCREEN_NAMES（仕入先・便・材料・包材・取り込みの設定）。
+// マスタの API（⑤）。name は src/lib/masters/screens.ts の SCREEN_NAMES（③の全部のマスタと取り込みの設定）。
 //   GET  ?format=csv            … 今の登録を CSV で書き出す（Excel で開ける UTF-8 BOM）。&encoding=shift_jis も可
 //   GET  ?format=template       … 空のテンプレート CSV
 //   GET  ?format=history&id=..  … 変更の記録
@@ -7,10 +7,14 @@
 //   POST JSON { action: "save", id?, input, who }   … 1件の追加・修正
 //   POST JSON { action: "delete" | "restore", id, who }
 //   POST JSON { action: "stocktake", id, counted, who, note? } … 棚卸（材料・包材）
+//   POST JSON { action: "makeWeek", who, customerId?, weekOf? } … 定期注文から今週分の注文（要確認）を作る（name = standingOrders）
+//   POST JSON { action: "saveRecipe", doughId, lines: [{ materialId, percent }], who } … 生地1つの配合をまとめて置き換え（name = recipeItems）
 import { revalidatePath } from "next/cache";
+import { createStandingOrdersForWeek } from "@/lib/masters/standing";
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  applyUpload, exportFile, history, isScreenName, previewUpload, remove, restore, saveOne, stocktake, templateFile,
+  applyUpload, exportFile, history, isScreenName, previewUpload, remove, restore, saveOne, saveRecipe, stocktake, templateFile,
+  type RecipeLineInput,
 } from "@/lib/masters/service";
 
 const csvResponse = (buf: Buffer, fileName: string) =>
@@ -54,12 +58,19 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
       if (action === "apply") result = await applyUpload(name, buf, file.name, String(form.get("who") ?? ""), String(form.get("hash") ?? "") || undefined);
       else result = await previewUpload(name, buf, file.name);
     } else {
-      const b = (await req.json()) as { action: string; id?: string; input?: Record<string, string>; who?: string; counted?: number; note?: string };
+      const b = (await req.json()) as { action: string; id?: string; input?: Record<string, string>; who?: string; counted?: number; note?: string; doughId?: string; lines?: RecipeLineInput[]; customerId?: string; weekOf?: string };
       const who = b.who ?? "";
       if (b.action === "save") result = await saveOne(name, b.id, b.input ?? {}, who);
       else if (b.action === "delete") result = await remove(name, b.id ?? "", who);
       else if (b.action === "restore") result = await restore(name, b.id ?? "", who);
-      else if (b.action === "stocktake") result = await stocktake(name, b.id ?? "", Number(b.counted), who, b.note);
+      else if (b.action === "saveRecipe" && name === "recipeItems") {
+        result = await saveRecipe(b.doughId ?? "", b.lines ?? [], who);
+        revalidatePath("/masters/recipes");
+        revalidatePath("/plan");
+      } else if (b.action === "makeWeek" && name === "standingOrders") {
+        result = await createStandingOrdersForWeek({ who, customerId: b.customerId, weekOf: b.weekOf });
+        revalidatePath("/", "layout");
+      } else if (b.action === "stocktake") result = await stocktake(name, b.id ?? "", Number(b.counted), who, b.note);
       else throw new Error(`知らない操作です: ${b.action}`);
     }
     revalidatePath(`/masters/${name}`);

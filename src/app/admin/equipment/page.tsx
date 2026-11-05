@@ -7,7 +7,7 @@ export const metadata = { title: "設備と人員｜マスタ管理" };
 
 // TODO(③): 設備（ミキサー台数・使える時間帯、分割機の能力・重量上限、スライサー、包装機、金属検出）と人員の列とデータ
 export default function EquipmentAdmin() {
-  toMastersIfReady(["equipment", "shifts"]); // ⑤の /masters に画面ができたら、そちらへ
+  toMastersIfReady(["equipment"]); // ⑤の /masters に画面ができたら、そちらへ
   const columns: ColumnDef[] = [
     { key: "id", label: "コード", required: true },
     { key: "name", label: "名前", required: true },

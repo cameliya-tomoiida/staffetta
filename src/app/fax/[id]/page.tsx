@@ -4,6 +4,8 @@ import { customers } from "@/data/master";
 import { allProducts } from "@/lib/catalog";
 import { readDb } from "@/lib/store";
 import { aliasMapFor, confidenceLevel } from "@/lib/aliases";
+import { checkLeadTime } from "@/lib/leadtime";
+import { nowIso } from "@/lib/clock";
 import { ReviewClient } from "./ReviewClient";
 
 
@@ -27,6 +29,19 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
     read.orders.flatMap((o, oi) => o.lines.map((l, li) => [`${oi}-${li}`, confidenceLevel(l.confidence, l.attention)] as const)),
   );
   const aliases = await aliasMapFor();
+  // 締めに間に合うか（③の checkLeadTime）。late=黄・warn=薄い黄で、行の下に理由を出す。確定前の FAX だけ
+  const leadTimes: Record<string, { status: "late" | "warn"; reason: string }> = {};
+  if (fax.status !== "confirmed" && fax.status !== "other") {
+    const at = nowIso();
+    for (const o of orders) {
+      if (!o.customerId || o.status !== "needs_review") continue;
+      const asRead = read.kind === "provisional_order" ? { ...o, status: "provisional" as const } : o;
+      for (const c of checkLeadTime(asRead, at)) {
+        const key = c.lineId.slice(fax.id.length + 1); // 行のIDは "FAXのID-注文の番号-行の番号"
+        if (c.status === "late" || c.status === "warn") leadTimes[key] = { status: c.status, reason: c.reason };
+      }
+    }
+  }
   return (
     <ReviewClient
       fax={fax}
@@ -37,6 +52,8 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
       products={allProducts().map((p) => ({ id: p.id, name: p.name }))}
       levels={levels}
       aliases={aliases}
+      leadTimes={leadTimes}
+      unreadFaxes={db.faxes.filter((f) => f.status === "new" || f.status === "reading").length}
     />
   );
 }

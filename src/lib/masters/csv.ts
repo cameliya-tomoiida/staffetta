@@ -217,8 +217,9 @@ function pickKeys(def: MasterDef, cells: string[], hcols: (ColumnDef | undefined
     if (!c || !def.keyColumns.includes(c.key)) return;
     const v = (cells[i] ?? "").trim();
     // enum のキー（ラインなど）は表示名でも書けるので、値に直す
+    // 文字の列（便ID など）は③の parseCell と同じく、そのまま（全角のかっこを変えない）
     const o = c.options?.find((x) => x.value === v.normalize("NFKC") || x.label === v);
-    out[c.key] = o ? o.value : v.normalize("NFKC");
+    out[c.key] = o ? o.value : c.type === "text" ? v : v.normalize("NFKC");
   });
   return out;
 }

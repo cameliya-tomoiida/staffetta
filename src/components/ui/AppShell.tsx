@@ -32,8 +32,9 @@ export const MENU: Group[] = [
   {
     title: "マスタ管理",
     items: [
-      { href: "/admin/products", label: "商品" },
-      { href: "/admin/recipes", label: "レシピと工程" },
+      // 商品・レシピ・設備などは⑤の /masters/*（③の全マスタ。CSV のプレビュー→確定つき）
+      { href: "/masters/products", label: "商品" },
+      { href: "/masters/recipes", label: "レシピと工程" },
       { href: "/admin/customers", label: "取引先" },
       { href: "/masters/courses", label: "配送の便（出発時刻・走る曜日）" },
       // 仕入先・材料・包材は⑤の /masters/*（CSV のプレビュー→確定・棚卸つき）
@@ -41,8 +42,23 @@ export const MENU: Group[] = [
       { href: "/masters/supplierDeliveries", label: "仕入先の便（締め・届く日）" },
       { href: "/masters/materials", label: "材料" },
       { href: "/masters/packaging", label: "包材" },
-      { href: "/admin/equipment", label: "設備と人員" },
+      { href: "/masters/equipment", label: "設備" },
+      { href: "/masters/shifts", label: "班と人数" },
       { href: "/admin/fax-templates", label: "FAXの様式" },
+    ],
+  },
+  {
+    title: "くわしいマスタ",
+    items: [
+      { href: "/masters/doughs", label: "生地" },
+      { href: "/masters/recipeItems", label: "配合（1行ずつ）" },
+      { href: "/masters/steps", label: "工程" },
+      { href: "/masters/toppings", label: "トッピング" },
+      { href: "/masters/toppingItems", label: "トッピングの中身" },
+      { href: "/masters/productPackaging", label: "商品の包材" },
+      { href: "/masters/lines", label: "ライン" },
+      { href: "/masters/staffAssignments", label: "工程ごとの配置" },
+      { href: "/masters/customers", label: "取引先（CSV で一括）" },
     ],
   },
   {

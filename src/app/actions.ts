@@ -48,6 +48,8 @@ export async function readFaxAction(faxId: string) {
       if (read.kind === "not_order" || read.kind === "supplier_reply") return;
       const isChange = read.kind === "change";
       read.orders.forEach((ro, oi) => {
+        // 行が無い納品日（「発注なし」の連絡など）は注文を作らない。FAX は確定で「受け取った」記録だけ残る
+        if (!ro.lines.length) return;
         // 変更FAX: 同じ取引先・納品日の元の注文を探して changeOf に入れる（元の注文には触らない）
         const original = isChange
           ? d.orders.find((o) => o.customerId === customerId && o.deliveryDate === ro.delivery_date && (o.status === "confirmed" || o.status === "provisional") && (o.intent ?? "new") === "new")
@@ -234,6 +236,9 @@ export async function confirmChangeAction(input: {
     if (!fax?.read) throw new Error("FAXが見つかりません");
     if (fax.status === "confirmed") throw new Error("このFAXはもう確定済みです");
     if (fax.read.kind !== "change") throw new Error("このFAXは変更のFAXではありません");
+    // 元の注文がまだ確定前（別の FAX で確認待ち）なのに「追加」として入れると、あとでその FAX を確定したとき二重になる
+    const waiting = pendingOriginalsFor(db.orders, fax.id, input.customerId, input.additions.map((a) => a.deliveryDate));
+    if (waiting.length) throw new Error(`元の注文がまだ確定前です。先に ${waiting.join("・")} を確定してから、この変更を確定してください`);
     const at = now();
     const ref = { kind: "fax_pdf" as const, faxId: fax.id, pdfUrl: fax.file };
     for (const c of input.changes) {
@@ -279,6 +284,18 @@ export async function confirmChangeAction(input: {
   revalidatePath("/", "layout");
 }
 
+/**
+ * 変更FAX の元になりそうな、まだ確定前の注文（同じ取引先・納品日・intent new・needs_review、別の入口のもの）。
+ * 見つかったら、その FAX の番号（FAX 以外は注文の番号）を返す。
+ */
+function pendingOriginalsFor(orders: Order[], faxId: string, customerId: string, dates: string[]): string[] {
+  const want = new Set(dates);
+  const hits = orders.filter(
+    (o) => !o.id.startsWith(`${faxId}-`) && o.customerId === customerId && want.has(o.deliveryDate) && o.status === "needs_review" && (o.intent ?? "new") === "new",
+  );
+  return [...new Set(hits.map((o) => o.source.refs.find((r) => r.kind === "fax_pdf")?.faxId ?? o.id))];
+}
+
 /** 電話・ドライバー聞き取りの注文を手で入れる（人が入れるのでそのまま確定） */
 export async function addManualOrderAction(input: {
   customerId: string;
@@ -310,7 +327,12 @@ export async function addManualOrderAction(input: {
   revalidatePath("/", "layout");
 }
 
-export async function resetDemoAction() {
+/**
+ * デモを最初から。本番（3100）では、本物の FAX・注文・発注書も消える（LINE は架空のお客さんだけ消す）。
+ * 画面で「消えることを確認しました」にチェックしたときだけ呼べる（2段の確認）。
+ */
+export async function resetDemoAction(input?: { understood?: boolean }) {
+  if (!input?.understood) throw new Error("「本物のデータも消えることを確認しました」にチェックを入れてください");
   await resetDb();
   revalidatePath("/", "layout");
 }

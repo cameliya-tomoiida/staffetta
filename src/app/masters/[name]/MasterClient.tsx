@@ -32,6 +32,10 @@ function cellText(c: ClientColumn, v: unknown): string {
     case "list":
     case "textlist":
       return Array.isArray(v) ? v.join(";") : String(v);
+    case "weekdays":
+      return Array.isArray(v) ? v.map((n) => "日月火水木金土"[Number(n)] ?? n).join(";") : String(v);
+    case "weekday":
+      return "日月火水木金土"[Number(v)] ?? String(v);
     case "map":
       return typeof v === "object" ? Object.entries(v as Record<string, unknown>).map(([k, x]) => `${k}:${x}`).join(";") : String(v);
     default:
