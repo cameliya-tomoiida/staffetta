@@ -1,5 +1,5 @@
 "use client";
-// 自動化のスイッチ（⑤）。保存は /api/automation（action: save）。
+// 自動化の設定（⑤）。保存は /api/automation（action: save）。スイッチは①の機能の一覧（setFlag）に書き、数・時刻は⑤の設定に書く。
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, fmtDateTime, Notice } from "@/components/ui";

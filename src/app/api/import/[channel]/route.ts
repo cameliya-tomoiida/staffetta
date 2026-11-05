@@ -4,6 +4,7 @@
 //   POST /api/import/kirara   … 取引先の発注サイトの EDI CSV（form の file）または { sample: "ファイル名" }
 //   POST /api/import/infomart  … インフォマートの明細 CSV（form の file）または { sample: "ファイル名" }
 // どれも、取り込んだ注文は「要確認」で db.json に入る。確定は人が画面で行う。
+import { isOn } from "@/lib/settings/features";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
@@ -32,6 +33,7 @@ async function readInput(req: NextRequest, channel: keyof typeof DIRS): Promise<
 
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/import/[channel]">) {
   const { channel } = await ctx.params;
+  if (!isOn("import_channels")) return NextResponse.json({ error: "取り込みは使わない設定です（設定 → 機能の ON/OFF）" }, { status: 403 });
   try {
     let result: unknown;
     if (channel === "email") {

@@ -7,6 +7,7 @@ import "server-only";
 // 同じ発注書・同じ製造日をもう一度記録したら、前の記録との差だけ動かす（数を直せる・二重に引かない）。
 import type { Masters } from "@/data/types";
 import { nowIso } from "@/lib/clock";
+import { isOn } from "@/lib/settings/features";
 import { getMaster, upsertMasters } from "@/lib/db/masters";
 import { ensureTables, getDb } from "@/lib/db/sqlite";
 import { loadMasters, seedSampleMasters } from "@/lib/masters/seed-db";
@@ -70,6 +71,7 @@ function putEvent(id: string, kind: string, value: unknown, who: string) {
 /** 在庫を動かす（マスタの stock を足し引きし、動きを1件ずつ残す）。在庫は 0 より下にしない（足りなかった分はメモに残す） */
 async function move(kind: MoveKind, items: { master: StockMaster; itemId: string; qty: number }[], who: string, ref: string, note = ""): Promise<StockMove[]> {
   await ready();
+  if (!isOn("stock")) return []; // 在庫の出入りを使わない設定なら、在庫の数は変えない
   const at = nowIso();
   const out: StockMove[] = [];
   for (const it of items) {
