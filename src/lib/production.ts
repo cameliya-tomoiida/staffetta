@@ -446,6 +446,9 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   // 前から積むライン
   for (const b of plan.doughs.filter((b) => fromOf(b.line) === "start")) {
     let t = opts.startMinute?.[b.line] ?? findLine(b.line).startMinute;
+    // 前日の作業（冷凍庫で12時間 など）が当日の朝まで続くときは、それが終わってから当日の作業を始める
+    const prevDone = Math.max(-Infinity, ...prevSteps.get(b.key)!.map((x) => x.end)) - 1440;
+    if (prevDone > t) t = prevDone;
     // ロットで流す: 次の工程は、前の工程の最初のロットが終わったら始められる（終わりは、前の工程の最後のロット＋1ロット分より後）
     const lots = lotsOf(b);
     let firstReady = t;

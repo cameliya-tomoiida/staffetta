@@ -133,3 +133,16 @@ describe("冷凍庫の容量", () => {
     expect(runPipeline([mOrder("A", "C10", [["P07", 800]])], DATE, { masters: m }).production.lines.find((l) => l.line === "pizza")!.freezerCases).toBeUndefined();
   });
 });
+
+describe("前日の作業が当日の朝まで続くとき", () => {
+  it("当日の作業は、前日の作業が終わってから始める", () => {
+    const m = sampleMasters();
+    // ピザ生地の冷蔵発酵を 20時間にする（前日 16時台から → 当日 12時台まで）
+    const long: Masters = { ...m, steps: m.steps.map((s) => (s.doughId === "DG04" && s.key === "retard" ? { ...s, waitMinutes: 1200 } : s)) };
+    const row = runPipeline([mOrder("A", "C10", [["P07", 400]])], DATE, { masters: long }).schedule.find((r) => r.line === "pizza")!;
+    const prevEnd = Math.max(...row.steps.filter((s) => s.prevDay).map((s) => s.end)) - 1440;
+    const first = row.steps.find((s) => !s.prevDay)!;
+    expect(prevEnd).toBeGreaterThan(8 * 60);
+    expect(first.start).toBe(prevEnd);
+  });
+});
