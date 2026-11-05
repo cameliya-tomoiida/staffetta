@@ -26,6 +26,13 @@ JOBS = [
     ("09-recipes", SHOTS / "masters-recipes.png", None, [(362, 360, 0), (458, 609, 0), (690, 609, 0), (388, 1181, 0), (640, 1250, 0), (794, 1338, 0)]),
     ("10-steps", SHOTS / "masters-steps.png", (0, 0, 1024, 800), [(643, 246, 0), (436, 310, 0), (834, 491, 0)]),
     ("11-customers", SHOTS / "masters-customers.png", (0, 0, 1024, 700), [(436, 284, 0), (651, 220, 0)]),
+    # 電話・ドライバーの注文（写真は②の docs/screenshots/phone-order）
+    ("12-phone-1", SHOTS / "phone-00-orders-top.png", None, [(706, 202, 0)]),
+    ("12-phone-2", SHOTS / "phone-01-customer.png", None, [(418, 329, 0), (431, 420, 0)]),
+    ("12-phone-3", SHOTS / "phone-02-date.png", None, [(539, 447, 0), (717, 447, 0)]),
+    ("12-phone-4", SHOTS / "phone-03-items.png", None, [(396, 512, 0), (876, 623, 0), (957, 623, 0)]),
+    ("12-phone-5", SHOTS / "phone-04-who.png", None, [(329, 466, 0), (345, 536, 0), (893, 709, 0)]),
+    ("12-phone-6", SHOTS / "phone-05-saved.png", None, [(406, 418, 0), (647, 418, 0)]),
 ]
 
 
