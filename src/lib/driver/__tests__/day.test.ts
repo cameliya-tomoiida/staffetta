@@ -53,6 +53,26 @@ describe("配送の画面（/driver）のその日の配送", () => {
   });
 });
 
+describe("いつもの商品（⑦の取引先の商品）", () => {
+  it("その曜日によく出るものを先に、数の多い順。注文の無い日でも出す", () => {
+    const cp = [
+      { customerId: "C01", code: "A", name: "ロール", productId: "P01", quantity: 100, weekdays: [1, 3], active: true },
+      { customerId: "C01", code: "B", name: "食パン", productId: "P03", quantity: 300, weekdays: [2], active: true },
+      { customerId: "C01", code: "C", name: "古い品", quantity: 999, weekdays: [5], active: false },
+      { customerId: "C09", code: "D", name: "ほかの先", quantity: 50, active: true },
+    ];
+    // 11/9 は月曜
+    const d = driverDay({ course: course("東コース（朝便）"), customers, orders: [], date: "2026-11-09", depot: DEFAULT_DEPOT, product, customerProducts: cp });
+    const c01 = d.stops.find((s) => s.id === "C01")!;
+    expect(c01.items).toEqual([]);
+    expect(c01.usual).toEqual([
+      { name: "バターロール", unit: "個", weekdays: "月・水", today: true },
+      { name: "食パン 8枚切", unit: "斤", weekdays: "火", today: false },
+    ]);
+    expect(d.stops.find((s) => s.id === "C14" || s.id === "DV01")!.usual).toEqual([]);
+  });
+});
+
 describe("スタッフの登録", () => {
   beforeEach(() => {
     getDb().exec("DELETE FROM kv WHERE key LIKE 'staff_members%'");

@@ -116,6 +116,7 @@ export async function driverDayAction(courseId: string, date: string) {
       course,
       customers: masters.customers,
       orders: db.orders,
+      customerProducts: masters.customerProducts ?? [],
       date,
       depot: getDepot(),
       settings: getRouteSettings(),
