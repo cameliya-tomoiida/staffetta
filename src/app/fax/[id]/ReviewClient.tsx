@@ -201,7 +201,8 @@ export function ReviewClient({
       : <span className="pill bg-review-bg text-review-ink">確認待ち</span>;
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-3">
+    // 広い画面（lg）は1画面に収めて左右で見比べる。スマホ・タブレット縦は上下に並べて、ページごと下へ読む
+    <div className="flex flex-col gap-3 lg:h-[calc(100vh-7rem)]">
       <div className="flex flex-wrap items-center gap-3">
         <Link href="/" className="text-sm text-ink-soft hover:underline">← 受信箱</Link>
         <h1 className="text-xl font-black">{read.document_title}</h1>
@@ -214,7 +215,7 @@ export function ReviewClient({
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
         {/* 左: 元のFAX */}
-        <div className="card min-h-0 overflow-hidden">
+        <div className="card flex h-[60vh] min-h-0 flex-col overflow-hidden lg:h-auto">
           <PdfView url={fax.file} rotation={rotation} highlight={selected != null ? rows[selected]?.y : null} />
           {!done && (
             <div className="flex items-center gap-2 border-t border-rule px-3 py-2 text-sm">
@@ -376,7 +377,8 @@ export function ReviewClient({
                       <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3.5 w-5 rounded-sm bg-sheet ring-2 ring-alert-line" />赤い枠＝かならずFAXと見比べる</span>
                     </div>
                   )}
-                  <table className="w-full text-sm">
+                  {/* fax-rows: スマホでは1行を小さなカードに並べ直す（globals.css） */}
+                  <table className="fax-rows w-full text-sm">
                     <thead>
                       <tr className="text-left text-xs text-ink-faint">
                         <th className="py-1">FAXに書いてある品名</th><th className="w-44">商品</th>
@@ -479,7 +481,7 @@ export function ReviewClient({
                             </td>
                             <td className="py-2 pl-2 text-right">
                               {!done && (
-                                <button className="text-xs text-ink-faint hover:text-alert-ink" onClick={() => update(i, { removed: !r.removed })}>
+                                <button className="min-h-10 px-2 text-sm text-ink-soft underline underline-offset-2 hover:text-alert-ink sm:min-h-0 sm:px-0 sm:text-xs sm:text-ink-faint sm:no-underline" onClick={() => update(i, { removed: !r.removed })}>
                                   {r.removed ? "戻す" : "消す"}
                                 </button>
                               )}
