@@ -48,6 +48,8 @@ export async function readFaxAction(faxId: string) {
       if (read.kind === "not_order" || read.kind === "supplier_reply") return;
       const isChange = read.kind === "change";
       read.orders.forEach((ro, oi) => {
+        // 行が無い納品日（「発注なし」の連絡など）は注文を作らない。FAX は確定で「受け取った」記録だけ残る
+        if (!ro.lines.length) return;
         // 変更FAX: 同じ取引先・納品日の元の注文を探して changeOf に入れる（元の注文には触らない）
         const original = isChange
           ? d.orders.find((o) => o.customerId === customerId && o.deliveryDate === ro.delivery_date && (o.status === "confirmed" || o.status === "provisional") && (o.intent ?? "new") === "new")
@@ -310,7 +312,12 @@ export async function addManualOrderAction(input: {
   revalidatePath("/", "layout");
 }
 
-export async function resetDemoAction() {
+/**
+ * デモを最初から。本番（3100）では、本物の FAX・注文・発注書も消える（LINE は架空のお客さんだけ消す）。
+ * 画面で「消えることを確認しました」にチェックしたときだけ呼べる（2段の確認）。
+ */
+export async function resetDemoAction(input?: { understood?: boolean }) {
+  if (!input?.understood) throw new Error("「本物のデータも消えることを確認しました」にチェックを入れてください");
   await resetDb();
   revalidatePath("/", "layout");
 }

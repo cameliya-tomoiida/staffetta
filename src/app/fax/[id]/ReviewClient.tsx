@@ -43,7 +43,7 @@ const kindInfo = {
 } as const;
 
 export function ReviewClient({
-  fax, orders, others, templates, customers, products, levels, aliases,
+  fax, orders, others, templates, customers, products, levels, aliases, leadTimes = {},
 }: {
   fax: FaxDoc;
   orders: Order[]; // このFAXから作った注文
@@ -55,6 +55,8 @@ export function ReviewClient({
   levels: Record<string, Level>;
   /** 名寄せ辞書 { 取引先ID: { 呼び名: 商品ID } } */
   aliases: Record<string, Record<string, string>>;
+  /** 行（"注文の番号-行の番号"）ごとの締めの判定（③の checkLeadTime）。間に合わない・仮発注で過ぎた行だけ */
+  leadTimes?: Record<string, { status: "late" | "warn"; reason: string }>;
 }) {
   const read = fax.read!;
   const [learned, setLearned] = useState<Record<string, string>>({}); // この画面で辞書に入れたもの（"取引先|呼び名" → 商品ID）
@@ -360,6 +362,12 @@ export function ReviewClient({
                             <td className="py-2 pr-2">
                               <div className="font-bold">{r.writtenName}</div>
                               {r.attention && <div className="mt-0.5 text-xs font-bold text-review-ink">{r.attention}</div>}
+                              {!done && leadTimes[`${r.orderIndex}-${r.lineIndex}`] && (
+                                <div className={`mt-1 rounded px-1.5 py-0.5 text-xs text-review-ink ${leadTimes[`${r.orderIndex}-${r.lineIndex}`].status === "late" ? "bg-review-bg font-bold outline outline-1 outline-review-line" : "bg-review-bg/50"}`}>
+                                  {leadTimes[`${r.orderIndex}-${r.lineIndex}`].status === "late" ? "締め: " : "締め（仮発注）: "}
+                                  {leadTimes[`${r.orderIndex}-${r.lineIndex}`].reason}
+                                </div>
+                              )}
                               {r.level === "low" ? (
                                 <div className="mt-0.5 text-xs font-bold text-alert-ink">読み取りの自信が低い（{Math.round(r.confidence * 100)}%）。かならずFAXと見比べてください</div>
                               ) : r.level === "mid" && !r.attention ? (
