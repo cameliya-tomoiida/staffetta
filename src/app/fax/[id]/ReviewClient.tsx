@@ -392,7 +392,11 @@ export function ReviewClient({
                                 </div>
                               )}
                               {r.level === "low" ? (
-                                <div className="mt-0.5 text-xs font-bold text-alert-ink">読み取りの自信が低い（{Math.round(r.confidence * 100)}%）。かならずFAXと見比べてください</div>
+                                <div className="mt-0.5 text-xs font-bold text-alert-ink">
+                                  {fax.customerId
+                                    ? `読み取りの自信が低い（${Math.round(r.confidence * 100)}%）。かならずFAXと見比べてください`
+                                    : "送り主が得意先一覧に無いので、商品はClaudeの推測です。かならず選び直してください"}
+                                </div>
                               ) : r.level === "mid" && !r.attention ? (
                                 <div className="mt-0.5 text-xs text-review-ink">読み取りの自信が少し低め（{Math.round(r.confidence * 100)}%）</div>
                               ) : null}

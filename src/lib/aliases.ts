@@ -73,8 +73,13 @@ export async function addAlias(input: { customerId: string; alias: string; produ
   );
 }
 
-/** 読み取りの自信度 → 画面の段階（high=そのまま、mid=黄、low=赤枠） */
-export function confidenceLevel(confidence: number, attention?: string): "high" | "mid" | "low" {
+/**
+ * 読み取りの自信度 → 画面の段階（high=そのまま、mid=黄、low=赤枠）。
+ * 送り主が得意先一覧に無い（取引先が決まっていない）FAX の行は、自信度にかかわらず low。
+ * 品名の対応が推測でしかなく、推測の商品のまま確定されるのを防ぐため（本物の FAX の測定から。docs/fax-accuracy.md）。
+ */
+export function confidenceLevel(confidence: number, attention?: string, opts: { customerKnown?: boolean } = {}): "high" | "mid" | "low" {
+  if (opts.customerKnown === false) return "low";
   if (confidence < 0.6) return "low";
   if (confidence < 0.85 || (attention && attention.trim())) return "mid";
   return "high";

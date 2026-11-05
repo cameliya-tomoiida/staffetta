@@ -26,7 +26,7 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
   // 自信度の段階（①の confidenceLevel: high=そのまま／mid=黄／low=赤枠）と、取引先ごとの名寄せ辞書
   const read = fax.read;
   const levels = Object.fromEntries(
-    read.orders.flatMap((o, oi) => o.lines.map((l, li) => [`${oi}-${li}`, confidenceLevel(l.confidence, l.attention)] as const)),
+    read.orders.flatMap((o, oi) => o.lines.map((l, li) => [`${oi}-${li}`, confidenceLevel(l.confidence, l.attention, { customerKnown: !!fax.customerId })] as const)),
   );
   const aliases = await aliasMapFor();
   // 締めに間に合うか（③の checkLeadTime）。late=黄・warn=薄い黄で、行の下に理由を出す。確定前の FAX だけ
