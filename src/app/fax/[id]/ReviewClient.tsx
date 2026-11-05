@@ -105,16 +105,15 @@ export function ReviewClient({
   const [selected, setSelected] = useState<number | null>(null);
   const [padFor, setPadFor] = useState<number | null>(null);
   const [who, setWho] = useState(STAFF[0]);
+  const [checked, setChecked] = useState<Record<string, boolean>>({}); // 迷った行に「FAXと見比べました」の印
+  const [font, setFont] = useState(20); // 右の表の文字の大きさ（px）
 
   const update = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "（商品を選んでください）";
   // 迷った行: 自信が高くない・商品が決まっていない・自動確定の判定で止まった行（締め・辞書に無いなど）
   const autoFlagged = new Set(fax.autoReview?.flagged ?? []);
   const needsLook = (r: Row) => r.level !== "high" || !r.productId || autoFlagged.has(`${r.orderIndex}-${r.lineIndex}`);
-  const [showOk, setShowOk] = useState(false);
   const inDict = (r: Row) => (learned[`${customerId}|${r.writtenName}`] ?? aliases[customerId]?.[r.writtenName]) === r.productId;
-  const changed = (r: Row) => r.quantity !== r.aiQuantity || r.productId !== r.aiProductId || r.piecesPerUnit !== r.aiPieces || r.removed;
-  const flagged = rows.filter((r) => !r.removed && needsLook(r)).length;
   const dates = [...new Set(rows.map((r) => `${r.orderIndex}|${r.deliveryDate}`))];
 
   const isOrderish = kind === "order" || kind === "provisional_order" || kind === "change";
@@ -200,75 +199,216 @@ export function ReviewClient({
       ? <span className="pill bg-review-bg text-review-ink">新しい様式・承認待ち</span>
       : <span className="pill bg-review-bg text-review-ink">確認待ち</span>;
 
+  // 迷った行は「FAXと見比べました」に印を付けてから確定する（数を直すと印は外れる。Codex のデザイン案）
+  const keyOf = (r: Row) => `${r.orderIndex}-${r.lineIndex}`;
+  const mustCheck = (r: Row) => !done && isOrderish && !needsTemplate && !r.removed && needsLook(r);
+  const remaining = rows.filter((r) => mustCheck(r) && !checked[keyOf(r)]).length;
+  const badQty = rows.some((r) => !r.removed && (!Number.isInteger(r.quantity) || r.quantity < 0));
+  const setQty = (i: number, v: number) => {
+    update(i, { quantity: v });
+    setChecked((c) => ({ ...c, [keyOf(rows[i])]: false }));
+  };
+  const setProduct = (i: number, productId: string) => {
+    update(i, { productId });
+    setChecked((c) => ({ ...c, [keyOf(rows[i])]: false }));
+  };
+  // 左の FAX で触れた高さに、いちばん近い行を選ぶ
+  const pick = (_page: number, y: number) => {
+    let best: number | null = null;
+    rows.forEach((r, i) => {
+      if (r.y == null) return;
+      if (best == null || Math.abs(r.y - y) < Math.abs((rows[best].y ?? 0) - y)) best = i;
+    });
+    if (best != null) {
+      setSelected(best);
+      document.getElementById(`fax-row-${best}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  };
+  const customerName = customers.find((c) => c.id === customerId)?.name ?? (read.sender.name || "送り主が不明");
+  const md = (d: string) => (d ? `${Number(d.slice(5, 7))}月${Number(d.slice(8, 10))}日` : "");
+  const allDates = [...new Set(rows.map((r) => r.deliveryDate))].sort();
+  // 何日分かの表（週間表など）は、FAX と同じく「品名 × 日付」の表で描く
+  const matrix = isOrderish && kind !== "change" && allDates.length > 1 && !needsTemplate;
+
+  /** 数量の入力欄（大きな数字。直した所は赤で「元 → 新 変更」） */
+  const qtyCell = (i: number) => {
+    const r = rows[i];
+    const edited = r.quantity !== r.aiQuantity;
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            disabled={done || r.removed}
+            value={Number.isFinite(r.quantity) ? r.quantity : ""}
+            onFocus={() => setSelected(i)}
+            onChange={(e) => setQty(i, e.target.value === "" ? NaN : Number(e.target.value))}
+            aria-label={`${r.writtenName} の数量`}
+            className={`h-14 w-[5.5em] rounded-lg border-2 px-3 text-right text-[1.3em] font-black tabular-nums ${
+              edited ? "border-[#a51e28] bg-[#fff0f1] text-[#a51e28]" : "border-rule-strong bg-sheet"
+            } ${!Number.isInteger(r.quantity) || r.quantity < 0 ? "outline outline-2 outline-[#a51e28]" : ""}`}
+          />
+        </div>
+        {edited && Number.isFinite(r.quantity) && (
+          <div className="text-[0.85em] font-bold text-[#a51e28]">{r.aiQuantity} → {r.quantity} 変更</div>
+        )}
+      </div>
+    );
+  };
+
+  /** 迷った行の「見比べました」の印 */
+  const checkBox = (i: number, label: string) => {
+    const r = rows[i];
+    if (!mustCheck(r)) return null;
+    const on = !!checked[keyOf(r)];
+    return (
+      <label className={`mt-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 font-bold ${on ? "bg-ok-bg text-ok-ink" : "bg-sheet text-review-ink ring-2 ring-review-line"}`}>
+        <input type="checkbox" className="h-6 w-6 accent-[#24633d]" checked={on} onChange={(e) => setChecked((c) => ({ ...c, [keyOf(r)]: e.target.checked }))} />
+        {on ? `✓ ${label}をFAXと見比べました` : `${label}をFAXと見比べました`}
+      </label>
+    );
+  };
+
+  /** 迷った理由（黄色の行に出す。大事なものだけ） */
+  const why = (r: Row) => {
+    const lt = leadTimes[keyOf(r)];
+    if (done) return null; // 確定したあとは、迷った理由は出さない（記録は下の「修正・変更の記録」）
+    return (
+      <>
+        {r.attention && <div className="mt-1 font-bold text-review-ink">！ {r.attention}</div>}
+        {!r.attention && r.level === "low" && (
+          <div className="mt-1 font-bold text-alert-ink">
+            ！ {fax.customerId ? `読み取りの自信が低い（${Math.round(r.confidence * 100)}%）` : "送り主が得意先一覧に無いので、商品は推測です"}
+          </div>
+        )}
+        {!r.attention && r.level === "mid" && <div className="mt-1 text-review-ink">！ 読み取りの自信が少し低め（{Math.round(r.confidence * 100)}%）</div>}
+        {!done && lt && <div className="mt-1 font-bold text-review-ink">{lt.status === "late" ? "締め：" : "締め（仮発注）："}{lt.reason}</div>}
+      </>
+    );
+  };
+
+  /** 商品を選ぶ（FAX の品名と工場の商品をつなぐ）。辞書に登録もここで */
+  const productPicker = (i: number, compact = false) => {
+    const r = rows[i];
+    return (
+      <div className={compact ? "mt-1" : "mt-1.5"}>
+        <select disabled={done || r.removed} value={r.productId} onChange={(e) => setProduct(i, e.target.value)}
+          aria-label={`${r.writtenName} の商品`}
+          className={`min-h-12 w-full rounded-lg border-2 px-2 text-[0.9em] ${
+            !r.productId ? "border-review-line bg-review-bg" : r.productId !== r.aiProductId ? "border-[#a51e28] bg-[#fff0f1] text-[#a51e28]" : "border-rule-strong bg-sheet"
+          }`}>
+          <option value="">（商品を選ぶ）</option>
+          {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        {r.productId !== r.aiProductId && <div className="text-[0.85em] font-bold text-[#a51e28]">{r.aiProductId ? productName(r.aiProductId) : "なし"} → {productName(r.productId)} 変更</div>}
+        {!done && customerId && r.productId && !r.removed && (
+          inDict(r) ? (
+            <div className="mt-1 text-[0.85em] text-ok-ink">「{r.writtenName}」は辞書に登録ずみ</div>
+          ) : (
+            <button type="button" disabled={pending}
+              onClick={(e) => { e.stopPropagation(); learn(r); }}
+              title={`「${r.writtenName}」を「${productName(r.productId)}」として覚えます`}
+              className="mt-1 min-h-11 rounded-md border-2 border-crust-600 bg-sheet px-3 text-[0.85em] font-bold text-crust-700 hover:bg-crust-50">
+              辞書に登録
+            </button>
+          )
+        )}
+      </div>
+    );
+  };
+
+  const rowCls = (i: number) => {
+    const r = rows[i];
+    return `${r.removed ? "opacity-40 line-through" : mustCheck(r) || (!done && needsLook(r)) ? "bg-[#fff3c4]" : ""} ${
+      selected === i ? "outline outline-[3px] -outline-offset-[3px] outline-[#1d4ed8]" : ""
+    }`;
+  };
+
   return (
     // 広い画面（lg）は1画面に収めて左右で見比べる。スマホ・タブレット縦は上下に並べて、ページごと下へ読む
-    <div className="flex flex-col gap-3 lg:h-[calc(100vh-7rem)]">
-      <div className="flex flex-wrap items-center gap-3">
-        <Link href="/" className="text-sm text-ink-soft hover:underline">← 受信箱</Link>
-        <h1 className="text-xl font-black">{read.document_title}</h1>
-        <span className={`pill ${kindInfo[kind].cls}`}>{kindInfo[kind].text}</span>
-        {statusPill}
-        <span className="text-xs text-ink-faint">読み取り: {fax.readModel}</span>
+    <div className="flex flex-col gap-4 lg:h-[calc(100vh-7rem)]">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <Link href="/" className="text-[16px] text-ink-soft underline underline-offset-2 hover:text-ink">← FAX受信箱に戻る</Link>
+          <h1 className="mt-1 text-[28px] font-black leading-tight">FAXを見比べて確認</h1>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[18px] text-ink-soft">
+            <span className="font-bold text-ink">{customerName}</span>
+            {isOrderish && allDates.length > 0 && <span>／ {allDates.map(md).join("・")} 納品</span>}
+            <span className={`pill ${kindInfo[kind].cls}`}>{kindInfo[kind].text}</span>
+            {statusPill}
+          </div>
+        </div>
         <span className="ml-auto" />
+        {!done && isOrderish && !needsTemplate && (
+          remaining > 0
+            ? <span className="rounded-lg bg-[#fff3c4] px-4 py-2 text-[18px] font-black text-[#654700]">！ あと {remaining} 行を確認</span>
+            : <span className="rounded-lg bg-ok-bg px-4 py-2 text-[18px] font-black text-ok-ink">✓ 見比べが終わりました</span>
+        )}
         {!done && <ReadButton faxId={fax.id} again />}
       </div>
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
-        {/* 左: 元のFAX */}
-        <div className="card flex h-[60vh] min-h-0 flex-col overflow-hidden lg:h-auto">
-          <PdfView url={fax.file} rotation={rotation} highlight={selected != null ? rows[selected]?.y : null} />
-          {!done && (
-            <div className="flex flex-wrap items-center gap-2 border-t border-rule px-3 py-2 text-sm">
-              <span className="hidden whitespace-nowrap text-ink-soft xl:inline">向きがおかしいときは:</span>
-              <button className="btn-ghost whitespace-nowrap px-3 py-1" onClick={() => setRotation((r) => (r + 270) % 360)}>↺ 左に回す</button>
-              <button className="btn-ghost whitespace-nowrap px-3 py-1" onClick={() => setRotation((r) => (r + 90) % 360)}>↻ 右に回す</button>
-            </div>
-          )}
+        {/* 左: 届いた FAX */}
+        <div className="card flex h-[70vh] min-h-0 flex-col overflow-hidden lg:h-auto">
+          <div className="flex items-center border-b border-rule px-4 py-2.5">
+            <h2 className="text-[22px] font-black">① 届いたFAX</h2>
+          </div>
+          <PdfView url={fax.file} rotation={rotation} highlight={selected != null ? rows[selected]?.y : null} onPick={pick}
+            onRotate={done ? undefined : (d) => setRotation((r) => (r + d) % 360)} />
         </div>
 
-        {/* 右: 読み取り結果 */}
+        {/* 右: 読み取った内容（FAX と同じ並び・同じ表の形で） */}
         <div className="card flex min-h-0 flex-col overflow-hidden">
-          {/* 上の説明が長いと行の表が見えなくなるので、説明は高さの4割までにして、それ以上は説明の中でスクロール */}
-          <div className="max-h-[40%] shrink-0 space-y-2 overflow-y-auto border-b border-rule p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="w-16 text-sm font-bold text-ink-soft">送り主</span>
-              {isOrderish ? (
-                <select disabled={done} value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={`min-w-0 flex-1 rounded-lg border px-3 py-2 font-bold ${customerId ? "" : "border-review-line bg-review-bg"}`}>
-                  <option value="">（選んでください）</option>
-                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              ) : (
-                <span className="font-bold">{read.sender.name || "（不明）"}</span>
-              )}
+          <div className="flex flex-wrap items-center gap-2 border-b border-rule px-4 py-2.5">
+            <h2 className="text-[22px] font-black">② 読み取った内容</h2>
+            <span className="ml-auto hidden text-[16px] text-ink-soft xl:inline">文字の大きさ</span>
+            <button type="button" className="min-h-11 min-w-11 rounded-lg border-2 border-rule-strong bg-sheet px-2 text-[16px] font-bold" aria-label="文字を小さく" onClick={() => setFont((f) => Math.max(16, f - 2))}>A−</button>
+            <button type="button" className="min-h-11 min-w-11 rounded-lg border-2 border-rule-strong bg-sheet px-2 text-[20px] font-bold" aria-label="文字を大きく" onClick={() => setFont((f) => Math.min(30, f + 2))}>A＋</button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-auto p-4" style={{ fontSize: font }}>
+            {/* 取引先・納品日 */}
+            <div className="mb-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
+              <label className="block">
+                <span className="mb-1 block text-[0.9em] font-bold">取引先</span>
+                {isOrderish ? (
+                  <select disabled={done} value={customerId} onChange={(e) => setCustomerId(e.target.value)}
+                    className={`min-h-14 w-full rounded-lg border-2 px-3 font-bold ${customerId ? "border-rule-strong bg-sheet" : "border-review-line bg-[#fff3c4]"}`}>
+                    <option value="">（選んでください）</option>
+                    {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                ) : (
+                  <span className="block font-bold">{read.sender.name || "（不明）"}</span>
+                )}
+              </label>
+              {isOrderish && !matrix && dates.length === 1 && (() => {
+                const [oi, date] = dates[0].split("|");
+                return (
+                  <label className="block">
+                    <span className="mb-1 block text-[0.9em] font-bold">納品日</span>
+                    <input type="date" disabled={done} value={date}
+                      onChange={(e) => setRows((rs) => rs.map((r) => (r.orderIndex === Number(oi) ? { ...r, deliveryDate: e.target.value } : r)))}
+                      className="min-h-14 rounded-lg border-2 border-rule-strong bg-sheet px-3 font-bold" />
+                  </label>
+                );
+              })()}
             </div>
-            <div className="text-xs text-ink-faint">判定の根拠: {read.sender.evidence}</div>
-            <div className="text-xs text-ink-faint">種類の判断: {read.kind_reason}</div>
-            {read.notes && <div className="rounded-lg border border-rule bg-cream px-3 py-2 text-sm"><b className="mr-1">メモ：</b>{read.notes}</div>}
-            {fax.autoConfirmed && fax.status === "confirmed" && <AutoConfirmBadge faxId={fax.id} reason={fax.autoConfirmed.reason} />}
-            {!done && fax.autoReview && fax.autoReview.reasons.length > 0 && (
-              <div className="rounded-lg bg-review-bg px-3 py-2 text-sm text-review-ink">
-                <div className="font-bold">自動で確定しなかった理由（ここだけ見てください）</div>
-                <ul className="mt-1 list-disc pl-5">
-                  {fax.autoReview.reasons.slice(0, 6).map((r, k) => <li key={k}>{r}</li>)}
-                </ul>
-              </div>
-            )}
-            {!done && isOrderish && !needsTemplate && (
-              <div className={`rounded-lg px-3 py-2 text-sm font-bold ${flagged ? "bg-review-bg text-review-ink" : "bg-ok-bg text-ok-ink"}`}>
-                {kind === "change"
-                  ? "変更のFAXです。元の注文と変更後の数を見比べてください。確定するまで元の注文は変わりません。"
-                  : flagged
-                    ? `黄色の ${flagged} 行は、元のFAXと見比べて確かめてください。数字をタップすると直せます。`
-                    : "要確認の行はありません。元のFAXと見比べて、合っていれば確定してください。"}
-              </div>
+
+            {/* 大事な知らせ（見落とすと数がずれるもの）は畳まない */}
+            {fax.autoConfirmed && fax.status === "confirmed" && <div className="mb-3"><AutoConfirmBadge faxId={fax.id} reason={fax.autoConfirmed.reason} /></div>}
+            {kind === "change" && !done && (
+              <div className="mb-2 rounded-lg bg-alert-bg px-3 py-2 text-[0.85em] font-bold text-alert-ink">変更のFAXです。「今の注文」と「変更後」を見比べてください。確定するまで元の注文は変わりません。</div>
             )}
             {kind === "change" && !done && waitingFaxes.length === 0 && unreadFaxes > 0 && rows.some((r) => !r.removed && !findOriginal(r)) && (
-              <div className="rounded-lg bg-review-bg px-3 py-2 text-sm font-bold text-review-ink">
-                元の注文が見つからない行があります。まだ読み取っていない FAX が {unreadFaxes} 枚あるので、元の注文がそこに入っているかもしれません。先に受信箱で読み取ってから確定すると安全です。
+              <div className="mb-2 rounded-lg bg-[#fff3c4] px-3 py-2 text-[0.85em] font-bold text-[#654700]">
+                元の注文が見つからない行があります。まだ読み取っていない FAX が {unreadFaxes} 枚あるので、先に受信箱で読み取ってから確定すると安全です。
               </div>
             )}
             {waitingFaxes.length > 0 && (
-              <div className="rounded-lg bg-alert-bg px-3 py-2 text-sm font-bold text-alert-ink">
+              <div className="mb-2 rounded-lg bg-alert-bg px-3 py-2 text-[0.85em] font-bold text-alert-ink">
                 元の注文がまだ確定前です。先に{" "}
                 {waitingFaxes.map((id, k) => (
                   <span key={id}>{k > 0 && "・"}<a className="underline" href={`/fax/${id}`}>{id}</a></span>
@@ -277,14 +417,14 @@ export function ReviewClient({
               </div>
             )}
             {kind === "provisional_order" && !done && (
-              <div className="rounded-lg bg-prov-bg px-3 py-2 text-sm font-bold text-prov-ink">仮発注として登録します。本発注のFAXが来たら、自動で探して置き換えます（集計では「仮」と表示）。</div>
+              <div className="mb-2 rounded-lg bg-prov-bg px-3 py-2 text-[0.85em] font-bold text-prov-ink">仮発注として登録します。本発注のFAXが来たら、自動で置き換えます。</div>
             )}
             {provisionalToReplace.length > 0 && (
-              <div className="rounded-lg bg-prov-bg px-3 py-2 text-sm text-prov-ink">
+              <div className="mb-2 rounded-lg bg-prov-bg px-3 py-2 text-[0.85em] text-prov-ink">
                 <div className="font-bold">この本発注で、仮発注を置き換えます</div>
                 {provisionalToReplace.map((o) => (
                   <div key={o.id}>
-                    {o.deliveryDate} の仮発注：{o.lines.map((l) => {
+                    {md(o.deliveryDate)} の仮発注：{o.lines.map((l) => {
                       const now = rows.find((r) => r.deliveryDate === o.deliveryDate && r.productId === l.productId && !r.removed);
                       return `${productName(l.productId)} ${l.quantity}→${now ? now.quantity : 0}`;
                     }).join("、")}
@@ -292,49 +432,43 @@ export function ReviewClient({
                 ))}
               </div>
             )}
-          </div>
 
-          <div className="min-h-0 flex-1 overflow-auto p-4">
             {/* 注文以外 */}
             {!isOrderish && (
               <div className="space-y-3">
                 <div className="rounded-lg bg-info-bg p-4">
                   <div className="font-bold">Claudeの判断：{kindInfo[kind].text}</div>
-                  <div className="mt-1 text-sm text-ink-soft">{read.kind_reason}</div>
-                  {kind === "supplier_reply" && <div className="mt-2 text-sm">こちらから出した発注への返事なので、受注には入れません。</div>}
+                  <div className="mt-1 text-ink-soft">{read.kind_reason}</div>
+                  {kind === "supplier_reply" && <div className="mt-2">こちらから出した発注への返事なので、受注には入れません。</div>}
                 </div>
-                {fax.status === "other" && <div className="text-sm text-ink-soft">仕分けた人: {fax.sortedBy}</div>}
+                {fax.status === "other" && <div className="text-ink-soft">仕分けた人: {fax.sortedBy}</div>}
               </div>
             )}
 
             {/* 新しい様式の承認 */}
             {needsTemplate && (
               <div className="mb-5 rounded-lg border-2 border-review-line bg-review-bg p-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-black text-review-ink">初めての様式です</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[1.15em] font-black text-review-ink">初めての様式です</span>
                   <span className="pill bg-review-bg text-review-ink">承認するまで受注に入りません</span>
                 </div>
-                <ol className="mt-2 grid grid-cols-3 gap-2 text-center text-xs font-bold">
+                <ol className="mt-2 grid grid-cols-3 gap-2 text-center text-[0.8em] font-bold">
                   <li className="rounded-lg bg-sheet px-2 py-1.5 ring-1 ring-review-line">① Claudeが様式を下書き<br /><span className="font-normal text-review-ink">済み</span></li>
                   <li className="rounded-lg bg-sheet px-2 py-1.5 ring-2 ring-review-line">② 品名の対応を確かめる<br /><span className="font-normal text-review-ink">いまここ</span></li>
                   <li className="rounded-lg bg-sheet px-2 py-1.5 ring-1 ring-review-line">③ 承認 → 次から自動<br /><span className="font-normal text-review-ink">ボタン1つ</span></li>
                 </ol>
-                <dl className="mt-3 space-y-1 rounded-lg bg-sheet/90 p-3 text-sm">
-                  <div><dt className="inline font-bold">様式名：</dt><dd className="inline">{read.document_title}</dd></div>
-                  <div><dt className="inline font-bold">Claudeが読んだ特徴：</dt><dd className="inline">{read.layout_summary}</dd></div>
-                </dl>
-                <div className="mt-3 text-sm font-bold">FAXの品名 → 工場の商品（違っていたら選び直してください）</div>
-                <table className="mt-1 w-full text-sm">
+                <div className="mt-3 font-bold">FAXの品名 → 工場の商品（違っていたら選び直してください）</div>
+                <table className="mt-1 w-full">
                   <tbody>
                     {[...new Map(rows.map((r, i) => [r.writtenName, i] as const)).entries()]
                       .filter(([, i]) => !rows[i].removed)
                       .map(([w, i]) => (
                         <tr key={w} className="border-t border-review-line">
-                          <td className="py-1.5 pr-2">「{w}」</td>
-                          <td className="py-1.5">
+                          <td className="py-2 pr-2">「{w}」</td>
+                          <td className="py-2">
                             <select value={rows[i].productId}
                               onChange={(e) => setRows((rs) => rs.map((r) => (r.writtenName === w ? { ...r, productId: e.target.value } : r)))}
-                              className={`w-full rounded-lg border px-2 py-1 ${rows[i].productId ? "bg-sheet" : "border-review-line bg-review-bg"}`}>
+                              className={`min-h-12 w-full rounded-lg border-2 px-2 ${rows[i].productId ? "bg-sheet" : "border-review-line bg-review-bg"}`}>
                               <option value="">（選ぶ）</option>
                               {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
@@ -343,7 +477,7 @@ export function ReviewClient({
                       ))}
                   </tbody>
                 </table>
-                <button className="btn-primary mt-3 w-full py-3 text-lg" disabled={pending || rows.some((r) => !r.removed && !r.productId)} onClick={approveTemplate}>
+                <button className="btn-primary mt-3 min-h-14 w-full text-[1.1em]" disabled={pending || rows.some((r) => !r.removed && !r.productId)} onClick={approveTemplate}>
                   {pending ? "登録中…" : `この様式を承認して登録する（${who}）`}
                 </button>
               </div>
@@ -351,180 +485,200 @@ export function ReviewClient({
             {justApproved && !needsTemplate && (
               <div className="mb-5 rounded-lg bg-ok-bg p-4 text-ok-ink ring-1 ring-ok-line">
                 <div className="font-black">様式を登録しました</div>
-                <div className="text-sm">次からこの取引先のFAXは、承認した対応で読み取ります。あとは中身を確かめて確定してください。</div>
+                <div>次からこの取引先のFAXは、承認した対応で読み取ります。あとは中身を確かめて確定してください。</div>
               </div>
             )}
 
-            {isOrderish && dates.map((key) => {
-              const [oi, date] = key.split("|");
-              const all = rows.map((_, i) => i).filter((i) => rows[i].orderIndex === Number(oi));
-              // 確定前は、迷った行だけを上に出し、迷わなかった行は「確認済み」として畳む（開けば全部見られる）
-              const fold = !done && isOrderish && all.some((i) => needsLook(rows[i]));
-              const lookIdxs = fold ? all.filter((i) => needsLook(rows[i])) : all;
-              const okIdxs = fold ? all.filter((i) => !needsLook(rows[i])) : [];
-              const idxs = [...lookIdxs, ...(showOk ? okIdxs : [])];
+            {/* 何日分かの表（週間表など）: 品名 × 日付 */}
+            {matrix && (() => {
+              const names = [...new Set(rows.map((r) => r.writtenName))];
+              const cellOf = (name: string, date: string) => rows.findIndex((r) => r.writtenName === name && r.deliveryDate === date);
               return (
-                <div key={key} className="mb-5">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="whitespace-nowrap text-sm font-bold text-ink-soft">納品日</span>
-                    <input type="date" disabled={done} value={date}
-                      onChange={(e) => setRows((rs) => rs.map((r) => (r.orderIndex === Number(oi) ? { ...r, deliveryDate: e.target.value } : r)))}
-                      className="rounded-lg border px-2 py-1 font-bold" />
-                    {read.orders[Number(oi)]?.delivery_place && <span className="text-sm text-ink-soft">納品場所: {read.orders[Number(oi)].delivery_place}</span>}
-                  </div>
-                  {!done && (
-                    <div className="mb-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-soft">
-                      <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3.5 w-5 rounded-sm bg-review-bg ring-1 ring-review-line" />黄色＝念のため見る</span>
-                      <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3.5 w-5 rounded-sm bg-sheet ring-2 ring-alert-line" />赤い枠＝かならずFAXと見比べる</span>
-                    </div>
-                  )}
-                  {/* fax-rows: スマホでは1行を小さなカードに並べ直す（globals.css） */}
-                  <table className="fax-rows w-full text-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
                     <thead>
-                      <tr className="text-left text-xs text-ink-faint">
-                        <th className="py-1">FAXに書いてある品名</th><th className="w-44">商品</th>
-                        {kind === "change" && <th className="text-right">今の注文</th>}
-                        <th className="text-right">{kind === "change" ? "変更後" : "数量"}</th><th className="text-right">個数</th><th />
+                      <tr className="bg-off-bg text-left">
+                        <th className="w-10 px-2 py-2 text-[0.9em]">行</th>
+                        <th className="px-2 py-2 text-[0.9em]">品名</th>
+                        {allDates.map((d) => <th key={d} className="px-2 py-2 text-right text-[0.9em] whitespace-nowrap">{md(d)}</th>)}
                       </tr>
                     </thead>
                     <tbody>
-                      {idxs.map((i) => {
-                        const r = rows[i];
-                        const look = needsLook(r);
-                        const orig = kind === "change" ? findOriginal(r) : null;
+                      {names.map((name, n) => {
+                        const first = rows.findIndex((r) => r.writtenName === name);
+                        const look = rows.some((r) => r.writtenName === name && mustCheck(r));
                         return (
-                          <tr key={i} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}
-                            className={`border-t border-rule align-top ${
-                              r.removed
-                                ? "opacity-40 line-through"
-                                : r.level === "low"
-                                  ? "bg-alert-bg/50 outline outline-[3px] -outline-offset-[3px] outline-alert-line"
-                                  : look
-                                    ? "bg-review-bg"
-                                    : ""
-                            } ${selected === i && (r.removed || r.level !== "low") ? "outline outline-2 -outline-offset-2 outline-review-line" : ""}`}>
-                            <td className="py-2 pr-2">
-                              <div className="font-bold">{r.writtenName}</div>
-                              {r.attention && <div className="mt-0.5 text-xs font-bold text-review-ink">{r.attention}</div>}
-                              {!done && leadTimes[`${r.orderIndex}-${r.lineIndex}`] && (
-                                <div className={`mt-1 rounded px-1.5 py-0.5 text-xs text-review-ink ${leadTimes[`${r.orderIndex}-${r.lineIndex}`].status === "late" ? "bg-review-bg font-bold outline outline-1 outline-review-line" : "bg-review-bg/50"}`}>
-                                  {leadTimes[`${r.orderIndex}-${r.lineIndex}`].status === "late" ? "締め: " : "締め（仮発注）: "}
-                                  {leadTimes[`${r.orderIndex}-${r.lineIndex}`].reason}
-                                </div>
-                              )}
-                              {r.level === "low" ? (
-                                <div className="mt-0.5 text-xs font-bold text-alert-ink">
-                                  {fax.customerId
-                                    ? `読み取りの自信が低い（${Math.round(r.confidence * 100)}%）。かならずFAXと見比べてください`
-                                    : "送り主が得意先一覧に無いので、商品はClaudeの推測です。かならず選び直してください"}
-                                </div>
-                              ) : r.level === "mid" && !r.attention ? (
-                                <div className="mt-0.5 text-xs text-review-ink">読み取りの自信が少し低め（{Math.round(r.confidence * 100)}%）</div>
-                              ) : null}
+                          <tr key={name} id={`fax-row-${first}`} className={`border-t border-rule align-top ${look ? "bg-[#fff3c4]" : ""}`} onMouseEnter={() => setSelected(first)}>
+                            <td className="px-2 py-3 tabular-nums">{n + 1}</td>
+                            <td className="px-2 py-3">
+                              <div className="font-bold">{name}</div>
+                              {productPicker(first, true)}
                             </td>
-                            <td className="py-2 pr-2">
-                              <select disabled={done || r.removed} value={r.productId} onChange={(e) => update(i, { productId: e.target.value })}
-                                className={`w-full rounded-lg border px-2 py-1.5 ${r.productId ? "" : "border-review-line"}`}>
-                                <option value="">（選ぶ）</option>
-                                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                              {r.productId !== r.aiProductId && <div className="text-xs text-info-ink">AIの候補: {r.aiProductId ? productName(r.aiProductId) : "なし"}</div>}
-                              {customerId && r.productId && !r.removed && (
-                                inDict(r) ? (
-                                  <div className="mt-1 text-xs text-ok-ink">辞書に登録ずみ</div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    disabled={pending}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      learn(r);
-                                    }}
-                                    title={`「${r.writtenName}」を「${productName(r.productId)}」として覚えます`}
-                                    className="mt-1 min-h-9 rounded-md border-2 border-crust-600 bg-sheet px-2 text-xs font-bold text-crust-700 hover:bg-crust-50"
-                                  >
-                                    辞書に登録
-                                  </button>
-                                )
-                              )}
-                            </td>
-                            {kind === "change" && (
-                              <td className="py-2 pr-2 text-right whitespace-nowrap">
-                                {done ? (
-                                  <span className="text-xs text-ink-faint">反映済み</span>
-                                ) : orig ? (
-                                  <>
-                                    <div className="text-lg font-bold">{orig.line.quantity}</div>
-                                    <div className="text-xs text-ink-faint">{orig.order.id}</div>
-                                    {r.previousQuantity >= 0 && r.previousQuantity !== orig.line.quantity && (
-                                      <div className="text-xs font-bold text-alert-ink">FAXの変更前は {r.previousQuantity}</div>
-                                    )}
-                                  </>
-                                ) : (
-                                  waitingOriginal(r) ? (
-                                  <div className="text-xs font-bold text-alert-ink">元の注文は<br />まだ確定前</div>
-                                ) : (
-                                  <div className="text-xs font-bold text-alert-ink">元の注文なし<br />→ 追加として入れる</div>
-                                )
-                                )}
-                              </td>
-                            )}
-                            <td className="py-2 text-right">
-                              <button disabled={done || r.removed} onClick={() => setPadFor(i)}
-                                className={`min-w-20 rounded-lg px-3 py-1.5 text-right text-lg font-black ring-1 hover:ring-crust-500 ${kind === "change" && orig && orig.line.quantity !== r.quantity ? "bg-alert-bg ring-alert-line" : "bg-sheet ring-rule-strong"}`}>
-                                {r.quantity}<span className="ml-1 text-xs font-normal">{r.unitWritten}</span>
-                              </button>
-                              {r.quantity !== r.aiQuantity && <div className="text-xs text-info-ink">AIの読み: {r.aiQuantity}</div>}
-                            </td>
-                            <td className="py-2 text-right whitespace-nowrap">
-                              <div className="font-bold">{r.quantity * r.piecesPerUnit}</div>
-                              {r.piecesPerUnit !== 1 && <div className="text-xs text-ink-faint">{r.piecesPerUnit}個入×{r.quantity}</div>}
-                            </td>
-                            <td className="py-2 pl-2 text-right">
-                              {!done && (
-                                <button className="min-h-10 px-2 text-sm text-ink-soft underline underline-offset-2 hover:text-alert-ink sm:min-h-0 sm:px-0 sm:text-xs sm:text-ink-faint sm:no-underline" onClick={() => update(i, { removed: !r.removed })}>
-                                  {r.removed ? "戻す" : "消す"}
-                                </button>
-                              )}
-                              {changed(r) && !r.removed && <div className="pill mt-1 bg-info-bg text-info-ink">修正</div>}
-                            </td>
+                            {allDates.map((d) => {
+                              const i = cellOf(name, d);
+                              if (i < 0) return <td key={d} className="px-2 py-3 text-right text-ink-faint">—</td>;
+                              return (
+                                <td key={d} className={`px-2 py-3 ${rowCls(i)}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}>
+                                  {qtyCell(i)}
+                                  {why(rows[i])}
+                                  {checkBox(i, `${n + 1}行目の${md(d)}`)}
+                                </td>
+                              );
+                            })}
                           </tr>
                         );
                       })}
-                      {okIdxs.length > 0 && (
-                        <tr className="border-t border-rule">
-                          <td colSpan={6} className="py-2">
-                            <button className="w-full rounded-lg bg-ok-bg px-3 py-2 text-left text-sm font-bold text-ok-ink" onClick={() => setShowOk((v) => !v)}>
-                              {showOk ? "▲ 迷わなかった行をたたむ" : `✓ 迷わなかった ${okIdxs.length} 行は確認済み（開いて見る）`}
-                            </button>
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>
               );
+            })()}
+
+            {/* 1日分の表（または変更の FAX）: 行・商品名・数量・単位 を FAX と同じ並びで。狭い画面でもつぶれないよう、1行ずつの帯で描く */}
+            {isOrderish && !matrix && !needsTemplate && (kind === "change" ? ["all|"] : dates).map((key) => {
+              const [oi, date] = key.split("|");
+              const all = oi === "all";
+              const idxs = rows.map((_, i) => i).filter((i) => all || rows[i].orderIndex === Number(oi));
+              return (
+                <div key={key} className="mb-5">
+                  {!all && dates.length > 1 && (
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="font-bold">納品日</span>
+                      <input type="date" disabled={done} value={date}
+                        onChange={(e) => setRows((rs) => rs.map((r) => (r.orderIndex === Number(oi) ? { ...r, deliveryDate: e.target.value } : r)))}
+                        className="min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 font-bold" />
+                    </div>
+                  )}
+                  {!all && read.orders[Number(oi)]?.delivery_place && <div className="mb-2 text-ink-soft">納品場所: {read.orders[Number(oi)].delivery_place}</div>}
+                  <div className="grid grid-cols-[2.2em_minmax(0,1fr)] gap-x-3 rounded-t-lg bg-off-bg px-2 py-2 text-[0.9em] font-bold">
+                    <span>行</span>
+                    <span className="flex flex-wrap justify-between gap-x-3">
+                      <span>商品名（FAX の書き方）</span>
+                      <span>{kind === "change" ? "今の注文 → 変更後" : "数量・単位"}</span>
+                    </span>
+                  </div>
+                  {idxs.map((i, n) => {
+                    const r = rows[i];
+                    const orig = kind === "change" ? findOriginal(r) : null;
+                    const no = all ? n + 1 : r.lineIndex + 1;
+                    return (
+                      <div key={i} id={`fax-row-${i}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}
+                        className={`grid grid-cols-[2.2em_minmax(0,1fr)] gap-x-3 border-t border-rule px-2 py-3 ${rowCls(i)}`}>
+                        <span className="pt-1 tabular-nums">{no}</span>
+                        {/* 品名と数量: 幅が足りなければ数量は品名の下に回る */}
+                        <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                        <div className="min-w-[8em] flex-1">
+                          {all && (
+                            <div className="mb-1 flex flex-wrap items-center gap-2 text-[0.9em]">
+                              {done ? <span className="font-bold">{md(r.deliveryDate)} 納品</span> : (
+                                <>
+                                  <input type="date" value={r.deliveryDate} aria-label="納品日"
+                                    onChange={(e) => update(i, { deliveryDate: e.target.value })}
+                                    className="min-h-11 rounded-lg border-2 border-rule-strong bg-sheet px-2 font-bold" />
+                                  <span>納品</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          <div className="font-bold">{r.writtenName}</div>
+                        </div>
+                        <div className="ml-auto flex items-start justify-end gap-2">
+                          {kind === "change" && (
+                            <div className="pt-1 text-right whitespace-nowrap">
+                              {done ? (
+                                <span className="text-ink-faint">反映済み</span>
+                              ) : orig ? (
+                                <span className="text-[1.3em] font-black tabular-nums">{orig.line.quantity} →</span>
+                              ) : waitingOriginal(r) ? (
+                                <span className="text-[0.85em] font-bold text-alert-ink">元の注文は<br />まだ確定前</span>
+                              ) : (
+                                <span className="text-[0.85em] font-bold text-alert-ink">元の注文なし<br />→ 追加</span>
+                              )}
+                            </div>
+                          )}
+                          {qtyCell(i)}
+                          <div className="pt-3 font-bold whitespace-nowrap">{r.unitWritten}</div>
+                        </div>
+                        </div>
+                        {/* 2段目: 迷った理由・商品・見比べの印（行の幅いっぱい） */}
+                        <div className="col-start-2 min-w-0">
+                          {kind === "change" && orig && r.previousQuantity >= 0 && r.previousQuantity !== orig.line.quantity && (
+                            <div className="mt-1 text-[0.85em] font-bold text-alert-ink">FAXの「変更前」は {r.previousQuantity}（今の注文と違います）</div>
+                          )}
+                          {r.piecesPerUnit !== 1 && <div className="mt-1 text-[0.85em] text-ink-soft">{r.piecesPerUnit}個入＝{(r.quantity || 0) * r.piecesPerUnit}個</div>}
+                          {why(r)}
+                          {productPicker(i)}
+                          {checkBox(i, `${no}行目`)}
+                          {!done && (
+                            <div className="mt-1 flex flex-wrap gap-x-5">
+                              {!r.removed && (
+                                <button type="button" className="min-h-11 text-[0.85em] font-bold text-crust-700 underline underline-offset-2" onClick={(e) => { e.stopPropagation(); setPadFor(i); }}>
+                                  テンキーで数を入れる
+                                </button>
+                              )}
+                              <button type="button" className="min-h-11 text-[0.85em] text-ink-soft underline underline-offset-2 hover:text-alert-ink" onClick={(e) => { e.stopPropagation(); update(i, { removed: !r.removed }); }}>
+                                {r.removed ? "この行を戻す" : "この行を消す"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
             })}
+
+            {!done && isOrderish && !needsTemplate && (
+              <div className="mb-3 flex flex-wrap gap-2 text-[0.85em]">
+                <span className="rounded bg-[#fff3c4] px-2 py-1 font-bold text-[#654700]">黄：確認する行</span>
+                <span className="rounded bg-[#fff0f1] px-2 py-1 font-bold text-[#a51e28]">赤：自分で変更した所</span>
+              </div>
+            )}
+
+            {/* 小さい説明（根拠・メモ・自動で確定しなかった理由）は畳んでおく */}
+            <details className="mt-2 rounded-lg border border-rule bg-cream px-4 py-2">
+              <summary className="min-h-11 cursor-pointer py-2 font-bold">くわしく（読み取りの根拠・メモ）</summary>
+              <div className="space-y-2 pb-2 text-[0.85em]">
+                <div>送り主の判定の根拠: {read.sender.evidence}</div>
+                <div>種類の判断: {read.kind_reason}</div>
+                {read.notes && <div>メモ: {read.notes}</div>}
+                {!done && fax.autoReview && fax.autoReview.reasons.length > 0 && (
+                  <div>
+                    <div className="font-bold">自動で確定しなかった理由</div>
+                    <ul className="list-disc pl-5">{fax.autoReview.reasons.slice(0, 6).map((r, k) => <li key={k}>{r}</li>)}</ul>
+                  </div>
+                )}
+                <div className="text-ink-soft">読み取り: {fax.readModel}</div>
+              </div>
+            </details>
+
             {done && isOrderish && <EditHistory orders={kind === "change" ? others.filter((o) => o.source.refs.some((r) => r.kind === "fax_pdf" && r.faxId === fax.id)) : orders} productName={productName} />}
           </div>
 
           {!done && (
-            <div className="flex flex-wrap items-center gap-3 border-t border-rule p-4">
-              <span className="text-sm text-ink-soft">確認した人</span>
-              <select value={who} onChange={(e) => setWho(e.target.value)} className="rounded-lg border px-2 py-2 font-bold">
-                {STAFF.map((s) => <option key={s}>{s}</option>)}
-              </select>
+            <div className="flex flex-wrap items-center gap-3 border-t border-rule px-4 py-3">
+              <label className="flex items-center gap-2 text-[18px]">
+                <span>確認した人</span>
+                <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border-2 border-rule-strong px-2 font-bold">
+                  {STAFF.map((s) => <option key={s}>{s}</option>)}
+                </select>
+              </label>
               <span className="ml-auto" />
-              {error && <span className="text-sm font-bold text-alert-ink">{error}</span>}
+              {error && <span className="font-bold text-alert-ink">{error}</span>}
               {isOrderish ? (
                 <>
-                  <button className="text-sm text-ink-faint underline" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: "not_order", who }))}>注文ではない</button>
-                  <button className="btn-primary px-6 py-3 text-lg" disabled={pending || !customerId || needsTemplate || waitingFaxes.length > 0} onClick={submit}>
-                    {pending ? "確定中…" : kind === "change" ? "この変更を反映する" : kind === "provisional_order" ? "仮発注として登録" : "この内容で確定"}
-                  </button>
+                  <button className="min-h-12 px-2 text-[16px] text-ink-soft underline" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: "not_order", who }))}>注文ではない</button>
+                  <div className="flex flex-col items-end">
+                    {remaining > 0 && <span className="mb-1 text-[16px] font-bold text-[#654700]">黄色の行の「見比べました」に印を付けてください</span>}
+                    {badQty && <span className="mb-1 text-[16px] font-bold text-[#a51e28]">数量は 0 以上の整数で入れてください</span>}
+                    <button className="btn-primary min-h-16 px-8 text-[22px] font-bold" disabled={pending || !customerId || needsTemplate || waitingFaxes.length > 0 || remaining > 0 || badQty} onClick={submit}>
+                      {pending ? "確定中…" : kind === "change" ? "この変更を反映する" : kind === "provisional_order" ? "仮発注として登録" : "この内容で確定する"}
+                    </button>
+                  </div>
                 </>
               ) : (
-                <button className="btn-primary px-6 py-3 text-lg" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: kind === "supplier_reply" ? "supplier_reply" : "not_order", who }))}>
+                <button className="btn-primary min-h-16 px-8 text-[22px] font-bold" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: kind === "supplier_reply" ? "supplier_reply" : "not_order", who }))}>
                   {pending ? "仕分け中…" : "注文以外として仕分ける"}
                 </button>
               )}
@@ -536,11 +690,11 @@ export function ReviewClient({
       {padFor != null && (
         <NumPad
           title={`${rows[padFor].writtenName}（${rows[padFor].deliveryDate}）`}
-          initial={rows[padFor].quantity}
+          initial={Number.isFinite(rows[padFor].quantity) ? rows[padFor].quantity : 0}
           unit={rows[padFor].unitWritten}
           onClose={() => setPadFor(null)}
           onOk={(v) => {
-            update(padFor, { quantity: v });
+            setQty(padFor, v);
             setPadFor(null);
           }}
         />
