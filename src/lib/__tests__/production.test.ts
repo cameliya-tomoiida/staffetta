@@ -10,17 +10,17 @@ const day = (products: [string, number][]): DayTotals => ({
 });
 
 describe("生地kg（ロス率込み）", () => {
-  it("バターロール 1,000個 × 35g = 35kg、ロス4% → 36.458kg", () => {
+  it("バターロール 1,000個 × 35g = 35kg、ロス2% → 35.714kg", () => {
     const b = doughBatch("DG01", [{ productId: "P01", name: "", pieces: 1000, doughGram: 35 }]);
     expect(b.netKg).toBe(35);
-    expect(b.lossRate).toBe(0.04);
-    expect(b.doughKg).toBeCloseTo(35 / 0.96, 3);
+    expect(b.lossRate).toBe(0.02);
+    expect(b.doughKg).toBeCloseTo(35 / 0.98, 3);
   });
 
   it("ロス率0なら生地kgは分割の合計と同じ。ロスが大きいほど生地は増える", () => {
     const b = doughBatch("DG04", [{ productId: "P07", name: "", pieces: 100, doughGram: 180 }]);
     expect(b.netKg).toBe(18);
-    expect(b.doughKg).toBeCloseTo(18 / 0.95, 3); // ピザ生地はロス5%
+    expect(b.doughKg).toBeCloseTo(18 / 0.98, 3); // ピザ生地もロス2%
     expect(b.doughKg).toBeGreaterThan(b.netKg);
   });
 

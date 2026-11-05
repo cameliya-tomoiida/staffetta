@@ -64,7 +64,12 @@ describe("人員の制約", () => {
   it("同じ時間に要る人数が班の人数を超えたら注意", () => {
     const m = patch((m) => (m.shifts.find((s) => s.id === "SH-BN")!.headcount = 2));
     const w = rows(m).flatMap((x) => x.warnings);
-    expect(w.some((x) => /成形.*人が足りません（同じ時間に \d+人 要る・班は 2人）/.test(x))).toBe(true);
+    const msgs = w.filter((x) => x.includes("たりません"));
+    expect(msgs.length).toBeGreaterThan(0);
+    for (const x of msgs) expect(x).toMatch(/^パンライン .+〜.+ は人が \d+人 たりません（要る \d+人・班 2人：/);
+    // 続いている時間はまとめて1行（同じ時刻の行が2つ出ない）
+    expect(new Set(msgs).size).toBe(msgs.length);
+    expect(msgs.some((x) => x.includes("成形 3"))).toBe(true);
   });
 
   it("工程の配置人数（班ごと）が、工程の人数より優先される", () => {
@@ -83,8 +88,8 @@ describe("マスタの差し替え", () => {
     const m = patch((m) => (m.doughs.find((d) => d.id === "DG01")!.lossRate = 0.2));
     const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
     expect(r.production.doughs.find((d) => d.doughId === "DG01")!.lossRate).toBe(0.2);
-    expect(findDough("DG01")!.lossRate).toBe(0.04);
-    expect(currentMasters().doughs.find((d) => d.id === "DG01")!.lossRate).toBe(0.04);
+    expect(findDough("DG01")!.lossRate).toBe(0.02);
+    expect(currentMasters().doughs.find((d) => d.id === "DG01")!.lossRate).toBe(0.02);
   });
 
   it("withMasters の中では、そのマスタで引ける", () => {
@@ -137,6 +142,48 @@ describe("便（配送コース）別の製造計画", () => {
     const m = patch((m) => (m.customers.find((c) => c.id === "C02")!.course = "ないコース"));
     const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
     expect(r.schedule.length).toBeGreaterThan(0);
+  });
+});
+
+describe("設備の使えない時間帯（霜取りなど）", () => {
+  it("前から積む工程は、使えない時間帯が終わるまで待つ", () => {
+    // ショックフリーザーを 10:00〜11:00 使えないことにすると、ピザ生地の急速冷凍は 11:00 から
+    const m = patch((m) => (m.equipment.find((e) => e.id === "EQ-P-FRZ")!.downtimes = ["10:00-11:00"]));
+    const frz = step(m, "DG04", "freeze");
+    expect(frz.start).toBe(11 * 60);
+    expect(rows(m).flatMap((x) => x.warnings).some((x) => x.includes("使えない時間"))).toBe(false);
+  });
+
+  it("逆算する工程は、使えない時間帯より前に終わるよう、生地全体を前にずらす", () => {
+    const before = step(undefined, "DG01", "bake");
+    // パンの平釜を 3:30〜4:30 使えないことにする
+    const m = patch((m) => (m.equipment.find((e) => e.id === "EQ-B-OVN")!.downtimes = [`${String(Math.floor(before.start / 60)).padStart(2, "0")}:00-${String(Math.floor(before.end / 60) + 1).padStart(2, "0")}:00`]));
+    const after = step(m, "DG01", "bake");
+    expect(after.end).toBeLessThanOrEqual(Math.floor(before.start / 60) * 60);
+    const roll = rows(m).find((r) => r.doughId === "DG01")!;
+    for (let i = 1; i < roll.steps.length; i++) if (!roll.steps[i].prevDay) expect(roll.steps[i].start).toBe(roll.steps[i - 1].end); // すき間なし
+  });
+
+  it("使えない時間帯は 17:00-17:40 の形。ちがう形はマスタの検査で教える", async () => {
+    const { validateItems } = await import("../masters/columns");
+    const { equipmentDef } = await import("../masters/defs");
+    const e = { ...base.equipment.find((x) => x.id === "EQ-P-FRZ")!, downtimes: ["夕方"] };
+    expect(validateItems(equipmentDef as never, [e], base)[0].message).toMatch(/17:00-17:40 の形/);
+  });
+});
+
+describe("分割機の重さの範囲の外は手分割", () => {
+  it("範囲の外の商品は手で分割として、時間と人数を足し、注意を出す", () => {
+    // ピザの分割機の上限を 150g にすると、180g・200g の生地は手分割
+    const m = patch((m) => (m.equipment.find((e) => e.id === "EQ-P-DIV")!.maxPieceGram = 150));
+    const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
+    const row = r.schedule.find((x) => x.doughId === "DG04")!;
+    const div = row.steps.find((s) => s.key === "divide")!;
+    const plain = rows().find((x) => x.doughId === "DG04")!.steps.find((s) => s.key === "divide")!;
+    expect(div.people).toBe(plain.people + 2);
+    expect(div.end - div.start).toBeGreaterThan(plain.end - plain.start);
+    expect(div.note).toMatch(/手分割 850個（180g・200g/);
+    expect(row.warnings.some((w) => /分割機の重さの範囲の外なので 850個/.test(w))).toBe(true);
   });
 });
 

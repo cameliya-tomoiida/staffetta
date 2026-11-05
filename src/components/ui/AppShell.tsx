@@ -35,6 +35,7 @@ export const MENU: Group[] = [
       { href: "/admin/products", label: "商品" },
       { href: "/admin/recipes", label: "レシピと工程" },
       { href: "/admin/customers", label: "取引先" },
+      { href: "/masters/courses", label: "配送の便（出発時刻・走る曜日）" },
       // 仕入先・材料・包材は⑤の /masters/*（CSV のプレビュー→確定・棚卸つき）
       { href: "/masters/suppliers", label: "仕入先" },
       { href: "/masters/supplierDeliveries", label: "仕入先の便（締め・届く日）" },

@@ -230,6 +230,8 @@ export interface Equipment {
   capacityPieces?: number;
   /** 同時に動かせない設備のまとまり（電気の容量などで、同じグループの設備は1台ずつしか回せない） */
   exclusiveGroup?: string;
+  /** 毎日の使えない時間帯（霜取り・清掃など）。"17:00-17:40" の形で複数 */
+  downtimes?: string[];
   active: boolean;
   note?: string;
 }
@@ -378,6 +380,10 @@ interface StockItemBase {
   unitCost: number;
   /** 保管場所（冷蔵庫A・倉庫2階 など） */
   location?: string;
+  /** 棚卸で在庫を数えた日時（ISO）・人・メモ（⑤の棚卸の画面が入れる） */
+  stockCountedAt?: string;
+  stockCountedBy?: string;
+  stockNote?: string;
   active: boolean;
 }
 

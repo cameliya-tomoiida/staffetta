@@ -40,8 +40,9 @@ export function TodayBar() {
   useEffect(() => {
     if (hidden) return;
     let alive = true;
-    const load = () =>
-      fetch("/api/today", { cache: "no-store" })
+    // ふだんはサーバーが30秒ためた数を使う。確定・承認のあと（HUB_CHANGED）だけ取り直させる
+    const load = (fresh = false) =>
+      fetch(fresh ? "/api/today?fresh=1" : "/api/today", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!alive || !d) return;
@@ -51,15 +52,17 @@ export function TodayBar() {
         })
         .catch(() => undefined);
     load();
-    const t = setInterval(load, 60_000);
+    const t = setInterval(() => load(), 120_000); // 計算が重いので2分ごと（①）
+    const onChanged = () => load(true);
+    const onFocus = () => load();
     // 確定・承認・リセットのあと（notifyHubChanged）と、画面に戻ってきたときにも取り直す
-    window.addEventListener(HUB_CHANGED, load);
-    window.addEventListener("focus", load);
+    window.addEventListener(HUB_CHANGED, onChanged);
+    window.addEventListener("focus", onFocus);
     return () => {
       alive = false;
       clearInterval(t);
-      window.removeEventListener(HUB_CHANGED, load);
-      window.removeEventListener("focus", load);
+      window.removeEventListener(HUB_CHANGED, onChanged);
+      window.removeEventListener("focus", onFocus);
     };
   }, [hidden, path]);
 

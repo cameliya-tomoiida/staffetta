@@ -41,26 +41,26 @@ describe("棚卸: 在庫を実数に合わせる", () => {
 });
 
 describe("ロス率の補正案（書き換えずに案として返す）", () => {
-  it("理論の 1.05倍 使っていた → L' = 1 − (1 − 0.05) ÷ 1.05 ≒ 0.095", () => {
+  it("理論の 1.05倍 使っていた → L' = 1 − (1 − 0.02) ÷ 1.05 ≒ 0.067", () => {
     const p = stocktake(1.05).proposals.find((x) => x.doughId === "DG04")!;
-    expect(p.currentLoss).toBe(0.05);
+    expect(p.currentLoss).toBe(0.02);
     expect(p.basis.ratio).toBeCloseTo(1.05, 2);
-    expect(p.suggestedLoss).toBeCloseTo(1 - 0.95 / 1.05, 2);
+    expect(p.suggestedLoss).toBeCloseTo(1 - 0.98 / 1.05, 2);
     expect(p.change).toBe("up");
     expect(p.needsCheck).toBe(false);
-    expect(p.basis.formula).toMatch(/L' = 1 − \(1 − 0.05\) ÷ 1.05/);
+    expect(p.basis.formula).toMatch(/L' = 1 − \(1 − 0.02\) ÷ 1.05/);
     expect(p.basis.materials.map((m) => m.materialId)).not.toContain("W00"); // 水は使わない
   });
 
   it("理論どおりなら変えない（same）", () => {
     const p = stocktake(1.0).proposals[0];
-    expect(p).toMatchObject({ change: "same", suggestedLoss: 0.05 });
+    expect(p).toMatchObject({ change: "same", suggestedLoss: 0.02 });
   });
 
   it("理論より少なく使っていた → ロスを下げる案", () => {
     const p = stocktake(0.97).proposals[0];
     expect(p.change).toBe("down");
-    expect(p.suggestedLoss).toBeLessThan(0.05);
+    expect(p.suggestedLoss).toBeLessThan(0.02);
   });
 
   it("差が大きすぎる（1.5倍）なら needsCheck と注意", () => {

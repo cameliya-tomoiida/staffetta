@@ -72,6 +72,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
     ...prov.products.map((p) => p.name),
     ...r.production.doughs.flatMap((d) => [d.name, ...d.items.map((i) => i.name)]),
     ...r.schedule.flatMap((row) => row.steps.map(eqName)).filter(Boolean),
+    ...r.production.doughs.flatMap((d) => (d.waveName ? [d.waveName] : [])),
   ];
   const mt = await translateTerms(lang, jaNames);
   const name: NameFn = (ja) => ({ text: mt[ja] ?? ja, machine: !!mt[ja], ja });
@@ -95,7 +96,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         name: name(i.name).text,
         unit: unitOf(i.productId),
         pieces: i.pieces,
-        doughName: name(b.name).text,
+        doughName: name(b.name).text + (b.waveName ? `（${name(b.waveName).text}）` : ""),
         doughGram: i.doughGram,
         bagSize: productMaster.get(i.productId)?.bagSize,
         caseSize: productMaster.get(i.productId)?.caseSize,
@@ -116,6 +117,42 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   };
   const dow = new Date(`${r.production.date}T00:00:00+09:00`).toLocaleDateString(langInfo(lang).htmlLang, { weekday: "short", timeZone: "Asia/Tokyo" });
   const shortName = (ja: string) => name(ja).text;
+  const summary = lines.map((line) => {
+    const lp = r.production.lines.find((l) => l.line === line);
+    const steps = r.schedule.filter((x) => x.line === line).flatMap((x) => x.steps.filter((st) => st.end > st.start));
+    const today = steps.filter((st) => !st.prevDay);
+    const prev = steps.filter((st) => st.prevDay);
+    const hc = headcount(line);
+    let shortAt: string | null = null;
+    let shortMax = 0;
+    let hasShift = false;
+    if (today.length) {
+      const from = Math.floor(Math.min(...today.map((st) => st.start)) / 30) * 30;
+      const to = Math.max(...today.map((st) => st.end));
+      for (let m = from; m < to; m += 30) {
+        const need = today.filter((st) => st.start <= m && m < st.end).reduce((n, st) => n + st.people, 0);
+        const have = hc(m);
+        if (have == null) continue;
+        hasShift = true;
+        if (need > have) {
+          shortAt ??= fmtTime(m);
+          shortMax = Math.max(shortMax, need - have);
+        }
+      }
+    }
+    return {
+      line,
+      pieces: lp?.pieces ?? 0,
+      unit: trUnit("ja", lp?.unit ?? "個"),
+      over: lp?.overBy ?? 0,
+      start: today.length ? fmtTime(Math.min(...today.map((st) => st.start))) : "—",
+      end: today.length ? fmtTime(Math.max(...today.map((st) => st.end))) : "—",
+      prevStart: prev.length ? fmtTime(Math.min(...prev.map((st) => st.start))).replace(/^前日/, "") : null,
+      shortAt,
+      shortMax,
+      hasShift,
+    };
+  });
   const showMt = lang !== "ja" && (!isReviewed(lang) || Object.keys(mt).length > 0);
 
   const jaLabel = langInfo(lang).ja;
@@ -138,48 +175,59 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </div>
       </div>
 
-      {/* 注意とお金は、畳んで件数だけ（押すと開く）。管理者向け・日本語・印刷しない */}
-      <div className="no-print mb-4 space-y-2" lang="ja">
-        {warn.incomplete.length > 0 && (
-          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
-            お店か商品が決まっていない注文が <span className="num">{warn.incomplete.length}</span> 件あります。この分は作る数に入っていません。
-            <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で直す</Link>
-          </Notice>
-        )}
-        {otherWarnings.length > 0 && (
-          <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />}>
-            <details>
-              <summary className="cursor-pointer">
-                製造の注意が <span className="num">{otherWarnings.length}</span> 件あります（ピザの上限・始める時刻など）。押すと出します。
-              </summary>
-              <ul className="mt-1 list-disc pl-5 font-normal">
-                {otherWarnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </details>
-          </Notice>
-        )}
-        {lateMaterials.length > 0 && (
-          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
-            <details>
-              <summary className="cursor-pointer">
-                間に合わない材料が <span className="num">{lateMaterials.length}</span> 件あります（発注書には入っていません）。押すと出します。
-              </summary>
-              <ul className="mt-1 list-disc pl-5 font-normal">
-                {lateMaterials.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </details>
-          </Notice>
-        )}
-        <details className="rounded-lg border border-rule bg-sheet">
-          <summary className="flex min-h-12 cursor-pointer items-center px-4 font-bold text-ink-soft">この日のお金（材料費・売上・粗利の目安）を見る</summary>
-          <div className="px-2 pb-2">
-            <CostBox s={cost} show={["material", "margin"]} />
+      {/* 最初の1画面: ラインごとに「いくつ作るか・何時に始めるか・人は足りるか」（日本語・印刷しない） */}
+      <div className="no-print mb-5 grid gap-3 md:grid-cols-2" lang="ja">
+        {summary.map((x) => (
+          <div key={x.line} className={`rounded-lg border-2 bg-sheet px-4 py-3 ${x.over || x.shortAt ? "border-alert-line" : "border-rule-strong"}`}>
+            <div className="mb-1 flex items-center gap-2 font-black" style={{ color: lineView[x.line].color }}>
+              {lineView[x.line].icon}
+              <span className="text-lg">{x.line === "bread" ? "パンライン" : "ピザライン"}</span>
+            </div>
+            {x.pieces === 0 ? (
+              <p className="text-ink-soft">この日は作るものがありません</p>
+            ) : (
+              <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1">
+                <dt className="text-sm font-bold text-ink-soft">作る数</dt>
+                <dd>
+                  <span className="num text-3xl font-black">{fmtNum(x.pieces)}</span>
+                  <span className="ml-1 font-bold">{x.unit}</span>
+                  {x.over > 0 && <span className="ml-2 font-bold text-alert-ink">上限より {fmtNum(x.over)} 多い</span>}
+                </dd>
+                <dt className="text-sm font-bold text-ink-soft">始める</dt>
+                <dd className="num text-xl font-black">
+                  {x.start}
+                  {x.prevStart && <span className="ml-2 text-sm font-bold text-prov-ink">（前日 {x.prevStart} から仕込み）</span>}
+                  <span className="ml-2 text-sm font-normal text-ink-soft">〜 {x.end} に終わる</span>
+                </dd>
+                <dt className="text-sm font-bold text-ink-soft">人</dt>
+                <dd className={`font-black ${x.shortAt ? "text-alert-ink" : x.hasShift ? "text-ok-ink" : "text-ink-soft"}`}>
+                  {x.shortAt ? `${x.shortAt} から足りません（いちばん多いとき ${x.shortMax}人 たりない）` : x.hasShift ? "足りています" : "班が登録されていません"}
+                </dd>
+              </dl>
+            )}
           </div>
-        </details>
+        ))}
+      </div>
+
+      {/* 印刷する紙をえらぶ（チェックしたものだけ印刷。プレビューで画面にも出す）。CSS の :has で切りかえる（print.css・globals.css） */}
+      <div className="no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3" lang="ja">
+        <div className="mb-2 font-black">印刷する紙をえらぶ</div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          {SHEETS.map((x) => (
+            <span key={x.key} className="inline-flex items-center gap-2">
+              <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 font-bold">
+                <input id={`pr-${x.key}`} type="checkbox" defaultChecked={x.key === "process"} className="h-6 w-6 accent-crust-600" />
+                {x.label}
+              </label>
+              {x.key !== "process" && (
+                <label className="inline-flex min-h-11 cursor-pointer items-center gap-1 text-sm text-crust-700 underline underline-offset-4">
+                  <input id={`pv-${x.key}`} type="checkbox" className="sr-only" />
+                  プレビュー
+                </label>
+              )}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* ことばのタブと印刷 */}
@@ -192,7 +240,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       {/* ここから下が印刷する紙（選んだことば） */}
       <div lang={langInfo(lang).htmlLang} className="rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">
         {/* 紙の頭（現場の製造計画書と同じ並び: 題・報告日・製造日・作った所・担当・確認の印） */}
-        <div className="mb-4 grid gap-3 border-b-2 border-ink pb-3 sm:grid-cols-[1fr_auto]">
+        <div className="mb-4 hidden gap-3 border-b-2 border-ink pb-3 print:grid print:grid-cols-[1fr_auto]">
           <div>
             <div className="text-xl font-black tracking-wide">
               {t("plan_title")}
@@ -235,7 +283,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         )}
 
       {makeRows.length > 0 && (
-        <div className="mb-8">
+        <div data-sheet="plan" className="sheet-paper mb-8">
           <PlanSheet rows={makeRows} date={fmtDate(r.production.date)} dow={dow} lang={lang} unitLabel={(u) => trUnit(lang, u)} />
         </div>
       )}
@@ -258,7 +306,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </div>
       )}
 
-      <div className="space-y-8">
+      <div data-sheet="process" className="space-y-8">
         {lines.map((line) => {
           const v = lineView[line];
           const lp = r.production.lines.find((l) => l.line === line);
@@ -276,7 +324,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
                 <div className="space-y-4">
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
                     <MakeTable bs={lp.doughs} lang={lang} t={t} name={name} unitOf={unitOf} />
-                    <Timetable rows={rs} bs={lp.doughs} lang={lang} t={t} name={name} />
+                    <Timetable rows={rs} bs={lp.doughs} lang={lang} t={t} name={name} id={line} />
                   </div>
                   <EquipmentChart
                     rows={rs}
@@ -293,8 +341,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         })}
       </div>
 
-      <div className="mt-10 space-y-10">
-        <div className="print-page">
+      <div className="space-y-10 [&>.sheet-paper]:mt-10">
+        <div data-sheet="staff" className="sheet-paper print-page">
           <StaffSheet
             rows={lines.map((line) => ({ lineTitle: lineView[line].title, rows: r.schedule.filter((x) => x.line === line) }))}
             date={fmtDate(r.production.date)}
@@ -306,18 +354,74 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           />
         </div>
         {makeRows.length > 0 && (
-          <div className="print-page">
+          <div data-sheet="daily" className="sheet-paper print-page">
             <DailySheet rows={makeRows} date={fmtDate(r.production.date)} lang={lang} unitLabel={(u) => trUnit(lang, u)} />
           </div>
         )}
       </div>
 
       </div>
+      {/* 注意とお金は、畳んで件数だけ（押すと開く）。管理者向け・日本語・印刷しない */}
+      <div className="no-print mt-6 space-y-2" lang="ja">
+        {warn.incomplete.length > 0 && (
+          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
+            お店か商品が決まっていない注文が <span className="num">{warn.incomplete.length}</span> 件あります。この分は作る数に入っていません。
+            <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で直す</Link>
+          </Notice>
+        )}
+        {otherWarnings.length > 0 && (
+          <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />}>
+            <details>
+              <summary className="cursor-pointer">
+                製造の注意が <span className="num">{otherWarnings.length}</span> 件あります（ピザの上限・始める時刻など）。押すと出します。
+              </summary>
+              <ul className="mt-1 list-disc pl-5 font-normal">
+                {otherWarnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </details>
+          </Notice>
+        )}
+        {lateMaterials.length > 0 && (
+          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
+            <details>
+              <summary className="cursor-pointer">
+                間に合わない材料が <span className="num">{lateMaterials.length}</span> 件あります（発注書には入っていません）。押すと出します。
+              </summary>
+              <ul className="mt-1 list-disc pl-5 font-normal">
+                {lateMaterials.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </details>
+          </Notice>
+        )}
+        <details className="rounded-lg border border-rule bg-sheet">
+          <summary className="flex min-h-12 cursor-pointer items-center px-4 font-bold text-ink-soft">この日のお金（材料費・売上・粗利の目安）を見る</summary>
+          <div className="px-2 pb-2">
+            <CostBox s={cost} show={["material", "margin"]} />
+          </div>
+        </details>
+      </div>
+
     </div>
   );
 }
 
+const SHEETS = [
+  { key: "plan", label: "製造計画書" },
+  { key: "process", label: "工程表（作るもの・時間割・設備）" },
+  { key: "staff", label: "人員配置表" },
+  { key: "daily", label: "製造日報" },
+] as const;
+
 type T = (k: Key) => string;
+
+/** 便の名前（同じ生地を便ごとに分けて作るとき。③の waveName） */
+function WaveTag({ w }: { w: string }) {
+  return <span className="mt-0.5 inline-block rounded border border-ink px-1.5 text-xs font-bold">{w}</span>;
+}
 type NameFn = (ja: string) => { text: string; machine: boolean; ja: string };
 const stepName = (lang: Lang, key: ProcessKey, ja: string) => (key in stepColor ? tr(lang, key as Key) : ja);
 
@@ -378,11 +482,12 @@ function MakeTable({ bs, lang, t, name, unitOf }: { bs: DoughBatchPlan[]; lang: 
     <div className="overflow-hidden rounded-sm border border-rule-strong bg-sheet">
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("make_list")}</div>
       {bs.map((b) => (
-        <div key={b.doughId} className="border-b border-rule-strong last:border-b-0">
+        <div key={b.key} className="border-b border-rule-strong last:border-b-0">
           <div className="flex flex-wrap items-end justify-between gap-2 bg-cream px-4 py-2">
             <div>
               <span className="text-xs text-ink-soft">{t("dough")}</span>
               <Name n={name(b.name)} lang={lang} big />
+              {b.waveName && <WaveTag w={name(b.waveName).text} />}
             </div>
             <div className="flex gap-5">
               <Stat label={t("dough_kg")} value={fmtNum(b.doughKg, 1)} unit="kg" />
@@ -413,7 +518,7 @@ function MakeTable({ bs, lang, t, name, unitOf }: { bs: DoughBatchPlan[]; lang: 
 }
 
 /** 時間割（当日の帯グラフ＋時刻の表。前日の仕込みは表に分けて出す） */
-function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: DoughBatchPlan[]; lang: Lang; t: T; name: NameFn }) {
+function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: DoughBatchPlan[]; lang: Lang; t: T; name: NameFn; id: string }) {
   const todaySteps = rows.flatMap((r) => r.steps.filter((s) => !s.prevDay));
   if (todaySteps.length === 0) return null;
   const deadlines = rows.flatMap((r) => (r.deadline != null ? [r.deadline] : []));
@@ -456,11 +561,12 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
             ))}
           </div>
           {rows.map((r) => {
-            const b = bs.find((b) => b.doughId === r.doughId);
+            const b = bs.find((b) => b.key === r.key);
             return (
-              <div key={r.doughId} className="flex items-center border-t border-rule py-1.5">
+              <div key={r.key} className="flex items-center border-t border-rule py-1.5">
                 <div className="w-36 shrink-0 pr-2 text-sm">
                   <Name n={name(r.doughName)} lang={lang} />
+                  {r.waveName && <WaveTag w={name(r.waveName).text} />}
                   {b && <span className="num text-xs text-ink-faint">{fmtNum(b.doughKg, 1)}kg</span>}
                   {r.deliveryMinute != null && (
                     <span className="num block text-xs font-bold text-alert-ink">
@@ -506,11 +612,20 @@ function Timetable({ rows, bs, lang, t, name }: { rows: ScheduleRow[]; bs: Dough
         </div>
       </div>
 
-      {/* 時刻の表（紙に印刷して貼る用） */}
-      <div className="grid gap-px border-t border-rule-strong bg-rule sm:grid-cols-2">
+      {/* 時刻の表（紙に印刷して貼る用）。画面では畳む */}
+      <input id={`steps-${id}`} type="checkbox" className="peer sr-only" />
+      <label
+        htmlFor={`steps-${id}`}
+        lang="ja"
+        className="no-print flex min-h-11 cursor-pointer items-center border-t border-rule-strong px-4 text-sm font-bold text-crust-700 underline underline-offset-4 peer-checked:hidden"
+      >
+        工程ごとの時刻を見る（計量 5分…）
+      </label>
+      <div className="hidden gap-px border-t border-rule-strong bg-rule peer-checked:grid print:grid sm:grid-cols-2">
         {rows.map((r) => (
-          <div key={r.doughId} className="bg-sheet px-4 py-2.5">
+          <div key={r.key} className="bg-sheet px-4 py-2.5">
             <Name n={name(r.doughName)} lang={lang} />
+            {r.waveName && <WaveTag w={name(r.waveName).text} />}
             {r.deadline != null && (
               <div className="num mt-0.5 text-sm font-bold text-alert-ink">
                 {t("delivery_at")} {ft(r.deliveryMinute ?? r.deadline)} ／{" "}
