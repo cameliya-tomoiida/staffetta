@@ -9,6 +9,7 @@ import { isSiteMethod } from "@/lib/channels/outbound/sites";
 import { listOutbound } from "@/lib/channels/outbound/workflow";
 import { getReceipt } from "@/lib/stock/store";
 import { listReplies } from "@/lib/replies/store";
+import { listDrafts } from "@/lib/drafts/store";
 import { runDueAutomations } from "@/lib/automation/tasks";
 import { OutboundClient } from "./OutboundClient";
 
@@ -17,6 +18,7 @@ export default async function OutboundPage() {
   // 決まった時刻の自動の仕事（定期注文・製造の実績・ふだんどおりの発注書の承認・返事の下書き）。送るのは人
   await runDueAutomations();
   const replies = listReplies();
+  const drafts = listDrafts();
   const records = await listOutbound();
   const { orders, today } = await allOrders();
   const dates = deliveryDatesOf(orders).filter((d) => d >= today);
@@ -41,7 +43,7 @@ export default async function OutboundPage() {
         title="発注の送り出し"
         lead="発注書の下書きを人が承認すると、送り先ごとに「FAX用PDF」「メール下書き」「サイトの入力用リスト・CSV」ができます。送信は人が行い、送ったあとに「送った」を押します（自動では送りません）。"
       />
-      <OutboundClient records={views} dates={dates} replies={replies} />
+      <OutboundClient records={views} dates={dates} replies={replies} drafts={drafts} />
     </div>
   );
 }

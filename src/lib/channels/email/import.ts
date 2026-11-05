@@ -4,6 +4,7 @@ import "server-only";
 // - 「変更」「キャンセル」は新しい注文（要確認）として入れ、元の注文は書き換えない。
 //   Order.intent / changeOf で元の注文とひも付ける。人が確定するまで元の注文はそのまま。
 import { createHash } from "node:crypto";
+import { scanSupplierNotice, type SupplierNotice } from "@/lib/supplier-notices";
 import ExcelJS from "exceljs";
 import { simpleParser } from "mailparser";
 import { customers } from "@/data/master";
@@ -20,7 +21,10 @@ export interface EmailImportResult {
   orderIds: string[];
   changeOf?: string;
   model: string;
-  read: EmailRead;
+  /** 注文として読んだときの結果（仕入先のお知らせのときは無い） */
+  read?: EmailRead;
+  /** #15: 仕入先からの「終売・価格改定・出荷停止」のお知らせだったとき */
+  notice?: SupplierNotice;
 }
 
 /** Excel のシートを「行番号: セル | セル | …」のテキストにする（Claude が表として読めるように） */
@@ -103,6 +107,10 @@ const safeId = (s: string) => createHash("sha1").update(s).digest("hex").slice(0
 export async function importEml(eml: Buffer, fileName = "mail.eml"): Promise<EmailImportResult> {
   const mail = await emlToParts(eml);
   if (!mail.parts.length) throw new Error("本文も読める添付もありませんでした");
+  // #15: 仕入先からの終売・価格改定・出荷停止のお知らせは、注文として読まずに記録する（アラートになる）
+  const body = mail.parts.filter((p) => p.kind === "text").map((p) => (p.kind === "text" ? p.text : "")).join(String.fromCharCode(10));
+  const notice = await scanSupplierNotice({ messageId: mail.messageId, subject: mail.subject, from: mail.from, text: body, receivedAt: mail.date });
+  if (notice) return { messageId: mail.messageId, subject: mail.subject, intent: "not_order", orderIds: [], model: "", notice };
   const { read, model } = await readEmail(mail);
   const customerId = customers.some((c) => c.id === read.sender.matched_customer_id) ? read.sender.matched_customer_id : "";
   const base = `E${safeId(mail.messageId)}`;

@@ -1,5 +1,5 @@
 // ⑤の自動化（人の手が要る所を減らす）。テストの「今」は 2026-11-01(日) 09:00。マスタ・設定は SQLite（メモリ）、注文と発注書はメモリの store。
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PurchaseOrder } from "@/data/types";
 import { mem, resetMem } from "@/lib/channels/__tests__/memdb";
 import type { ImportedOrder } from "@/lib/channels/common";
@@ -17,6 +17,11 @@ const imported = (id: string, channel: "infomart" | "email" | "google_sheet", li
 });
 
 beforeEach(() => resetMem());
+// 自動は既定で「人に聞く」（OFF）。ここでは自動を確かめるので ON にする（①の機能の一覧に記録される）
+beforeAll(async () => {
+  const { saveAutomationSettings } = await import("../settings");
+  saveAutomationSettings({ importAutoConfirm: true, standingAuto: true, poAutoApprove: true, productionAutoDone: true, receiptAutoReceive: true }, "テスト");
+});
 
 describe("A8・A9 取り込みの自動確定", () => {
   it("辞書で全部決まった取り込みは自動で確定。知らない品があれば要確認のまま（理由が記録に残る）。取り消せる", async () => {
@@ -60,10 +65,16 @@ describe("A8・A9 取り込みの自動確定", () => {
     expect(r.auto.held.map((h) => h.id)).toEqual(["EM-2", "EM-3", "EM-4"]);
   });
 
-  it("スイッチを切ると自動で確定しない", async () => {
+  it("既定は OFF（人に聞く）。スイッチを切ると自動で確定しない。スイッチは①の機能の一覧（isOn）", async () => {
+    const { DEFAULT_AUTOMATION } = await import("../settings");
+    const { FEATURES, isOn } = await import("@/lib/settings/features");
+    expect(FEATURES.find((f) => f.key === "import_auto_confirm")?.default).toBe(false);
+    expect(FEATURES.find((f) => f.key === "receipt_auto_receive")?.default).toBe(false);
+    expect("importAutoConfirm" in DEFAULT_AUTOMATION).toBe(false);
     const { saveAutomationSettings } = await import("../settings");
     const { saveImported } = await import("@/lib/channels/common");
     saveAutomationSettings({ importAutoConfirm: false }, WHO);
+    expect(isOn("import_auto_confirm")).toBe(false);
     await saveImported([imported("IM-9", "infomart", [{}])]);
     expect(mem.db.orders.find((o) => o.id === "IM-9")?.status).toBe("needs_review");
     saveAutomationSettings({ importAutoConfirm: true }, WHO);

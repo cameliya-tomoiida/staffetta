@@ -356,6 +356,10 @@ export interface ProductMaster {
   sourceProductId?: string;
   slicesPerPack?: number;
   active: boolean;
+  /** 最後に原価・見積りを見直した日 YYYY-MM-DD（11か月でお知らせ） */
+  lastCostReviewAt?: string;
+  /** 見直しの担当 */
+  costReviewOwner?: string;
 }
 
 /** 材料・包材の共通の項目（在庫・発注先・リードタイム・ロット） */
@@ -411,6 +415,8 @@ export interface SupplierMaster {
   siteName?: string;
   /** FAX 番号・メールなど */
   contact: string;
+  /** 依頼・問い合わせのメールの宛先（あれば） */
+  email?: string;
   /** 発注の締め "HH:MM" と、締めから納品までの日数 */
   cutoff?: string;
   leadDays?: number;

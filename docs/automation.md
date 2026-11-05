@@ -1,6 +1,6 @@
 # 自動化（⑤の分）
 
-方針（11/5）：AI は値を書き換えない。迷わなかったもの・ふだんどおりのものは、人の確認を待たずに進める。自動で決めたものは「自動（…）」と記録され、取り消せる。スイッチは **設定 → 自動化の設定**（`/settings/automation`）。
+方針（11/5）：AI は値を書き換えない。迷わなかったもの・ふだんどおりのものは、人の確認を待たずに進める。自動で決めたものは「自動（…）」と記録され、取り消せる。ON/OFF は①の **機能の ON/OFF**（`/settings/features`、`src/lib/settings/features.ts` の import_auto_confirm・standing_auto_create・purchase_auto_approve・production_done_auto・order_reply_drafts・receipt_auto_receive）。既定は「人に聞く」（OFF）。時刻・上限金額・幅と記録は **自動化の設定**（`/settings/automation`）。
 
 | # | 何を自動にするか | 人に回すとき | 記録 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | B5 | 入荷：納品書（写真・PDF）を Claude で読み、発注書と全部合えば入荷 | 数が違う・読めない・発注書に無い品 | 「自動（納品書と一致・…）」 |
 
 ## 決まった時刻の仕事を動かすには
-画面（送り出し・自動化の設定）を開いたときにも動くが、だれも開かない夜（C3）のために、Windows のタスクスケジューラなどから数分おきに次を呼ぶ。同じ週・同じ日に2回は動かない。
+①の5分ごとの仕事から次を呼ぶ（送り出しの画面を開いたときにも動く）。同じ週・同じ日に2回は動かない。
 
 ```
 curl -X POST http://localhost:3100/api/automation -H "content-type: application/json" -d "{\"action\":\"tick\"}"
