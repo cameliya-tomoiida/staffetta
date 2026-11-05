@@ -12,6 +12,8 @@ import { allOrders } from "@/demo/all-orders";
 import { runPipeline } from "@/lib/pipeline";
 import { receivePurchaseOrder, type ReceiptLine } from "@/lib/stock/store";
 import { markReplySent } from "@/lib/replies/store";
+import { autoApprovePurchaseOrders } from "@/lib/automation/tasks";
+import { readNoteAndReceive } from "@/lib/automation/receipt";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { approvePo, listOutbound, markSent, receiveDrafts } from "@/lib/channels/outbound/workflow";
 import type { PoLike } from "@/lib/channels/outbound/render";
@@ -22,6 +24,15 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    // B5: 納品書（写真・PDF）を読んで発注書と照合。全部合えば自動で入荷（設定で止められる）。差があれば数の案を返して人が直す
+    if ((req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+      const form = await req.formData();
+      const file = form.get("file");
+      if (!(file instanceof File)) throw new Error("納品書の写真か PDF を選んでください");
+      const r = await readNoteAndReceive(String(form.get("poId") ?? ""), new Uint8Array(await file.arrayBuffer()), file.type, String(form.get("who") ?? ""));
+      revalidatePath("/outbound");
+      return NextResponse.json(r);
+    }
     const b = (await req.json()) as { action: string; poId?: string; who?: string; drafts?: PoLike[]; date?: string; lines?: ReceiptLine[]; note?: string; replyId?: string };
     let result: unknown;
     if (b.action === "load") {
@@ -29,6 +40,7 @@ export async function POST(req: NextRequest) {
       const { orders } = await allOrders();
       const r = runPipeline(orders, b.date, { masters: await loadMasters() });
       result = await receiveDrafts([...r.productPurchaseOrders, ...r.materialPurchaseOrders], "発注書の計算");
+      await autoApprovePurchaseOrders(); // B1: ふだんどおりの発注書は自動で承認（送るのは人）
     } else if (b.action === "receive") result = await receiveDrafts(b.drafts ?? []);
     else if (b.action === "approve") result = await approvePo(b.poId ?? "", b.who ?? "");
     else if (b.action === "fax_send") {

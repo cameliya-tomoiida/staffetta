@@ -15,6 +15,8 @@ import { outputPath } from "@/lib/channels/outbound/workflow";
 import { makeSimplePdf } from "@/lib/channels/pdf";
 import { nowIso } from "@/lib/clock";
 import { ensureTables, getDb } from "@/lib/db/sqlite";
+import { getAutomationSettings } from "@/lib/automation/settings";
+import { logAuto } from "@/lib/automation/log";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { demoOrders } from "@/demo/orders";
 import { readDb } from "@/lib/store";
@@ -40,6 +42,8 @@ export interface StoredReply {
   late: number;
   changed: number;
   altDate?: string;
+  /** D1: 全行そのまま受けられる（変更・受けられない品が無い）＝そのまま送ってよい返事 */
+  ready?: boolean;
   /** 社内向けのメモ（前の日に作っておけば受けられる、など。返事には書いていない） */
   memo?: string[];
 }
@@ -132,6 +136,7 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
     changed: content.lines.filter((l) => l.status === "changed" || l.status === "removed").length,
     ...(content.altDate ? { altDate: content.altDate } : {}),
     ...(content.memo.length ? { memo: content.memo } : {}),
+    ready: content.lines.every((l) => l.status === "ok"),
   };
   save(r);
   return r;
@@ -152,6 +157,7 @@ export async function createReply(orderId: string, who: string): Promise<StoredR
 
 /** 取引先マスタで「受けたら返事が要る」の先の、まだ返事の無い仮発注・確定の注文に下書きを作る。作った数を返す */
 export async function ensureAutoReplies(): Promise<StoredReply[]> {
+  if (!getAutomationSettings().replyAutoQueue) return [];
   const masters = await loadMasters();
   const need = new Set(masters.customers.filter((c) => (c as { replyRequired?: boolean }).replyRequired).map((c) => c.id));
   if (!need.size) return [];
@@ -161,7 +167,9 @@ export async function ensureAutoReplies(): Promise<StoredReply[]> {
   const out: StoredReply[] = [];
   for (const o of orders) {
     if (!withMasters(masters, () => replyKindOf(o)).kind) continue;
-    out.push(await create(o, "自動（受けたら返事が要る先）", true, masters));
+    const r = await create(o, "自動（受けたら返事が要る先）", true, masters);
+    logAuto("reply", r.id, r.ready ? "done" : "held", r.ready ? "全部そのまま受けられるので、返事を送信待ちに入れました（送るのは人）" : "変更・受けられない品があるので、下書きを人が見てから送ります");
+    out.push(r);
   }
   return out;
 }

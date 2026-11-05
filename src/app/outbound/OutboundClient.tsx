@@ -108,6 +108,7 @@ export function OutboundClient({ records, dates, replies = [] }: { records: View
               <div className="text-sm text-ink-soft">
                 {x.kind === "fax" ? "FAX" : "メール"} <b className="num text-ink">{x.to || "（宛先を入れてください）"}</b> ／ 納品 <b className="num text-ink">{fmtDate(x.deliveryDate)}</b>
                 {x.auto && " ／ 自動（受けたら返事が要る先）"}
+                {x.status === "draft" && (x.ready ? <b className="text-ok-ink"> ／ そのまま送れます</b> : <b className="text-review-ink"> ／ 人が見てから送る</b>)}
                 {x.changed > 0 && <> ／ 変更 {x.changed}</>}
                 {x.late > 0 && <b className="text-alert-ink"> ／ 間に合わない品 {x.late}{x.altDate && `（${fmtDate(x.altDate)}なら可）`}</b>}
                 {x.status === "sent" && <> ／ 送信済み {x.sentAt && fmtDateTime(x.sentAt)}（{x.sentBy}）</>}
@@ -192,6 +193,8 @@ export function OutboundClient({ records, dates, replies = [] }: { records: View
                 {po.status === "approved" && po.method === "fax" && <Notice tone="review">上の「FAX 送信待ち」から送ってください</Notice>}
                 {po.status === "sent" && r.receipt && (
                   <ReceivePanel
+                    poId={po.id}
+                    who={who}
                     lines={po.lines.filter((l) => l.itemType === "material").map((l) => ({ itemId: l.itemId, name: l.name, quantity: l.quantity, units: l.units, unitLabel: l.unitLabel }))}
                     receipt={r.receipt}
                     disabled={busy || !who}
