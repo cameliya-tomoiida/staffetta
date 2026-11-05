@@ -76,7 +76,8 @@ export async function readLineText(
   knownMappings: Record<string, string> = {},
   recentOrders: RecentOrderBrief[] = [],
 ): Promise<{ read: LineRead; model: string }> {
-  const client = new Anthropic();
+  // 1回の待ち時間は2分まで（SDK の初期値は10分）。やり直しは read-retry.ts が間をあけて行う
+  const client = new Anthropic({ timeout: 120_000 });
   const jst = new Date(receivedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", dateStyle: "full", timeStyle: "short" });
   const response = await client.beta.messages.parse({
     model: LINE_READER_MODEL,
