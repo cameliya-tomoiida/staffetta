@@ -29,7 +29,18 @@ async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
       return true; // 一覧に無い種類は使う
     }
   };
-  const alerts = evaluateAlerts(await loadDb(), await loadMasters(), now, { isOn: (k) => on(alertFeatureKey(k)) });
+  // ⑤が持つ記録: 「今日は休み」（#6 を出さない）と、見直しの資料の依頼（#5 届かない）
+  const [{ listDayOffs, getCostRequest }, { getDb }] = await Promise.all([import("./alert-actions"), import("./db/sqlite")]);
+  const requestedProducts = (getDb().prepare("SELECT key FROM kv WHERE key LIKE 'cost_request_%'").all() as { key: string }[]).map((r) => r.key.slice("cost_request_".length));
+  const reviewRequests = requestedProducts.flatMap((productId) => {
+    const r = getCostRequest(productId);
+    return r ? r.supplierIds.map((supplierId) => ({ id: `${productId}:${supplierId}`, productId, supplierId, requestedAt: r.at })) : [];
+  });
+  const alerts = evaluateAlerts(await loadDb(), await loadMasters(), now, {
+    isOn: (k) => on(alertFeatureKey(k)),
+    dayOffs: listDayOffs().map(({ customerId, date }) => ({ customerId, date })),
+    reviewRequests,
+  });
   const hrefOf = (kind: string, p: Record<string, unknown>): string | undefined => {
     const id = (k: string) => (typeof p[k] === "string" ? encodeURIComponent(p[k] as string) : "");
     switch (kind) {

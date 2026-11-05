@@ -5,7 +5,10 @@ const calls: unknown[] = [];
 vi.mock("@/lib/alert-actions", () => ({
   runAlertAction: async (input: unknown) => {
     calls.push(input);
-    return { kind: "draft_po", message: "発注書の下書きを 1 枚作りました", href: "/outbound" };
+    const k = (input as { kind: string }).kind;
+    if (k === "create_po_draft") return { kind: k, message: "発注書の下書きを 1 枚作りました", href: "/outbound" };
+    if (k === "open_material") return { kind: k, message: "材料の画面を開きます", href: "/masters/materials" };
+    return { kind: k, message: "この数のままにしました" };
   },
 }));
 
@@ -30,9 +33,9 @@ describe("お知らせのボタンの実行", () => {
     ], "2026-11-05T09:00:00+09:00");
   });
 
-  it("下書きを作るボタンは⑤の処理を呼び、材料の一覧（配列）も渡す。結果を履歴に残す", async () => {
+  it("ボタンは⑤の処理に、③の種類と payload（材料の一覧の配列も）をそのまま渡す。結果を履歴に残す", async () => {
     const r = await runAlertActionAction("stock_shortage:M01", 0, "事務 たなか");
-    expect(calls[0]).toEqual({ kind: "draft_po", materialIds: ["M01"], date: "2026-11-08", who: "事務 たなか" });
+    expect(calls[0]).toEqual({ kind: "create_po_draft", who: "事務 たなか", payload: { supplierId: "S01", materialIds: ["M01"], arriveDate: "2026-11-07" } });
     expect(r).toMatchObject({ message: "発注書の下書きを 1 枚作りました", href: "/outbound" });
     expect(listAlerts().find((a) => a.dedupeKey === "stock_shortage:M01")?.history.at(-1)?.what).toContain("注文しますか");
   });
@@ -41,7 +44,7 @@ describe("お知らせのボタンの実行", () => {
     expect((await runAlertActionAction("stock_shortage:M01", 1, "事務 たなか")).href).toBe("/masters/materials");
     expect((await runAlertActionAction("unusual_quantity:o1", 0, "事務 たなか")).done).toBe(true);
     expect(listAlerts({ states: ["done"] }).map((a) => a.dedupeKey)).toEqual(["unusual_quantity:o1"]);
-    expect(calls).toEqual([]);
+    expect(calls.map((c) => (c as { kind: string }).kind)).toEqual(["open_material", "accept_quantity"]);
   });
 
   it("名前なし・無いボタンは止める", async () => {
