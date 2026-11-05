@@ -1,5 +1,5 @@
 // アラートのボタンの先（⑤）。②の画面・①の保存から呼ぶ。下書きを作るまで。送るのは人。
-//   POST { kind, who, ...引数 } … kind: draft_po | draft_cost_request | draft_inquiry | mark_cost_reviewed | open_product
+//   POST { kind, payload, who } … ③の evaluateAlerts の actions[] をそのまま（kind は③の AlertActionKind ＋ mark_cost_reviewed）。前の⑤の平たい形も可
 //   GET                          … #15 仕入先のお知らせ（終売・価格改定・出荷停止）の一覧
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
