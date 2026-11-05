@@ -526,6 +526,8 @@ export interface ShiftMaster {
   headcount: number;
   /** 休けいの時間帯（"13:00-14:00"）。その時間は人数に数えない */
   breaks?: string[];
+  /** 1人あたりの休けい（分）。時間帯は決めず、班の時間のうち人の余っている時間に交代で取る（足りない時間には入れない） */
+  breakMinutesPerPerson?: number;
   /** 出る曜日（0=日〜6=土）。空なら毎日。曜日で時間がちがう班は、曜日ごとに1行ずつ */
   weekdays?: number[];
 }

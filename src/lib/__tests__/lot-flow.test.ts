@@ -102,6 +102,20 @@ describe("段取り替え・洗浄・休けい（ラインと班の設定）", (
     expect(warn(withBreak).some((w) => /10:00〜11:00 は人が/.test(w))).toBe(true);
     expect(warn(withBreak).length).toBeGreaterThan(warn(m).length);
   });
+
+  it("1人あたりの休けい（時間帯は自由）は、人の余る時間に入れる。足りない時間帯の注意は増えない。余りが足りなければ注意", () => {
+    const m = sampleMasters();
+    const small = [mOrder("A", "C10", [["P07", 200]])];
+    const msgs = (mm: Masters, o = small) => runPipeline(o, DATE, { masters: mm }).schedule.flatMap((r) => r.warnings);
+    const flex = (min: number): Masters => ({ ...m, shifts: m.shifts.map((s) => (s.line === "pizza" ? { ...s, breakMinutesPerPerson: min } : s)) });
+    // 少ない注文なら人が余るので、1人60分の休けいは入る（注意なし・人の足りない注意も増えない）
+    expect(msgs(flex(60)).filter((w) => /休けい/.test(w))).toEqual([]);
+    expect(msgs(flex(60)).filter((w) => /たりません/.test(w))).toEqual(msgs(m).filter((w) => /たりません/.test(w)));
+    // 班の時間より長い休けいは入りきらない → 注意
+    const over = msgs(flex(11 * 60)).filter((w) => /休けい/.test(w));
+    expect(over.length).toBeGreaterThan(0);
+    expect(over[0]).toMatch(/人の余る時間がありません/);
+  });
 });
 
 describe("パンラインもロットで流す（納品時刻から逆算）", () => {

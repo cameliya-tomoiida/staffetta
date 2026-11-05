@@ -358,7 +358,8 @@ export const shiftDef: MasterDef<ShiftMaster> = {
     { key: "to", label: "終了", type: "time", required: true, example: "07:00" },
     { key: "headcount", label: "人数", type: "integer", min: 0, required: true, example: "6" },
     { key: "weekdays", label: "出る曜日", type: "weekdays", example: "月;火", help: "空なら毎日。曜日で時間がちがう班は、曜日ごとに1行ずつ" },
-    { key: "breaks", label: "休けい", type: "textlist", example: "13:00-14:00", help: "その時間は人数に数えない。複数なら ; で区切る" },
+    { key: "breaks", label: "休けい", type: "textlist", example: "13:00-14:00", help: "時間帯が決まっている休けい。その時間は人数に数えない。複数なら ; で区切る" },
+    { key: "breakMinutesPerPerson", label: "1人の休けい（分）", type: "integer", min: 0, example: "60", help: "時間帯を決めずに交代で取る休けい。人の余っている時間に入れる。余りが足りなければ注意を出す" },
   ],
 };
 

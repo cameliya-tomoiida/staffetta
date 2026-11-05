@@ -2,6 +2,7 @@
 // 自社で作る商品の個数 → 生地kg（ロス率込み）→ ミキサー回数・材料kg、ライン（パン・ピザ）ごとの上限チェック、
 // 工程の時間割（工程表）を出す。全部ふつうの計算で、同じ入力なら必ず同じ結果になる。
 import type { Line, ProcessKey } from "@/data/production";
+import type { ShiftMaster } from "@/data/types";
 import type { DayTotals } from "./aggregate";
 import { allLines, allShifts, currentMasters, customerDeadline, customerDeliveryMinute, findDough, findEquipment, findLine, findMaterial, findProduct, findTopping } from "./catalog";
 
@@ -699,6 +700,41 @@ export function checkScheduleConstraints(rows: ScheduleRow[], date?: string): vo
       for (const u of g.uses) by.set(u.step.name, Math.max(by.get(u.step.name) ?? 0, u.step.people));
       const detail = [...by.entries()].map(([n, p]) => `${n} ${p}`).join("・");
       g.uses[0].row.warnings.push(`${lineName} ${fmtTime(g.from)}〜${fmtTime(g.to)} は人が ${g.need - g.have}人 たりません（要る ${g.need}人・班 ${g.have}人：${detail}）`);
+    }
+
+    // 1人あたりの休けい（時間帯を決めない）: 班の時間のうち、人の余っている時間に交代で入れる（足りない時間には入れない）。
+    // 余りが足りないときだけ注意を出す
+    const flex = lineShifts.filter((s) => (s.breakMinutesPerPerson ?? 0) > 0 && s.headcount > 0);
+    if (flex.length && act.length) {
+      const span = (s: ShiftMaster): [number, number] => {
+        const f = hhmm(s.from);
+        const t = hhmm(s.to);
+        return [f, t <= f ? t + 1440 : t];
+      };
+      const fixedBreak = (s: ShiftMaster, m: number) => (s.breaks ?? []).some((w) => { const [a, b] = w.split("-").map((x) => x.trim()); return !!a && !!b && inSpan(m, a, b); });
+      const pts = [...new Set([...lineShifts.flatMap(span), ...act.flatMap((u) => [u.step.start, u.step.end])])].sort((a, b) => a - b);
+      const spare: { from: number; to: number; pm: number }[] = [];
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const from = pts[i], to = pts[i + 1];
+        const need = act.filter((u) => u.step.start <= from && from < u.step.end).reduce((s, u) => s + u.step.people, 0);
+        const have = lineShifts.filter((s) => { const [f, t] = span(s); return f <= from && from < t && !fixedBreak(s, from); }).reduce((s, x) => s + x.headcount, 0);
+        spare.push({ from, to, pm: Math.max(0, have - need) * (to - from) });
+      }
+      // 早く帰る班から、班の時間の中の余りを使う
+      for (const s of [...flex].sort((a, b) => span(a)[1] - span(b)[1])) {
+        const [f, t] = span(s);
+        let want = s.headcount * s.breakMinutesPerPerson!;
+        for (const g of spare) {
+          if (want <= 0) break;
+          if (g.from < f || g.from >= t) continue;
+          const take = Math.min(want, g.pm, s.headcount * (g.to - g.from));
+          g.pm -= take;
+          want -= take;
+        }
+        if (want > 0) {
+          act[0].row.warnings.push(`${lineName} ${s.name}: 休けい（1人${s.breakMinutesPerPerson}分・${s.headcount}人）を取れるほど人の余る時間がありません（あと のべ ${Math.ceil(want)}分。休けいを取ると人がたりなくなります）`);
+        }
+      }
     }
   }
 }
