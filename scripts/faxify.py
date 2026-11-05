@@ -34,3 +34,23 @@ faxify("fax6", angle=0.8)
 faxify("fax7", angle=0, flip=True)
 faxify("fax8", angle=-0.6)
 faxify("fax9", angle=-0.5)
+faxify("fax10", angle=0.7)
+
+
+def faxify_coarse(name, out_name):
+    """粗い「標準モード」相当（解像度を落とし、ゴミ点を増やす）。読み取りの精度の測定用"""
+    random.seed(11)
+    im = Image.open(src / f"{name}.png").convert("L")
+    w, h = im.size
+    im = im.resize((int(w * 0.62), int(h * 0.62)), Image.BILINEAR).rotate(-0.9, resample=Image.BICUBIC, fillcolor=255)
+    im = im.filter(ImageFilter.GaussianBlur(0.7))
+    px = im.load()
+    W, H = im.size
+    for _ in range(W * H // 1500):
+        px[random.randrange(W), random.randrange(H)] = 0
+    im = im.point(lambda v: 0 if v < 170 else 255).convert("L")
+    im.save(out / f"{out_name}.pdf", "PDF", resolution=110)
+    print("wrote", out / f"{out_name}.pdf", im.size)
+
+
+faxify_coarse("fax10", "fax10s")

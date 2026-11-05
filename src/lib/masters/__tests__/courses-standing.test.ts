@@ -45,6 +45,9 @@ describe("便・納品曜日・定期注文", () => {
     expect(r.created.find((c) => c.deliveryDate === "2026-11-11")?.lines).toBe(2); // P01 と画面で足した P02
     expect(r.skipped.some((x) => x.date === "2026-11-10" && /火曜日に納品していません/.test(x.reason))).toBe(true);
     expect(mem.db.orders.filter((o) => o.id.startsWith("SO-C07-")).every((o) => o.status === "needs_review")).toBe(true);
+    // 過ぎた日は作らない（テストの「今」は 11/1。10/26 の週は全部過ぎている）
+    const past = await createStandingOrdersForWeek({ who: WHO, customerId: "C07", weekOf: "2026-10-28" });
+    expect(past.created).toEqual([]);
 
     const again = await createStandingOrdersForWeek({ who: WHO, customerId: "C07", weekOf: "2026-11-11" });
     expect(again.created).toEqual([]);
