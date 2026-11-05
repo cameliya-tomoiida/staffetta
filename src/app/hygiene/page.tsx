@@ -3,6 +3,8 @@ import { choiceClass } from "@/components/ui";
 import { todayJst } from "@/lib/clock";
 import { KIND_LABEL, runDays, sheetProblems, type SheetDef, type SheetRecord } from "@/lib/hygiene/sheets";
 import { holidaysOf, listManuals, listSheets, recordsOf } from "@/lib/hygiene/store";
+import { getMonthSummary } from "@/lib/printing/auto";
+import { SummaryBox } from "./SummaryBox";
 
 export const metadata = { title: "衛生管理｜STAFFETTA" };
 export const dynamic = "force-dynamic";
@@ -55,6 +57,12 @@ export default async function HygienePage(props: PageProps<"/hygiene">) {
           <SheetCard key={s.id} def={s} rec={recs.get(s.id)} month={month} today={today} holidays={holidays} />
         ))}
       </ul>
+
+      <SummaryBox month={month} summary={getMonthSummary(month)} ai={!!process.env.ANTHROPIC_API_KEY} />
+
+      <p className="text-lg">
+        毎月決まった日に自動で印刷するときは <Link href="/settings/auto-print">設定 → 自動印刷</Link>。
+      </p>
 
       <section className="card space-y-3 p-5">
         <div className="flex flex-wrap items-center gap-4">

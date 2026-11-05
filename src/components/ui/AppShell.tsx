@@ -90,6 +90,7 @@ export const MENU: Group[] = [
       { href: "/settings/features", label: "機能の ON/OFF" },
       { href: "/settings/staff", label: "スタッフの登録" },
       { href: "/settings/backup", label: "バックアップ" },
+      { href: "/settings/auto-print", label: "自動印刷" },
       { href: "/settings/line", label: "LINE（スタッフ）" },
       { href: "/settings/demo", label: "デモ" },
     ],
