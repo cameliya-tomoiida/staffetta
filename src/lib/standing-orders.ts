@@ -45,6 +45,11 @@ export interface StandingOptions {
   customerId?: string;
   /** 定期注文の表（無ければ今のマスタ） */
   rows?: StandingOrderMaster[];
+  /**
+   * この日より前の納品日は作らない（YYYY-MM-DD）。「今週分を作る」では あした（todayJst(1)）を渡す。
+   * 週の途中で押したときに、もう過ぎた日や今日の分を作らないため
+   */
+  notBefore?: string;
 }
 
 /** 定期注文の注文 ID（得意先 × 納品日で1件） */
@@ -65,6 +70,7 @@ export function generateStandingOrders(weekStart: string, opts: StandingOptions 
 
   for (let i = 0; i < days; i++) {
     const date = addDays(weekStart, i);
+    if (opts.notBefore && date < opts.notBefore) continue;
     const wd = weekdayOf(date);
     const today = rows.filter((r) => r.weekday === wd && (!r.from || r.from <= date) && (!r.to || date <= r.to));
     const byCustomer = new Map<string, StandingOrderMaster[]>();
@@ -101,7 +107,7 @@ export function generateStandingOrders(weekStart: string, opts: StandingOptions 
           confidence: 1,
           read: {
             writtenName: findProduct(r.productId)!.name, quantity: r.quantity, unitWritten: r.unit, piecesPerUnit: r.piecesPerUnit,
-            productId: r.productId, confidence: 1, attention: "定期注文から作成。変更・お休みの連絡がないか確かめてください",
+            productId: r.productId, confidence: 1, attention: "定期注文から作成（変更やお休みの連絡がないか確かめてください）",
           },
           edits: [],
           ...(r.note ? { note: r.note } : {}),
