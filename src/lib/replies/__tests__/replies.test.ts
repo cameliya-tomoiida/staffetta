@@ -38,7 +38,7 @@ describe("受注の確認返信", () => {
     expect(readFileSync(outputPath(r.id, r.fileName)).subarray(0, 4).toString()).toBe("%PDF");
     expect(getReply("RP-T-R1")?.status).toBe("draft");
 
-    const c = buildReply(order("T-R1"), "2026-11-01T09:00:00+09:00");
+    const c = buildReply(order("T-R1"), "2026-11-01T09:00:00+09:00", { otherOrders: [] });
     expect(c.lines.map((l) => l.status)).toEqual(["ok", "changed", "late"]);
     expect(c.lines[1].change).toBe("数 30 → 25");
     expect(c.lines[2].reason).toMatch(/締め/);

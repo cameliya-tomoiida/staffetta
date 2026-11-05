@@ -40,6 +40,8 @@ export interface StoredReply {
   late: number;
   changed: number;
   altDate?: string;
+  /** 社内向けのメモ（前の日に作っておけば受けられる、など。返事には書いていない） */
+  memo?: string[];
 }
 
 const SQL = `CREATE TABLE IF NOT EXISTS order_replies (id TEXT PRIMARY KEY, order_id TEXT NOT NULL, json TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);`;
@@ -121,7 +123,7 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
   // 受けられない品と代わりの日は③の suggestAlternatives（締め・納品しない曜日・ラインの上限）
   const now = nowIso();
   const alt = suggestAlternatives(order, now, { masters, otherOrders: (await readDb()).orders });
-  const content = withMasters(masters, () => buildReply(order, now, undefined, alt));
+  const content = withMasters(masters, () => buildReply(order, now, { alt }));
   const fileName = await writeFiles(id, content);
   const r: StoredReply = {
     id, orderId: order.id, customerId: order.customerId, customerName: content.customerName, kind: content.kind, to: content.to,
@@ -129,6 +131,7 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
     late: content.lines.filter((l) => l.status === "late").length,
     changed: content.lines.filter((l) => l.status === "changed" || l.status === "removed").length,
     ...(content.altDate ? { altDate: content.altDate } : {}),
+    ...(content.memo.length ? { memo: content.memo } : {}),
   };
   save(r);
   return r;

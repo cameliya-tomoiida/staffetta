@@ -112,6 +112,7 @@ export function OutboundClient({ records, dates, replies = [] }: { records: View
                 {x.late > 0 && <b className="text-alert-ink"> ／ 間に合わない品 {x.late}{x.altDate && `（${fmtDate(x.altDate)}なら可）`}</b>}
                 {x.status === "sent" && <> ／ 送信済み {x.sentAt && fmtDateTime(x.sentAt)}（{x.sentBy}）</>}
               </div>
+              {x.memo?.map((m) => <div key={m} className="text-sm font-bold text-review-ink">社内メモ（返事には書いていません）：{m}</div>)}
             </div>
             <a className={buttonClass("ghost", "md", "text-sm")} href={file(x.id, x.fileName)} target="_blank" rel="noreferrer">{x.kind === "fax" ? "返信 FAX（PDF）" : "返信メール（下書き）"}</a>
             {x.status === "draft" && <Button variant="ok" disabled={busy || !who} onClick={() => act({ action: "reply_sent", replyId: x.id }, "送信済みにしました")}>送った</Button>}
