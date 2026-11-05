@@ -506,15 +506,16 @@ function MakeTable({ bs, lang, t, name, unitOf, cards }: { bs: DoughBatchPlan[];
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("make_list")}</div>
       {bs.map((b) => (
         <div key={b.key} className="border-b border-rule-strong last:border-b-0">
-          <div className="flex flex-wrap items-end justify-between gap-2 bg-cream px-4 py-2">
+          {/* 生地の名前の行と、量（生地・粉・ミキサー）の行を分ける。どの生地も同じ並びで読めるように */}
+          <div className="space-y-1 bg-cream px-4 py-2">
             <div>
               <span className="text-xs text-ink-soft">{t("dough")}</span>
               {(() => {
                 const c = cards.find((x) => x.id === b.doughId);
                 return c ? (
-                  <DoughDetailButton card={c} className="block">
+                  <DoughDetailButton card={c} className="flex flex-wrap items-baseline gap-x-2">
                     <Name n={name(b.name)} lang={lang} big />
-                    <span className="ml-1 text-sm font-bold text-crust-700 print:hidden">レシピ ›</span>
+                    <span className="text-sm font-bold text-crust-700 print:hidden">レシピ ›</span>
                   </DoughDetailButton>
                 ) : (
                   <Name n={name(b.name)} lang={lang} big />

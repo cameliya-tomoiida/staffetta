@@ -135,9 +135,9 @@ main a:not([class]),
   }
 }
 
-/* FAX の確認画面の行（スマホ・タブレット。1024 でも右の欄は狭い）: 表のままだと品名と理由が数文字ずつ折れるので、1行を小さなカードにする。
+/* FAX の確認画面の行（スマホ・タブレット・1280 の横並び。右の欄は狭い）: 表のままだと品名と理由が数文字ずつ折れるので、1行を小さなカードにする。
    1段目＝FAX の品名と理由（横いっぱい）、2段目＝商品｜数量｜個数、3段目＝消す など */
-@media (max-width: 1279px) {
+@media (max-width: 1535px) {
   table.fax-rows,
   table.fax-rows tbody { display: block; }
   table.fax-rows thead { display: none; }
