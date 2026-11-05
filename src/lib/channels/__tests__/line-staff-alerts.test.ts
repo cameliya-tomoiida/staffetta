@@ -62,7 +62,7 @@ describe("スタッフの LINE へのアラート", () => {
     expect(r.sent).toEqual([{ key: danger.key, to: KOIDE, name: "工場長 こいで", mode: "demo" }]);
     const st = await import("@/lib/channels/line/state");
     const msg = (await st.readLineState()).outbox.filter((m) => m.to === KOIDE).at(-1)!;
-    expect(msg.text).toBe("【受発注ハブ】材料が足りなくなります：強力粉（11/7）。発注書の下書きができています\nhttp://192.168.0.10:3100/purchase");
+    expect(msg.text).toBe("【STAFFETTA】材料が足りなくなります：強力粉（11/7）。発注書の下書きができています\nhttp://192.168.0.10:3100/purchase");
     const again = await s.sendAlertsToStaff([danger]);
     expect(again.sent).toHaveLength(0);
     expect(again.skipped[0].why).toBe("今日はもう送った");

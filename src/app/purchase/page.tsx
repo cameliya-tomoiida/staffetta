@@ -15,7 +15,7 @@ import { PurchaseClient, type PoView } from "./PurchaseClient";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { withMasters } from "@/lib/catalog";
 
-export const metadata = { title: "発注書｜受発注ハブ" };
+export const metadata = { title: "発注書｜STAFFETTA" };
 
 const round = (n: number) => Math.round(n * 10) / 10;
 

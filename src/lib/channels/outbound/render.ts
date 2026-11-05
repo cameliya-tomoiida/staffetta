@@ -125,7 +125,7 @@ export function purchasePdf(po: PoLike): Promise<Buffer> {
     },
     notes: ["ご不明な点は上記までご連絡ください。", ...strs(po.notes).map((n) => `※${n}`)],
     footer: [
-      `承認: ${po.approvedBy ?? "（未承認）"}　この発注書は受発注ハブで作成し、担当者の承認後に送付しています。`,
+      `承認: ${po.approvedBy ?? "（未承認）"}　この発注書はSTAFFETTAで作成し、担当者の承認後に送付しています。`,
     ],
   });
 }

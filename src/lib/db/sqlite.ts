@@ -1,4 +1,4 @@
-// 受発注ハブの保存先（SQLite）。Node 24 標準の node:sqlite を使う（追加パッケージなし）。
+// STAFFETTAの保存先（SQLite）。Node 24 標準の node:sqlite を使う（追加パッケージなし）。
 //
 // 置き場所: data/hub.sqlite（git には入れない）。HUB_DB_PATH で変えられる（テスト用）。
 // 使い方（ほかの担当も同じ）:

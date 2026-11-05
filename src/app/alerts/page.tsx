@@ -9,7 +9,7 @@ import { lastTick } from "@/lib/scheduler";
 import { isOn } from "@/lib/settings/features";
 import { AlertsClient } from "./AlertsClient";
 
-export const metadata = { title: "お知らせ｜受発注ハブ" };
+export const metadata = { title: "お知らせ｜STAFFETTA" };
 
 export default async function AlertsPage() {
   await connection();

@@ -62,7 +62,7 @@ export interface ImportReport {
 export async function importAll(data: unknown, who: string): Promise<ImportReport> {
   const b = data as Backup;
   if (!b || b.app !== "juhacchu-hub" || b.version !== 1 || typeof b.tables !== "object") {
-    throw new Error("受発注ハブのバックアップファイルではありません");
+    throw new Error("STAFFETTA（受発注ハブ）のバックアップファイルではありません");
   }
   const db = getDb();
   const existing = new Set(tableNames());

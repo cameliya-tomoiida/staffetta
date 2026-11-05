@@ -94,7 +94,7 @@ export async function createDraft(input: {
       from: [HUB_SENDER.name, `TEL ${HUB_SENDER.tel}`, `FAX ${HUB_SENDER.fax}`],
       lead: input.body,
       table: input.table ?? { columns: [{ label: "", width: 515 }], rows: [] },
-      footer: ["この連絡は受発注ハブで作った下書きを、担当者が確かめて送っています。"],
+      footer: ["この連絡はSTAFFETTAで作った下書きを、担当者が確かめて送っています。"],
     });
   }
   const p = outputPath(input.id, fileName);

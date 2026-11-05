@@ -101,7 +101,7 @@ async function writeFiles(id: string, c: ReplyContent): Promise<string> {
         ]),
       },
       notes: t.notes,
-      footer: ["この返信は受発注ハブで作った下書きを、担当者が確かめて送っています。"],
+      footer: ["この返信はSTAFFETTAで作った下書きを、担当者が確かめて送っています。"],
     });
   } else {
     fileName = `受付のご連絡_${c.customerId}_${c.deliveryDate}.eml`;

@@ -81,7 +81,7 @@ export const isQuietHours = (ms = nowMs()) => {
 
 
 /** 送る文（短く） */
-export const staffAlertText = (a: StaffAlert) => `【受発注ハブ】${a.title}${a.action ? `。${a.action}` : ""}\n${staffLink(a.href)}`;
+export const staffAlertText = (a: StaffAlert) => `【STAFFETTA】${a.title}${a.action ? `。${a.action}` : ""}\n${staffLink(a.href)}`;
 
 export interface StaffAlertResult {
   sent: { key: string; to: string; name: string; mode: "live" | "demo" }[];

@@ -6,7 +6,7 @@ import { FACTORY } from "@/data/master";
 import { AppShell } from "@/components/ui/AppShell";
 
 export const metadata: Metadata = {
-  title: "受発注ハブ",
+  title: "STAFFETTA",
   description: "FAX・電話の注文から、製造計画と材料の発注までをつなぐ中小パン工場向けのしくみ",
 };
 

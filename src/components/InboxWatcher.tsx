@@ -14,7 +14,7 @@ export function InboxWatcher() {
       try {
         const s = (await (await fetch("/api/fax/status", { cache: "no-store" })).json()) as { version: string; count: number; waiting: number };
         if (!alive) return;
-        document.title = s.waiting > 0 ? `(${s.waiting}) 受発注ハブ` : "受発注ハブ";
+        document.title = s.waiting > 0 ? `(${s.waiting}) STAFFETTA` : "STAFFETTA";
         const prev = last.current;
         last.current = { version: s.version, count: s.count };
         if (!prev || prev.version === s.version) return;

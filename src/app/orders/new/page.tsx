@@ -4,7 +4,7 @@ import { allProducts } from "@/lib/catalog";
 import { readDb } from "@/lib/store";
 import { PhoneOrder } from "./PhoneOrder";
 
-export const metadata = { title: "電話・ドライバーの注文を入れる｜受発注ハブ" };
+export const metadata = { title: "電話・ドライバーの注文を入れる｜STAFFETTA" };
 
 // 電話・ドライバーの聞き取りの注文を、選ぶ・＋−・テンキーだけで入れる（②）。入れた注文は「要確認」
 export default async function NewPhoneOrderPage() {

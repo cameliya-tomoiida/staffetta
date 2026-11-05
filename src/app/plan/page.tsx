@@ -26,7 +26,7 @@ import { loadMasters } from "@/lib/masters/seed-db";
 import { doughCards, type DoughCard } from "@/components/recipe/cards";
 import { DoughDetailButton } from "@/components/recipe/DoughCards";
 
-export const metadata = { title: "製造計画・工程表｜受発注ハブ" };
+export const metadata = { title: "製造計画・工程表｜STAFFETTA" };
 
 /** 工程の色（落ち着いた色。隣どうしが見分けられるように） */
 const stepColor: Record<ProcessKey, string> = {

@@ -8,7 +8,7 @@ import { nowIso } from "@/lib/clock";
 import { withMasters } from "@/lib/catalog";
 import { loadMasters } from "@/lib/masters/seed-db";
 
-export const metadata = { title: "受注一覧｜受発注ハブ" };
+export const metadata = { title: "受注一覧｜STAFFETTA" };
 
 export default async function OrdersPage(props: PageProps<"/orders">) {
   const q = await props.searchParams;

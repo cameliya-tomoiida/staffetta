@@ -35,7 +35,7 @@ const M = 40;
 /** 枠線付きの表がある A4 縦の書類を1つ作る（行が多ければ改ページ） */
 export function makeSimplePdf(doc: SimpleDoc): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const pdf = new PDFDocument({ size: "A4", margin: M, info: { Title: doc.title, Creator: "受発注ハブ（デモ）" } });
+    const pdf = new PDFDocument({ size: "A4", margin: M, info: { Title: doc.title, Creator: "STAFFETTA（デモ）" } });
     const chunks: Buffer[] = [];
     pdf.on("data", (c: Buffer) => chunks.push(c));
     pdf.on("end", () => resolve(Buffer.concat(chunks)));

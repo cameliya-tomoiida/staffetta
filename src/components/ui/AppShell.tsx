@@ -96,9 +96,9 @@ const KEY = "hub.menu.folded";
 function Brand({ factory }: { factory: string }) {
   return (
     <Link href="/" className="flex shrink-0 items-center gap-2.5">
-      <span className="grid h-10 w-10 place-items-center rounded-md border-2 border-crust-600 text-lg font-black text-crust-600">受</span>
+      <span className="grid h-10 w-10 place-items-center rounded-md border-2 border-crust-600 text-lg font-black text-crust-600">S</span>
       <span className="leading-tight">
-        <span className="block text-lg font-black tracking-wider text-ink">受発注ハブ</span>
+        <span className="block text-lg font-black tracking-wider text-ink">STAFFETTA</span>
         <span className="block text-xs text-ink-faint">{factory}</span>
       </span>
     </Link>
