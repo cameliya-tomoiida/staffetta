@@ -12,6 +12,7 @@ import { addCustomer, getCustomerSettings, syncLineUserIds } from "./customers";
 import { checkLeadTime, deliveryDayProblem, type LeadTimeCheck } from "@/lib/leadtime";
 import { suggestAlternatives } from "@/lib/alternatives";
 import { addDays } from "@/lib/purchase";
+import { isOn } from "@/lib/settings/features";
 
 // LINEから来た注文を、共通の型の Order（channel: "line"、status: "needs_review"）にして store.ts に保存する。
 
@@ -31,6 +32,8 @@ const isLineOrderOf = (o: Order, userId: string) =>
 /** トークで届いた文章を Claude で読み取り、納品日ごとに「要確認」の注文を作る。同じメッセージは二重に作らない */
 export async function ingestTalkMessage(input: { messageId: string; userId: string; text: string; receivedAt: string }) {
   const idBase = `L${input.messageId}`;
+  // 「LINE 注文」を使わない設定なら、注文を作らない（①の機能の ON/OFF）
+  if (!isOn("line_orders")) return { duplicated: false, disabled: true as const, orders: [] as Order[] };
   const existing = await readDb();
   if (existing.orders.some((o) => o.id === idBase || o.id.startsWith(`${idBase}-`))) return { duplicated: true };
 
@@ -231,6 +234,7 @@ export interface LiffOrderInput {
 
 /** LIFFの画面から来た注文。フォームなので読み取りの迷いはないが、人の確認を通すため「要確認」で入れる */
 export async function createLiffOrder(input: LiffOrderInput) {
+  if (!isOn("line_orders")) throw new Error("いまは LINE での注文を受け付けていません。お電話でご注文ください");
   const items = input.items.filter((i) => i.quantity > 0 && productById(i.productId));
   if (!items.length) throw new Error("数が入っていません");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate) || input.deliveryDate <= todayJst()) throw new Error("納品日を選んでください");

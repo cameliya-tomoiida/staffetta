@@ -1,13 +1,12 @@
 "use client";
 // 大事なアラートをスタッフの LINE に送る設定（④）。お客さんには送らない。
 import { useState, useTransition } from "react";
-import { addStaffLineAction, removeStaffLineAction, setStaffAlertAction } from "@/lib/channels/line/actions";
+import { addStaffLineAction, removeStaffLineAction } from "@/lib/channels/line/actions";
 import type { StaffLine } from "@/lib/channels/line/staff-alerts";
 
 const WHO = "事務"; // ログインの仕組みができたら、その人の名前にする
 
-export function StaffAlertPanel({ enabled: initial, staff, candidates }: { enabled: boolean; staff: StaffLine[]; candidates: { userId: string; label: string }[] }) {
-  const [enabled, setEnabled] = useState(initial);
+export function StaffAlertPanel({ staff, candidates }: { staff: StaffLine[]; candidates: { userId: string; label: string }[] }) {
   const [busy, start] = useTransition();
   const [userId, setUserId] = useState("");
   const [name, setName] = useState("");
@@ -26,25 +25,11 @@ export function StaffAlertPanel({ enabled: initial, staff, candidates }: { enabl
 
   return (
     <section className="space-y-4 rounded-lg border border-rule bg-sheet p-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-black">大事なお知らせを、スタッフの LINE に送る</h2>
-          <p className="mt-1 text-ink-soft">
-            {enabled
-              ? "大事なお知らせ（赤）と、その人に回されたお知らせを、下のスタッフの LINE に送ります。同じお知らせは1日1回まで。夜（22時〜6時）は送りません。お客さんには送りません。"
-              : "スタッフの LINE には送りません。お知らせはアプリの中だけに出ます。"}
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          disabled={busy}
-          onClick={() => run(async () => setEnabled((await setStaffAlertAction(!enabled, WHO)).enabled))}
-          className={`min-h-12 min-w-28 rounded-lg border-2 px-4 text-lg font-black ${enabled ? "border-ok-line bg-ok-bg text-ok-ink" : "border-rule-strong bg-off-bg text-off-ink"}`}
-        >
-          {enabled ? "送る" : "送らない"}
-        </button>
+      <div>
+        <h2 className="text-lg font-black">スタッフの LINE</h2>
+        <p className="mt-1 text-ink-soft">
+          ここに登録したスタッフだけが、大事なお知らせを LINE で受け取れます。工場の外から「LINE でログイン」してアプリを開けるのも、ここに登録した人だけです。お客さん（お店にひも付いた LINE の人）は登録できません。
+        </p>
       </div>
 
       <div>

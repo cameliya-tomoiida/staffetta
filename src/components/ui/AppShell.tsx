@@ -83,7 +83,7 @@ export const MENU: Group[] = [
     items: [
       { href: "/settings/fax", label: "FAX の自動確定" },
       { href: "/settings/backup", label: "バックアップ" },
-      { href: "/settings/line", label: "LINE の自動" },
+      { href: "/settings/line", label: "LINE（スタッフ）" },
       { href: "/settings/demo", label: "デモ" },
     ],
   },

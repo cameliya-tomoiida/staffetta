@@ -150,3 +150,22 @@ describe("D2 確定の連絡の自動送信と、取り消し", () => {
     expect(back.edits.at(-1)).toMatchObject({ who: "事務 たなか", from: "自動で確定" });
   });
 });
+
+describe("機能の ON/OFF（①の一覧）", () => {
+  it("「LINE 注文」を使わないにすると、注文フォームは受けず、トークからも注文を作らない", async () => {
+    const { setFlag } = await import("@/lib/settings/features");
+    setFlag("line_orders", false, "試験");
+    try {
+      const o = await import("@/lib/channels/line/orders");
+      await expect(o.createLiffOrder({ userId: KOTORI, deliveryDate: "2026-11-09", items: [{ productId: "P07", quantity: 1 }] })).rejects.toThrow(/受け付けていません/);
+      nextRead = talk("2026-11-09", [line("バターロール", "P01", 3, "個")]);
+      const r = await o.ingestTalkMessage({ messageId: `off${++n}`, userId: KOTORI, text: "（見本）", receivedAt: "2026-11-05T02:30:00.000Z" });
+      expect(r.orders).toHaveLength(0);
+      // 自動確定・自動送信も OFF 扱い
+      const a = await import("@/lib/channels/line/auto");
+      expect(a.getLineAutoSettings()).toEqual({ autoConfirm: false, autoNotify: false });
+    } finally {
+      setFlag("line_orders", true, "試験");
+    }
+  });
+});
