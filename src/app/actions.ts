@@ -239,6 +239,7 @@ export async function confirmChangeAction(input: {
   /** 元の注文が見つからなかった行（新しい注文として入れる） */
   additions: { deliveryDate: string; productId: string; quantity: number; piecesPerUnit: number; writtenName: string }[];
 }) {
+  if (!customers.some((c) => c.id === input.customerId)) throw new Error("お店（得意先）と商品を決めてから確定してください");
   await updateDb((db) => {
     const fax = db.faxes.find((f) => f.id === input.faxId);
     if (!fax?.read) throw new Error("FAXが見つかりません");

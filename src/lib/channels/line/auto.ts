@@ -1,4 +1,5 @@
 import "server-only";
+import { confirmBlocker } from "@/lib/confirm-guard";
 // LINE の注文の自動確定（A5・A6）と、確定の連絡の自動送信（D2）。担当者の方針（11/5）「AI が迷わなかったものは人を待たずに確定してよい」。
 // AI は値を書き換えない。確定するかどうかを決めるだけ。迷った行・締めに通らない行が1つでもあれば、今までどおり「要確認」で人が見る。
 // 自動で確定・送信したものは、確定した人＝「自動（LINE・迷いなし）」と、source.extra に札（autoConfirmed / lineNotifiedBy=自動）を残す。取り消せる（⑤の undoAutoConfirm）。
@@ -79,6 +80,12 @@ export async function autoConfirmLineOrders(orderIds: string[], opts: { dictHit?
       const o = db.orders.find((x) => x.id === id);
       if (!o || o.source.channel !== "line") continue;
       const r = autoConfirmCheck(o, opts);
+      // 確定の直前の守り（⑤ confirm-guard。得意先・商品が空なら確定しない）
+      const blocked = confirmBlocker(o);
+      if (blocked && r.ok) {
+        r.ok = false;
+        r.reasons.push(blocked);
+      }
       if (!s.autoConfirm || !r.ok) {
         if (!r.ok) o.source.extra = { ...o.source.extra, autoHold: r.reasons.slice(0, 5).join("／") };
         continue;
