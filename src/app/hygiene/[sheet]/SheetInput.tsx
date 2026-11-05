@@ -122,6 +122,9 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
   const set = (date: string, k: keyof TempEntry, v: TempEntry[keyof TempEntry]) =>
     update((r) => ({ ...r, temps: { ...r.temps, [date]: { ...r.temps?.[date], [k]: v, ...(who && !r.temps?.[date]?.who ? { who } : {}) } } }));
   const todayRow = useRef<HTMLTableRowElement>(null);
+  // スマホ: はじめは今日（無ければ月の最後の日）だけ出す。「ほかの日も出す」で全部（⑧）
+  const [allDays, setAllDays] = useState(false);
+  const focus = run.some((d) => d.date === today) ? today : run.at(-1)?.date;
   useEffect(() => {
     // 新しい Chrome は scrollIntoView が Promise を返すので、返り値を effect の後片付けにしない
     todayRow.current?.scrollIntoView({ block: "center" });
@@ -133,7 +136,7 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
         {t.set != null ? `設定 ${t.set}${t.unit}・` : ""}管理範囲 {range}（外れたら赤。異常時の措置を書く）
       </h2>
       <div className="overflow-x-auto">
-        <table className="m-keep w-full min-w-[900px] table-fixed border-collapse">
+        <table className="w-full min-w-[900px] table-fixed border-collapse">
           <thead>
             <tr>
               <th className={`${TH} w-32`}>日付</th>
@@ -166,7 +169,7 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
               };
               const bad = [e.am, e.pm].some((v) => outOfRange(t, v));
               return (
-                <tr key={d.date} ref={isToday ? todayRow : undefined} className={isToday ? "bg-crust-50" : ""}>
+                <tr key={d.date} ref={isToday ? todayRow : undefined} className={isToday ? "bg-crust-50" : ""} data-m-hide={!allDays && d.date !== focus ? "" : undefined}>
                   <th className={`${TH} ${isToday ? "bg-crust-50 text-crust-700" : ""}`}>
                     {d.d}日（{WD[d.weekday]}）{isToday && <span className="block text-base">きょう</span>}
                   </th>
@@ -186,6 +189,10 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
           </tbody>
         </table>
       </div>
+      <button type="button" className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-rule-strong bg-sheet text-[17px] font-bold md:hidden" aria-expanded={allDays} onClick={() => setAllDays((x) => !x)}>
+        {allDays ? "今日だけにする" : `ほかの日も出す（${run.length}日）`}
+        <svg viewBox="0 0 24 24" className={`h-5 w-5 transition-transform ${allDays ? "-rotate-90" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 5 7 7-7 7" /></svg>
+      </button>
     </section>
   );
 }
@@ -349,7 +356,7 @@ function LogInput({ def, rec, update, who, today, disabled }: { def: SheetDef; r
       </div>
 
       <div className="overflow-x-auto">
-        <table className="m-keep w-full min-w-[900px] border-collapse text-lg">
+        <table className="w-full min-w-[900px] border-collapse text-lg">
           <thead>
             <tr>
               {cols.map((c) => (
@@ -440,7 +447,7 @@ function ItemEditor({ def }: { def: SheetDef }) {
         </div>
       </fieldset>
       <div className="mt-4 overflow-x-auto">
-        <table className="m-keep w-full min-w-[900px] border-collapse text-lg">
+        <table className="w-full min-w-[900px] border-collapse text-lg">
           <thead>
             <tr>
               <th className={TH}>名前</th>

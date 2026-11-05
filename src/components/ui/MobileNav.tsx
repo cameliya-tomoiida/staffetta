@@ -92,7 +92,7 @@ export function MobileTopBar({ path, title, ai, user, tabs }: { path: string; ti
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
   return (
-    <div className="no-print sticky top-0 z-30 flex min-h-14 items-center gap-1 border-b border-rule-strong bg-sheet/95 pr-2 pl-1 backdrop-blur md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule-strong bg-sheet pr-2 pl-1 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {root ? (
         // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
         <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="ml-2 h-8 w-8 shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
@@ -114,7 +114,7 @@ export function BottomTabs({ path, tabs, onMenu, menuOpen }: { path: string; tab
   if (typing) return null;
   const cell = "flex min-h-[60px] flex-1 flex-col items-center justify-center gap-0.5 pt-1 text-[13px] leading-tight font-bold";
   return (
-    <nav aria-label="下のタブ" className="no-print fixed inset-x-0 bottom-0 z-30 flex border-t border-rule-strong bg-sheet/97 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav aria-label="下のタブ" className="no-print fixed inset-x-0 bottom-0 z-30 flex border-t border-rule-strong bg-sheet md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       {tabs.map((t) => {
         const on = !menuOpen && isOn(t, path);
         return (
@@ -225,10 +225,26 @@ export function useTableCards() {
   useEffect(() => {
     const label = () => {
       for (const table of document.querySelectorAll<HTMLTableElement>("main table:not(.m-keep)")) {
-        const head = table.tHead?.rows[table.tHead.rows.length - 1];
-        if (!head) continue;
-        const names: string[] = [];
-        for (const th of Array.from(head.cells)) for (let i = 0; i < (th.colSpan || 1); i++) names.push((th.textContent ?? "").replace(/[↕↑↓▲▼⇅]/g, "").trim());
+        const rows = table.tHead ? Array.from(table.tHead.rows) : [];
+        if (!rows.length) continue;
+        // 見出しが2段（まとまり＋項目）でも、列ごとに「いちばん下の見出し」を取る（rowSpan・colSpan を数える）
+        const grid: string[][] = rows.map(() => []);
+        rows.forEach((tr, r) => {
+          let col = 0;
+          for (const th of Array.from(tr.cells)) {
+            while (grid[r][col] !== undefined) col++;
+            const text = (th.textContent ?? "").replace(/[↕↑↓▲▼⇅]/g, "").trim();
+            for (let dr = 0; dr < (th.rowSpan || 1) && r + dr < rows.length; dr++) for (let dc = 0; dc < (th.colSpan || 1); dc++) grid[r + dr][col + dc] = text;
+            col += th.colSpan || 1;
+          }
+        });
+        const width = Math.max(...grid.map((g) => g.length));
+        const names: string[] = Array.from({ length: width }, (_, c) => {
+          const parts = grid.map((g) => g[c]).filter((x): x is string => !!x);
+          const last = parts[parts.length - 1] ?? "";
+          const group = parts.length > 1 && parts[0] !== last ? parts[0] : "";
+          return group && last.length <= 4 ? `${group}・${last}` : last;
+        });
         for (const body of Array.from(table.tBodies)) {
           for (const tr of Array.from(body.rows)) {
             let col = 0;

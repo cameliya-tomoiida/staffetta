@@ -273,3 +273,9 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     background: var(--color-sheet, #fff);
   }
 }
+/* スマホ: data-m-hide の行は出さない（「ほかの日も出す」などで出す） */
+@media screen and (max-width: 767px) {
+  main tr[data-m-hide] {
+    display: none !important;
+  }
+}
