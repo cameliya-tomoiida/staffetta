@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-vi.mock("next/server", () => ({ connection: async () => undefined }));
+// next/server の connection() は真似しない（5分ごとの判定はリクエストの外で動くので、呼んでいたら落ちることを確かめる）
 
 import { preparePlanIfDue } from "../plan-prepare";
 import { listAlerts } from "../db/alerts-store";
