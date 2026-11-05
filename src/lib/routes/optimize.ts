@@ -27,6 +27,17 @@ export interface OptimizeOptions {
   /** 休けい（分）。コースの真ん中で取る */
   breakMinutes: number;
   settings: RouteSettings;
+  /** 帰る時刻の決まり（人ごと。⑦の(29)）。1つにつき1コースを、その時刻までに帰す。空なら決まりなし */
+  backBy?: BackBy[];
+  /** 同じコースに入れる先のまとまり（⑦の(29)）。先の id の組 */
+  together?: string[][];
+}
+
+export interface BackBy {
+  /** "HH:MM" までに工場に帰る */
+  time: string;
+  /** だれのコースか（例: 〇〇さん）。案の名前に出す */
+  label?: string;
 }
 
 export const DEFAULT_OPTIMIZE: Omit<OptimizeOptions, "weekday" | "settings"> = {
@@ -37,6 +48,8 @@ export type OptStop = Stop & { deliveryWeekdays?: number[]; course?: string };
 
 export interface RoutePlan {
   name: string;
+  /** 帰る時刻の決まりがあるコース（⑦の(29)） */
+  backBy?: BackBy;
   ids: string[];
   /** 出発の時刻（分）。見直し案では、間に合ういちばん遅い出発 */
   depart: number;
@@ -62,6 +75,8 @@ export interface OptimizeResult {
   /** 入らなかった先（時間の希望に間に合わない・上限の時間を超える） */
   unassigned: { id: string; name: string; reason: string }[];
   summary: Summary;
+  /** 決まりを守れなかったこと（帰る時刻の決まりなど） */
+  warnings?: string[];
 }
 
 /** その曜日に回る先か（定休日・納品する曜日） */
@@ -135,11 +150,17 @@ function latest(c: Ctx, route: number[]): number | undefined {
 }
 
 /** コースのよさ（小さいほどよい）: 間に合ういちばん遅い出発で回ったときの、出発から帰社まで。だめなら undefined */
-function routeCost(c: Ctx, route: number[]): { cost: number; depart: number } | undefined {
+function routeCost(c: Ctx, route: number[], maxBack?: number): { cost: number; depart: number } | undefined {
   if (!route.length) return { cost: 0, depart: c.earliest };
-  const d = latest(c, route);
+  let d = latest(c, route);
   if (d == null) return undefined;
-  const s = simulate(c, route, d);
+  let s = simulate(c, route, d);
+  if (maxBack != null && s.back > maxBack) {
+    // 帰る時刻の決まり: その分だけ早く出る（いちばん早い出発より前には出ない）
+    d = Math.max(c.earliest, Math.floor((d - (s.back - maxBack)) / 5) * 5);
+    s = simulate(c, route, d);
+    if (s.back > maxBack + 0.01 || s.late > 0.01) return undefined;
+  }
   const work = s.back - d;
   if (work > c.o.maxHours * 60) return undefined;
   // 働く時間 ＋ 走る時間を少し重く（同じ時間なら走らない方）
@@ -147,15 +168,15 @@ function routeCost(c: Ctx, route: number[]): { cost: number; depart: number } | 
 }
 
 /** コースの中の順番を直す（2-opt と 1件の移動） */
-function improveRoute(c: Ctx, route: number[]): number[] {
+function improveRoute(c: Ctx, route: number[], maxBack?: number): number[] {
   let best = route;
-  let bestCost = routeCost(c, route)?.cost ?? Infinity;
+  let bestCost = routeCost(c, route, maxBack)?.cost ?? Infinity;
   for (let round = 0, better = true; better && round < 20; round++) {
     better = false;
     for (let i = 0; i < best.length - 1; i++) {
       for (let k = i + 1; k < best.length; k++) {
         const cand = [...best.slice(0, i), ...best.slice(i, k + 1).reverse(), ...best.slice(k + 1)];
-        const cc = routeCost(c, cand)?.cost;
+        const cc = routeCost(c, cand, maxBack)?.cost;
         if (cc != null && cc < bestCost - 0.01) [best, bestCost, better] = [cand, cc, true];
       }
     }
@@ -165,7 +186,7 @@ function improveRoute(c: Ctx, route: number[]): number[] {
         const cand = [...best];
         const [x] = cand.splice(i, 1);
         cand.splice(j, 0, x);
-        const cc = routeCost(c, cand)?.cost;
+        const cc = routeCost(c, cand, maxBack)?.cost;
         if (cc != null && cc < bestCost - 0.01) [best, bestCost, better] = [cand, cc, true];
       }
     }
@@ -174,12 +195,12 @@ function improveRoute(c: Ctx, route: number[]): number[] {
 }
 
 /** いちばんよい入れ場所（増える分・位置）。入らなければ undefined */
-function bestInsert(c: Ctx, route: number[], v: number): { delta: number; pos: number } | undefined {
-  const base = routeCost(c, route)?.cost ?? 0;
+function bestInsert(c: Ctx, route: number[], v: number, maxBack?: number): { delta: number; pos: number } | undefined {
+  const base = routeCost(c, route, maxBack)?.cost ?? 0;
   let best: { delta: number; pos: number } | undefined;
   for (let p = 0; p <= route.length; p++) {
     const cand = [...route.slice(0, p), v, ...route.slice(p)];
-    const rc = routeCost(c, cand);
+    const rc = routeCost(c, cand, maxBack);
     if (rc && (!best || rc.cost - base < best.delta)) best = { delta: rc.cost - base, pos: p };
   }
   return best;
@@ -191,72 +212,150 @@ function bestInsert(c: Ctx, route: number[], v: number): { delta: number; pos: n
 export function optimizeRoutes(depot: LatLng, stopsIn: Stop[], o: OptimizeOptions): OptimizeResult {
   const stops = stopsIn.filter((s) => s.lat != null && s.lng != null).map((s) => effectiveStop(s, o.deadlineSlack));
   const c = makeCtx(depot, stops, o);
+  const warnings: string[] = [];
   const unassigned: OptimizeResult["unassigned"] = [];
+  const drop = (v: number, reason: string) => unassigned.push({ id: stops[v - 1].id, name: stops[v - 1].name, reason });
+
+  // 同じコースに入れるまとまり（重なるまとまりはつなぐ）。1件だけのまとまりは無いのと同じ
+  const idx = new Map(stops.map((s, i) => [s.id, i + 1]));
+  const groupOf = new Map<number, number[]>();
+  for (const g of o.together ?? []) {
+    const vs = [...new Set(g.map((id) => idx.get(id)).filter((v): v is number => v != null))];
+    if (vs.length < 2) continue;
+    const merged = new Set(vs);
+    for (const v of vs) for (const w of groupOf.get(v) ?? []) merged.add(w);
+    const all = [...merged];
+    for (const v of all) groupOf.set(v, all);
+  }
+
   const pool = new Set<number>();
   for (let v = 1; v <= c.n; v++) {
     // 1件だけでも回れない先は、はじめから外す
-    if (!routeCost(c, [v])) unassigned.push({ id: stops[v - 1].id, name: stops[v - 1].name, reason: reasonAlone(c, v) });
+    if (!routeCost(c, [v])) drop(v, reasonAlone(c, v));
     else pool.add(v);
   }
+  // まとまりの中に外した先があっても、残りはまとめる
+  const unitOf = (v: number) => (groupOf.get(v) ?? [v]).filter((w) => w === v || pool.has(w));
+  /** まとまりを1件ずつ、いちばんよい所に入れる。入らなければ undefined */
+  const insertUnit = (route: number[], vs: number[], maxBack?: number): { route: number[]; delta: number } | undefined => {
+    const base = routeCost(c, route, maxBack)?.cost ?? 0;
+    let r = route;
+    for (const v of vs) {
+      const ins = bestInsert(c, r, v, maxBack);
+      if (!ins) return undefined;
+      r = [...r.slice(0, ins.pos), v, ...r.slice(ins.pos)];
+    }
+    return { route: r, delta: (routeCost(c, r, maxBack)?.cost ?? 0) - base };
+  };
+
+  // 帰る時刻の決まり（早い順）。1つにつき1コース
+  const limits = (o.backBy ?? [])
+    .filter((b) => /^\d{1,2}:\d{2}$/.test(b.time))
+    .map((b) => ({ b, t: toMin(b.time) }))
+    .sort((x, y) => x.t - y.t);
   const maxRoutes = o.courses && o.courses > 0 ? o.courses : Infinity;
   const routes: number[][] = [];
+  const lim: ((typeof limits)[number] | undefined)[] = [];
+  const who = (l: (typeof limits)[number]) => `${l.b.label ? `${l.b.label}の` : ""}${l.b.time}までに帰るコース`;
 
   // 1) 作る
+  let li = 0;
   while (pool.size && routes.length < maxRoutes) {
-    // 種: 締めがいちばん早い先（同じなら工場から遠い先）
-    const seed = [...pool].sort((a, b) => c.to[a] - c.to[b] || c.drive[0][b] - c.drive[0][a])[0];
-    const r = [seed];
-    pool.delete(seed);
+    const limit = limits[li];
+    li++;
+    const maxBack = limit?.t;
+    // 種: 締めがいちばん早い先（同じなら工場から遠い先）。帰る時刻の決まりがあるコースは、その時刻に帰れる先から
+    const seeds = [...pool].sort((a, b) => c.to[a] - c.to[b] || c.drive[0][b] - c.drive[0][a]);
+    let r: number[] | undefined;
+    for (const sv of seeds) {
+      if (!pool.has(sv)) continue;
+      r = insertUnit([], unitOf(sv), maxBack)?.route;
+      if (r) break;
+      if (maxBack == null) {
+        // まとまりがまとめて入らない
+        for (const w of unitOf(sv)) {
+          pool.delete(w);
+          drop(w, "同じコースにする先と、まとめて1コースに入りません（時間の希望か上限の時間）");
+        }
+      }
+    }
+    if (!r) {
+      if (limit) {
+        warnings.push(`${who(limit)}は作れませんでした（その時刻に帰れる先がありません）`);
+        continue;
+      }
+      break;
+    }
+    r.forEach((v) => pool.delete(v));
     for (;;) {
-      let pick: { v: number; pos: number; score: number } | undefined;
+      let pick: { route: number[]; vs: number[]; score: number } | undefined;
+      const seen = new Set<number>();
       for (const v of pool) {
-        const ins = bestInsert(c, r, v);
+        if (seen.has(v)) continue;
+        const vs = unitOf(v);
+        vs.forEach((w) => seen.add(w));
+        const ins = insertUnit(r, vs, maxBack);
         if (!ins) continue;
         // 遠い先を先に入れる（あとで入れにくいから）: 増える分 − 工場からの距離 × 0.3
-        const score = ins.delta - c.drive[0][v] * 0.3;
-        if (!pick || score < pick.score) pick = { v, pos: ins.pos, score };
+        const score = ins.delta - Math.max(...vs.map((w) => c.drive[0][w])) * 0.3;
+        if (!pick || score < pick.score) pick = { route: ins.route, vs, score };
       }
       if (!pick) break;
-      r.splice(pick.pos, 0, pick.v);
-      pool.delete(pick.v);
+      r = pick.route;
+      pick.vs.forEach((w) => pool.delete(w));
     }
     routes.push(r);
+    lim.push(limit);
   }
+  for (const l of limits.slice(li)) warnings.push(`コースの数が足りず、${who(l)}は作れませんでした`);
   // コースの数を決めたとき、入りきらなかった先
-  for (const v of pool) {
+  for (const v of [...pool]) {
+    if (!pool.has(v)) continue;
+    const vs = unitOf(v);
+    vs.forEach((w) => pool.delete(w));
     // どこかに入れられるなら入れる（上の順で入らなかっただけのもの）
-    let best: { ri: number; pos: number; delta: number } | undefined;
+    let best: { ri: number; route: number[]; delta: number } | undefined;
     routes.forEach((r, ri) => {
-      const ins = bestInsert(c, r, v);
+      const ins = insertUnit(r, vs, lim[ri]?.t);
       if (ins && (!best || ins.delta < best.delta)) best = { ri, ...ins };
     });
-    if (best) routes[best.ri].splice(best.pos, 0, v);
-    else unassigned.push({ id: stops[v - 1].id, name: stops[v - 1].name, reason: `${routes.length}コースでは、時間の希望か上限の ${o.maxHours} 時間に収まりません` });
+    if (best) routes[best.ri] = best.route;
+    else for (const w of vs) drop(w, `${routes.length}コースでは、時間の希望か上限の ${o.maxHours} 時間に収まりません`);
   }
 
-  // 2) 減らす（コースの数を決めていないとき）
+  // 2) 減らす（コースの数を決めていないとき。帰る時刻の決まりがあるコースはなくさない）
   if (!o.courses) {
     for (let changed = true; changed && routes.length > 1; ) {
       changed = false;
-      const order = routes.map((r, i) => [r.length, i] as const).sort((a, b) => a[0] - b[0]);
+      const order = routes
+        .map((r, i) => [r.length, i] as const)
+        .filter(([, i]) => !lim[i])
+        .sort((a, b) => a[0] - b[0]);
       for (const [, ri] of order) {
         const others = routes.map((r) => [...r]);
+        const otherLim = [...lim];
         const victims = others.splice(ri, 1)[0];
+        otherLim.splice(ri, 1);
         let ok = true;
+        const moved = new Set<number>();
         for (const v of victims) {
-          let best: { ri: number; pos: number; delta: number } | undefined;
+          if (moved.has(v)) continue;
+          const vs = (groupOf.get(v) ?? [v]).filter((w) => victims.includes(w));
+          vs.forEach((w) => moved.add(w));
+          let best: { ri: number; route: number[]; delta: number } | undefined;
           others.forEach((r, j) => {
-            const ins = bestInsert(c, r, v);
+            const ins = insertUnit(r, vs, otherLim[j]?.t);
             if (ins && (!best || ins.delta < best.delta)) best = { ri: j, ...ins };
           });
           if (!best) {
             ok = false;
             break;
           }
-          others[best.ri].splice(best.pos, 0, v);
+          others[best.ri] = best.route;
         }
         if (ok) {
           routes.splice(0, routes.length, ...others);
+          lim.splice(0, lim.length, ...otherLim);
           changed = true;
           break;
         }
@@ -264,19 +363,20 @@ export function optimizeRoutes(depot: LatLng, stopsIn: Stop[], o: OptimizeOption
     }
   }
 
-  // 3) 直す: 1件を別のコースへ移す ＋ コースの中の順番
-  for (let i = 0; i < routes.length; i++) routes[i] = improveRoute(c, routes[i]);
+  // 3) 直す: 1件を別のコースへ移す ＋ コースの中の順番（まとまりの先は動かさない）
+  for (let i = 0; i < routes.length; i++) routes[i] = improveRoute(c, routes[i], lim[i]?.t);
   for (let round = 0, better = true; better && round < 5; round++) {
     better = false;
     for (let a = 0; a < routes.length; a++) {
       for (const v of [...routes[a]]) {
+        if (groupOf.has(v)) continue;
         const without = routes[a].filter((x) => x !== v);
-        const costA = routeCost(c, routes[a])!.cost;
-        const costA2 = routeCost(c, without)?.cost;
-        if (costA2 == null) continue;
+        const costA = routeCost(c, routes[a], lim[a]?.t)?.cost;
+        const costA2 = routeCost(c, without, lim[a]?.t)?.cost;
+        if (costA == null || costA2 == null) continue;
         for (let b = 0; b < routes.length; b++) {
           if (a === b) continue;
-          const ins = bestInsert(c, routes[b], v);
+          const ins = bestInsert(c, routes[b], v, lim[b]?.t);
           if (ins && costA2 - costA + ins.delta < -0.5) {
             routes[a] = without;
             routes[b].splice(ins.pos, 0, v);
@@ -286,22 +386,21 @@ export function optimizeRoutes(depot: LatLng, stopsIn: Stop[], o: OptimizeOption
         }
       }
     }
-    for (let i = 0; i < routes.length; i++) routes[i] = improveRoute(c, routes[i]);
+    for (let i = 0; i < routes.length; i++) routes[i] = improveRoute(c, routes[i], lim[i]?.t);
   }
 
   const plans: RoutePlan[] = routes
-    .filter((r) => r.length)
-    .map((r) => {
-      const d = latest(c, r) ?? c.earliest;
-      return { r, d };
-    })
+    .map((r, i) => ({ r, l: lim[i] }))
+    .filter(({ r }) => r.length)
+    .map(({ r, l }) => ({ r, l, d: routeCost(c, r, l?.t)?.depart ?? latest(c, r) ?? c.earliest }))
     .sort((x, y) => x.d - y.d)
-    .map(({ r, d }, i) => {
+    .map(({ r, l, d }, i) => {
       const ordered = r.map((v) => stops[v - 1]);
       const timeline = buildTimeline({ departTime: toHHMM(d), serviceMinutes: o.serviceMinutes, breakMinutes: o.breakMinutes }, depot, ordered, { settings: o.settings });
-      return { name: `案${i + 1}`, ids: ordered.map((s) => s.id), depart: d, latestDepart: d, timeline };
+      const name = `案${i + 1}${l ? `（${l.b.label ? `${l.b.label}・` : ""}${l.b.time}まで）` : ""}`;
+      return { name, ids: ordered.map((s) => s.id), depart: d, latestDepart: d, timeline, ...(l ? { backBy: l.b } : {}) };
     });
-  return { routes: plans, unassigned, summary: summarize(plans) };
+  return { routes: plans, unassigned, summary: summarize(plans), ...(warnings.length ? { warnings } : {}) };
 }
 
 function reasonAlone(c: Ctx, v: number) {

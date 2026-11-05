@@ -93,3 +93,29 @@ describe("今のコースと比べる", () => {
     expect(toHHMM(r[0].latestDepart!)).toBe("07:45");
   });
 });
+
+describe("⑦(29) 帰る時刻・同じコース", () => {
+  it("帰る時刻の決まりがあるコースは、その時刻までに帰る（決まりの無いコースと分ける）", () => {
+    const stops = [s("N1", 0, 5), s("N2", 0, 6), s("S1", 0, -40), s("S2", 0, -42)].map((x) => ({ ...x, deliveryWindowTo: "09:00" }));
+    const r = optimizeRoutes(depot, stops, o({ earliestDepart: "07:00", backBy: [{ time: "08:00", label: "Aさん" }] }));
+    const a = r.routes.find((x) => x.backBy)!;
+    expect(a.name).toContain("Aさん・08:00まで");
+    expect(a.timeline.back).toBeLessThanOrEqual(toMin("08:00"));
+    expect(r.unassigned).toEqual([]);
+    expect(r.warnings).toBeUndefined();
+  });
+
+  it("どの先でも間に合わない帰る時刻は、知らせて、ほかは今までどおり", () => {
+    const r = optimizeRoutes(depot, [s("F", 60, 0, { deliveryWindowTo: "12:00" })], o({ earliestDepart: "07:00", backBy: [{ time: "07:30" }] }));
+    expect(r.warnings?.[0]).toContain("07:30までに帰るコース");
+    expect(r.routes).toHaveLength(1);
+  });
+
+  it("同じコースにする先は、方向がちがっても同じコースに入る", () => {
+    const stops = [s("E1", 10), s("E2", 12), s("W1", -10), s("W2", -12)].map((x) => ({ ...x, deliveryWindowTo: "07:00" }));
+    const r = optimizeRoutes(depot, stops, o({ earliestDepart: "06:00", together: [["E1", "W1"]] }));
+    const ofE1 = r.routes.find((x) => x.ids.includes("E1"))!;
+    expect(ofE1.ids).toContain("W1");
+    expect(r.routes.flatMap((x) => x.ids).sort()).toEqual(["E1", "E2", "W1", "W2"]);
+  });
+});
