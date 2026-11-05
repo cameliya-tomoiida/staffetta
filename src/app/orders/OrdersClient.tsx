@@ -1,4 +1,5 @@
 "use client";
+import { AutoTag, isAutoConfirmed, UndoAutoButton } from "@/components/ui/AutoConfirmed";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { customerById, customers } from "@/data/master";
@@ -213,6 +214,7 @@ function OrderRow({
         <div className={`min-w-0 ${off ? "text-ink-faint" : ""}`}>
           <div className="flex flex-wrap items-center gap-2">
             <OrderStatusTag status={o.status} />
+            {isAutoConfirmed(o) && <AutoTag by={o.confirmedBy} />}
             {intent && <Tag tone={intent.tone}>{intent.label}</Tag>}
             {x.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
             {/* 締め（③の checkLeadTime）: 見出しに札を出して、何の黄色かを分かるように */}
@@ -321,6 +323,7 @@ function OrderRow({
         </div>
         <div className="flex flex-wrap gap-2 md:flex-col md:items-stretch">
           <SourceButton source={o.source} />
+          {isAutoConfirmed(o) && canConfirm && <UndoAutoButton orderId={o.id} who={who} />}
           {canConfirm && o.status === "needs_review" && o.source.channel !== "fax" && (o.intent ?? "new") === "new" && (
             <ConfirmButton order={o} who={who} custName={custName} />
           )}
