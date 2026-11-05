@@ -4,6 +4,8 @@ import { z } from "zod";
 import { readFaxAction } from "@/app/actions";
 import { receiveFax } from "@/lib/fax-inbound";
 import { nowIso } from "@/lib/clock";
+import { isOn } from "@/lib/settings/features";
+import { ensureStore } from "@/lib/db/hub-store";
 
 // Google Apps Script（fax-inbox@example.com のラベル「FAX受信」）からFAXを受け取る口。
 // 認証: ヘッダー X-Hub-Token と .env.local の FAX_INBOUND_TOKEN が一致すること。
@@ -27,6 +29,9 @@ export async function POST(req: Request) {
   if (!authorized(req)) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ ok: false, error: "bad request" }, { status: 400 });
+  // 「FAX の受信と読み取り」を使わない設定なら受け取らない（GAS はラベルを残し、使うに戻したあとで送り直す）
+  await ensureStore();
+  if (!isOn("fax_inbox")) return Response.json({ ok: false, error: "FAX の受信は「使わない」に設定されています" }, { status: 503 });
   try {
     const via = parsed.data.via ?? "gmail";
     // テスト送信（fax:simulate）は、受け取った時刻をデモの時計（DEMO_NOW）にそろえる。本物の Gmail はメールの日時のまま

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { importAll, type ImportReport } from "@/lib/db/backup";
 import { kvGet } from "@/lib/db/sqlite";
 import { autoConfirmEnabled, setAutoConfirmEnabled } from "@/lib/fax-auto-setting";
+import { flagLog, listFlags, setFlag, type FeatureKey } from "@/lib/settings/features";
 
 export async function importBackupAction(formData: FormData): Promise<{ ok: true; report: ImportReport } | { ok: false; error: string }> {
   const file = formData.get("file");
@@ -35,3 +36,14 @@ export async function setAutoConfirmAction(enabled: boolean, who: string) {
   setAutoConfirmEnabled(enabled, who);
   revalidatePath("/", "layout");
 }
+
+/** 機能の ON/OFF（/settings/features は②の画面。一覧は listFlagsAction、変えるのは setFlagAction） */
+export async function listFlagsAction() {
+  return { flags: listFlags(), log: flagLog(50) };
+}
+
+export async function setFlagAction(key: FeatureKey, on: boolean, who: string) {
+  setFlag(key, on, who);
+  revalidatePath("/", "layout");
+}
+

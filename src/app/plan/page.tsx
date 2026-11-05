@@ -23,6 +23,8 @@ import { DailySheet, EquipmentChart, PlanSheet, StaffSheet, type MakeRow } from 
 import { LangPicker } from "./LangPicker";
 import { cookies } from "next/headers";
 import { loadMasters } from "@/lib/masters/seed-db";
+import { doughCards, type DoughCard } from "@/components/recipe/cards";
+import { DoughDetailButton } from "@/components/recipe/DoughCards";
 
 export const metadata = { title: "製造計画・工程表｜受発注ハブ" };
 
@@ -65,6 +67,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const cost = withMasters(masters, () => dayCostSummary(r));
   const units = new Map(withMasters(masters, () => allProducts()).map((p) => [p.id, p.unit]));
   const unitOf = (productId: string) => units.get(productId) ?? "個";
+  // 「作るもの」の生地名を押すと、その生地のレシピのカード（配合の％と g・この日の量・工程）が開く
+  const cards = doughCards(masters, { date: r.productionDate, doughs: r.production.doughs });
   // 材料の締めに間に合わないもの（③の materialPlan.lateItems）は黄色で別に出す
   const lateMaterials = r.materialPlan.lateItems.map((x) => x.message);
   const warn = splitWarnings(r.warnings.filter((w) => !lateMaterials.includes(w)));
@@ -339,7 +343,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
               ) : (
                 <div className="space-y-4">
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-                    <MakeTable bs={lp.doughs} lang={lang} t={t} name={name} unitOf={unitOf} />
+                    <MakeTable bs={lp.doughs} lang={lang} t={t} name={name} unitOf={unitOf} cards={cards} />
                     <Timetable rows={rs} bs={lp.doughs} lang={lang} t={t} name={name} id={line} />
                   </div>
                   <EquipmentChart
@@ -495,7 +499,7 @@ function Name({ n, lang, big }: { n: ReturnType<NameFn>; lang: Lang; big?: boole
 }
 
 /** 作るもの（生地ごとに、商品と数、生地と粉の量、ミキサー回数） */
-function MakeTable({ bs, lang, t, name, unitOf }: { bs: DoughBatchPlan[]; lang: Lang; t: T; name: NameFn; unitOf: (id: string) => string }) {
+function MakeTable({ bs, lang, t, name, unitOf, cards }: { bs: DoughBatchPlan[]; lang: Lang; t: T; name: NameFn; unitOf: (id: string) => string; cards: DoughCard[] }) {
   return (
     <div className="overflow-hidden rounded-sm border border-rule-strong bg-sheet">
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("make_list")}</div>
@@ -504,7 +508,17 @@ function MakeTable({ bs, lang, t, name, unitOf }: { bs: DoughBatchPlan[]; lang: 
           <div className="flex flex-wrap items-end justify-between gap-2 bg-cream px-4 py-2">
             <div>
               <span className="text-xs text-ink-soft">{t("dough")}</span>
-              <Name n={name(b.name)} lang={lang} big />
+              {(() => {
+                const c = cards.find((x) => x.id === b.doughId);
+                return c ? (
+                  <DoughDetailButton card={c} className="block">
+                    <Name n={name(b.name)} lang={lang} big />
+                    <span className="ml-1 text-sm font-bold text-crust-700 print:hidden">レシピ ›</span>
+                  </DoughDetailButton>
+                ) : (
+                  <Name n={name(b.name)} lang={lang} big />
+                );
+              })()}
               {b.waveName && <WaveTag w={name(b.waveName).text} />}
             </div>
             <div className="flex gap-5">
