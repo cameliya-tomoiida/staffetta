@@ -10,6 +10,7 @@
     "fax:simulate": "node scripts/fax-simulate.mjs",
     "test": "vitest run",
     "demo:reset": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/demo-reset.ts",
+    "i18n:pretranslate": "tsx --conditions=react-server --env-file=.env.local --tsconfig tsconfig.json scripts/pretranslate.ts",
     "check": "next typegen && tsc --noEmit && eslint && vitest run"
   },
   "dependencies": {
