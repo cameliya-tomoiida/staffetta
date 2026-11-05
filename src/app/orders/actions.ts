@@ -3,7 +3,6 @@
 // AIや取り込みが読んだ元の値（read）はそのまま残し、人が直した数量は edits に記録する。
 // 変更・取消の連絡（intent が change / cancel）は元の注文の書き換えが要るので、ここでは確定しない。
 import { revalidatePath } from "next/cache";
-import type { Order } from "@/data/types";
 import { findProduct } from "@/lib/catalog";
 import { customerById } from "@/data/master";
 import { updateDb } from "@/lib/store";
@@ -109,7 +108,7 @@ export async function phoneContextAction(customerId: string): Promise<PhoneConte
   });
 }
 
-/** 電話・ドライバーの注文を保存する（要確認で入る） */
+/** 電話・ドライバーの注文を保存する（要確認で入る）。中身は配送スタッフの画面（/driver）と共通の lib/orders/manual-order */
 export async function addPhoneOrderAction(input: {
   customerId: string;
   deliveryDate: string;
@@ -117,48 +116,8 @@ export async function addPhoneOrderAction(input: {
   channel: "phone" | "driver";
   who: string;
 }): Promise<{ ok: true; orderId: string; late: string[] } | { ok: false; error: string }> {
-  try {
-    const [{ loadMasters }, { withMasters }, { checkLeadTime, deliveryDayProblem }, { nowIso, nowMs }] = await Promise.all([
-      import("@/lib/masters/seed-db"),
-      import("@/lib/catalog"),
-      import("@/lib/leadtime"),
-      import("@/lib/clock"),
-    ]);
-    if (!input.who.trim()) throw new Error("受けた人を選んでください");
-    if (!customerById(input.customerId)) throw new Error("取引先を選んでください");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate)) throw new Error("納品日を選んでください");
-    const items = input.items.filter((i) => i.quantity > 0);
-    if (!items.length) throw new Error("商品の数を入れてください");
-    const masters = await loadMasters();
-    const at = nowIso();
-    const id = `M${nowMs()}`;
-    const order = withMasters(masters, () => {
-      const lines = items.map((i, n) => {
-        const p = findProduct(i.productId);
-        if (!p) throw new Error("商品が見つかりません");
-        return { id: `${id}-${n}`, productId: p.id, quantity: i.quantity, unit: p.unit, piecesPerUnit: 1, pieces: i.quantity, confidence: 1, edits: [] };
-      });
-      const o: Order = {
-        id,
-        intent: "new",
-        customerId: input.customerId,
-        deliveryDate: input.deliveryDate,
-        status: "needs_review",
-        createdAt: at,
-        edits: [],
-        source: { channel: input.channel, refs: [{ kind: "manual", note: `${input.channel === "phone" ? "電話" : "ドライバーの聞き取り"}（受けた人: ${input.who}）` }], receivedAt: at, extra: { takenBy: input.who } },
-        lines,
-      };
-      const closed = deliveryDayProblem(input.customerId, input.deliveryDate);
-      const late = [...(closed ? [closed] : []), ...checkLeadTime(o, at).filter((c) => c.status === "late").map((c) => `${findProduct(c.productId)?.name ?? ""}：${c.reason}`)];
-      return { o, late };
-    });
-    await updateDb((db) => {
-      db.orders.push(order.o);
-    });
-    revalidatePath("/", "layout");
-    return { ok: true, orderId: id, late: order.late };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+  const { createManualOrder } = await import("@/lib/orders/manual-order");
+  const r = await createManualOrder(input);
+  if (r.ok) revalidatePath("/", "layout");
+  return r;
 }
