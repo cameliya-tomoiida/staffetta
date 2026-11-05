@@ -18,7 +18,7 @@ export default async function CardPage(props: PageProps<"/cards/[date]/[key]">) 
     ? `${new Date(card.updatedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} ${card.updatedBy ?? ""}`
     : undefined;
   return (
-    <main className="mx-auto max-w-6xl space-y-4 p-6">
+    <main className="mx-auto max-w-7xl space-y-4 p-6">
       <Link href={`/cards?date=${date}`} className="link text-xl">
         ← {fmtDate(date)} の製品カードの一覧
       </Link>

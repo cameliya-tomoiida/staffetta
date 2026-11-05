@@ -61,12 +61,14 @@ describe("アプリが入れる所", () => {
 describe("目標から外れたら赤", () => {
   it("捏上温度 26±2・焼成温度 目安±10・金属検査×・製品数が注文より少ない・賞味期限切れ", () => {
     const v: CardInput = {
-      kneadTempC: 29, yeastExpiry: "2026-11-01",
+      mixes: [{ kneadTempC: 27 }, { kneadTempC: 29 }], yeastExpiry: "2026-11-01",
       items: { P01: { bakeTempC: 215, metal: "ng", packed: 190 }, P02: { bakeTempC: 205, sensory: "ok", packed: 100 } },
     };
     const f = checkCard(base, v).map((p) => p.field);
-    expect(f).toEqual(["kneadTempC", "yeastExpiry", "items.P01.bakeTempC", "items.P01.metal", "items.P01.packed"]);
-    expect(checkCard(base, { kneadTempC: 27.5, items: {} })).toEqual([]);
+    expect(f).toEqual(["mixes.1.kneadTempC", "yeastExpiry", "items.P01.bakeTempC", "items.P01.metal", "items.P01.packed"]);
+    expect(checkCard(base, { mixes: [{ kneadTempC: 27.5 }], items: {} })).toEqual([]);
+    // 前の形（1回分だけ）も1回目として見る
+    expect(checkCard(base, { kneadTempC: 31, items: {} }).map((p) => p.field)).toEqual(["mixes.0.kneadTempC"]);
     // 0:00 をまたぐ分割はよい。終わりがずっと前ならだめ
     expect(checkCard(base, { divideStart: "23:30", divideEnd: "00:12", items: {} })).toEqual([]);
     expect(checkCard(base, { bakeStart: "06:30", bakeEnd: "06:00", items: {} }).map((x) => x.field)).toEqual(["bakeEnd"]);
@@ -77,7 +79,7 @@ describe("記入の進み具合", () => {
   it("まだ → 記入中 → 記入済み → 責任者が確認した", () => {
     expect(cardStatus(base, undefined)).toBe("empty");
     expect(cardStatus(base, { roomTempC: 20, items: {} })).toBe("writing");
-    const full: CardInput = { kneadTempC: 26, waterTempC: 10, writer: "見本", items: { P01: { packed: 200, metal: "ok" }, P02: { packed: 100, metal: "ok" } } };
+    const full: CardInput = { mixes: [{ kneadTempC: 26, waterTempC: 10 }], writer: "見本", items: { P01: { packed: 200, metal: "ok" }, P02: { packed: 100, metal: "ok" } } };
     expect(cardStatus(base, full)).toBe("done");
     expect(cardStatus(base, { ...full, approvedBy: "責任者" })).toBe("approved");
   });
@@ -93,7 +95,7 @@ describe("保存と責任者の確認（見本の製造計画で）", () => {
     const pid = cards[0].base.items[0].productId;
     vi.stubGlobal("fetch", async () => new Response("{}", { status: 500 }));
     const r = await s.saveCardInput("2026-11-06", key, { kneadTempC: 31, approvedBy: "ずる", items: { [pid]: { packed: 1 } } }, "見本");
-    expect(r.problems.map((p) => p.field)).toContain("kneadTempC");
+    expect(r.problems.map((p) => p.field)).toContain("mixes.0.kneadTempC");
     const c1 = await s.loadCard("2026-11-06", key);
     expect(c1?.input).toMatchObject({ kneadTempC: 31 });
     expect(c1?.input?.approvedBy).toBeUndefined(); // 確認は approveCard だけ

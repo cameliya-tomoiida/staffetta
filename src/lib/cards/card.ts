@@ -48,9 +48,10 @@ export interface CardBase {
   doughId: string;
   doughName: string;
   line: "bread" | "pizza";
-  /** 生地 kg・ミキサーの回数 */
+  /** 生地 kg・ミキサーの回数・1回の量（kg） */
   doughKg: number;
   batches: number;
+  batchKg?: number;
   items: CardItem[];
   /** 工程表の予定（"4:10" / "前日 21:30"） */
   planned: { mix?: string; divideStart?: string; divideEnd?: string; bakeStart?: string; bakeEnd?: string };
@@ -79,8 +80,19 @@ export interface CardItemInput {
   sensory?: Check;
 }
 
+/** ミキサー1回分（同じ生地をまとめてこねる。回ごとに1行） */
+export interface MixInput {
+  waterTempC?: number;
+  /** 捏上時間（"22:38"） */
+  kneadTime?: string;
+  kneadTempC?: number;
+  staff?: string;
+}
+
 /** 現場で入れる所 */
 export interface CardInput {
+  /** ミキサーの回ごと（1回目・2回目…） */
+  mixes?: MixInput[];
   roomTempC?: number;
   roomHumidity?: number;
   writer?: string;
@@ -187,6 +199,7 @@ export function buildCardBase(args: {
     line: dough.line,
     doughKg: dough.doughKg,
     batches: dough.batches,
+    batchKg: dough.batchKg,
     items: dough.items.map((i) => ({ productId: i.productId, name: i.name, gram: i.doughGram, orders: i.pieces, prep: Math.ceil(i.pieces / (1 - loss)) })),
     planned: {
       ...(mix != null ? { mix: fmt(mix) } : {}),
@@ -208,6 +221,15 @@ export function buildCardBase(args: {
   };
 }
 
+/** ミキサーの回ごとの入力（前の形＝1回分だけの kneadTempC などは1回目に読みかえる） */
+export function mixesOf(input: CardInput): MixInput[] {
+  if (input.mixes?.length) return input.mixes;
+  if (input.kneadTempC != null || input.waterTempC != null || input.kneadTime || input.mixStaff) {
+    return [{ waterTempC: input.waterTempC, kneadTime: input.kneadTime, kneadTempC: input.kneadTempC, staff: input.mixStaff }];
+  }
+  return [];
+}
+
 /** 終わりが始めより前か（0:00 をまたぐのはよい。12時間より長くなる並びだけ「前」とみなす） */
 function backwards(from?: string, to?: string) {
   if (!from || !to) return false;
@@ -218,9 +240,11 @@ function backwards(from?: string, to?: string) {
 /** 目標から外れている所（赤にする） */
 export function checkCard(base: CardBase, input: CardInput): Problem[] {
   const p: Problem[] = [];
-  if (input.kneadTempC != null && Math.abs(input.kneadTempC - base.targetKneadC) > KNEAD_TOLERANCE_C) {
-    p.push({ field: "kneadTempC", message: `捏上温度が目標（${base.targetKneadC}℃ ±${KNEAD_TOLERANCE_C}）から外れています` });
-  }
+  mixesOf(input).forEach((m, i) => {
+    if (m.kneadTempC != null && Math.abs(m.kneadTempC - base.targetKneadC) > KNEAD_TOLERANCE_C) {
+      p.push({ field: `mixes.${i}.kneadTempC`, message: `${i + 1}回目の捏上温度が目標（${base.targetKneadC}℃ ±${KNEAD_TOLERANCE_C}）から外れています` });
+    }
+  });
   if (input.yeastExpiry && input.yeastExpiry < base.productionDate) p.push({ field: "yeastExpiry", message: "イーストの賞味期限が過ぎています" });
   if (backwards(input.divideStart, input.divideEnd)) p.push({ field: "divideEnd", message: "分割の終わりが始めより前です" });
   if (backwards(input.bakeStart, input.bakeEnd)) p.push({ field: "bakeEnd", message: "焼成の終わりが始めより前です" });
@@ -242,7 +266,8 @@ export function checkCard(base: CardBase, input: CardInput): Problem[] {
 export function cardStatus(base: CardBase, input?: CardInput): "empty" | "writing" | "done" | "approved" {
   if (!input) return "empty";
   if (input.approvedBy) return "approved";
-  const need = [input.kneadTempC, input.waterTempC, input.writer, ...base.items.flatMap((i) => [input.items[i.productId]?.packed, input.items[i.productId]?.metal || undefined])];
+  const m0 = mixesOf(input)[0] ?? {};
+  const need = [m0.kneadTempC, m0.waterTempC, input.writer, ...base.items.flatMap((i) => [input.items[i.productId]?.packed, input.items[i.productId]?.metal || undefined])];
   if (need.every((v) => v != null && v !== "")) return "done";
   const any = Object.entries(input).some(([k, v]) => k !== "items" && v != null && v !== "") || Object.values(input.items).some((x) => Object.values(x).some((v) => v != null && v !== ""));
   return any ? "writing" : "empty";
