@@ -227,6 +227,7 @@ function costReviewDue(masters: Masters, now: string, opts: AlertOptions): Alert
       `最後に見直したのは ${last.slice(0, 10)}${p.lastCostReviewAt ? "" : "（登録した日）"}です。${md(due)}までに、原価と見積りを見直してください。${p.costReviewOwner ? `担当: ${p.costReviewOwner}` : "担当が決まっていません。"}`,
       [
         { label: "見直しを始める", kind: "start_cost_review", payload: { productId: p.id } },
+        { label: "見直した", kind: "mark_cost_reviewed", payload: { productId: p.id } },
         { label: "担当者にお願いする", kind: "assign", payload: { alertId: `cost_review_due:${p.id}|${last.slice(0, 10)}`, role: "cost_review" } },
         ...(suppliers.length ? [{ label: "必要な資料を仕入先にメールで依頼しますか？", kind: "draft_request_email" as const, payload: { supplierIds: suppliers, productId: p.id, purpose: "cost_review" } }] : []),
       ],

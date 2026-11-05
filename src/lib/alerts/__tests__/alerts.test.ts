@@ -90,7 +90,7 @@ describe("アラートの判定", () => {
     expect(p1.due).toBe("2026-11-20T00:00:00+09:00");
     expect(p2.level).toBe("danger");
     expect(p2.message).toMatch(/担当: 工場長/);
-    expect(p1.actions.map((x) => x.kind)).toEqual(["start_cost_review", "assign", "draft_request_email"]);
+    expect(p1.actions.map((x) => x.kind)).toEqual(["start_cost_review", "mark_cost_reviewed", "assign", "draft_request_email"]);
     expect(a.find((x) => x.relatedIds[0] === "P03")).toBeUndefined();
     expect(a.find((x) => x.level === "info")!.title).toMatch(/見直した日が入っていない商品が \d+件/);
     // 登録日で代わりに見る
