@@ -6,7 +6,7 @@ import { findProduct } from "@/lib/catalog";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
   addDays, buttonClass, fmtNum, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
-  orderIntent, orderStatusRank, PageHeader, Segmented, Tag,
+  orderIntent, orderStatusRank, PageHeader, Segmented, Tag, LinkButton,
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
 import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
@@ -90,6 +90,10 @@ export function OrdersClient({
         <span className="text-ink-soft">
           全 <b className="num text-ink">{orders.length}</b> 件
         </span>
+        {/* 電話・ドライバーの聞き取りは、ここから手で入れる */}
+        <LinkButton href="/orders/new" variant="primary" size="lg">
+          ＋ 電話・ドライバーの注文を入れる
+        </LinkButton>
       </PageHeader>
 
       {reviewAll > 0 && status !== "needs_review" && (
