@@ -163,3 +163,154 @@ main a:not([class]),
   table.fax-rows td:last-child { grid-column: 1 / -1; text-align: right; padding-top: 0; }
 }
 
+
+/* ───────── スマホ（⑧ docs/mobile-rules.md）───────── */
+/* ダブルタップで拡大しない・文字の大きさを勝手に変えない */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+a, button, input, select, textarea, label, summary, [role="button"] {
+  touch-action: manipulation;
+}
+@media (max-width: 767px) {
+  /* iPhone は 16px 未満の入力欄を押すと拡大するので、16px 以上に */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font-size: max(16px, 1em);
+  }
+  /* 画面はふわっと横から入る */
+  .m-enter {
+    animation: m-enter 0.2s ease-out;
+  }
+  .m-sheet {
+    animation: m-sheet 0.22s ease-out;
+  }
+}
+@keyframes m-enter {
+  from { opacity: 0.4; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m-sheet {
+  from { transform: translateY(40px); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m-enter, .m-sheet { animation: none; }
+}
+
+/* スマホ: 表はカードに組み替える（⑧）。見出し（th）の字を各セルの左に出す（data-label は MobileNav の useTableCards が入れる）。
+   表のまま見せたい表（記入の表・工程表など）は class="m-keep"（左の列を止めて横スクロール） */
+@media screen and (max-width: 767px) {
+  main table:not(.m-keep) {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    border: 0 !important;
+  }
+  main table:not(.m-keep) > thead {
+    display: none;
+  }
+  main table:not(.m-keep) > tbody,
+  main table:not(.m-keep) > tfoot {
+    display: block;
+  }
+  main table:not(.m-keep) > tbody > tr,
+  main table:not(.m-keep) > tfoot > tr {
+    display: block;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-rule-strong, #c5cac5);
+    border-radius: 12px;
+    background: var(--color-sheet, #fff);
+  }
+  main table:not(.m-keep) > tbody > tr > td,
+  main table:not(.m-keep) > tbody > tr > th,
+  main table:not(.m-keep) > tfoot > tr > td,
+  main table:not(.m-keep) > tfoot > tr > th {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 4px 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    font-size: 16px;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+  main table:not(.m-keep) td[data-label]::before,
+  main table:not(.m-keep) th[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    width: 6.5em;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-ink-soft, #55503f);
+  }
+  /* 1つ目のセルは名前として大きく（見出しは出さない） */
+  main table:not(.m-keep) > tbody > tr > :first-child {
+    font-size: 18px;
+    font-weight: 900;
+  }
+  main table:not(.m-keep) > tbody > tr > :first-child::before {
+    display: none;
+  }
+  main table:not(.m-keep) td:empty {
+    display: none;
+  }
+  /* 表を包む横スクロールの箱は、そのまま（カードは幅に収まる） */
+  main :has(> table:not(.m-keep)) {
+    min-width: 0 !important;
+  }
+  /* 表のまま見せる表: 左の列を止める */
+  main table.m-keep th:first-child,
+  main table.m-keep td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-sheet, #fff);
+  }
+}
+/* スマホ: data-m-hide の行は出さない（「ほかの日も出す」などで出す） */
+@media screen and (max-width: 767px) {
+  main tr[data-m-hide] {
+    display: none !important;
+  }
+}
+/* スマホ: 押して開く所はボタンに見せる（枠つき＋›。開くと回る）・補足の字を薄くしすぎない（⑧） */
+@media screen and (max-width: 767px) {
+  main details > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 2px solid var(--color-rule-strong, #c9c0b4);
+    border-radius: 12px;
+    background: var(--color-sheet, #fff);
+    font-weight: 700;
+    list-style: none;
+    cursor: pointer;
+  }
+  main details > summary::-webkit-details-marker {
+    display: none;
+  }
+  main details > summary::after {
+    content: "›";
+    margin-left: auto;
+    font-size: 22px;
+    line-height: 1;
+    transition: transform 0.15s;
+  }
+  main details[open] > summary {
+    border-color: var(--color-crust-600, #a33b2a);
+  }
+  main details[open] > summary::after {
+    transform: rotate(90deg);
+  }
+  .text-ink-faint {
+    color: var(--color-ink-soft, #5f5650) !important;
+  }
+}

@@ -84,7 +84,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
       </div>
 
       {/* 上の帯 */}
-      <table className="mt-[1.5mm] w-full table-fixed border-collapse">
+      <table className="m-keep mt-[1.5mm] w-full table-fixed border-collapse">
         <thead>
           <tr>
             {["日付", "天候", "室温", "湿度", "生地", "記入者"].map((h) => (
@@ -106,7 +106,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
 
       {/* 工程の表 ／ ミキサー・イースト */}
       <div className="mt-[2mm] grid grid-cols-[1.25fr_1fr] gap-[3mm]">
-        <table className="w-full table-fixed border-collapse">
+        <table className="m-keep w-full table-fixed border-collapse">
           <colgroup>
             <col className="w-[22mm]" />
             <col className="w-[30mm]" />
@@ -182,7 +182,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
         </table>
 
         <div className="space-y-[2mm]">
-          <table className="w-full table-fixed border-collapse">
+          <table className="m-keep w-full table-fixed border-collapse">
             <thead>
               <tr>
                 <th className={th} colSpan={5}>
@@ -209,7 +209,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
               ))}
             </tbody>
           </table>
-          <table className="w-full table-fixed border-collapse">
+          <table className="m-keep w-full table-fixed border-collapse">
             <thead>
               <tr>
                 <th className={th}>イースト 品名</th>
@@ -242,7 +242,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
       </div>
 
       {/* 製品の表 */}
-      <table className="mt-[2mm] w-full table-fixed border-collapse">
+      <table className="m-keep mt-[2mm] w-full table-fixed border-collapse">
         <colgroup>
           <col className="w-[44mm]" />
           <col className="w-[20mm]" />

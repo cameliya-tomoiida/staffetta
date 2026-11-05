@@ -278,7 +278,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
             </dl>
           </div>
           {/* 担当・確認の印（紙に書く・押す欄） */}
-          <table className="self-start border-collapse text-center text-sm">
+          <table className="m-keep self-start border-collapse text-center text-sm">
             <thead>
               <tr>
                 {["担当", "確認", "工場長"].map((h) => (

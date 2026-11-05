@@ -129,7 +129,7 @@ export function TemplateEditor({ templates, selected, doughs, hasAi }: { templat
             <input className="min-w-0 text-2xl font-bold outline-none focus:bg-crust-50" value={t.name} onChange={(e) => setT({ ...t, name: e.target.value })} aria-label="形の名前" />
             <span className="text-base text-ink-soft">製品カード・A4 横（押すと直せます）</span>
           </div>
-          <table className="w-full table-fixed border-collapse text-base">
+          <table className="m-keep w-full table-fixed border-collapse text-base">
             <tbody>
               <tr>
                 {["日付", "天候", "室温", "湿度", "生地", "記入者"].map((h) => (
@@ -148,7 +148,7 @@ export function TemplateEditor({ templates, selected, doughs, hasAi }: { templat
           </table>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] table-fixed border-collapse text-base">
+            <table className="m-keep w-full min-w-[760px] table-fixed border-collapse text-base">
               <colgroup>
                 <col className="w-[27%]" />
                 <col className="w-[11%]" />
@@ -230,7 +230,7 @@ export function TemplateEditor({ templates, selected, doughs, hasAi }: { templat
 
           {/* 製品の表（ロスの列） */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] table-fixed border-collapse text-sm">
+            <table className="m-keep w-full min-w-[900px] table-fixed border-collapse text-sm">
               <colgroup>
                 <col className="w-[20%]" />
               </colgroup>

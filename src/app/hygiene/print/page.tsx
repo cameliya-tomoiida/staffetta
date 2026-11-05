@@ -74,7 +74,7 @@ function TempSheet({ def, rec, run }: { def: SheetDef; rec: SheetRecord; run: Da
   return (
     <div className="space-y-[3mm]">
       {halves.map((h, hi) => (
-        <table key={hi} className="w-full table-fixed border-collapse text-center">
+        <table key={hi} className="m-keep w-full table-fixed border-collapse text-center">
           <thead>
             <tr>
               <th className={`${th} w-[26mm] text-left`}>日</th>
@@ -158,7 +158,7 @@ function GridSheet({ def, rec, days, run }: { def: SheetDef; rec: SheetRecord; d
   const rowH = many ? "h-[6.3mm]" : items.length > 14 ? "h-[7.5mm]" : items.length > 10 ? "h-[10mm]" : "h-[12mm]";
   return (
     <>
-      <table className="w-full table-fixed border-collapse text-center">
+      <table className="m-keep w-full table-fixed border-collapse text-center">
         <colgroup>
           <col className="w-[44mm]" />
           {def.kind === "clean" ? <col className="w-[16mm]" /> : <col className="w-[12mm]" />}
@@ -234,7 +234,7 @@ function LogSheet({ def, rec }: { def: SheetDef; rec: SheetRecord }) {
     return String(v ?? "");
   };
   return (
-    <table className="w-full table-fixed border-collapse">
+    <table className="m-keep w-full table-fixed border-collapse">
       <colgroup>
         {cols.map((c) => (
           <col key={c.key} style={{ width: `${c.width ?? 10}%` }} />

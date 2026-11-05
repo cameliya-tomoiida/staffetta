@@ -22,6 +22,8 @@ export function AdminTable({
 }) {
   const cols = columns.filter((c) => c.list !== false);
   const [q, setQ] = useState("");
+  // スマホ: はじめは8件まで（さがすか「すべて見る」で全部）（⑧ docs/mobile-rules.md）
+  const [all, setAll] = useState(false);
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
 
   const shown = useMemo(() => {
@@ -79,11 +81,11 @@ export function AdminTable({
             </tr>
           </thead>
           <tbody>
-            {shown.map((r) => {
+            {shown.map((r, i) => {
               const id = String(r[idKey] ?? "");
               const on = selectedId === id;
               return (
-                <tr key={id} className={`border-b border-rule last:border-b-0 ${on ? "bg-crust-50" : "hover:bg-cream"}`}>
+                <tr key={id} className={`border-b border-rule last:border-b-0 ${on ? "bg-crust-50" : "hover:bg-cream"}`} data-m-hide={!all && !q && i >= 8 && !on ? "" : undefined}>
                   {cols.map((c) => (
                     <td key={c.key} className={`px-3 py-2 ${c.type === "number" ? "num text-right whitespace-nowrap" : c.type === "textarea" ? "min-w-48" : "whitespace-nowrap"}`}>
                       {cellText(c, r[c.key])}
@@ -109,6 +111,11 @@ export function AdminTable({
           </tbody>
         </table>
       </div>
+      {!q && shown.length > 8 && (
+        <button type="button" className="mt-2 flex min-h-12 w-full items-center justify-center rounded-xl border-2 border-rule-strong bg-sheet text-[17px] font-bold md:hidden" aria-expanded={all} onClick={() => setAll((x) => !x)}>
+          {all ? "8件だけにする" : `すべて見る（${shown.length}件）`}
+        </button>
+      )}
     </div>
   );
 }

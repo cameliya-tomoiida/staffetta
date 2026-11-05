@@ -55,16 +55,16 @@ export function AiChat() {
       {!open && (
         // 上の行（日付の横）に置く。画面の右下に浮かせると、保存などのボタンに重なるため
         <button type="button" onClick={() => setOpen(true)}
-          className="flex min-h-11 items-center gap-1.5 rounded-full bg-[#8b1a1a] px-4 text-[17px] font-bold text-white hover:bg-[#701414]">
+          className="flex min-h-11 items-center gap-1.5 rounded-full bg-[#8b1a1a] px-4 text-[17px] font-bold whitespace-nowrap text-white hover:bg-[#701414] max-md:min-h-11 max-md:px-3 max-md:text-[16px]">
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M4 5h16v11H9l-5 4Z" />
             <path d="M9 9.5h6M9 12.5h4" />
           </svg>
-          AI に頼む
+          AI<span className="max-md:hidden"> に頼む</span>
         </button>
       )}
       {open && (
-        <div role="dialog" aria-label="AI に頼む" className="fixed right-4 bottom-4 z-50 flex h-[min(680px,calc(100dvh-2rem))] w-[min(460px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border-2 border-rule-strong bg-sheet shadow-2xl">
+        <div role="dialog" aria-label="AI に頼む" className="m-sheet fixed right-4 bottom-4 z-50 flex h-[min(680px,calc(100dvh-2rem))] w-[min(460px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border-2 border-rule-strong bg-sheet shadow-2xl max-md:inset-0 max-md:h-dvh max-md:w-full max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]">
           <div className="flex items-center gap-2 border-b border-rule bg-[#8b1a1a] px-4 py-2 text-white">
             <span className="text-[19px] font-black">AI に頼む</span>
             <span className="text-[15px] opacity-80">頼みごと・使い方</span>
