@@ -81,9 +81,9 @@ export const MENU: Group[] = [
     title: "設定",
     fold: true,
     items: [
-      { href: "/settings/fax", label: "FAX の自動確定" },
+      // 各画面のスイッチ（FAX・LINE・自動化）は「機能の ON/OFF」の各行からリンクで開く
+      { href: "/settings/features", label: "機能の ON/OFF" },
       { href: "/settings/backup", label: "バックアップ" },
-      { href: "/settings/line", label: "LINE の自動" },
       { href: "/settings/demo", label: "デモ" },
     ],
   },
