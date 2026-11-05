@@ -58,7 +58,7 @@ export function StaffLogin({ liffId, next }: { liffId: string; next: string }) {
           </>
         )}
         {state === "error" && <p className="text-[16px] leading-relaxed">{msg}</p>}
-        <p className="text-[13px] text-ink-faint">ログインは12時間つづきます。</p>
+        <p className="text-[16px] text-ink-faint">ログインは12時間つづきます。</p>
       </div>
     </div>
   );

@@ -65,6 +65,17 @@ html {
   font-size: 17px;
 }
 
+/*
+ * 老眼の人でも読めるように（作者の指示 11/5 夜・Codex のデザイン案 02）: 小さい文字の下限を 16px にする。
+ * text-xs・text-sm は、もとの 12.75px・14.9px から 16px・17px に上げる（補足の文も 16px より小さくしない）。
+ */
+@theme {
+  --text-xs: 0.9412rem; /* 16px */
+  --text-xs--line-height: 1.5;
+  --text-sm: 1rem; /* 17px */
+  --text-sm--line-height: 1.55;
+}
+
 body {
   background: var(--color-paper);
   color: var(--color-ink);

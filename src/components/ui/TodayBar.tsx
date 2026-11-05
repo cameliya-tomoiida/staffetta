@@ -1,43 +1,60 @@
 "use client";
-// どの画面でも上に出す「今日やること」。押すとその画面へ行く。
-// 数は /api/today から取る（お客さんの LINE 画面には出さない・取りに行かない）。
+// どの画面でも上に出す「今日の仕事」の帯。押すとその画面へ行く（11/5 夜: Codex のデザイン案 01 で作り直し）。
+// - 6項目を1本の帯に。順番はいつも同じ（急ぎ → 要確認 → FAX → 発注書 → 材料不足 → 注意）。0件でも消さず、灰色で静かに出す
+// - 大きな数字＋アイコン＋短い名前。面を赤くするのは「急ぎ」だけ。要確認は黄色の下線
+// - 合計は出さない（項目の間で重なりがある）。未読の数はお知らせの画面の中に置く（帯の数と混ぜない）
+// - 数は /api/today から取る（お客さんの LINE 画面には出さない・取りに行かない）。取れないときは「—」と「更新できません」
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { TodaySummary } from "@/demo/today";
-import { fmtDate, fmtDateTime } from "./index";
 import { HUB_CHANGED } from "./refresh";
 
-const left = (iso: string, now: number) => {
-  const m = Math.floor((Date.parse(iso) - now) / 60000);
-  if (m < 60) return `あと ${m}分`;
-  const h = Math.floor(m / 60);
-  return h < 24 ? `あと ${h}時間${m % 60 ? `${m % 60}分` : ""}` : `あと ${Math.floor(h / 24)}日`;
-};
+type IconName = "urgent" | "review" | "fax" | "purchase" | "stock" | "warn";
 
-function Chip({ href, tone, label, short, value, sub }: { href: string; tone: "review" | "alert" | "ok" | "plain"; label: string; short?: string; value: React.ReactNode; sub?: React.ReactNode }) {
-  const cls = {
-    review: "border-review-line bg-review-bg text-review-ink",
-    alert: "border-alert-line bg-alert-bg text-alert-ink",
-    ok: "border-ok-line bg-ok-bg text-ok-ink",
-    plain: "border-rule-strong bg-sheet text-ink",
-  }[tone];
+/** 線画のアイコン（24px・線幅2）。必ず文字と一緒に出す */
+function Icon({ name, className }: { name: IconName; className?: string }) {
+  const p = {
+    urgent: <><path d="M12 3 2.5 20h19Z" /><path d="M12 10v4.5M12 17.5v.01" /></>,
+    review: <><rect x="4" y="3.5" width="16" height="17" rx="2" /><path d="m8 12 3 3 5-6" /></>,
+    fax: <><path d="M7 8V3.5h10V8" /><rect x="3.5" y="8" width="17" height="9" rx="2" /><path d="M7 14h10v6.5H7Z" /></>,
+    purchase: <><path d="M6 3.5h9l3 3v14H6Z" /><path d="M9 10h6M9 13.5h6M9 17h4" /></>,
+    stock: <><path d="M4 8.5 12 4l8 4.5v9L12 22l-8-4.5Z" /><path d="M4 8.5 12 13l8-4.5M12 13v9" /></>,
+    warn: <><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></>,
+  }[name];
   return (
-    // スマホでは小さく（帯が画面の3分の1にならないように）。長い名前は短く
-    <Link href={href} className={`flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2 py-0.5 leading-tight sm:min-h-12 sm:py-1 xl:gap-1.5 xl:px-2.5 ${cls}`}>
-      <span className="text-xs font-bold sm:text-sm">
-        {short ? (
-          <>
-            {/* 帯が2段にならないように、とても広い画面（2xl）まで短い名前 */}
-            <span className="2xl:hidden">{short}</span>
-            <span className="hidden 2xl:inline">{label}</span>
-          </>
-        ) : (
-          label
-        )}
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {p}
+    </svg>
+  );
+}
+
+function WorkItem({ href, label, count, unit = "件", urgent = false, review = false, icon, active }: {
+  href: string; label: string; count: number | null; unit?: string; urgent?: boolean; review?: boolean; icon: IconName; active: boolean;
+}) {
+  const zero = count === 0;
+  const tone = urgent && count != null && count > 0
+    ? "bg-[#8b1a1a] text-white hover:bg-[#701414]"
+    : zero || count == null
+      ? "bg-[#f3f4f2] text-[#565c57] hover:bg-[#e8ebe7]"
+      : "bg-sheet text-ink hover:bg-[#faf1f1]";
+  return (
+    <Link
+      href={href}
+      aria-label={`${label} ${count == null ? "取得できません" : `${count}${unit}`}`}
+      aria-current={active ? "page" : undefined}
+      className={`relative flex min-h-[88px] min-w-0 flex-col justify-center border-[#c5cac5] px-3 py-2 focus-visible:outline-3 focus-visible:-outline-offset-[3px] focus-visible:outline-blue-700 xl:px-4 ${tone}`}
+    >
+      <span className="flex items-center gap-1.5 text-[17px] font-bold leading-tight xl:text-[18px]">
+        <Icon name={icon} className="h-6 w-6 shrink-0" />
+        <span className="truncate">{label}</span>
       </span>
-      <span className="num text-lg font-black sm:text-xl">{value}</span>
-      {sub && <span className="hidden text-xs font-bold xl:inline">{sub}</span>}
+      <span className="leading-none">
+        <b className="text-[34px] font-extrabold tabular-nums xl:text-[40px]">{count == null ? "—" : count > 999 ? "999+" : count}</b>
+        <span className="ml-1 text-[17px]">{unit}</span>
+      </span>
+      {review && !zero && count != null && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-[#c49b25]" />}
+      {active && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-[#8b1a1a]" />}
     </Link>
   );
 }
@@ -46,7 +63,7 @@ export function TodayBar() {
   const path = usePathname() ?? "/";
   const hidden = path.startsWith("/liff");
   const [s, setS] = useState<TodaySummary | null>(null);
-  const [now, setNow] = useState(0);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (hidden) return;
@@ -65,12 +82,12 @@ export function TodayBar() {
       fetch("/api/today", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (!alive || !d) return;
+          if (!alive) return;
+          if (!d) return setFailed(true); // 前の数はそのまま残す
           setS(d);
-          // 時計はサーバーに合わせる（デモの時刻でも、締めまでの残りがずれないように）
-          setNow(d.serverNow ?? Date.now());
+          setFailed(false);
         })
-        .catch(() => undefined)
+        .catch(() => alive && setFailed(true))
         .finally(() => {
           inFlight = false;
           if (again && alive) {
@@ -98,66 +115,31 @@ export function TodayBar() {
   }, [hidden]);
 
   if (hidden) return null;
-  if (!s) return <div className="h-12" aria-hidden />;
 
-  const fax = s.faxToReview + s.faxUnread;
+  const n = (v: number | undefined) => (s ? (v ?? 0) : null);
+  const purchaseHref = s ? `/purchase?date=${s.purchaseDate}` : "/purchase";
+  const items: Parameters<typeof WorkItem>[0][] = [
+    { href: "/alerts", label: "急ぎ", count: s ? (s.alerts ? s.alerts.danger : null) : null, urgent: true, icon: "urgent", active: path.startsWith("/alerts") },
+    { href: "/orders?status=needs_review", label: "要確認", count: n(s?.ordersToReview), review: true, icon: "review", active: path === "/orders" },
+    { href: "/", label: "FAX", count: s ? s.faxToReview + s.faxUnread : null, unit: "枚", review: true, icon: "fax", active: path === "/" || path.startsWith("/fax") },
+    { href: purchaseHref, label: "発注書", count: s ? s.purchaseDraft + s.purchaseApproved : null, unit: "枚", icon: "purchase", active: path.startsWith("/purchase") },
+    { href: s?.lowStockHref || "/masters/materials", label: "材料不足", count: n(s?.lowStock), icon: "stock", active: false },
+    { href: s ? `/plan?date=${s.purchaseDate}` : "/plan", label: "注意", count: n(s?.warnings), icon: "warn", active: path.startsWith("/plan") },
+  ];
+
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 pb-2 md:justify-end xl:gap-1.5" aria-label="今日やること">
-      <Chip
-        href="/orders?status=needs_review"
-        tone={s.ordersToReview ? "review" : "ok"}
-        label="要確認"
-        value={s.ordersToReview ? `${s.ordersToReview}件` : "なし"}
-        sub={s.provisional ? `仮 ${s.provisional}` : undefined}
-      />
-      <Chip
-        href="/"
-        tone={fax ? "review" : "ok"}
-        label="FAX"
-        value={fax ? `${fax}枚` : "なし"}
-        sub={fax ? (s.faxToReview ? `確認待ち ${s.faxToReview}` : `未読 ${s.faxUnread}`) : undefined}
-      />
-      <Chip
-        href={`/purchase?date=${s.purchaseDate}`}
-        tone={s.overdue ? "alert" : s.purchaseDraft + s.purchaseApproved ? "review" : "ok"}
-        label="発注書"
-        value={s.purchaseDraft + s.purchaseApproved ? `${s.purchaseDraft + s.purchaseApproved}枚` : "送信済み"}
-        sub={s.overdue ? `締め過ぎ ${s.overdue}枚` : s.nextCutoff ? `締め ${fmtDateTime(s.nextCutoff).split(" ").pop()} ${left(s.nextCutoff, now)}` : `${fmtDate(s.purchaseDate)}納品`}
-      />
-      {s.lowStock > 0 && <Chip href={s.lowStockHref} tone="alert" label="材料が足りなくなります" short="材料不足" value={`${s.lowStock}件`} />}
-      {s.warnings > 0 && <Chip href={`/plan?date=${s.purchaseDate}`} tone="alert" label="注意" value={`${s.warnings}件`} />}
-      {s.alerts && <Bell count={s.alerts.new} open={s.alerts.open} danger={s.alerts.danger} active={path.startsWith("/alerts")} />}
+    <div className="pb-3">
+      <nav aria-label="今日の仕事" className="grid w-full min-w-0 grid-cols-3 overflow-hidden rounded-[10px] border border-[#c5cac5] min-[851px]:grid-cols-6 [&>a]:border-r [&>a:nth-child(3n)]:border-r-0 min-[851px]:[&>a:nth-child(3n)]:border-r max-[850px]:[&>a:nth-child(-n+3)]:border-b [&>a:last-child]:border-r-0">
+        {items.map((it) => <WorkItem key={it.label} {...it} />)}
+      </nav>
+      {failed && (
+        <div className="mt-1 text-[16px] font-bold text-alert-ink">
+          {s ? "数を更新できません（前の数のままです）" : "数を取得できません。"}
+          {!s && (
+            <button type="button" className="ml-2 underline" onClick={() => location.reload()}>再読み込み</button>
+          )}
+        </div>
+      )}
     </div>
-  );
-}
-
-/** ベル（まだ見ていないお知らせの数）。急ぎがあれば赤くして「急ぎ N件」。押すとお知らせの一覧 */
-function Bell({ count, open, danger, active }: { count: number; open: number; danger: number; active: boolean }) {
-  return (
-    <Link
-      href="/alerts"
-      aria-label={`お知らせ（${danger ? `急ぎ ${danger}件・` : ""}まだ見ていないもの ${count}件・出ているもの ${open}件）`}
-      className={`relative flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-lg border px-2 sm:min-h-12 sm:min-w-12 ${
-        danger ? "border-alert-line bg-alert-bg text-alert-ink" : active ? "border-crust-600 bg-crust-50 text-crust-700" : "border-rule-strong bg-sheet text-ink hover:border-crust-200 hover:bg-crust-50"
-      }`}
-    >
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" />
-        <path d="M10 20a2.2 2.2 0 0 0 4 0" />
-      </svg>
-      {danger > 0 ? (
-        <span className="flex items-center gap-1 leading-tight">
-          <span className="text-xs font-bold sm:text-sm">急ぎ</span>
-          <span className="num text-lg font-black sm:text-xl">{danger}件</span>
-        </span>
-      ) : (
-        <span className="hidden text-sm font-bold xl:inline">お知らせ</span>
-      )}
-      {count > 0 && (
-        <span className="num absolute -top-2 -right-2 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-sheet bg-crust-600 px-1 text-sm font-black text-white">
-          {count > 99 ? "99+" : count}
-        </span>
-      )}
-    </Link>
   );
 }
