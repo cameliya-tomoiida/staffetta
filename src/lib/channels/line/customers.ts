@@ -1,4 +1,6 @@
 import "server-only";
+import { parseCell, type ColumnDef } from "@/lib/masters/columns";
+import { customerDef } from "@/lib/masters/defs";
 import { getMaster, listMaster, upsertMasters } from "@/lib/db/masters";
 import { seedCustomers } from "@/lib/db/seed/customers";
 import { CHANNEL_LABEL, CUSTOMERS, DEFAULT_CUSTOMER_DELIVERY_TIME, validateCustomer, type CustomerRow } from "@/lib/masters/customers";
@@ -71,6 +73,8 @@ export async function syncLineUserIds(userId: string, customerId: string | undef
 }
 
 /** 管理画面の1行（文字の入った行）をそのまま保存。新しい ID なら追加、あれば更新（LINE のひも付けは変えない） */
+const weekdaysCol = customerDef.columns.find((c) => c.key === "deliveryWeekdays") as ColumnDef;
+
 export async function upsertCustomerRow(
   row: Record<string, string | number | boolean | null | undefined>,
   who: string,
@@ -91,7 +95,15 @@ export async function upsertCustomerRow(
     ...(s("note") ? { note: s("note") } : { note: undefined }),
     lineUserIds: cur?.lineUserIds,
     active: row.active === false || s("active") === "false" ? false : true,
+    // ⑤の「受けたら返事が要る」（はい なら受付の返事の下書きを作る）
+    replyRequired: row.replyRequired === true || s("replyRequired") === "true",
   };
+  // 納品する曜日（「月;水;金」）。空なら便の曜日
+  if ("deliveryWeekdays" in row) {
+    const wd = parseCell(weekdaysCol, s("deliveryWeekdays"));
+    if (wd.error) return { ok: false, error: wd.error, field: "deliveryWeekdays" };
+    next.deliveryWeekdays = (wd.value as number[] | undefined)?.length ? (wd.value as number[]) : undefined;
+  }
   const errors = validateCustomer(next);
   if (errors.length) return { ok: false, error: errors.join("／") };
   await upsertMasters<CustomerRow>(CUSTOMERS, [JSON.parse(JSON.stringify(next)) as CustomerRow], who);

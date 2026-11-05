@@ -25,6 +25,8 @@ export default async function CustomersAdmin() {
     fax: c.fax ?? "",
     externalCode: c.externalCode ?? "",
     note: c.note ?? "",
+    deliveryWeekdays: (c.deliveryWeekdays ?? []).map((n) => "日月火水木金土"[n]).join(";"),
+    replyRequired: c.replyRequired === true,
     active: c.active !== false,
     lineUserIds: c.lineUserIds?.length ? `${c.lineUserIds.length}人` : "",
   }));
