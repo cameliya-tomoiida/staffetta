@@ -27,14 +27,26 @@ export default async function OrdersPage(props: PageProps<"/orders">) {
   const now = nowIso();
   const lead: Record<string, LeadView[]> = {};
   // 受けられない注文の「代わりの日」（③の suggestAlternatives。ほかの注文も渡して、ラインの上限超えまで見る）
-  const alt: Record<string, string> = {};
+  // 締め（checkLeadTime）は札と「締め：」の行で出ているので、ここでは曜日・上限の問題と「○日なら受けられます」だけ。締めだけの注文は出さない
+  const alt: Record<string, string[]> = {};
   withMasters(masters, () => {
     for (const o of orders) {
       if (o.status === "cancelled" || o.status === "confirmed") continue;
       const xs = checkLeadTime(o, now).filter((c) => c.status === "late" || c.status === "warn");
       if (xs.length) lead[o.id] = xs.map((c) => ({ lineId: c.lineId, status: c.status as "late" | "warn", reason: c.reason }));
       const a = suggestAlternatives(o, now, { masters, otherOrders: orders });
-      if (!a.ok && a.message) alt[o.id] = a.message;
+      if (a.ok) continue;
+      const bad = a.lines.filter((l) => l.problems.length);
+      if (bad.every((l) => l.problems.every((p) => p.kind === "deadline"))) continue;
+      const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+      alt[o.id] = [
+        ...bad.flatMap((l) => {
+          const other = l.problems.filter((p) => p.kind !== "deadline");
+          return other.length ? [`${l.name}：${other.map((p) => p.reason).join("・")}`] : [];
+        }),
+        ...bad.filter((l) => l.makeEarlier).map((l) => `${l.name}：${l.makeEarlier!.reason}`),
+        a.earliestDateForAll ? `${md(a.earliestDateForAll)}の納品なら、全部受けられます` : "全部を受けられる日が見つかりません。電話で相談してください",
+      ];
     }
   });
   return <OrdersClient key={st} orders={orders} today={today} storedIds={storedIds} linePreviews={linePreviews} initialStatus={st} lead={lead} alt={alt} />;
