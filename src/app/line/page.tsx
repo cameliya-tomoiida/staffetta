@@ -7,7 +7,8 @@ import { LeadTimeNote } from "@/components/line/LeadTimeNote";
 import { readLineState } from "@/lib/channels/line/state";
 import { readDb } from "@/lib/store";
 import { NotifyButton } from "./buttons";
-import { AutoTag, isAutoConfirmed, UndoAutoButton } from "@/components/ui/AutoConfirmed";
+import { AutoTag, UndoAutoButton } from "@/components/ui/AutoConfirmed";
+import { isAutoConfirmed } from "@/lib/auto-confirmed"; // サーバーの画面なので、"use client" の部品からは呼べない
 import { getLineAutoSettings } from "@/lib/channels/line/auto";
 import { fmtDate, fmtDateTime, Notice, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
 

@@ -10,7 +10,8 @@ import { Button, Tag } from "./index";
 import { notifyHubChanged } from "./refresh";
 
 /** 自動で確定した注文か（確定済みで、confirmedBy が「自動」で始まる） */
-export const isAutoConfirmed = (o: { status: string; confirmedBy?: string }) => o.status === "confirmed" && !!o.confirmedBy?.startsWith("自動");
+// 判定はサーバーからも呼べる @/lib/auto-confirmed に置いた（ここからも使えるよう、そのまま出す）
+export { isAutoConfirmed } from "@/lib/auto-confirmed";
 
 /** 「自動（迷いなし）」→「迷いなし」。かっこが無ければ空 */
 const reasonOf = (by?: string) => by?.match(/^自動[（(](.+)[）)]$/)?.[1] ?? "";
