@@ -32,6 +32,7 @@ export const CHANNEL_OPTIONS = opts({
   fax: "FAX", line: "LINE", infomart: "インフォマート", customer_site: "取引先の発注サイト", email: "メール",
   google_sheet: "スプレッドシート", phone: "電話", driver: "ドライバー",
 });
+export const DELIVERY_METHOD_OPTIONS = opts({ own: "自社便", frozen: "冷凍便", parcel: "宅配・路線便", pickup: "引き取り" });
 export const PER_OPTIONS = opts({ piece: "1個", pack: "1包・1袋", case: "1ケース" });
 export const SCHEDULE_FROM_OPTIONS = opts({ delivery: "納品時刻から逆算", start: "開始時刻から順に" });
 
@@ -303,8 +304,26 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "deliveryWeekdays", label: "納品する曜日", type: "weekdays", example: "月;水;金", help: "空なら便の曜日（それも空なら毎日）" },
     { key: "replyRequired", label: "受けたら返事が要る", type: "boolean", default: false, example: "いいえ", help: "はい なら、仮発注・注文を受けたときに受付の返事（FAX・メール）の下書きを自動で作る（送るのは人）" },
     { key: "note", label: "メモ", type: "text" },
+    // 配送の情報（⑦。配送コースの地図が使う）
+    { key: "postalCode", label: "郵便番号", type: "text", example: "460-0008" },
+    { key: "address", label: "住所", type: "text", example: "愛知県名古屋市中区栄三丁目", help: "地図に出すのに使う（住所から位置を出す）" },
+    { key: "deliveryMethod", label: "納品の方法", type: "enum", options: DELIVERY_METHOD_OPTIONS, example: "自社便", help: "自社便なら、どの便かは「配送コース」に書く" },
+    { key: "closedWeekdays", label: "定休日", type: "weekdays", example: "日", help: "この曜日は納品しない。複数なら ; で区切る" },
+    { key: "deliveryWindowFrom", label: "納品時間の希望（から）", type: "time", example: "07:00" },
+    { key: "deliveryWindowTo", label: "納品時間の希望（まで）", type: "time", example: "09:00" },
+    { key: "deliveryHowTo", label: "納品の仕方", type: "text", example: "裏口の棚に置く。番重は前回分を回収", help: "新しい人に教えるときに地図に出す" },
+    { key: "deliveryCaution", label: "注意事項", type: "text", example: "8時までは正面に車を止めない" },
+    { key: "lat", label: "緯度", type: "number", min: 20, max: 46, example: "35.1681", help: "空なら住所から出す" },
+    { key: "lng", label: "経度", type: "number", min: 122, max: 154, example: "136.9083", help: "空なら住所から出す" },
     ACTIVE,
   ],
+  check: (c) => {
+    const errs: string[] = [];
+    if (c.postalCode && !/^\d{3}-?\d{4}$/.test(c.postalCode)) errs.push("郵便番号は 460-0008 の形で入れてください");
+    if (c.deliveryWindowFrom && c.deliveryWindowTo && c.deliveryWindowFrom > c.deliveryWindowTo) errs.push("納品時間の希望は「から」を「まで」より前にしてください");
+    if ((c.lat == null) !== (c.lng == null)) errs.push("緯度と経度は両方入れてください（どちらも空なら住所から出します）");
+    return errs;
+  },
 };
 
 // ───────── 便（配送コース） ─────────

@@ -4,7 +4,7 @@ import { customerDef } from "@/lib/masters/defs";
 import { getMaster, listMaster, upsertMasters } from "@/lib/db/masters";
 import { seedCustomers } from "@/lib/db/seed/customers";
 import { CHANNEL_LABEL, CUSTOMERS, DEFAULT_CUSTOMER_DELIVERY_TIME, validateCustomer, type CustomerRow } from "@/lib/masters/customers";
-import type { OrderChannel } from "@/data/types";
+import type { DeliveryMethod, OrderChannel } from "@/data/types";
 
 // 取引先マスタ（①の SQLite・masters の "customers"）を、LINE の画面から読み書きする口。
 // 列の決まりは src/lib/masters/customers.ts。変更はすべて master_history に残る（だれが・いつ）。
@@ -74,6 +74,7 @@ export async function syncLineUserIds(userId: string, customerId: string | undef
 
 /** 管理画面の1行（文字の入った行）をそのまま保存。新しい ID なら追加、あれば更新（LINE のひも付けは変えない） */
 const weekdaysCol = customerDef.columns.find((c) => c.key === "deliveryWeekdays") as ColumnDef;
+const closedCol = customerDef.columns.find((c) => c.key === "closedWeekdays") as ColumnDef;
 
 export async function upsertCustomerRow(
   row: Record<string, string | number | boolean | null | undefined>,
@@ -98,6 +99,26 @@ export async function upsertCustomerRow(
     // ⑤の「受けたら返事が要る」（はい なら受付の返事の下書きを作る）
     replyRequired: row.replyRequired === true || s("replyRequired") === "true",
   };
+  // 配送の情報（⑦）。空にすると消える。画面に無い列（古い画面からの保存）は今の値のまま
+  for (const k of ["postalCode", "address", "deliveryWindowFrom", "deliveryWindowTo", "deliveryHowTo", "deliveryCaution"] as const) {
+    if (k in row) next[k] = s(k) || undefined;
+  }
+  if ("deliveryMethod" in row) next.deliveryMethod = (s("deliveryMethod") || undefined) as DeliveryMethod | undefined;
+  if ("closedWeekdays" in row) {
+    const wd = parseCell(closedCol, s("closedWeekdays"));
+    if (wd.error) return { ok: false, error: wd.error, field: "closedWeekdays" };
+    next.closedWeekdays = (wd.value as number[] | undefined)?.length ? (wd.value as number[]) : undefined;
+  }
+  for (const k of ["lat", "lng"] as const) {
+    if (!(k in row)) continue;
+    const v = s(k);
+    next[k] = v === "" ? undefined : Number(v);
+  }
+  // 住所を変えたのに位置がそのままなら、位置を消して地図の画面で出し直す
+  if (cur?.address && next.address !== cur.address && next.lat === cur.lat && next.lng === cur.lng) {
+    next.lat = undefined;
+    next.lng = undefined;
+  }
   // 納品する曜日（「月;水;金」）。空なら便の曜日
   if ("deliveryWeekdays" in row) {
     const wd = parseCell(weekdaysCol, s("deliveryWeekdays"));
