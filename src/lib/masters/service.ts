@@ -11,6 +11,7 @@ import type { Masters } from "@/data/types";
 import { nowIso } from "@/lib/clock";
 import { deleteMaster, getMaster, getMasterHistory, listMaster, restoreMaster, seedMastersIfEmpty, upsertMasters } from "@/lib/db/masters";
 import { exportCsv, previewCsv, recordsToApply, templateCsv, validateForm, type MasterDef, type Preview } from "./csv";
+import { seedCustomers } from "@/lib/db/seed/customers";
 import { loadMasters, seedSampleMasters } from "./seed-db";
 import { CHANNEL_SEEDS, ID_PREFIX, isChannelMaster, SCREEN_DEFS, SCREEN_NAMES, STOCK_MASTERS, type ScreenName } from "./screens";
 
@@ -27,6 +28,10 @@ export const isScreenName = (s: string): s is ScreenName => (SCREEN_NAMES as str
 let seeded = false;
 /** まだ空なら、サンプル（架空データ）を入れる。③のマスタは③の seedSampleMasters、取り込みの設定は⑤の初期値 */
 export async function ensureSeeded(name: ScreenName) {
+  if (name === "customers") {
+    await seedCustomers(); // 取引先の初期値は④（空のときだけ）
+    return;
+  }
   if (isChannelMaster(name)) {
     await seedMastersIfEmpty(name, (CHANNEL_SEEDS[name]() as Rec[]).map((r) => ({ ...r })));
     return;

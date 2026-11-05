@@ -18,7 +18,8 @@ export type ColumnType =
   | "list" // "6;8"（; ・ 、 | で区切る）→ 数の配列
   | "map" // "6:144;8:200" → { 6: 144, 8: 200 }
   | "textlist" // "C02;C05" → ["C02","C05"]
-  | "weekdays"; // "月;火;水" または "1;2;3" → [1,2,3]（0=日〜6=土）
+  | "weekdays" // "月;火;水" または "1;2;3" → [1,2,3]（0=日〜6=土）
+  | "weekday"; // "火" または "2" → 2
 
 export interface ColumnOption {
   value: string;
@@ -121,6 +122,12 @@ export function parseCell(col: ColumnDef, raw: string | undefined): { value?: un
       if (nums.some((n) => !Number.isFinite(n) || n <= 0)) return { error: "6;8 のように数を ; で区切って入れてください" };
       return { value: nums };
     }
+    case "weekday": {
+      const i = "日月火水木金土".indexOf(s.replace(/曜日?$/, ""));
+      const n = s.length === 1 && i >= 0 ? i : /^[0-6]$/.test(s) ? Number(s) : -1;
+      if (n < 0) return { error: "曜日は「火」のように1つ入れてください" };
+      return { value: n };
+    }
     case "weekdays": {
       const names = ["日", "月", "火", "水", "木", "金", "土"];
       const out: number[] = [];
@@ -159,6 +166,8 @@ export function formatCell(col: ColumnDef, v: unknown): string {
       return (v as (number | string)[]).join(";");
     case "weekdays":
       return (v as number[]).map((n) => "日月火水木金土"[n]).join(";");
+    case "weekday":
+      return "日月火水木金土"[v as number] ?? String(v);
     case "map":
       return Object.entries(v as Record<string, number>).map(([k, x]) => `${k}:${x}`).join(";");
     default:

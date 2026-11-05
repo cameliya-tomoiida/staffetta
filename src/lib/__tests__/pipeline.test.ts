@@ -49,7 +49,7 @@ describe("原価と利益", () => {
   it("自社製造: 材料費（ロス込み）＋包材＋人件費、粗利 = 売価 − 原価", () => {
     const c = productCost("P07");
     expect(c.kind).toBe("make");
-    expect(c.materialCost).toBeCloseTo((180 / 0.95) * doughYenPerGram("DG04"), 1);
+    expect(c.materialCost).toBeCloseTo((180 / 0.98) * doughYenPerGram("DG04"), 1);
     expect(c.cost).toBeCloseTo(c.materialCost + c.packagingCost + c.laborCost, 2);
     expect(c.gross).toBeCloseTo(c.price - c.cost, 2);
     expect(c.missing).toEqual([]);

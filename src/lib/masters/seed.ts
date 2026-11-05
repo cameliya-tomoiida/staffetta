@@ -4,7 +4,7 @@
 import { customers as masterCustomers } from "@/data/master";
 import { customerDeliveryTime, doughRecipes, lineSettings, toppingRecipes, type ProcessStep } from "@/data/production";
 import type {
-  CourseMaster, CustomerMaster, DoughMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
+  CourseMaster, CustomerMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster, SupplierMaster,
 } from "@/data/types";
 import { legacyMaterials as allMaterials, legacyProducts as allProducts, legacySuppliers as allSuppliers } from "./legacy";
@@ -27,7 +27,7 @@ export const SAMPLE_EQUIPMENT: Equipment[] = [
   { id: "EQ-P-MIX", name: "ミキサー（ピザ）", kind: "mixer", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", maxBatchKg: 75, exclusiveGroup: "ミキサー", active: true, note: "粉45kg（生地 約75kg）まで" },
   { id: "EQ-P-DIV", name: "分割機（ピザ）", kind: "divider", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 1200, lanes: 1, minPieceGram: 60, maxPieceGram: 220, active: true, note: "1分に10〜20個（4人）。鉄板1枚20個" },
   { id: "EQ-P-OVN", name: "ジェットオーブン", kind: "oven", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 600, active: true, note: "上下450℃・1分30秒（具ありは440℃以上・1分50秒）。連続投入" },
-  { id: "EQ-P-FRZ", name: "ショックフリーザー", kind: "cooler", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "17:00", active: true, note: "-30℃・20分。17:00〜17:40 は霜取りで使えない" },
+  { id: "EQ-P-FRZ", name: "ショックフリーザー", kind: "cooler", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", downtimes: ["17:00-17:40"], active: true, note: "-30℃・20分。17:00〜17:40 は霜取り" },
   { id: "EQ-P-PACK", name: "包装機（ピザ）", kind: "packer", line: "pizza", count: 1, availableFrom: "07:00", availableTo: "24:00", piecesPerHour: 600, active: true, note: "5枚/袋・ラベル" },
 ];
 
@@ -156,6 +156,19 @@ const CUSTOMER_COURSE: Record<string, { course: string; deliveryTime: string; de
   C13: { course: "ヤマト便", deliveryTime: "09:00" },
 };
 
+// ───────── 定期注文（架空） ─────────
+const so = (customerId: string, weekdays: number[], productId: string, quantity: number, unit = "個", piecesPerUnit = 1): StandingOrderMaster[] =>
+  weekdays.map((w) => ({ id: `SO-${customerId}-${w}-${productId}`, customerId, weekday: w, productId, quantity, unit, piecesPerUnit, active: true }));
+
+export const SAMPLE_STANDING_ORDERS: StandingOrderMaster[] = [
+  // グループホーム: 火・木・土に、いつものロールと食パン（ドライバーが聞き取っていた分）
+  ...so("C05", [2, 4, 6], "P01", 30),
+  ...so("C05", [2, 4, 6], "P03", 2, "斤"),
+  // 喫茶店: 月〜土の朝に黒糖ロールとふんわりロール
+  ...so("C04", [1, 2, 3, 4, 5, 6], "P02", 20),
+  ...so("C04", [1, 2, 3, 4, 5, 6], "P18", 16),
+];
+
 // ───────── まとめ ─────────
 export function sampleMasters(): Masters {
   const lines: LineMaster[] = Object.values(lineSettings).map((l) => ({
@@ -242,6 +255,7 @@ export function sampleMasters(): Masters {
     supplierDeliveries,
     customers,
     courses: SAMPLE_COURSES,
+    standingOrders: SAMPLE_STANDING_ORDERS,
     shifts: SAMPLE_SHIFTS,
     staffAssignments: SAMPLE_STAFF,
   };

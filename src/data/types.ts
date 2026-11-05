@@ -230,6 +230,8 @@ export interface Equipment {
   capacityPieces?: number;
   /** 同時に動かせない設備のまとまり（電気の容量などで、同じグループの設備は1台ずつしか回せない） */
   exclusiveGroup?: string;
+  /** 毎日の使えない時間帯（霜取り・清掃など）。"17:00-17:40" の形で複数 */
+  downtimes?: string[];
   active: boolean;
   note?: string;
 }
@@ -378,6 +380,10 @@ interface StockItemBase {
   unitCost: number;
   /** 保管場所（冷蔵庫A・倉庫2階 など） */
   location?: string;
+  /** 棚卸で在庫を数えた日時（ISO）・人・メモ（⑤の棚卸の画面が入れる） */
+  stockCountedAt?: string;
+  stockCountedBy?: string;
+  stockNote?: string;
   active: boolean;
 }
 
@@ -465,6 +471,27 @@ export interface CourseMaster {
   active: boolean;
 }
 
+/**
+ * 定期注文（毎週同じ曜日に同じものを頼む得意先の「いつもの」）。1行 = 得意先 × 曜日 × 商品。
+ * この表から週ごとに「要確認」の注文を作り、人が確かめて確定する（generateStandingOrders）。
+ */
+export interface StandingOrderMaster {
+  id: string;
+  customerId: string;
+  /** 納品する曜日（0=日〜6=土） */
+  weekday: number;
+  productId: string;
+  quantity: number;
+  /** 書く単位（個・P・袋・c/s など）と、1単位の個数 */
+  unit: string;
+  piecesPerUnit: number;
+  /** この日から／この日まで（YYYY-MM-DD。空なら いつでも） */
+  from?: string;
+  to?: string;
+  note?: string;
+  active: boolean;
+}
+
 /** 班（朝班・夜班）。時間帯と人数 */
 export interface ShiftMaster {
   id: string;
@@ -502,6 +529,7 @@ export interface Masters {
   supplierDeliveries: SupplierDeliveryMaster[];
   customers: CustomerMaster[];
   courses: CourseMaster[];
+  standingOrders: StandingOrderMaster[];
   shifts: ShiftMaster[];
   staffAssignments: StaffAssignmentMaster[];
 }

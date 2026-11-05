@@ -8,7 +8,7 @@
 // - 食パンの包み直し: 元の食パン（3斤）の仕入先の締め
 // - 仮発注（provisional）: 概数で先に入れて当日に確定する運用なので、間に合わなくても「警告」だけ（late にしない）
 import type { Order, OrderLine } from "@/data/types";
-import { deliveryFor, findCustomer, findProduct } from "./catalog";
+import { customerWeekdays, deliveryFor, findCustomer, findProduct } from "./catalog";
 import { cutoffIso } from "./purchase";
 
 export type LeadTimeStatus = "ok" | "late" | "warn" | "unknown";
@@ -56,11 +56,28 @@ export function orderDeadline(productId: string, customerId: string, deliveryDat
 }
 
 /** 注文の行ごとに、now の時点で締めに間に合うかを判定する */
+/**
+ * その納品日に、この得意先へ納品できる曜日か（得意先 → 便 の配送曜日。登録が無ければ毎日）。
+ * できないときは、画面に出す理由を返す。
+ */
+export function deliveryDayProblem(customerId: string, deliveryDate: string): string | undefined {
+  const wds = customerWeekdays(customerId);
+  if (!wds.length) return undefined;
+  const wd = new Date(`${deliveryDate}T00:00:00Z`).getUTCDay();
+  if (wds.includes(wd)) return undefined;
+  const W = "日月火水木金土";
+  const name = findCustomer(customerId)?.name ?? customerId;
+  return `${name}は${W[wd]}曜日に納品していません（納品する曜日: ${wds.map((n) => W[n]).join("・")}）`;
+}
+
 export function checkLeadTime(order: Order, now: string): LeadTimeCheck[] {
   const nowMs = Date.parse(now);
   const provisional = order.status === "provisional";
+  const dayProblem = order.customerId ? deliveryDayProblem(order.customerId, order.deliveryDate) : undefined;
   return order.lines.map((l: OrderLine): LeadTimeCheck => {
     if (!l.productId) return { lineId: l.id, productId: "", status: "unknown", deadline: "", reason: "商品が決まっていません" };
+    // 納品しない曜日なら、締めより先にそれを知らせる（仮発注なら警告だけ）
+    if (dayProblem) return { lineId: l.id, productId: l.productId, status: provisional ? "warn" : "late", deadline: "", reason: dayProblem };
     const { deadline, basis } = orderDeadline(l.productId, order.customerId, order.deliveryDate);
     if (!deadline) return { lineId: l.id, productId: l.productId, status: "unknown", deadline: "", reason: `締めを決められません（${basis}）` };
     const name = findProduct(l.productId)?.name ?? l.productId;

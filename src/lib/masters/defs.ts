@@ -1,7 +1,7 @@
 // 各マスタの CSV 列定義（日本語の列名）と、種類ごとの検査（③）。
 // 型は src/data/types.ts の …Master。しくみは columns.ts。
 import type {
-  CourseMaster, CustomerMaster, DoughMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
+  CourseMaster, CustomerMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, RecipeItemMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster,
   SupplierMaster, ToppingItemMaster, ToppingMaster,
 } from "@/data/types";
@@ -73,6 +73,7 @@ export const equipmentDef: MasterDef<Equipment> = {
     { key: "minPieceGram", label: "1個の重さ 下限（g）", type: "number", min: 0, example: "20", help: "分割機" },
     { key: "maxPieceGram", label: "1個の重さ 上限（g）", type: "number", min: 0, example: "150", help: "分割機" },
     { key: "capacityPieces", label: "1回に入る数", type: "integer", min: 1, example: "", help: "オーブン・ホイロ" },
+    { key: "downtimes", label: "使えない時間帯", type: "textlist", example: "17:00-17:40", help: "霜取り・清掃など。毎日くり返す。複数なら ; で区切る" },
     { key: "exclusiveGroup", label: "同時に動かせないグループ", type: "text", example: "ミキサー", help: "同じグループの設備は1台ずつしか回せない（同じ時間に他のミキサーは回せない など）" },
     ACTIVE,
     { key: "note", label: "メモ", type: "text" },
@@ -80,6 +81,7 @@ export const equipmentDef: MasterDef<Equipment> = {
   check: (e) => [
     ...(e.kind === "mixer" && !e.maxBatchKg ? ["ミキサーは「1回の上限（kg）」を入れてください"] : []),
     ...(e.minPieceGram !== undefined && e.maxPieceGram !== undefined && e.minPieceGram > e.maxPieceGram ? ["重さの下限が上限より大きいです"] : []),
+    ...(e.downtimes ?? []).filter((w) => !/^([01]?[0-9]|2[0-4]):[0-5][0-9]-([01]?[0-9]|2[0-4]):[0-5][0-9]$/.test(w.replace(/\s/g, ""))).map((w) => `使えない時間帯「${w}」は 17:00-17:40 の形で入れてください`),
   ],
 };
 
@@ -311,6 +313,31 @@ export const courseDef: MasterDef<CourseMaster> = {
   ],
 };
 
+// ───────── 定期注文 ─────────
+export const WEEKDAY_OPTIONS = opts({ "0": "日", "1": "月", "2": "火", "3": "水", "4": "木", "5": "金", "6": "土" });
+
+export const standingOrderDef: MasterDef<StandingOrderMaster> = {
+  name: "standingOrders", label: "定期注文", keyColumns: ["id"],
+  columns: [
+    ID("定期注文ID", "SO-C05-2-P01"),
+    { key: "customerId", label: "得意先ID", type: "text", required: true, ref: "customers", example: "C05" },
+    { key: "weekday", label: "曜日", type: "weekday", required: true, example: "火", help: "1行に1つの曜日（火と木なら2行）" },
+    { key: "productId", label: "商品ID", type: "text", required: true, ref: "products", example: "P01" },
+    { key: "quantity", label: "数量", type: "number", min: 0, required: true, example: "30" },
+    { key: "unit", label: "単位", type: "text", default: "個", example: "個" },
+    { key: "piecesPerUnit", label: "1単位の個数", type: "number", min: 1, default: 1, example: "1", help: "P（10個入）なら 10" },
+    { key: "from", label: "この日から", type: "text", example: "2026-11-01", help: "YYYY-MM-DD。空ならいつでも" },
+    { key: "to", label: "この日まで", type: "text", example: "", help: "YYYY-MM-DD。空ならずっと" },
+    { key: "note", label: "メモ", type: "text" },
+    ACTIVE,
+  ],
+  check: (o) => {
+    const errs: string[] = [];
+    for (const [k, v] of [["この日から", o.from], ["この日まで", o.to]] as const) if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) errs.push(`「${k}」は 2026-11-01 の形で入れてください`);
+    return errs;
+  },
+};
+
 // ───────── 人員 ─────────
 export const shiftDef: MasterDef<ShiftMaster> = {
   name: "shifts", label: "班", keyColumns: ["id"],
@@ -338,14 +365,14 @@ export const staffAssignmentDef: MasterDef<StaffAssignmentMaster> = {
 export const MASTER_DEFS: Record<MasterName, MasterDef> = {
   lines: lineDef, equipment: equipmentDef, doughs: doughDef, recipeItems: recipeItemDef, steps: stepDef,
   toppings: toppingDef, toppingItems: toppingItemDef, products: productDef, materials: materialDef, packaging: packagingDef,
-  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef,
+  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef, standingOrders: standingOrderDef,
   shifts: shiftDef, staffAssignments: staffAssignmentDef,
 } as unknown as Record<MasterName, MasterDef>;
 
 /** 取り込みの順番（参照される側から） */
 export const MASTER_ORDER: MasterName[] = [
   "lines", "suppliers", "supplierDeliveries", "courses", "customers", "materials", "packaging", "equipment", "doughs", "recipeItems",
-  "steps", "toppings", "toppingItems", "products", "productPackaging", "shifts", "staffAssignments",
+  "steps", "toppings", "toppingItems", "products", "productPackaging", "standingOrders", "shifts", "staffAssignments",
 ];
 
 /** マスタ一式をまとめて確かめる（参照・重複・種類ごとの検査）。画面の「マスタの点検」やテストで使う */
