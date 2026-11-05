@@ -180,6 +180,7 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "doughGram", label: "分割（g）", type: "number", min: 1, example: "35", requiredWhen: (r) => kind("make")(r) && "自社製造は「分割（g）」が必須です" },
     { key: "toppingId", label: "トッピングID", type: "text", ref: "toppings" },
     { key: "dailyCap", label: "この商品がある日の上限", type: "integer", min: 1 },
+    { key: "excludeFromDailyCap", label: "ラインの上限に数えない", type: "boolean", default: false, example: "いいえ", help: "はい なら、ラインの1日の上限（枚・個）に数えない（生地玉など、別の作業で作るもの）" },
     { key: "packStyle", label: "包装", type: "enum", options: PACK_STYLE_OPTIONS, example: "1枚包装" },
     { key: "packMethod", label: "包装のしかた", type: "enum", options: PACK_METHOD_OPTIONS, example: "機械" },
     { key: "sliceMm", label: "スライス幅（mm）", type: "number", min: 1, example: "" },
@@ -356,6 +357,7 @@ export const shiftDef: MasterDef<ShiftMaster> = {
     { key: "from", label: "開始", type: "time", required: true, example: "22:00" },
     { key: "to", label: "終了", type: "time", required: true, example: "07:00" },
     { key: "headcount", label: "人数", type: "integer", min: 0, required: true, example: "6" },
+    { key: "weekdays", label: "出る曜日", type: "weekdays", example: "月;火", help: "空なら毎日。曜日で時間がちがう班は、曜日ごとに1行ずつ" },
     { key: "breaks", label: "休けい", type: "textlist", example: "13:00-14:00", help: "その時間は人数に数えない。複数なら ; で区切る" },
   ],
 };
