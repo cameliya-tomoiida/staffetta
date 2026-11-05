@@ -70,7 +70,7 @@ function order(id: string, customerId: string, deliveryDate: string, channel: Or
     status,
     createdAt: receivedAt,
     confirmedAt: done ? receivedAt.replace(/T(\d\d)/, (_, h) => `T${String(Math.min(23, Number(h) + 1)).padStart(2, "0")}`) : undefined,
-    confirmedBy: done ? (o.by ?? "事務 こばやし") : undefined,
+    confirmedBy: done ? (o.by ?? "こばやし") : undefined,
     edits: [],
   };
 }
@@ -83,7 +83,7 @@ export const demoOrders: Order[] = [
   // 超じゅくロールは 60個 → 変更FAX（DO-11）で 65個 に。人が確定して書き換えた跡が edits に残る。
   // 65個は 6個入でしか買えない → 11袋・余り1。病院の分は2便で受ける。
   order("DO-01", "C02", DEMO_DATE, "fax", [
-    ["P10", 65, "個", 1, [{ at: "2026-11-05T08:05:00+09:00", who: "事務 こばやし", field: "quantity", from: "60", to: "65" }]],
+    ["P10", 65, "個", 1, [{ at: "2026-11-05T08:05:00+09:00", who: "こばやし", field: "quantity", from: "60", to: "65" }]],
     ["P06", 11, "袋", 3],
     ["P05", 39, "袋", 2],
     ["P15", 40, "包", 1],

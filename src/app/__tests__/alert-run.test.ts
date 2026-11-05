@@ -34,15 +34,15 @@ describe("お知らせのボタンの実行", () => {
   });
 
   it("ボタンは⑤の処理に、③の種類と payload（材料の一覧の配列も）をそのまま渡す。結果を履歴に残す", async () => {
-    const r = await runAlertActionAction("stock_shortage:M01", 0, "事務 たなか");
-    expect(calls[0]).toEqual({ kind: "create_po_draft", who: "事務 たなか", payload: { supplierId: "S01", materialIds: ["M01"], arriveDate: "2026-11-07" } });
+    const r = await runAlertActionAction("stock_shortage:M01", 0, "たなか");
+    expect(calls[0]).toEqual({ kind: "create_po_draft", who: "たなか", payload: { supplierId: "S01", materialIds: ["M01"], arriveDate: "2026-11-07" } });
     expect(r).toMatchObject({ message: "発注書の下書きを 1 枚作りました", href: "/outbound" });
     expect(listAlerts().find((a) => a.dedupeKey === "stock_shortage:M01")?.history.at(-1)?.what).toContain("注文しますか");
   });
 
   it("画面を開くだけのボタンは行き先を返す。「この数でよい」は済みにする", async () => {
-    expect((await runAlertActionAction("stock_shortage:M01", 1, "事務 たなか")).href).toBe("/masters/materials");
-    expect((await runAlertActionAction("unusual_quantity:o1", 0, "事務 たなか")).done).toBe(true);
+    expect((await runAlertActionAction("stock_shortage:M01", 1, "たなか")).href).toBe("/masters/materials");
+    expect((await runAlertActionAction("unusual_quantity:o1", 0, "たなか")).done).toBe(true);
     expect(listAlerts({ states: ["done"] }).map((a) => a.dedupeKey)).toEqual(["unusual_quantity:o1"]);
     expect(calls.map((c) => (c as { kind: string }).kind)).toEqual(["open_material", "accept_quantity"]);
   });

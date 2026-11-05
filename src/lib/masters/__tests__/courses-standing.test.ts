@@ -7,7 +7,7 @@ import { mem } from "@/lib/channels/__tests__/memdb";
 vi.mock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
 
 const file = (n: string) => new Uint8Array(readFileSync(path.join(process.cwd(), "public", "samples", "masters", n)));
-const WHO = "事務 たなか";
+const WHO = "たなか";
 
 describe("便・納品曜日・定期注文", () => {
   it("サンプル CSV 10〜12 が順に入る（取引先は2列だけでも、ほかの列は今のまま）", async () => {

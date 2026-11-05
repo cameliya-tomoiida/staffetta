@@ -83,10 +83,10 @@ describe("人が承認してから反映", () => {
 
   it("承認した生地だけが「使うロス率」になる。名前が要る", () => {
     expect(() => approveLossProposals(r.proposals, ["DG04"], " ")).toThrow();
-    const a = approveLossProposals(r.proposals, ["DG04"], "専務 はやし", "2026-08-04T10:00:00+09:00", { DG01: 0.05 });
+    const a = approveLossProposals(r.proposals, ["DG04"], "はやし", "2026-08-04T10:00:00+09:00", { DG01: 0.05 });
     expect(a.lossRates.DG04).toBe(r.proposals[0].suggestedLoss);
     expect(a.lossRates.DG01).toBe(0.05); // 前に承認した分は残る
-    expect(a).toMatchObject({ approvedBy: "専務 はやし", approvedAt: "2026-08-04T10:00:00+09:00" });
+    expect(a).toMatchObject({ approvedBy: "はやし", approvedAt: "2026-08-04T10:00:00+09:00" });
     expect(approveLossProposals(r.proposals, [], "はやし").lossRates).toEqual({});
   });
 

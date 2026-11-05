@@ -19,7 +19,7 @@ export interface ClientColumn {
   help?: string;
   example?: string;
 }
-const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
+const STAFF = ["こばやし", "たなか", "はやし"];
 
 /** 値を CSV と同じ書き方の文字にする（フォームの初期値・一覧の表示） */
 function cellText(c: ClientColumn, v: unknown): string {

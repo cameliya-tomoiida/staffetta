@@ -18,8 +18,8 @@ describe("発注書の保存（下書き → 承認 → 送信済み）", () => 
   });
 
   it("承認すると、承認した人と時刻を残す", () => {
-    const { record } = approveRecord(saved(), drafts[0].id, "専務 はやし", T2);
-    expect(record).toMatchObject({ status: "approved", approvedBy: "専務 はやし", approvedAt: T2 });
+    const { record } = approveRecord(saved(), drafts[0].id, "はやし", T2);
+    expect(record).toMatchObject({ status: "approved", approvedBy: "はやし", approvedAt: T2 });
     expect(record.history!.map((h) => h.action)).toEqual(["saved", "approved"]);
   });
 

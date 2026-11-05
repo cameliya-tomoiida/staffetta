@@ -33,7 +33,7 @@ interface Row {
 
 type Level = "high" | "mid" | "low";
 
-const STAFF = ["事務 たなか", "製造 グエン", "専務 はやし"];
+const STAFF = ["たなか", "グエン", "はやし"];
 
 const kindInfo = {
   order: { text: "注文", cls: "bg-ok-bg text-ok-ink" },

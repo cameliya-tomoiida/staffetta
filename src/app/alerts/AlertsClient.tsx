@@ -11,7 +11,7 @@ import { notifyHubChanged } from "@/components/ui/refresh";
 import type { AlertAction, AlertLevel, AlertRow } from "@/lib/db/alerts-store";
 import { checkAlertsNowAction, runAlertActionAction, updateAlertAction } from "./actions";
 
-const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
+const STAFF = ["たなか", "こばやし", "はやし"];
 
 const LEVEL: Record<AlertLevel, { label: string; bar: string; tag: string; box: string }> = {
   danger: { label: "急ぎ", bar: "bg-alert-line", tag: "border-alert-line bg-alert-bg text-alert-ink", box: "border-alert-line" },

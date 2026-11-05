@@ -6,7 +6,7 @@ import { Button, fmtDateTime, Notice } from "@/components/ui";
 import type { AutoLog } from "@/lib/automation/log";
 import type { AutomationSettings } from "@/lib/automation/settings";
 
-const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
+const STAFF = ["こばやし", "たなか", "はやし"];
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 const KIND: Record<AutoLog["kind"], string> = {
   order_confirm: "注文の確定", order_change: "変更の反映", standing: "定期注文", po_approve: "発注書の承認", production: "製造の実績", reply: "お客さんへの返事", receipt: "入荷",

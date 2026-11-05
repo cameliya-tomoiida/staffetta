@@ -12,7 +12,7 @@ const fetchSpy = vi.fn(async () => {
   throw new Error("本番の LINE に送ろうとしました");
 });
 const NOON = "2026-11-05T11:30:00+09:00";
-const KOIDE = "U_demo_staff_koide"; // 架空のスタッフ（デモの人なので記録だけ）
+const MORITA = "U_demo_staff_morita"; // 架空のスタッフ（デモの人なので記録だけ）
 const SATO = "U_demo_staff_sato";
 
 const sa = () => import("@/lib/channels/line/staff-alerts");
@@ -28,7 +28,7 @@ beforeAll(async () => {
   mem.db.orders = structuredClone(demoOrders);
   const st = await import("@/lib/channels/line/state");
   await st.resetLineDemo(); // U_demo_kotori はお客さん（C06）
-  await st.touchUser(KOIDE, { displayName: "こいで（架空）" });
+  await st.touchUser(MORITA, { displayName: "もりた（架空）" });
   await st.touchUser(SATO, { displayName: "さとう（架空）" });
 });
 afterEach(() => {
@@ -47,11 +47,11 @@ describe("スタッフの LINE へのアラート", () => {
   it("お客さんにひも付いた LINE の人は、スタッフにできない。スタッフはひも付け待ちの一覧に出ない", async () => {
     const s = await sa();
     await expect(s.addStaffLine({ userId: "U_demo_kotori", name: "ことり" }, "事務")).rejects.toThrow(/お客さん/);
-    await s.addStaffLine({ userId: KOIDE, name: "工場長 こいで", allDanger: true }, "事務");
-    await s.addStaffLine({ userId: SATO, name: "事務 さとう", allDanger: false }, "事務");
+    await s.addStaffLine({ userId: MORITA, name: "もりた", allDanger: true }, "事務");
+    await s.addStaffLine({ userId: SATO, name: "さとう", allDanger: false }, "事務");
     const { unlinkedLineUsers } = await import("@/lib/channels/line/orders");
     const waiting = (await unlinkedLineUsers()).map((u) => u.userId);
-    expect(waiting).not.toContain(KOIDE);
+    expect(waiting).not.toContain(MORITA);
     expect(waiting).not.toContain(SATO);
   });
 
@@ -59,9 +59,9 @@ describe("スタッフの LINE へのアラート", () => {
     const s = await sa();
     s.setStaffAlertSettings({ enabled: true }, "事務");
     const r = await s.sendAlertsToStaff([danger]);
-    expect(r.sent).toEqual([{ key: danger.key, to: KOIDE, name: "工場長 こいで", mode: "demo" }]);
+    expect(r.sent).toEqual([{ key: danger.key, to: MORITA, name: "もりた", mode: "demo" }]);
     const st = await import("@/lib/channels/line/state");
-    const msg = (await st.readLineState()).outbox.filter((m) => m.to === KOIDE).at(-1)!;
+    const msg = (await st.readLineState()).outbox.filter((m) => m.to === MORITA).at(-1)!;
     expect(msg.text).toBe("【STAFFETTA】材料が足りなくなります：強力粉（11/7）。発注書の下書きができています\nhttp://192.168.0.10:3100/purchase");
     const again = await s.sendAlertsToStaff([danger]);
     expect(again.sent).toHaveLength(0);
@@ -73,7 +73,7 @@ describe("スタッフの LINE へのアラート", () => {
     const s = await sa();
     const warn = { key: "review:30min", level: "warn" as const, title: "要確認が30分たまっています" };
     expect((await s.sendAlertsToStaff([warn])).sent).toHaveLength(0);
-    const assigned = { key: "review:assigned", level: "warn" as const, title: "原価の見直しをお願いします：バターロール", assignee: "事務 さとう", href: "/alerts" };
+    const assigned = { key: "review:assigned", level: "warn" as const, title: "原価の見直しをお願いします：バターロール", assignee: "さとう", href: "/alerts" };
     const r = await s.sendAlertsToStaff([assigned]);
     expect(r.sent.map((x) => x.to)).toEqual([SATO]);
   });
@@ -95,7 +95,7 @@ describe("スタッフの LINE へのアラート", () => {
     await st.updateLineState((x) => {
       x.users[SATO] = { ...x.users[SATO], customerId: "C04" };
     });
-    const r = await s.sendAlertsToStaff([{ key: "x:1", level: "warn", title: "見本", assignee: "事務 さとう" }]);
+    const r = await s.sendAlertsToStaff([{ key: "x:1", level: "warn", title: "見本", assignee: "さとう" }]);
     expect(r.sent).toHaveLength(0);
     expect(r.skipped[0].why).toBe("お客さんにひも付いている");
   });

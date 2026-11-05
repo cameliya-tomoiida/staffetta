@@ -14,7 +14,7 @@ import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
 import { ReplyButton } from "./ReplyButton";
 import { easyReasons, LOW_CONFIDENCE } from "@/components/ui/wording";
 
-const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
+const STAFF = ["たなか", "こばやし", "はやし"];
 
 type StatusFilter = "all" | OrderStatus;
 type SortKey = "date" | "customer" | "received";

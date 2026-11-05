@@ -14,7 +14,7 @@ export interface StandingCustomer {
 }
 type Result = { weekStart: string; created: { id: string; customerId: string; deliveryDate: string; lines: number }[]; existing: string[]; skipped: { customerId: string; date: string; reason: string }[] };
 
-const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
+const STAFF = ["こばやし", "たなか", "はやし"];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 const WD = "日月火水木金土";
 const inputClass = "min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base text-ink";

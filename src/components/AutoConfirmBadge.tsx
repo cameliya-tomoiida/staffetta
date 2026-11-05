@@ -4,7 +4,7 @@ import { useState } from "react";
 import { undoAutoConfirmAction } from "@/app/actions";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
 
-const STAFF = ["事務 たなか", "製造 グエン", "専務 はやし"];
+const STAFF = ["たなか", "グエン", "はやし"];
 
 export function AutoConfirmBadge({ faxId, reason, compact = false }: { faxId: string; reason: string; compact?: boolean }) {
   const [who, setWho] = useState(STAFF[0]);

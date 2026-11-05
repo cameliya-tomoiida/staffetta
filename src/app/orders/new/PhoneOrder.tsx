@@ -11,7 +11,7 @@ import { addPhoneOrderAction, phoneContextAction, type PhoneContext } from "../a
 type Customer = { id: string; name: string; channel: string; count: number };
 type Product = { id: string; name: string; unit: string };
 
-const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし", "ドライバー やまだ"];
+const STAFF = ["たなか", "こばやし", "はやし", "ドライバー やまだ"];
 const WD = "日月火水木金土";
 const dow = (ymd: string) => WD[new Date(`${ymd}T00:00:00Z`).getUTCDay()];
 

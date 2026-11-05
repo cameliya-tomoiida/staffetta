@@ -129,11 +129,11 @@ describe("D2 確定の連絡の自動送信と、取り消し", () => {
     await settings({ autoNotify: true });
     const { confirmOrderAction } = await import("@/app/orders/actions");
     const ok = await send(KOTORI, talk("2026-11-09", [line("バタロ", "P01", 5, "個", 0.6, "商品の対応が推測")]));
-    await confirmOrderAction({ orderId: ok.id, who: "事務 たなか", lines: [] });
+    await confirmOrderAction({ orderId: ok.id, who: "たなか", lines: [] });
     expect(await outboxFor(ok.id)).toHaveLength(1);
 
     const late = await send(KOTORI, talk("2026-11-06", [line("超じゅくロール 6個入", "P10", 2, "袋")]));
-    await confirmOrderAction({ orderId: late.id, who: "事務 たなか", lines: [] });
+    await confirmOrderAction({ orderId: late.id, who: "たなか", lines: [] });
     expect(mem.db.orders.find((x) => x.id === late.id)!.status).toBe("confirmed");
     expect(await outboxFor(late.id)).toHaveLength(0);
   });
@@ -142,11 +142,11 @@ describe("D2 確定の連絡の自動送信と、取り消し", () => {
     const o = await send(KOTORI, talk("2026-11-10", [line("バターロール", "P01", 8, "個")]));
     expect(o.status).toBe("confirmed");
     const { undoAutoConfirm } = await import("@/lib/automation/orders");
-    await undoAutoConfirm(o.id, "事務 たなか");
+    await undoAutoConfirm(o.id, "たなか");
     const back = mem.db.orders.find((x) => x.id === o.id)!;
     expect(back.status).toBe("needs_review");
     expect(back.confirmedBy).toBeUndefined();
-    expect(back.edits.at(-1)).toMatchObject({ who: "事務 たなか", from: "自動（LINE・迷いなし）" });
+    expect(back.edits.at(-1)).toMatchObject({ who: "たなか", from: "自動（LINE・迷いなし）" });
   });
 });
 

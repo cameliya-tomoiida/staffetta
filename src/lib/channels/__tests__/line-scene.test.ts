@@ -51,14 +51,14 @@ describe("撮影の LINE の場面（デモの人・DEMO_NOW）", () => {
 
     // 受注一覧で確定（人が押す）
     const { confirmOrderAction } = await import("@/app/orders/actions");
-    const r = await confirmOrderAction({ orderId: id, who: "事務 たなか", lines: [] });
+    const r = await confirmOrderAction({ orderId: id, who: "たなか", lines: [] });
     expect(r).toMatchObject({ ok: true, channel: "line" });
     expect(mem.db.orders.find((x) => x.id === id)!.status).toBe("confirmed");
 
     // 確定の連絡: デモの人なので記録だけ（本番の LINE には送らない）。2回目は送らない
-    const sent = await o.notifyOrderConfirmed(id, "事務 たなか");
+    const sent = await o.notifyOrderConfirmed(id, "たなか");
     expect(sent).toMatchObject({ already: false, mode: "demo" });
-    expect(await o.notifyOrderConfirmed(id, "事務 たなか")).toMatchObject({ already: true });
+    expect(await o.notifyOrderConfirmed(id, "たなか")).toMatchObject({ already: true });
     const out = (await st.readLineState()).outbox.filter((m) => m.orderId === id);
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ to: "U_demo_kotori", via: "push", mode: "demo" });

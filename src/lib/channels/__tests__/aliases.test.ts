@@ -13,7 +13,7 @@ const order = (writtenName: string, productId = "", confidence = 0.3): ImportedO
 
 describe("名寄せ辞書を取り込みに当てる", () => {
   it("辞書にある呼び名は、その商品を候補にする（全角半角・空白の違いは吸収）。読み取りの値は attention に残す", async () => {
-    await addAlias({ customerId: "C01", alias: "ﾛｰﾙ 小", productId: "P01", source: "email", who: "事務 たなか" });
+    await addAlias({ customerId: "C01", alias: "ﾛｰﾙ 小", productId: "P01", source: "email", who: "たなか" });
     const [o] = await applyAliases([order("ロール小")]);
     expect(o.lines[0]).toMatchObject({ productId: "P01", confidence: 0.95 });
     expect(o.lines[0].attention).toMatch(/名寄せ辞書で P01/);

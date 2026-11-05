@@ -13,7 +13,7 @@ vi.mock("@/lib/channels/email/reader", async (orig) => ({
   },
 }));
 
-const WHO = "専務 はやし";
+const WHO = "はやし";
 beforeEach(() => resetMem());
 
 describe("アラートのボタンの先", () => {

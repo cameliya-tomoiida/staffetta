@@ -6,7 +6,7 @@ import type { ImportedOrder } from "@/lib/channels/common";
 
 vi.mock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
 
-const WHO = "事務 たなか";
+const WHO = "たなか";
 const imported = (id: string, channel: "infomart" | "email" | "google_sheet", lines: Partial<ImportedOrder["lines"][number]>[], over: Partial<ImportedOrder> = {}): ImportedOrder => ({
   id,
   customerId: "C03",

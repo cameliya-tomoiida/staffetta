@@ -62,7 +62,7 @@ export function StaffAlertPanel({ staff, candidates }: { staff: StaffLine[]; can
               <option key={c.userId} value={c.userId}>{c.label}</option>
             ))}
           </select>
-          <input className={field} placeholder="スタッフの名前（例: 工場長 こいで）" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className={field} placeholder="スタッフの名前（例: もりた）" value={name} onChange={(e) => setName(e.target.value)} />
           <label className="flex min-h-12 items-center gap-2">
             <input type="checkbox" className="h-5 w-5 accent-crust-600" checked={allDanger} onChange={(e) => setAllDanger(e.target.checked)} /> 大事なお知らせを全部受け取る
           </label>

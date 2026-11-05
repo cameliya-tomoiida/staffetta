@@ -67,7 +67,7 @@ describe("FAX の自動確定", () => {
 
   it("自動確定を1タップで取り消すと要確認に戻る", async () => {
     await receive("AUTO5", read("order", "C01", [["2026-11-10", [["バターロール", "P01", 60]]]]));
-    await undoAutoConfirmAction({ faxId: "AUTO5", who: "事務 たなか" });
+    await undoAutoConfirmAction({ faxId: "AUTO5", who: "たなか" });
     const db = await readDb();
     const f = db.faxes.find((x) => x.id === "AUTO5")!;
     expect(f.status).toBe("review");
@@ -88,7 +88,7 @@ describe("FAX の自動確定", () => {
     expect(c.status).toBe("confirmed");
     expect(c.autoConfirmed?.reason).toContain("60→55");
     expect((await readDb()).orders.find((x) => x.id === "AUTO7-0")?.lines[0].quantity).toBe(55);
-    await undoAutoConfirmAction({ faxId: "AUTO8", who: "事務 たなか" });
+    await undoAutoConfirmAction({ faxId: "AUTO8", who: "たなか" });
     expect((await readDb()).orders.find((x) => x.id === "AUTO7-0")?.lines[0].quantity).toBe(60);
   });
 

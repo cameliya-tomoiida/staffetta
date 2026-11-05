@@ -7,7 +7,7 @@ import { loadMasters } from "../seed-db";
 import * as s from "../service";
 
 const plan = async () => runPipeline(demoOrders, DEMO_DATE, { masters: await loadMasters() });
-const WHO = "専務 はやし";
+const WHO = "はやし";
 
 describe("レシピ・生地を直す → 生産計画の kg が変わる", () => {
   it("配合の％を変えると、材料 kg が変わる（親子の保存: 行の追加・％の変更・行の削除）", async () => {

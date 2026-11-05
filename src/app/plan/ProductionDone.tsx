@@ -9,7 +9,7 @@ import { Button, fmtDateTime, Notice } from "@/components/ui";
 import type { Actual, MadeView } from "./made";
 export type { MadeView };
 
-const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
+const STAFF = ["こばやし", "たなか", "はやし"];
 
 export function ProductionDone({ date, planned, actual }: { date: string; planned: MadeView[]; actual?: Actual }) {
   const router = useRouter();

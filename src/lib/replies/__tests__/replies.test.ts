@@ -9,7 +9,7 @@ import { outputPath } from "@/lib/channels/outbound/workflow";
 
 vi.mock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
 
-const WHO = "事務 たなか";
+const WHO = "たなか";
 const line = (id: string, productId: string, quantity: number, extra: Partial<OrderLine> = {}): OrderLine => ({
   id, productId, quantity, unit: "個", piecesPerUnit: 1, pieces: quantity, confidence: 1, edits: [], ...extra,
 });
@@ -71,7 +71,7 @@ describe("受注の確認返信", () => {
     await expect(createReply("T-R3", WHO)).rejects.toThrow(/LINE/);
     await expect(createReply("T-R4", WHO)).rejects.toThrow(/確定/);
     const r = await createReply("T-R5", WHO);
-    expect(markReplySent(r.id, "課長 こばやし")).toMatchObject({ status: "sent", sentBy: "課長 こばやし" });
+    expect(markReplySent(r.id, "こばやし")).toMatchObject({ status: "sent", sentBy: "こばやし" });
     await expect(createReply("T-R5", WHO)).rejects.toThrow(/もう送って/);
   });
 

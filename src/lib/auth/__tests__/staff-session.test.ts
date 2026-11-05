@@ -10,8 +10,8 @@ const T0 = Date.parse("2026-11-05T11:30:00+09:00");
 
 describe("cookie の署名と期限", () => {
   it("作った値は確かめられ、12時間で切れる", () => {
-    const v = createStaffSession({ userId: "U_demo_staff_koide", name: "工場長 こいで" }, T0, KEY)!;
-    expect(verifyStaffSession(v, T0 + 3600_000, KEY)).toMatchObject({ u: "U_demo_staff_koide", n: "工場長 こいで" });
+    const v = createStaffSession({ userId: "U_demo_staff_morita", name: "もりた" }, T0, KEY)!;
+    expect(verifyStaffSession(v, T0 + 3600_000, KEY)).toMatchObject({ u: "U_demo_staff_morita", n: "もりた" });
     expect(verifyStaffSession(v, T0 + 12 * 3600_000 - 1, KEY)).toBeTruthy();
     expect(verifyStaffSession(v, T0 + 12 * 3600_000, KEY)).toBeUndefined();
   });
@@ -56,16 +56,16 @@ describe("ログインできる人・通知のリンク", () => {
     vi.doMock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
     const st = await import("@/lib/channels/line/state");
     const sa = await import("@/lib/channels/line/staff-alerts");
-    await st.touchUser("U_demo_staff_koide", { displayName: "こいで" });
+    await st.touchUser("U_demo_staff_morita", { displayName: "もりた" });
     await st.touchUser("U_demo_cust", { displayName: "お客さん" });
-    await sa.addStaffLine({ userId: "U_demo_staff_koide", name: "工場長 こいで" }, "事務");
-    expect(await sa.staffLoginCheck("U_demo_staff_koide")).toEqual({ ok: true, name: "工場長 こいで" });
+    await sa.addStaffLine({ userId: "U_demo_staff_morita", name: "もりた" }, "事務");
+    expect(await sa.staffLoginCheck("U_demo_staff_morita")).toEqual({ ok: true, name: "もりた" });
     expect(await sa.staffLoginCheck("U_demo_nobody")).toMatchObject({ ok: false });
     // あとからお客さんにひも付いた
     await st.updateLineState((x) => {
-      x.users["U_demo_staff_koide"] = { ...x.users["U_demo_staff_koide"], customerId: "C04" };
+      x.users["U_demo_staff_morita"] = { ...x.users["U_demo_staff_morita"], customerId: "C04" };
     });
-    expect(await sa.staffLoginCheck("U_demo_staff_koide")).toMatchObject({ ok: false, error: expect.stringMatching(/お客さん/) });
+    expect(await sa.staffLoginCheck("U_demo_staff_morita")).toMatchObject({ ok: false, error: expect.stringMatching(/お客さん/) });
   });
 
   it("通知のリンク: 外の URL があれば LINE でログインを通る形、無ければ工場の中の URL", async () => {

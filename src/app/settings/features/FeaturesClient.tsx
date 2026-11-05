@@ -9,7 +9,7 @@ import { setFlagAction } from "../actions";
 import type { FeatureKey, FlagLog, FlagRow } from "@/lib/settings/features";
 
 type Row = Omit<FlagRow, "menu">;
-const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
+const STAFF = ["たなか", "こばやし", "はやし"];
 
 /** くわしい設定の画面（時刻・上限・条件など）がある機能 */
 const DETAIL: Record<string, { href: string; label: string }> = {

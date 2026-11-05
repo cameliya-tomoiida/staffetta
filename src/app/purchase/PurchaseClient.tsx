@@ -38,7 +38,7 @@ export interface PoState {
   sentBy?: string;
 }
 
-const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
+const STAFF = ["こばやし", "たなか", "はやし"];
 const WARN_MIN = 60; // 締めの何分前から警告するか
 
 

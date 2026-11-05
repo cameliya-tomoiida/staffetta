@@ -13,7 +13,7 @@ describe("アラートの保存", () => {
     getDb().exec("DROP TABLE IF EXISTS alerts");
     // ensureTables は1回しか作らないので、消したら作り直す
     (globalThis as unknown as { __hubSchemas?: Set<string> }).__hubSchemas?.delete("alerts");
-    setAlertSettings({ escalateTo: "専務 はやし" }, "テスト");
+    setAlertSettings({ escalateTo: "はやし" }, "テスト");
   });
 
   it("同じ dedupeKey は1件。判定から消えたら自動で済み、また出たら新しいに戻る", () => {
@@ -32,7 +32,7 @@ describe("アラートの保存", () => {
     const r = listAlerts()[0];
     expect(r.createdAt).toBe("2026-11-05T12:00:00.000+09:00");
     expect(r.history[0].at).toBe("2026-11-05T12:00:00.000+09:00");
-    const s = updateAlert("a", { snoozeUntil: "2026-11-05T05:00:00.000Z" }, "事務 たなか", "2026-11-05T03:30:00.000Z");
+    const s = updateAlert("a", { snoozeUntil: "2026-11-05T05:00:00.000Z" }, "たなか", "2026-11-05T03:30:00.000Z");
     expect(s.snoozeUntil).toBe("2026-11-05T14:00:00.000+09:00");
     expect(s.history.at(-1)?.what).toContain("11/5 14:00");
   });
@@ -45,18 +45,18 @@ describe("アラートの保存", () => {
 
   it("見た・あとで・済み・担当者を変えると履歴が残り、あとでの時刻が来たら戻る", () => {
     syncAlerts("logic", [c("a")], T(9));
-    updateAlert("a", { state: "seen" }, "事務 たなか", T(9));
-    updateAlert("a", { snoozeUntil: T(12), assignee: "製造 グエン" }, "事務 たなか", T(10));
+    updateAlert("a", { state: "seen" }, "たなか", T(9));
+    updateAlert("a", { snoozeUntil: T(12), assignee: "グエン" }, "たなか", T(10));
     expect(alertCounts()).toMatchObject({ open: 0, snoozed: 1 });
-    expect(() => updateAlert("a", { snoozeUntil: T(8) }, "事務 たなか", T(10))).toThrow();
+    expect(() => updateAlert("a", { snoozeUntil: T(8) }, "たなか", T(10))).toThrow();
     tickAlerts(T(13));
     const r = listAlerts()[0];
     expect(r.state).toBe("seen");
-    expect(r.assignee).toBe("製造 グエン");
-    expect(r.history.map((h) => h.who)).toEqual(["システム", "事務 たなか", "事務 たなか", "システム"]);
+    expect(r.assignee).toBe("グエン");
+    expect(r.history.map((h) => h.who)).toEqual(["システム", "たなか", "たなか", "システム"]);
     // 判定が出し直しても、人が付けた担当者は残る
     syncAlerts("logic", [c("a", { assignee: "別の人" })], T(14));
-    expect(listAlerts()[0].assignee).toBe("製造 グエン");
+    expect(listAlerts()[0].assignee).toBe("グエン");
   });
 
   it("期限を過ぎたら level を1段上げ、上の人に知らせる印を付ける（1回だけ）", () => {
@@ -64,9 +64,9 @@ describe("アラートの保存", () => {
     expect(tickAlerts(T(11))).toEqual([]);
     const up = tickAlerts(T(12));
     expect(up).toHaveLength(1);
-    expect(listAlerts()[0]).toMatchObject({ level: "danger", escalatedTo: "専務 はやし" });
+    expect(listAlerts()[0]).toMatchObject({ level: "danger", escalatedTo: "はやし" });
     expect(tickAlerts(T(13))).toEqual([]);
-    expect(listAlerts({ assignee: "専務 はやし" })).toHaveLength(1);
+    expect(listAlerts({ assignee: "はやし" })).toHaveLength(1);
     expect(alertCounts().danger).toBe(1);
   });
 });

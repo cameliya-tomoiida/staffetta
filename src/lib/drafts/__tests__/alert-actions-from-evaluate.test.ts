@@ -9,7 +9,7 @@ vi.mock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
 const NOW = "2026-11-05T14:30:00+09:00";
 // 見本の注文で「足りなくなりそう（注文しますか？）」が出る時刻（11/5 には締めを過ぎて「電話」になる）
 const STOCK_NOW = "2026-11-03T09:00:00+09:00";
-const WHO = "課長 こばやし";
+const WHO = "こばやし";
 const po = (id: string, p: Partial<PurchaseOrder>): PurchaseOrder => ({
   id, supplierId: "S01", method: "fax", deliveryDate: "2026-11-06", cutoffAt: "2026-11-05T15:00:00+09:00", status: "draft",
   lines: [{ itemType: "material", itemId: "M01", name: "強力粉", units: 2, unitLabel: "25kg袋", quantity: 50 }], ...p,

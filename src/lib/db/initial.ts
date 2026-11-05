@@ -13,9 +13,9 @@ const initialFaxes = (): FaxDoc[] => [
 /** デモの前提: いつもFAXをくれる3社は、様式を承認済み（めぐみ給食サービスは初めての様式） */
 const now0 = "2026-11-01T09:00:00+09:00";
 const initialTemplates = (): Db["templates"] => ({
-  C01: { customerId: "C01", title: "週間パン注文表", layoutSummary: "品名が縦、納品日（月〜金）が横の表。空欄は注文なし。数量は個・斤", items: { "バターロール": "P01", "黒糖ロール": "P02", "ミニロール（白）": "P05", "ミニロール（黒糖）": "P06", "食パン 8枚切（斤）": "P03", "食パン 6枚切（斤）": "P04", "ピザクラスト": "P07" }, draftedBy: "claude-opus-5-5", approvedBy: "専務 はやし", approvedAt: now0 },
-  C02: { customerId: "C02", title: "パン発注書", layoutSummary: "納品場所・納品日の欄のあと、品名・規格（入数）・数量（袋）。白・黒を丸で選ぶ。1個25gのミニサイズ", items: { "ロールパン 白・黒（黒に丸） 3個入り": "P06", "ロールパン 白・黒（黒に丸） 2個入り": "P06", "ロールパン 白（白に丸） 3個入り": "P05", "ロールパン 白（白に丸） 2個入り": "P05" }, draftedBy: "claude-opus-5-5", approvedBy: "専務 はやし", approvedAt: now0 },
-  C03: { customerId: "C03", title: "発注書", layoutSummary: "横長。納品日ごとに品名・入数・数量・単位（ケ・P・枚）。〈ひので〉は仕入品", items: { "ピザクラスト 23cm": "P07", "たまごサンドロール〈ひので〉": "P08", "ごまバンズ〈ひので〉": "P09", "黒糖ロール": "P02", "バターロール 35g": "P01", "超じゅくロール〈ひので〉": "P10" }, draftedBy: "claude-opus-5-5", approvedBy: "専務 はやし", approvedAt: now0 },
+  C01: { customerId: "C01", title: "週間パン注文表", layoutSummary: "品名が縦、納品日（月〜金）が横の表。空欄は注文なし。数量は個・斤", items: { "バターロール": "P01", "黒糖ロール": "P02", "ミニロール（白）": "P05", "ミニロール（黒糖）": "P06", "食パン 8枚切（斤）": "P03", "食パン 6枚切（斤）": "P04", "ピザクラスト": "P07" }, draftedBy: "claude-opus-5-5", approvedBy: "はやし", approvedAt: now0 },
+  C02: { customerId: "C02", title: "パン発注書", layoutSummary: "納品場所・納品日の欄のあと、品名・規格（入数）・数量（袋）。白・黒を丸で選ぶ。1個25gのミニサイズ", items: { "ロールパン 白・黒（黒に丸） 3個入り": "P06", "ロールパン 白・黒（黒に丸） 2個入り": "P06", "ロールパン 白（白に丸） 3個入り": "P05", "ロールパン 白（白に丸） 2個入り": "P05" }, draftedBy: "claude-opus-5-5", approvedBy: "はやし", approvedAt: now0 },
+  C03: { customerId: "C03", title: "発注書", layoutSummary: "横長。納品日ごとに品名・入数・数量・単位（ケ・P・枚）。〈ひので〉は仕入品", items: { "ピザクラスト 23cm": "P07", "たまごサンドロール〈ひので〉": "P08", "ごまバンズ〈ひので〉": "P09", "黒糖ロール": "P02", "バターロール 35g": "P01", "超じゅくロール〈ひので〉": "P10" }, draftedBy: "claude-opus-5-5", approvedBy: "はやし", approvedAt: now0 },
 });
 
 export const emptyDb = (): Db => ({

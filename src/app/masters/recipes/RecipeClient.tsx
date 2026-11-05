@@ -16,7 +16,7 @@ export interface RecipeDough {
   steps: { id: string; seq: number; name: string; equipment?: string; people: number; ccp: boolean; prevDay: boolean }[];
 }
 type Material = { id: string; name: string; unit: string };
-const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
+const STAFF = ["こばやし", "たなか", "はやし"];
 const inputClass = "min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base text-ink";
 
 export function RecipeClient({ doughs, materials, selected, batchKg }: { doughs: RecipeDough[]; materials: Material[]; selected?: string; batchKg?: number }) {

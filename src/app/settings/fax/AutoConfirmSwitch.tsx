@@ -5,7 +5,7 @@ import { setFlagAction } from "@/app/settings/actions";
 // 中身は機能の一覧（features の fax_auto_confirm）。/settings/features のスイッチと同じもの
 import { choiceClass } from "@/components/ui";
 
-const STAFF = ["専務 はやし", "事務 たなか", "課長 こばやし"];
+const STAFF = ["はやし", "たなか", "こばやし"];
 
 export function AutoConfirmSwitch({ initial }: { initial: boolean }) {
   const [on, setOn] = useState(initial);

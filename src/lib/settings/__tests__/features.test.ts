@@ -20,17 +20,17 @@ describe("機能の ON/OFF", () => {
   });
 
   it("切り替えると誰がいつ変えたかが残り、dependsOn が OFF なら子も OFF、メニューも隠れる", () => {
-    setFlag("line_orders", false, "専務 はやし");
+    setFlag("line_orders", false, "はやし");
     expect(isOn("line_orders")).toBe(false);
     expect(isOn("line_auto_confirm")).toBe(false); // 親が OFF
     const row = listFlags().find((f) => f.key === "line_auto_confirm")!;
     expect(row.on).toBe(true); // 自分のスイッチは ON のまま
     expect(row.effective).toBe(false);
     expect(hiddenMenuHrefs()).toContain("/line");
-    expect(flagLog()[0]).toMatchObject({ key: "line_orders", on: false, who: "専務 はやし" });
-    expect(listFlags().find((f) => f.key === "line_orders")?.changedBy).toBe("専務 はやし");
+    expect(flagLog()[0]).toMatchObject({ key: "line_orders", on: false, who: "はやし" });
+    expect(listFlags().find((f) => f.key === "line_orders")?.changedBy).toBe("はやし");
 
-    setFlag("line_orders", true, "専務 はやし");
+    setFlag("line_orders", true, "はやし");
     expect(isOn("line_auto_confirm")).toBe(true);
     expect(hiddenMenuHrefs()).not.toContain("/line");
   });

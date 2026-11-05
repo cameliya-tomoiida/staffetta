@@ -2,7 +2,7 @@
 // お知らせ（アラート）の server action（画面は②の /alerts・ベル・帯）。
 //   updateAlertAction(key, { state: "seen" | "done" | "new" }, who)          … 見た・済み・新しいに戻す
 //   updateAlertAction(key, { snoozeUntil: "2026-11-06T09:00:00+09:00" }, who) … あとで（〜まで）
-//   updateAlertAction(key, { assignee: "事務 たなか", dueAt: "…" }, who)     … 担当者・期限（期限を過ぎたら上の人にも）
+//   updateAlertAction(key, { assignee: "たなか", dueAt: "…" }, who)     … 担当者・期限（期限を過ぎたら上の人にも）
 //   runAlertActionAction(key, index, who)                                  … ボタンを実行する（「○○しますか？」の「はい」）。⑤の処理などにつなぐ
 //   checkAlertsNowAction()                                                  … いますぐ判定し直す
 //   getAlertSettingsAction() / setAlertSettingsAction({ escalateTo }, who)   … 期限を過ぎたときに知らせる上の人

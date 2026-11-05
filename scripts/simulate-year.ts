@@ -114,7 +114,7 @@ async function main() {
       const sent = date <= END;
       db.purchaseOrders!.push({
         ...po, status: sent ? "sent" : "draft",
-        ...(sent ? { approvedBy: "課長 こばやし", approvedAt: `${addDays(date, -1)}T18:30:00+09:00`, sentAt: `${addDays(date, -1)}T18:40:00+09:00` } : {}),
+        ...(sent ? { approvedBy: "こばやし", approvedAt: `${addDays(date, -1)}T18:30:00+09:00`, sentAt: `${addDays(date, -1)}T18:40:00+09:00` } : {}),
         history: [{ at: `${addDays(date, -1)}T18:00:00+09:00`, who: "system", action: "saved" }],
       } as never);
     }
@@ -128,7 +128,7 @@ async function main() {
     const at = addDays(start, w * 7);
     for (const name of ["materials", "packaging"] as const) {
       const rows = await listMaster<{ id: string; stock: number }>(name);
-      await upsertMasters(name, rows.map((r) => ({ ...r, stock: Math.round(r.stock * (0.7 + rnd() * 0.6) * 10) / 10, stockCountedAt: `${at}T17:00:00+09:00`, stockCountedBy: "製造 ベトナム班" })), "棚卸（試験）");
+      await upsertMasters(name, rows.map((r) => ({ ...r, stock: Math.round(r.stock * (0.7 + rnd() * 0.6) * 10) / 10, stockCountedAt: `${at}T17:00:00+09:00`, stockCountedBy: "グエン班" })), "棚卸（試験）");
     }
   }
 

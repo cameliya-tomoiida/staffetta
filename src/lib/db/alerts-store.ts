@@ -106,7 +106,7 @@ function getRow(key: string): AlertRow | undefined {
 
 /** 設定（エスカレーション先＝期限を過ぎたときに知らせる上の人） */
 export interface AlertSettings { escalateTo: string }
-export const getAlertSettings = (): AlertSettings => ({ escalateTo: "専務 はやし", ...(kvGet<Partial<AlertSettings>>("alert_settings") ?? {}) });
+export const getAlertSettings = (): AlertSettings => ({ escalateTo: "はやし", ...(kvGet<Partial<AlertSettings>>("alert_settings") ?? {}) });
 export function setAlertSettings(v: Partial<AlertSettings>, who: string) {
   kvSet("alert_settings", { ...getAlertSettings(), ...v, updatedBy: who, updatedAt: new Date().toISOString() });
 }

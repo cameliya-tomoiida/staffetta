@@ -9,7 +9,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
 
-const WHO = "事務 たなか";
+const WHO = "たなか";
 const order = (id: string, over: Partial<Order> = {}, lines: Partial<Order["lines"][number]>[] = [{}]): Order => ({
   id,
   intent: "new",

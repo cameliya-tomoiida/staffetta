@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, buttonClass, fmtDate, fmtDateTime, MethodIcon, Notice, PurchaseStatusTag, Qty } from "@/components/ui";
 
-const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
+const STAFF = ["こばやし", "たなか", "はやし"];
 import type { EntryRow } from "@/lib/channels/outbound/render";
 import { ReceivePanel } from "./ReceivePanel";
 import type { StoredReply } from "@/lib/replies/store";

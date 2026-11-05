@@ -58,14 +58,14 @@ describe("確定の連絡の「代わりの日の提案」と、その返事", (
     const id = r.orders![0].id;
 
     // 人が受注一覧で確定（行はそのまま）
-    await confirmOrderAction({ orderId: id, who: "事務 たなか", lines: [] });
+    await confirmOrderAction({ orderId: id, who: "たなか", lines: [] });
     const order = mem.db.orders.find((x) => x.id === id)!;
     const offers = o.alternativeOffers(order);
     expect(offers).toHaveLength(1);
     expect(offers[0]).toMatchObject({ productId: "P10", quantity: 2, date: "2026-11-07" });
 
     // 確定の連絡（人が押したときだけ）。デモの人なので記録だけ・fetch は呼ばない
-    expect(await o.notifyOrderConfirmed(id, "事務 たなか")).toMatchObject({ already: false, mode: "demo" });
+    expect(await o.notifyOrderConfirmed(id, "たなか")).toMatchObject({ already: false, mode: "demo" });
     expect(fetchSpy).not.toHaveBeenCalled();
     const sent = (await st.readLineState()).outbox.filter((m) => m.orderId === id);
     expect(sent).toHaveLength(1);

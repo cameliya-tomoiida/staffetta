@@ -18,7 +18,7 @@ describe("日付", () => {
 });
 
 describe("定期注文から、その週の注文を作る", () => {
-  const r = generateStandingOrders(WEEK, { now: AT, who: "事務 こばやし" });
+  const r = generateStandingOrders(WEEK, { now: AT, who: "こばやし" });
 
   it("得意先 × 納品日で1件。すべて要確認（確定は人）", () => {
     // グループホーム（C05）は 火・木・土、喫茶店（C04）は 月〜土
@@ -32,7 +32,7 @@ describe("定期注文から、その週の注文を作る", () => {
     const o = r.orders.find((x) => x.id === "SO-C05-2026-11-10")!;
     expect(o.lines.map((l) => [l.productId, l.quantity, l.unit, l.pieces])).toEqual([["P01", 30, "個", 30], ["P03", 2, "斤", 2]]);
     expect(o.lines[0].read!.attention).toMatch(/定期注文/);
-    expect(o.source).toMatchObject({ channel: "driver", extra: { standing: true, weekday: 2, createdBy: "事務 こばやし" } });
+    expect(o.source).toMatchObject({ channel: "driver", extra: { standing: true, weekday: 2, createdBy: "こばやし" } });
     expect(o.source.refs[0]).toMatchObject({ kind: "manual", note: "定期注文（毎週火曜日）から作成" });
   });
 

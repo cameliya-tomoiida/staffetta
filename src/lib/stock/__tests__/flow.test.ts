@@ -7,7 +7,7 @@ import { runPipeline } from "@/lib/pipeline";
 
 vi.mock("@/lib/store", () => import("@/lib/channels/__tests__/memdb"));
 
-const WHO = "課長 こばやし";
+const WHO = "こばやし";
 const plan = async () => runPipeline(demoOrders, DEMO_DATE, { masters: await loadMasters() });
 const stockOf = async (master: "materials" | "packaging", id: string) => Number((await loadMasters())[master].find((x) => x.id === id)?.stock ?? 0);
 

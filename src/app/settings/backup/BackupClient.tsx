@@ -7,7 +7,7 @@ import type { ImportReport } from "@/lib/db/backup";
 import { buttonClass, fmtDateTime, Notice, SectionTitle } from "@/components/ui";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
 
-const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
+const STAFF = ["たなか", "こばやし", "はやし"];
 const field = "min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 font-bold text-ink focus:border-crust-600 focus:outline-none";
 
 type Last = { at: string; who: string; exportedAt: string; report: ImportReport } | null;

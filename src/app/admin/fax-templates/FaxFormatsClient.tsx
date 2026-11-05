@@ -13,7 +13,7 @@ import { Button, buttonClass, fmtDateTime, Notice, SectionTitle, Tag } from "@/c
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
 import { notifyHubChanged } from "@/components/ui/refresh";
 
-const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
+const STAFF = ["たなか", "こばやし", "はやし"];
 const field = "min-h-12 w-full rounded-lg border-2 border-rule-strong bg-sheet px-3 text-ink focus:border-crust-600 focus:outline-none";
 const actionLabel: Record<HistoryRow["action"], string> = { insert: "登録", update: "変更", disable: "無効にした", restore: "戻した" };
 
