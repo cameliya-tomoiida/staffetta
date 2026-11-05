@@ -37,7 +37,7 @@ async function main() {
     for (const s of row.steps) lines.push(`  ${hm(s.start)}〜${hm(s.end)}  ${String(s.end - s.start).padStart(4)}分  ${s.people ?? 0}人  ${s.name}`);
     for (const w of row.warnings) lines.push(`  ！${w}`);
   }
-  for (const pl of r.production.lines) lines.push(`ライン ${pl.line}: ${pl.pieces} / 上限 ${pl.cap ?? "なし"}`);
+  for (const pl of r.production.lines) lines.push(`ライン ${pl.line}: ${pl.pieces}${pl.capPieces !== undefined ? `（上限に数える ${pl.capPieces}）` : ""} / 上限 ${pl.cap ?? "なし"}`);
   for (const w of r.production.warnings) lines.push(`！${w}`);
   const text = lines.join("\n") + "\n";
   if (out) {
