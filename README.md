@@ -77,6 +77,14 @@ FAX は逆さまや横向きで届くこともあり、単位も「個・P・袋
 **`/liff/order` LINE の注文フォーム（お客さん用）** — 届け日と数を押すだけ
 <img src="docs/screenshots/07-liff-order.png" alt="LINE の注文フォーム" width="320">
 
+## 使い方の手引き
+
+現場でそのまま使うための手引きです（やさしい日本語・画面の写真に番号つき・架空のデータ）。
+
+- [スタッフ向けの操作の手引き](docs/manual/README.md) — 1日の流れ（朝：注文を確定 → 発注書を承認・送る → 夕方：製造計画を印刷）と、マスタの登録（CSV・1件ずつ・新しい商品のレシピと工程）
+- [お客さん向け「LINE でのご注文のしかた」](docs/manual/customer-line-order.html)（A4 1枚・[PDF](docs/manual/customer-line-order.pdf)）
+- [導入のしかた](docs/manual/setup.md) — マスタの CSV → FAX の転送 → LINE → 1週間ためて様式を承認
+
 ## 動かし方
 
 Node.js 20.9 以上が必要です（動作確認は 24）。
@@ -161,7 +169,7 @@ src/
   i18n/               多言語の文言
 scripts/              FAX・LINE の再現、デモの初期化、見本の作成
 public/samples/       見本の FAX・メール・CSV（すべて架空）
-docs/                 接続の手順
+docs/                 接続の手順・使い方の手引き（docs/manual）
 data/                 実行時のデータ（git には入れない）
 ```
 
