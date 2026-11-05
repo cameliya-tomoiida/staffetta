@@ -55,17 +55,58 @@ export function StandingPanel({ customers }: { customers: StandingCustomer[] }) 
             {STAFF.map((s) => <option key={s}>{s}</option>)}
           </select>
         </label>
-        <Button variant="primary" disabled={busy || !customers.length} onClick={() => make()}>今週分を作る（全部の取引先）</Button>
+        <Button variant="primary" size="lg" disabled={busy || !customers.length} onClick={() => make()}>{busy ? "作っています…" : "今週分を作る（全部の取引先）"}</Button>
       </div>
       <p className="text-sm text-ink-soft">作った注文は「要確認」で受注一覧に入ります。お休み・変更の連絡がないか確かめてから確定してください。もう作ってある日は作りません。</p>
       {err && <Notice tone="alert">{err}</Notice>}
       {res && (
-        <Notice tone={res.created.length ? "ok" : "review"}>
-          <div>{res.weekStart} の週：{res.created.length} 件作りました{res.existing.length ? `（${res.existing.length} 件はもう作ってありました）` : ""}。</div>
-          {res.created.map((c) => <div key={c.id} className="font-normal">{c.deliveryDate} {nameOf(c.customerId)}（{c.lines}品）</div>)}
-          {res.skipped.length > 0 && <div className="mt-1">作らなかった日：</div>}
-          {res.skipped.map((s, i) => <div key={i} className="font-normal">{s.date} {s.reason}</div>)}
-        </Notice>
+        // 押したら何が起きたかを大きく: 作った件数・もう作ってあった件数・作らなかった日と理由
+        <div ref={(el) => el?.scrollIntoView({ block: "nearest", behavior: "smooth" })} className={`rounded-lg border-2 p-4 ${res.created.length ? "border-ok-line bg-ok-bg" : "border-review-line bg-review-bg"}`} role="status">
+          <div className="text-sm font-bold text-ink-soft">{res.weekStart} からの1週間</div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+            <div>
+              <span className="num text-4xl font-black">{res.created.length}</span>
+              <span className="ml-1 text-lg font-black">件 作りました</span>
+            </div>
+            {res.existing.length > 0 && (
+              <div className="text-ink-soft">
+                <span className="num text-2xl font-black">{res.existing.length}</span> 件はもう作ってありました（二重には作りません）
+              </div>
+            )}
+            {res.skipped.length > 0 && (
+              <div className="text-review-ink">
+                <span className="num text-2xl font-black">{res.skipped.length}</span> 日 作りませんでした
+              </div>
+            )}
+          </div>
+          {res.created.length > 0 && (
+            <>
+              <ul className="mt-3 grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
+                {res.created.map((c) => (
+                  <li key={c.id} className="num">
+                    {c.deliveryDate}　<span className="font-bold">{nameOf(c.customerId)}</span>（{c.lines}品）
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 font-bold">
+                作った注文は「要確認」です。
+                <a href="/orders?status=needs_review" className="ml-1 underline underline-offset-4">受注一覧で確かめて確定する →</a>
+              </p>
+            </>
+          )}
+          {res.skipped.length > 0 && (
+            <div className="mt-3 border-t border-review-line pt-2">
+              <div className="font-bold">作らなかった日と理由</div>
+              <ul className="mt-1">
+                {res.skipped.map((x, i) => (
+                  <li key={i}>
+                    <span className="num">{x.date}</span>　{nameOf(x.customerId)}：{x.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
       {customers.length === 0 && <p className="text-ink-soft">定期注文はまだありません。下の「定期注文を1件追加」か CSV で入れてください。</p>}
       {customers.map((c) => (

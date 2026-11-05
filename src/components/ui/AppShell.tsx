@@ -9,28 +9,32 @@ import { usePathname } from "next/navigation";
 import { TodayBar } from "./TodayBar";
 
 type Item = { href: string; label: string; match?: (p: string) => boolean };
-type Group = { title: string; items: Item[] };
+/** fold: たたんでおくまとまり（今いる画面がその中にあるときだけ開いて出す） */
+type Group = { title: string; items: Item[]; fold?: boolean };
 
 export const MENU: Group[] = [
+  // 毎日つかうものを上に（仕事の順: 注文を受ける → 作る → 仕入れる）
   {
-    title: "受注",
+    title: "毎日の仕事",
     items: [
       { href: "/", label: "FAX受信箱", match: (p) => p === "/" || p.startsWith("/fax") },
       { href: "/orders", label: "受注一覧" },
-      { href: "/line", label: "LINE受付" },
-      { href: "/import", label: "取り込み（メール・CSV）" },
-    ],
-  },
-  { title: "製造", items: [{ href: "/plan", label: "製造計画・工程表" }] },
-  {
-    title: "発注",
-    items: [
+      { href: "/plan", label: "製造計画・工程表" },
       { href: "/purchase", label: "発注書" },
       { href: "/outbound", label: "送り出し（FAX・サイト）" },
     ],
   },
   {
+    title: "注文の入口",
+    items: [
+      { href: "/line", label: "LINE受付" },
+      { href: "/import", label: "取り込み（メール・CSV）" },
+      { href: "/masters/standingOrders", label: "定期注文（今週分を作る）" },
+    ],
+  },
+  {
     title: "マスタ管理",
+    fold: true,
     items: [
       // 商品・レシピ・設備などは⑤の /masters/*（③の全マスタ。CSV のプレビュー→確定つき）
       { href: "/masters/products", label: "商品" },
@@ -49,6 +53,7 @@ export const MENU: Group[] = [
   },
   {
     title: "くわしいマスタ",
+    fold: true,
     items: [
       { href: "/masters/doughs", label: "生地" },
       { href: "/masters/recipeItems", label: "配合（1行ずつ）" },
@@ -63,6 +68,7 @@ export const MENU: Group[] = [
   },
   {
     title: "取り込みの設定",
+    fold: true,
     items: [
       { href: "/masters/sheet_sources", label: "読みに行くシート" },
       { href: "/masters/sheet_columns", label: "シートの列と商品" },
@@ -72,6 +78,7 @@ export const MENU: Group[] = [
   },
   {
     title: "設定",
+    fold: true,
     items: [
       { href: "/settings/backup", label: "バックアップ" },
       { href: "/settings/demo", label: "デモ" },
@@ -94,33 +101,60 @@ function Brand({ factory }: { factory: string }) {
   );
 }
 
+function MenuItems({ items, path, onPick }: { items: Item[]; path: string; onPick?: () => void }) {
+  return (
+    <ul>
+      {items.map((it) => {
+        const on = isOn(it, path);
+        return (
+          <li key={it.href}>
+            <Link
+              href={it.href}
+              onClick={onPick}
+              aria-current={on ? "page" : undefined}
+              className={`flex min-h-11 items-center border-l-4 px-3 font-bold ${
+                on ? "border-crust-600 bg-crust-50 text-crust-700" : "border-transparent text-ink hover:bg-cream"
+              }`}
+            >
+              {it.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function SideMenu({ path, onPick }: { path: string; onPick?: () => void }) {
+  // たたむまとまりは、今いる画面が中にあるときだけ開く（押せば開け閉めできる）
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
     <nav aria-label="メニュー" className="space-y-3">
-      {MENU.map((g) => (
-        <div key={g.title}>
-          <div className="mb-1 border-b border-rule px-3 pb-1 text-sm font-black tracking-wider text-ink-faint">{g.title}</div>
-          <ul>
-            {g.items.map((it) => {
-              const on = isOn(it, path);
-              return (
-                <li key={it.href}>
-                  <Link
-                    href={it.href}
-                    onClick={onPick}
-                    aria-current={on ? "page" : undefined}
-                    className={`flex min-h-10 items-center border-l-4 px-3 font-bold ${
-                      on ? "border-crust-600 bg-crust-50 text-crust-700" : "border-transparent text-ink hover:bg-cream"
-                    }`}
-                  >
-                    {it.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+      {MENU.map((g) => {
+        const active = g.items.some((it) => isOn(it, path));
+        if (!g.fold)
+          return (
+            <div key={g.title}>
+              <div className="mb-1 border-b border-rule px-3 pb-1 text-sm font-black tracking-wider text-ink-faint">{g.title}</div>
+              <MenuItems items={g.items} path={path} onPick={onPick} />
+            </div>
+          );
+        const isOpen = open[g.title] ?? active;
+        return (
+          <div key={g.title}>
+            <button
+              type="button"
+              aria-expanded={isOpen}
+              onClick={() => setOpen((o) => ({ ...o, [g.title]: !isOpen }))}
+              className="flex min-h-11 w-full items-center justify-between border-b border-rule px-3 text-sm font-black tracking-wider text-ink-soft hover:bg-cream"
+            >
+              <span>{g.title}</span>
+              <span className="text-xs font-bold text-crust-700">{isOpen ? "▲ たたむ" : `▼ ひらく（${g.items.length}）`}</span>
+            </button>
+            {isOpen && <MenuItems items={g.items} path={path} onPick={onPick} />}
+          </div>
+        );
+      })}
     </nav>
   );
 }
