@@ -7,11 +7,12 @@ import { useState } from "react";
 import { Button, fmtDateTime, Notice } from "@/components/ui";
 
 import type { Actual, MadeView } from "./made";
+import { useStaffNames } from "@/components/ui/staff";
 export type { MadeView };
 
-const STAFF = ["こばやし", "たなか", "はやし"];
 
 export function ProductionDone({ date, planned, actual }: { date: string; planned: MadeView[]; actual?: Actual }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(planned.map((p) => [p.productId, String(actual?.made.find((m) => m.productId === p.productId)?.pieces ?? (actual ? 0 : p.pieces))])),

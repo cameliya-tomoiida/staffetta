@@ -10,8 +10,8 @@ import { Button, buttonClass, Empty, fmtDateTime, Notice, Segmented } from "@/co
 import { notifyHubChanged } from "@/components/ui/refresh";
 import type { AlertAction, AlertLevel, AlertRow } from "@/lib/db/alerts-store";
 import { checkAlertsNowAction, runAlertActionAction, updateAlertAction } from "./actions";
+import { useStaffNames } from "@/components/ui/staff";
 
-const STAFF = ["たなか", "こばやし", "はやし"];
 
 const LEVEL: Record<AlertLevel, { label: string; bar: string; tag: string; box: string }> = {
   danger: { label: "急ぎ", bar: "bg-alert-line", tag: "border-alert-line bg-alert-bg text-alert-ink", box: "border-alert-line" },
@@ -46,6 +46,7 @@ function tomorrowMorning(nowMs: number) {
 type Filter = "all" | "mine" | "snoozed";
 
 export function AlertsClient({ open, done, now, lastAt, enabled }: { open: AlertRow[]; done: AlertRow[]; now: string; lastAt: string | null; enabled: boolean }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [who, setWho] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -152,6 +153,7 @@ export function AlertsClient({ open, done, now, lastAt, enabled }: { open: Alert
 type Run = (fn: () => Promise<unknown>, ok?: string) => void;
 
 function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; nowMs: number; pending: boolean; run: Run }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const lv = LEVEL[a.level];
   const [panel, setPanel] = useState<null | "assign" | "later" | { ask: AlertAction; i: number }>(null);

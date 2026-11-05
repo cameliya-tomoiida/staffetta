@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, buttonClass, fmtDate, fmtDateTime, MethodIcon, Notice, PurchaseStatusTag, Qty } from "@/components/ui";
 
-const STAFF = ["こばやし", "たなか", "はやし"];
 import type { EntryRow } from "@/lib/channels/outbound/render";
 import { ReceivePanel } from "./ReceivePanel";
 import type { StoredReply } from "@/lib/replies/store";
 import type { OutgoingDraft } from "@/lib/drafts/store";
 import type { OutboundRecord } from "@/lib/channels/outbound/workflow";
+import { useStaffNames } from "@/components/ui/staff";
 
 type View = OutboundRecord & {
   supplierName: string;
@@ -30,6 +30,7 @@ const file = (po: string, name: string) => `/api/outbound/file?po=${encodeURICom
 const iso = (v: unknown) => (typeof v === "string" ? v : undefined);
 
 export function OutboundClient({ records, dates, replies = [], drafts = [] }: { records: View[]; dates: string[]; replies?: StoredReply[]; drafts?: OutgoingDraft[] }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [who, setWho] = useState("");
   const [busy, setBusy] = useState(false);

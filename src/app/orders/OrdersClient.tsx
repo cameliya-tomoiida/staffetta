@@ -13,8 +13,8 @@ import { SourceButton } from "@/components/ui/SourceViewer";
 import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
 import { ReplyButton } from "./ReplyButton";
 import { easyReasons, LOW_CONFIDENCE } from "@/components/ui/wording";
+import { useStaffNames } from "@/components/ui/staff";
 
-const STAFF = ["たなか", "こばやし", "はやし"];
 
 type StatusFilter = "all" | OrderStatus;
 type SortKey = "date" | "customer" | "received";
@@ -32,6 +32,7 @@ export type LeadView = { lineId: string; status: "late" | "warn"; reason: string
 export function OrdersClient({
   orders, today, storedIds, linePreviews, initialStatus = "all", lead = {}, alt = {},
 }: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]>; alt?: Record<string, string[]> }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const [who, setWho] = useState(STAFF[0]);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);

@@ -7,11 +7,11 @@ import { NumPad } from "@/components/NumPad";
 import { Button, buttonClass, choiceClass, fmtDate, Icon, LinkButton, Notice } from "@/components/ui";
 import { notifyHubChanged } from "@/components/ui/refresh";
 import { addPhoneOrderAction, phoneContextAction, type PhoneContext } from "../actions";
+import { useStaffNames } from "@/components/ui/staff";
 
 type Customer = { id: string; name: string; channel: string; count: number };
 type Product = { id: string; name: string; unit: string };
 
-const STAFF = ["たなか", "こばやし", "はやし", "ドライバー やまだ"];
 const WD = "日月火水木金土";
 const dow = (ymd: string) => WD[new Date(`${ymd}T00:00:00Z`).getUTCDay()];
 
@@ -36,6 +36,7 @@ function Step({ n, title, done, onChange, children }: { n: number; title: string
 }
 
 export function PhoneOrder({ customers, products }: { customers: Customer[]; products: Product[] }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const [customerId, setCustomerId] = useState("");
   const [ctx, setCtx] = useState<PhoneContext | null>(null);
   const [date, setDate] = useState("");

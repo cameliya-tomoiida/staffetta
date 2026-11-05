@@ -10,6 +10,7 @@ import { addAliasAction, approveTemplateAction, confirmChangeAction, confirmFaxA
 import { PdfView } from "@/components/PdfView";
 import { NumPad } from "@/components/NumPad";
 import { ReadButton } from "@/components/ReadButton";
+import { useStaffNames } from "@/components/ui/staff";
 
 interface Row {
   orderIndex: number;
@@ -33,7 +34,6 @@ interface Row {
 
 type Level = "high" | "mid" | "low";
 
-const STAFF = ["たなか", "グエン", "はやし"];
 
 const kindInfo = {
   order: { text: "注文", cls: "bg-ok-bg text-ok-ink" },
@@ -61,6 +61,7 @@ export function ReviewClient({
   /** まだ読み取っていない FAX の枚数（変更FAX の元の注文が、そこに入っているかもしれない） */
   unreadFaxes?: number;
 }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const read = fax.read!;
   const [learned, setLearned] = useState<Record<string, string>>({}); // この画面で辞書に入れたもの（"取引先|呼び名" → 商品ID）
   const kind = read.kind;

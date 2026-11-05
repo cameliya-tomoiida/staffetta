@@ -6,8 +6,13 @@
 // - お客さん用の LINE 注文フォーム（/liff）では、メニューも帯も出さない。
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { TodayBar } from "./TodayBar";
+import { canOpen, homeOf, type Role } from "@/lib/auth/roles";
+import { logoutAction } from "@/app/login/actions";
+
+/** ログインしている人（ログインを使っていないときは null） */
+export type ShellUser = { name: string; role: Role; via: "password" | "line" } | null;
 
 type Item = { href: string; label: string; match?: (p: string) => boolean };
 /** fold: たたんでおくまとまり（今いる画面がその中にあるときだけ開いて出す） */
@@ -18,6 +23,7 @@ export const MENU: Group[] = [
   {
     title: "毎日の仕事",
     items: [
+      { href: "/home", label: "ホーム" },
       { href: "/", label: "FAX受信箱", match: (p) => p === "/" || p.startsWith("/fax") },
       { href: "/orders", label: "受注一覧", match: (p) => p === "/orders" },
       { href: "/plan", label: "製造計画・工程表" },
@@ -134,13 +140,13 @@ function MenuItems({ items, path, onPick }: { items: Item[]; path: string; onPic
   );
 }
 
-function SideMenu({ path, onPick, hidden = [] }: { path: string; onPick?: () => void; hidden?: string[] }) {
+function SideMenu({ path, onPick, hidden = [], role }: { path: string; onPick?: () => void; hidden?: string[]; role?: Role }) {
   // たたむまとまりは、今いる画面が中にあるときだけ開く（押せば開け閉めできる）
   const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
     <nav aria-label="メニュー" className="space-y-2">
       {MENU.map((g0) => {
-        const g = { ...g0, items: g0.items.filter((it) => !hidden.includes(it.href)) };
+        const g = { ...g0, items: g0.items.filter((it) => !hidden.includes(it.href) && (!role || canOpen(role, it.href))) };
         if (g.items.length === 0) return null;
         const active = g.items.some((it) => isOn(it, path));
         if (!g.fold)
@@ -170,12 +176,17 @@ function SideMenu({ path, onPick, hidden = [] }: { path: string; onPick?: () => 
   );
 }
 
-export function AppShell({ factory, children }: { factory: string; children: React.ReactNode }) {
+export function AppShell({ factory, user = null, children }: { factory: string; user?: ShellUser; children: React.ReactNode }) {
   const path = usePathname() ?? "/";
+  // 役割で見られない画面へ（画面の中のリンクで）移ったら、その人のホームへ戻す（最初に開いたときは layout が止める）
+  const router = useRouter();
+  useEffect(() => {
+    if (user && !canOpen(user.role, path)) router.replace(homeOf(user.role));
+  }, [user, path, router]);
   // 使わない機能のページはメニューから隠す（①の機能の一覧 /api/features）
   const [hidden, setHidden] = useState<string[]>([]);
   useEffect(() => {
-    if (path.startsWith("/liff") || path.startsWith("/driver")) return;
+    if (path.startsWith("/liff") || path.startsWith("/driver") || path.startsWith("/login") || path.startsWith("/setup")) return;
     fetch("/api/features", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setHidden(d.hidden ?? []))
@@ -198,7 +209,7 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
       return !f;
     });
 
-  if (path.startsWith("/liff") || path.startsWith("/driver")) return <>{children}</>;
+  if (path.startsWith("/liff") || path.startsWith("/driver") || path.startsWith("/login") || path.startsWith("/setup")) return <>{children}</>;
 
   return (
     <div className="flex min-h-full">
@@ -210,7 +221,7 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
             <div className="mb-4 px-3">
               <Brand factory={factory} />
             </div>
-            <SideMenu path={path} hidden={hidden} />
+            <SideMenu path={path} hidden={hidden} role={user?.role} />
             <button type="button" onClick={toggleFold} className="mt-4 ml-3 min-h-11 px-2 text-[16px] font-bold text-crust-700 underline underline-offset-4">
               ◀ メニューをたたむ
             </button>
@@ -228,7 +239,7 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
                 とじる
               </button>
             </div>
-            <SideMenu path={path} hidden={hidden} onPick={() => setOpen(false)} />
+            <SideMenu path={path} hidden={hidden} role={user?.role} onPick={() => setOpen(false)} />
           </aside>
           <div className="flex-1 bg-ink/40" />
         </div>
@@ -250,8 +261,14 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
             </span>
             <span className="text-[18px] font-bold">今日の仕事</span>
             <span className="ml-auto text-[17px] text-ink-soft tabular-nums">{today}</span>
+            {user && (
+              <form action={logoutAction} className="flex items-center gap-2">
+                <span className="text-[17px] font-bold">{user.name} さん<span className="ml-1 text-[16px] font-normal text-ink-soft">（{user.role}）</span></span>
+                {user.via === "password" && <button className="min-h-11 px-2 text-[16px] font-bold text-crust-700 underline underline-offset-4">ログアウト</button>}
+              </form>
+            )}
           </div>
-          <TodayBar />
+          <TodayBar role={user?.role} />
         </header>
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-5 sm:py-6">
           {/* 印刷物の見出し（画面では出さない） */}

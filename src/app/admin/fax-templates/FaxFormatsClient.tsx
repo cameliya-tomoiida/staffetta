@@ -12,8 +12,8 @@ import type { ColumnDef, Row } from "@/components/admin/types";
 import { Button, buttonClass, fmtDateTime, Notice, SectionTitle, Tag } from "@/components/ui";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
 import { notifyHubChanged } from "@/components/ui/refresh";
+import { useStaffNames } from "@/components/ui/staff";
 
-const STAFF = ["たなか", "こばやし", "はやし"];
 const field = "min-h-12 w-full rounded-lg border-2 border-rule-strong bg-sheet px-3 text-ink focus:border-crust-600 focus:outline-none";
 const actionLabel: Record<HistoryRow["action"], string> = { insert: "登録", update: "変更", disable: "無効にした", restore: "戻した" };
 
@@ -25,6 +25,7 @@ export function FaxFormatsClient({
   kinds: Record<FaxFormatKind, string>;
   products: { id: string; name: string }[];
 }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const [who, setWho] = useState(STAFF[0]);
   const [pickId, setPickId] = useState<string | null>(null);
   const picked = formats.find((f) => f.id === pickId) ?? null;

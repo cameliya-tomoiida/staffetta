@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { undoAutoConfirmAction } from "@/app/actions";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
+import { useStaffNames } from "@/components/ui/staff";
 
-const STAFF = ["たなか", "グエン", "はやし"];
 
 export function AutoConfirmBadge({ faxId, reason, compact = false }: { faxId: string; reason: string; compact?: boolean }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const [who, setWho] = useState(STAFF[0]);
   return (
     <div className={`rounded-lg bg-ok-bg px-3 py-2 text-sm text-ok-ink ${compact ? "" : "font-bold"}`}>

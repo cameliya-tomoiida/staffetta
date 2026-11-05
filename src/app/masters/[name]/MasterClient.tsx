@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Button, buttonClass, fmtDateTime, Notice, Tag } from "@/components/ui";
 import type { ColumnType } from "@/lib/masters/columns";
 import type { Preview } from "@/lib/masters/csv";
+import { useStaffNames } from "@/components/ui/staff";
 
 type Rec = Record<string, unknown> & { id: string; disabled?: boolean };
 type RefIndex = Record<string, { id: string; name?: string }[]>;
@@ -19,7 +20,6 @@ export interface ClientColumn {
   help?: string;
   example?: string;
 }
-const STAFF = ["こばやし", "たなか", "はやし"];
 
 /** 値を CSV と同じ書き方の文字にする（フォームの初期値・一覧の表示） */
 function cellText(c: ClientColumn, v: unknown): string {
@@ -55,6 +55,7 @@ function show(c: ClientColumn, v: unknown, refs: RefIndex): string {
 export function MasterClient({ name, label, columns, listKeys, keyColumns, hasStock, rows, refs }: {
   name: string; label: string; columns: ClientColumn[]; listKeys: string[]; keyColumns: string[]; hasStock: boolean; rows: Rec[]; refs: RefIndex;
 }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [who, setWho] = useState("");
   const [busy, setBusy] = useState(false);

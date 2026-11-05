@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Notice } from "@/components/ui";
 import { isFlourName, recipeSummary } from "@/lib/masters/recipe";
+import { useStaffNames } from "@/components/ui/staff";
 
 export interface RecipeDough {
   id: string;
@@ -16,10 +17,10 @@ export interface RecipeDough {
   steps: { id: string; seq: number; name: string; equipment?: string; people: number; ccp: boolean; prevDay: boolean }[];
 }
 type Material = { id: string; name: string; unit: string };
-const STAFF = ["こばやし", "たなか", "はやし"];
 const inputClass = "min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base text-ink";
 
 export function RecipeClient({ doughs, materials, selected, batchKg }: { doughs: RecipeDough[]; materials: Material[]; selected?: string; batchKg?: number }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [doughId, setDoughId] = useState(selected ?? "");
   const dough = doughs.find((d) => d.id === doughId);

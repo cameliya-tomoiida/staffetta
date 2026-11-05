@@ -5,8 +5,8 @@ import { useState } from "react";
 import { Button, fmtDateTime, Notice } from "@/components/ui";
 import type { AutoLog } from "@/lib/automation/log";
 import type { AutomationSettings } from "@/lib/automation/settings";
+import { useStaffNames } from "@/components/ui/staff";
 
-const STAFF = ["こばやし", "たなか", "はやし"];
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 const KIND: Record<AutoLog["kind"], string> = {
   order_confirm: "注文の確定", order_change: "変更の反映", standing: "定期注文", po_approve: "発注書の承認", production: "製造の実績", reply: "お客さんへの返事", receipt: "入荷",
@@ -25,6 +25,7 @@ const SWITCHES: Sw[] = [
 ];
 
 export function AutomationClient({ settings, changed, log }: { settings: AutomationSettings; changed: { at: string; who: string } | null; log: AutoLog[] }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [s, setS] = useState(settings);
   const [who, setWho] = useState("");

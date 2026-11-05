@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Notice } from "@/components/ui";
+import { useStaffNames } from "@/components/ui/staff";
 
 export interface StandingCustomer {
   id: string;
@@ -14,12 +15,12 @@ export interface StandingCustomer {
 }
 type Result = { weekStart: string; created: { id: string; customerId: string; deliveryDate: string; lines: number }[]; existing: string[]; skipped: { customerId: string; date: string; reason: string }[] };
 
-const STAFF = ["こばやし", "たなか", "はやし"];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 const WD = "日月火水木金土";
 const inputClass = "min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base text-ink";
 
 export function StandingPanel({ customers }: { customers: StandingCustomer[] }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [who, setWho] = useState("");
   const [busy, setBusy] = useState(false);

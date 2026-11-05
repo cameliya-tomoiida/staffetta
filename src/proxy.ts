@@ -8,8 +8,12 @@ import { decideTunnelAccess } from "@/lib/tunnel-access";
 // - ログインしていなければ、画面はログインの入口（/liff/staff）へ。API・ボタン（Server Actions）は 403
 // 社内 PC（トンネルを通らない）は、今までどおり全部通す。
 export function proxy(request: NextRequest) {
+  // 画面の枠（layout）が、どの画面を開こうとしているか分かるように（役割で見られる画面を分けるため）
+  const headers = new Headers(request.headers);
+  headers.set("x-hub-path", request.nextUrl.pathname + request.nextUrl.search);
+  const pass = () => NextResponse.next({ request: { headers } });
   const viaTunnel = request.headers.has("cf-connecting-ip") || request.headers.has("cf-ray");
-  if (!viaTunnel) return NextResponse.next();
+  if (!viaTunnel) return pass();
   const { pathname, search } = request.nextUrl;
   const d = decideTunnelAccess({
     viaTunnel,
@@ -20,7 +24,7 @@ export function proxy(request: NextRequest) {
     isServerAction: request.headers.has("next-action"),
     staffOk: Boolean(verifyStaffSession(request.cookies.get(STAFF_COOKIE)?.value, Date.now())),
   });
-  if (d.kind === "next") return NextResponse.next();
+  if (d.kind === "next") return pass();
   if (d.kind === "login") return NextResponse.redirect(new URL(d.location, request.url));
   return new NextResponse("Not available from outside", { status: 403 });
 }

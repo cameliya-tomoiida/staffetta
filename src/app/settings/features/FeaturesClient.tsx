@@ -7,9 +7,9 @@ import { Button, fmtDateTime, Notice } from "@/components/ui";
 import { notifyHubChanged } from "@/components/ui/refresh";
 import { setFlagAction } from "../actions";
 import type { FeatureKey, FlagLog, FlagRow } from "@/lib/settings/features";
+import { useStaffNames } from "@/components/ui/staff";
 
 type Row = Omit<FlagRow, "menu">;
-const STAFF = ["たなか", "こばやし", "はやし"];
 
 /** くわしい設定の画面（時刻・上限・条件など）がある機能 */
 const DETAIL: Record<string, { href: string; label: string }> = {
@@ -27,6 +27,7 @@ const DETAIL: Record<string, { href: string; label: string }> = {
 const word = (f: Row, on: boolean) => (f.kind === "auto" ? (on ? "自動でやる" : "人に聞く") : on ? "使う" : "使わない");
 
 export function FeaturesClient({ groups, flags, log }: { groups: string[]; flags: Row[]; log: FlagLog[] }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const [who, setWho] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const label = (key?: string) => flags.find((f) => f.key === key)?.label ?? key ?? "";

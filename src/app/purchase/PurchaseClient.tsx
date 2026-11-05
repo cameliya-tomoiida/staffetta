@@ -10,6 +10,7 @@ import {
   Button, buttonClass, Empty, fmtDate, fmtDateTime, Icon, methodLabel, MethodIcon, Notice, PageHeader, PurchaseStatusTag, Segmented, Tag,
   Qty, type PurchaseStatus,
 } from "@/components/ui";
+import { useStaffNames } from "@/components/ui/staff";
 
 export interface PoView {
   id: string;
@@ -38,7 +39,6 @@ export interface PoState {
   sentBy?: string;
 }
 
-const STAFF = ["こばやし", "たなか", "はやし"];
 const WARN_MIN = 60; // 締めの何分前から警告するか
 
 
@@ -57,6 +57,7 @@ export function PurchaseClient({
   /** 締めを過ぎて、もう発注書では頼めない材料（③の materialPlan.lateItems の文） */
   lateMaterials?: string[];
 }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);

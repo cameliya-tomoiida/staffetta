@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { TodaySummary } from "@/demo/today";
 import { HUB_CHANGED } from "./refresh";
+import { canOpen, type Role } from "@/lib/auth/roles";
 
 type IconName = "urgent" | "review" | "fax" | "purchase" | "stock" | "warn";
 
@@ -59,9 +60,9 @@ function WorkItem({ href, label, count, unit = "件", urgent = false, review = f
   );
 }
 
-export function TodayBar() {
+export function TodayBar({ role }: { role?: Role } = {}) {
   const path = usePathname() ?? "/";
-  const hidden = path.startsWith("/liff") || path.startsWith("/driver");
+  const hidden = path.startsWith("/liff") || path.startsWith("/driver") || path.startsWith("/login") || path.startsWith("/setup");
   const [s, setS] = useState<TodaySummary | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -127,10 +128,13 @@ export function TodayBar() {
     { href: s ? `/plan?date=${s.purchaseDate}` : "/plan", label: "注意", count: n(s?.warnings), icon: "warn", active: path.startsWith("/plan") },
   ];
 
+  // 役割で開けない項目は出さない（工場の人に FAX・発注書の数を見せても押せないため）
+  const shown = role ? items.filter((it) => canOpen(role, it.href.split("?")[0])) : items;
+  if (shown.length === 0) return null;
   return (
     <div className="pb-3">
-      <nav aria-label="今日の仕事" className="grid w-full min-w-0 grid-cols-3 overflow-hidden rounded-[10px] border border-[#c5cac5] min-[851px]:grid-cols-6 [&>a]:border-r [&>a:nth-child(3n)]:border-r-0 min-[851px]:[&>a:nth-child(3n)]:border-r max-[850px]:[&>a:nth-child(-n+3)]:border-b [&>a:last-child]:border-r-0">
-        {items.map((it) => <WorkItem key={it.label} {...it} />)}
+      <nav aria-label="今日の仕事" className="grid w-full min-w-0 grid-cols-3 overflow-hidden rounded-[10px] border border-[#c5cac5] min-[851px]:grid-cols-6 [&>a]:border-r [&>a:nth-child(3n)]:border-r-0 min-[851px]:[&>a:nth-child(3n)]:border-r max-[850px]:[&>a:nth-child(-n+3)]:border-b [&>a:last-child]:border-r-0" style={shown.length < 6 ? { gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` } : undefined}>
+        {shown.map((it) => <WorkItem key={it.label} {...it} />)}
       </nav>
       {failed && (
         <div className="mt-1 text-[16px] font-bold text-alert-ink">

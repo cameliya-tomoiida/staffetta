@@ -6,13 +6,14 @@ import { importBackupAction } from "@/app/settings/actions";
 import type { ImportReport } from "@/lib/db/backup";
 import { buttonClass, fmtDateTime, Notice, SectionTitle } from "@/components/ui";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
+import { useStaffNames } from "@/components/ui/staff";
 
-const STAFF = ["たなか", "こばやし", "はやし"];
 const field = "min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 font-bold text-ink focus:border-crust-600 focus:outline-none";
 
 type Last = { at: string; who: string; exportedAt: string; report: ImportReport } | null;
 
 export function BackupClient({ last }: { last: Last }) {
+  const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
