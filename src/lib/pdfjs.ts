@@ -18,3 +18,17 @@ export function getPdfjs() {
  * これが無いと「Dependent image isn't ready yet」で真っ白になる。
  */
 export const pdfDocOptions = { wasmUrl: "/pdfjs-wasm/" } as const;
+
+/**
+ * PDF を開く（受信箱のサムネイル・確認画面の共通）。ワーカーは1つを全部で使い回す。
+ * getDocument にワーカーを渡さないと、pdf.js は共有のワーカーを借りて、その PDF を閉じる（destroy）ときにワーカーごと壊す。
+ * すると、ほかのサムネイルが「PDFWorker.create - the worker is being destroyed」で描けなくなる（11/5 に⑤が見つけた）。
+ * ワーカーを明示して渡すと、PDF を閉じてもワーカーは残る。
+ */
+let shared: Promise<InstanceType<(typeof import("pdfjs-dist"))["PDFWorker"]>> | null = null;
+export async function openPdf(url: string) {
+  const pdfjs = await getPdfjs();
+  shared ??= Promise.resolve(pdfjs.PDFWorker.create({ port: pdfjs.GlobalWorkerOptions.workerPort ?? undefined }));
+  const worker = await shared;
+  return pdfjs.getDocument({ url, ...pdfDocOptions, worker });
+}

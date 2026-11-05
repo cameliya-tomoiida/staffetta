@@ -1,5 +1,5 @@
 "use client";
-import { getPdfjs, pdfDocOptions } from "@/lib/pdfjs";
+import { openPdf } from "@/lib/pdfjs";
 import { useEffect, useRef, useState } from "react";
 
 /** 受信箱のサムネイル。2ページ以上の FAX は、1・2ページ目を2枚並べる（縦長は横に、横長は縦に。担当者の指示 11/5） */
@@ -10,9 +10,12 @@ export function PdfThumb({ url, rotation = 0 }: { url: string; rotation?: number
   const [landscape, setLandscape] = useState(false); // 横長のページは縦に2枚
   useEffect(() => {
     let cancelled = false;
+    let destroy: (() => void) | null = null;
     (async () => {
-      const pdfjs = await getPdfjs();
-      const doc = await pdfjs.getDocument({ url, ...pdfDocOptions }).promise;
+      const loading = await openPdf(url); // ワーカーは使い回し（閉じてもほかのサムネイルに影響しない）
+      destroy = () => void loading.destroy();
+      if (cancelled) return destroy();
+      const doc = await loading.promise;
       const n = Math.min(2, doc.numPages);
       if (cancelled) return;
       setCount(n);
@@ -28,9 +31,12 @@ export function PdfThumb({ url, rotation = 0 }: { url: string; rotation?: number
         if (p === 1) setLandscape(viewport.width > viewport.height);
         await page.render({ canvas, viewport }).promise;
       }
-    })().catch((e) => console.error("PdfThumb", e));
+    })().catch((e) => {
+      if (!cancelled) console.error("PdfThumb", e);
+    });
     return () => {
       cancelled = true;
+      destroy?.(); // 画面を離れたら、この PDF だけ閉じる
     };
   }, [url, rotation]);
   return (

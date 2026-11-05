@@ -1,5 +1,5 @@
 "use client";
-import { getPdfjs, pdfDocOptions } from "@/lib/pdfjs";
+import { openPdf } from "@/lib/pdfjs";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -22,8 +22,7 @@ export function PdfView({ url, rotation, highlight }: { url: string; rotation: n
     let destroy: (() => void) | null = null;
     (async () => {
       try {
-        const pdfjs = await getPdfjs();
-        const loading = pdfjs.getDocument({ url, ...pdfDocOptions });
+        const loading = await openPdf(url); // ワーカーは使い回し（閉じてもワーカーは壊れない）
         destroy = () => void loading.destroy();
         const d = (await loading.promise) as unknown as PdfDoc;
         if (cancelled) return;
