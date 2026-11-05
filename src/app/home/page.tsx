@@ -5,6 +5,10 @@ import { currentUser } from "@/lib/auth/current-user";
 import type { Role } from "@/lib/auth/roles";
 import { accountsExist } from "@/lib/staff";
 import { homeData, type HomeData } from "@/lib/home";
+import { briefFacts } from "@/lib/home-brief";
+import { briefingFor, type Briefing } from "@/lib/ai/briefing";
+import { todayJst } from "@/lib/clock";
+import { RefreshBriefing } from "./RefreshBriefing";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
 
@@ -21,6 +25,8 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
   const role: Role = loginOn && user ? user.role : (["管理者", "事務", "工場"] as Role[]).find((r) => r === asked) ?? user?.role ?? "管理者";
   if (role === "配送") redirect("/driver");
   const d = await homeData(role);
+  // 管理者には朝の「今日の要点」（その日の最初に1回作って覚える）
+  const brief = role === "管理者" ? await briefingFor(briefFacts(d), todayJst()) : null;
 
   return (
     <div className="space-y-6">
@@ -41,12 +47,30 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         )}
       </div>
 
+      {brief && <Brief b={brief} />}
       <Todo role={role} d={d} />
       {role === "管理者" && <Admin d={d} />}
       {role === "事務" && <Office d={d} />}
       {role === "工場" && <Factory d={d} />}
       <Alerts d={d} />
     </div>
+  );
+}
+
+/** 朝の「今日の要点」（3行） */
+function Brief({ b }: { b: Briefing }) {
+  return (
+    <section className="rounded-xl border-2 border-crust-600 bg-sheet px-5 py-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-[22px] font-black">今日の要点</h2>
+        <span className="rounded bg-off-bg px-2 py-0.5 text-[15px] text-ink-soft">{b.by === "AI" ? "AI が数字から作りました" : "数字から作りました"}・{new Date(b.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</span>
+        <span className="ml-auto" />
+        <RefreshBriefing />
+      </div>
+      <ol className="mt-2 space-y-1 text-[20px] leading-relaxed">
+        {b.lines.map((l, i) => <li key={i} className="flex gap-2"><span className="font-black text-crust-700">{i + 1}.</span><span>{l}</span></li>)}
+      </ol>
+    </section>
   );
 }
 

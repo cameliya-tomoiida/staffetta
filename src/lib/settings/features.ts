@@ -119,6 +119,10 @@ export const FEATURES = [
     label: "時刻で動く仕事", description: "5分ごとに、決まった時刻の仕事（定期注文の自動作成・夜の「作り終えた」・発注書の自動承認・返事）を動かします。それぞれの仕事は、上の「自動」のスイッチが ON のときだけ動きます。使わないと、時刻では何も動きません。" },
   { key: "system_watch", group: "仕組み", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
     label: "仕組みの見張り", description: "FAX がいつもの時間に届かない・バックアップが7日ない・ディスクの空きが少ない、をお知らせします。" },
+  { key: "ai_watch", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
+    label: "いつもと違う注文の見張り（AI）", description: "取引先のいつもの数より大きく多い・少ない・桁がちがうかもしれない注文を、AI が理由つきでお知らせします（AI の使った量は「設定 → AI」）。OFF だと出しません。" },
+  { key: "ai_briefing", group: "アラート", kind: "feature", default: true, owner: "①",
+    label: "朝の「今日の要点」（AI）", description: "管理者のホームに、今日の要点を3行で出します（朝に1回 AI が作る。キーが無ければ数字から作る）。" },
 ] as const satisfies readonly FeatureDef[];
 
 export type FeatureKey = (typeof FEATURES)[number]["key"];

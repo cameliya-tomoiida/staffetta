@@ -83,6 +83,8 @@ async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
 export const ALERT_SOURCES: AlertSource[] = [
   { name: "logic", run: evaluateLogic },
   { name: "system", feature: "system_watch", run: gatherSystem },
+  // AI の案 D: いつもと違う注文の見張り（理由は AI。同じ注文は2回聞かない）
+  { name: "ai_watch", feature: "ai_watch", run: async (now) => (await import("./ai/watch")).watchAlerts(now) },
 ];
 
 const g = globalThis as unknown as { __hubScheduler?: { timer: ReturnType<typeof setInterval>; running: boolean; last?: TickResult }; __hubAlertSoon?: ReturnType<typeof setTimeout> };
