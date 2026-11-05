@@ -164,7 +164,7 @@ function Preview({ def }: { def: SheetDef }) {
       <h3 className="border-b-2 border-black pb-1 text-xl font-bold">{def.title}</h3>
       {def.rule && <p className="text-base">{def.rule}</p>}
       {def.kind === "temp" && def.temp && (
-        <table className="w-full table-fixed border-collapse text-center text-sm">
+        <table className="m-keep w-full table-fixed border-collapse text-center text-sm">
           <thead>
             <tr>
               <th className={`${TH} w-20`}>{def.temp.unit}</th>
@@ -204,7 +204,7 @@ function Preview({ def }: { def: SheetDef }) {
         </p>
       )}
       {(def.kind === "clean" || def.kind === "check") && (
-        <table className="w-full table-fixed border-collapse text-sm">
+        <table className="m-keep w-full table-fixed border-collapse text-sm">
           <thead>
             <tr>
               <th className={`${TH} w-[40%]`}>項目</th>
@@ -232,7 +232,7 @@ function Preview({ def }: { def: SheetDef }) {
         </table>
       )}
       {def.kind === "log" && (
-        <table className="w-full table-fixed border-collapse text-sm">
+        <table className="m-keep w-full table-fixed border-collapse text-sm">
           <thead>
             <tr>
               {(def.columns ?? []).map((c) => (

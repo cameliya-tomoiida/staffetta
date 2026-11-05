@@ -133,7 +133,7 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
         {t.set != null ? `設定 ${t.set}${t.unit}・` : ""}管理範囲 {range}（外れたら赤。異常時の措置を書く）
       </h2>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] table-fixed border-collapse">
+        <table className="m-keep w-full min-w-[900px] table-fixed border-collapse">
           <thead>
             <tr>
               <th className={`${TH} w-32`}>日付</th>
@@ -262,7 +262,7 @@ function DoneInput({ def, run, days, today, rec, update, who, disabled }: { def:
       <details className="card p-4">
         <summary className="cursor-pointer text-xl font-bold">月の一覧（{def.kind === "clean" ? "○＝計画・●＝した" : "✓＝した"}）</summary>
         <div className="mt-3 overflow-x-auto">
-          <table className="border-collapse text-base">
+          <table className="m-keep border-collapse text-base">
             <thead>
               <tr>
                 <th className="sticky left-0 border border-rule-strong bg-cream px-2 text-left">項目</th>
@@ -349,7 +349,7 @@ function LogInput({ def, rec, update, who, today, disabled }: { def: SheetDef; r
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] border-collapse text-lg">
+        <table className="m-keep w-full min-w-[900px] border-collapse text-lg">
           <thead>
             <tr>
               {cols.map((c) => (
@@ -440,7 +440,7 @@ function ItemEditor({ def }: { def: SheetDef }) {
         </div>
       </fieldset>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[900px] border-collapse text-lg">
+        <table className="m-keep w-full min-w-[900px] border-collapse text-lg">
           <thead>
             <tr>
               <th className={TH}>名前</th>

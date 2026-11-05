@@ -141,7 +141,7 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
       </div>
 
       {/* 1) 上の帯 */}
-      <table className="w-full table-fixed border-collapse">
+      <table className="m-keep w-full table-fixed border-collapse">
         <thead>
           <tr>
             {["日付", "天候（朝5時）", "室温（℃）", "湿度（％）", "生地", "記入者"].map((h) => (
@@ -168,7 +168,7 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
       <section>
         <h2 className="mb-1 text-xl font-bold">工程（だれが・何時に）</h2>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[940px] table-fixed border-collapse">
+          <table className="m-keep w-full min-w-[940px] table-fixed border-collapse">
             <colgroup>
               <col className="w-[12%]" />
               <col className="w-[18%]" />
@@ -260,7 +260,7 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
           <h2 className="mb-1 text-xl font-bold">
             ミキサー（予定 {base.batches}回{base.batchKg ? `・1回 ${round1(base.batchKg)} kg` : ""}）　目標の捏上温度 {kr ? `${kr.target}℃（±${kr.tol}）` : "未登録"}
           </h2>
-          <table className="w-full table-fixed border-collapse">
+          <table className="m-keep w-full table-fixed border-collapse">
             <thead>
               <tr>
                 <th className={`${TH} w-14`}>回</th>
@@ -295,7 +295,7 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
         </section>
         <section>
           <h2 className="mb-1 text-xl font-bold">イースト</h2>
-          <table className="w-full table-fixed border-collapse">
+          <table className="m-keep w-full table-fixed border-collapse">
             <thead>
               <tr>
                 <th className={TH}>品名</th>
@@ -318,7 +318,7 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
       <section>
         <h2 className="mb-1 text-xl font-bold">この生地からとった製品</h2>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] table-fixed border-collapse">
+          <table className="m-keep w-full min-w-[1080px] table-fixed border-collapse">
             <colgroup>
               <col className="w-[14%]" />
               {Array.from({ length: 10 + lossCols.length + 1 }, (_, i) => (

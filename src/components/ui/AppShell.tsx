@@ -11,6 +11,7 @@ import { TodayBar } from "./TodayBar";
 import { canOpen, homeOf, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";
 import { AiChat } from "@/components/AiChat";
+import { BottomTabs, MenuSheet, MobileTopBar, tabsFor, titleOf, useTableCards } from "./MobileNav";
 
 /** ログインしている人（ログインを使っていないときは null） */
 export type ShellUser = { name: string; role: Role; via: "password" | "line" } | null;
@@ -205,6 +206,8 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
     setToday(`${d.getMonth() + 1}月${d.getDate()}日(${"日月火水木金土"[d.getDay()]})`); // eslint-disable-line react-hooks/set-state-in-effect -- 日付はブラウザの時計で出す（サーバーの描画とずれないように）
   }, []);
   const [open, setOpen] = useState(false); // せまい画面で開いているか
+  const [sheet, setSheet] = useState(false); // スマホ: 全部の画面のメニュー（下から出る）
+  useTableCards();
 
   useEffect(() => {
     setFolded(localStorage.getItem(KEY) === "1"); // eslint-disable-line react-hooks/set-state-in-effect -- 覚えた状態はブラウザでしか読めない
@@ -251,8 +254,15 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print z-20 border-b border-rule-strong bg-sheet px-4 pt-2 sm:px-5">
+      <div className="flex min-w-0 flex-1 flex-col max-md:overflow-x-clip">
+        {/* スマホ（768px 未満）: 上の細い帯・下のタブ・メニューのシート（⑧ docs/mobile-rules.md） */}
+        <MobileTopBar path={path} title={titleOf(path, MENU)} ai={<AiChat />} user={user} tabs={tabsFor(user?.role)} />
+        {path === "/home" && (
+          <div className="no-print border-b border-rule bg-sheet px-3 pt-3 md:hidden">
+            <TodayBar role={user?.role} />
+          </div>
+        )}
+        <header className="no-print z-20 hidden border-b border-rule-strong bg-sheet px-4 pt-2 sm:px-5 md:block">
           <div className="flex items-center gap-3 pb-2">
             <button
               type="button"
@@ -278,13 +288,15 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
           </div>
           <TodayBar role={user?.role} />
         </header>
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-5 sm:py-6">
+        <main key={path} className="m-enter mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 pt-4 pb-[calc(84px+env(safe-area-inset-bottom))] sm:px-5 md:py-6">
           {/* 印刷物の見出し（画面では出さない） */}
           {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
           <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={120} height={32} className="mb-2 hidden h-8 w-auto print:block" />
           {children}
         </main>
       </div>
+      <BottomTabs path={path} tabs={tabsFor(user?.role)} onMenu={() => setSheet(true)} menuOpen={sheet} />
+      {sheet && <MenuSheet menu={MENU} path={path} role={user?.role} hidden={hidden} onClose={() => setSheet(false)} user={user} factory={factory} />}
     </div>
   );
 }
