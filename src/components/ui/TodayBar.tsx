@@ -113,6 +113,7 @@ export function TodayBar() {
         value={s.purchaseDraft + s.purchaseApproved ? `${s.purchaseDraft + s.purchaseApproved}枚` : "送信済み"}
         sub={s.overdue ? `締め過ぎ ${s.overdue}枚` : s.nextCutoff ? `締め ${fmtDateTime(s.nextCutoff).split(" ").pop()} ${left(s.nextCutoff, now)}` : `${fmtDate(s.purchaseDate)}納品`}
       />
+      {s.lowStock > 0 && <Chip href={s.lowStockHref} tone="alert" label="材料が足りなくなります" value={`${s.lowStock}件`} />}
       {s.warnings > 0 && <Chip href={`/plan?date=${s.purchaseDate}`} tone="alert" label="注意" value={`${s.warnings}件`} />}
     </div>
   );

@@ -7,6 +7,7 @@ import { listPurchaseOrders } from "@/lib/purchase-store";
 import { allOrders, pickDate, visibleDates } from "./all-orders";
 import { nowMs } from "@/lib/clock";
 import { loadMasters } from "@/lib/masters/seed-db";
+import { lowStockItems } from "@/lib/stock/store";
 
 export interface TodaySummary {
   /** 要確認の注文（どの入口でも） */
@@ -27,6 +28,9 @@ export interface TodaySummary {
   overdue: number;
   /** 計算の注意（ピザの上限超えなど） */
   warnings: number;
+  /** 安全在庫を下回っている材料・包材の数（⑤の lowStockItems）と、押したときの行き先 */
+  lowStock: number;
+  lowStockHref: string;
   /** サーバーの「いま」（ミリ秒。デモの時計なら、デモの時刻）。画面はここからの経過で数える */
   serverNow: number;
 }
@@ -34,7 +38,9 @@ export interface TodaySummary {
 export async function todaySummary(now = nowMs()): Promise<TodaySummary> {
   const [{ orders, today }, db, stored] = await Promise.all([allOrders(), readDb(), listPurchaseOrders()]);
   const date = pickDate(undefined, visibleDates(deliveryDatesOf(orders), today), today);
-  const r = runPipeline(orders, date, { masters: await loadMasters() }); // マスタ画面で直した値で計算
+  const masters = await loadMasters();
+  const r = runPipeline(orders, date, { masters }); // マスタ画面で直した値で計算
+  const low = await lowStockItems(masters).catch(() => []);
   const status = new Map(stored.map((p) => [p.id, p.status]));
   const pos = [...r.productPurchaseOrders, ...r.materialPurchaseOrders]
     .filter((p) => p.lines.length > 0)
@@ -53,6 +59,8 @@ export async function todaySummary(now = nowMs()): Promise<TodaySummary> {
     nextCutoffSupplier: future[0]?.supplierName ?? "",
     overdue: open.filter((p) => Date.parse(p.cutoffAt) < now).length,
     warnings: r.warnings.length,
+    lowStock: low.length,
+    lowStockHref: `/masters/${low.every((x) => x.master === "packaging") && low.length ? "packaging" : "materials"}#stock-moves`,
     serverNow: now,
   };
 }
