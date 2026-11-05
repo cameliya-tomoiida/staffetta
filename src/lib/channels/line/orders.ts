@@ -6,6 +6,7 @@ import { readDb, updateDb } from "@/lib/store";
 import { pushText } from "./client";
 import { aliasMapFor, normalizeAlias } from "@/lib/aliases";
 import { readLineText } from "./reader";
+import { describeReadError, limitConcurrentReads, withReadRetry } from "./read-retry";
 import { customerIdForUser, readLineState, touchUser, updateLineState } from "./state";
 import { isDemoLineUser } from "./config";
 import { addCustomer, getCustomerSettings, syncLineUserIds } from "./customers";
@@ -75,8 +76,13 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
     const dict = customerId ? ((await aliasMapFor(customerId))[customerId] ?? {}) : {};
     const known = { ...(existing.mappings[customerId] ?? {}), ...dict };
     const byAlias = new Map(Object.entries(dict).map(([a, pid]) => [normalizeAlias(a), pid]));
-    const { read, model } = await readLineText(input.text, input.receivedAt, known, recentBrief);
-    const extra = { readModel: model, isOrder: read.is_order, ...(read.notes ? { notes: read.notes } : {}) };
+    // 一時的な失敗（通信の途切れ・混雑）は間をあけてやり直す。同時に頼むのは2件まで
+    const { value: { read, model }, attempts } = await limitConcurrentReads(() =>
+      withReadRetry(() => readLineText(input.text, input.receivedAt, known, recentBrief), {
+        onRetry: (n, e) => console.warn(`[line] 読み取りをやり直します（${n}回目の失敗: ${describeReadError(e)}）`, idBase),
+      }),
+    );
+    const extra = { readModel: model, ...(attempts > 1 ? { readAttempts: attempts } : {}), isOrder: read.is_order, ...(read.notes ? { notes: read.notes } : {}) };
     const groups = read.orders.length
       ? read.orders
       : [{ intent: "new" as const, change_of_order_id: "", delivery_date: jstDate(new Date(input.receivedAt), 1), date_written: "", lines: [] }];
@@ -125,7 +131,10 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
         id: idBase,
         intent: "new",
         deliveryDate: jstDate(new Date(input.receivedAt), 1),
-        source: source({ readError: e instanceof Error ? e.message : String(e) }),
+        source: source({
+          readError: describeReadError(e),
+          ...(typeof (e as { attempts?: unknown }).attempts === "number" ? { readAttempts: (e as { attempts: number }).attempts } : {}),
+        }),
         lines: [],
       },
     ];
