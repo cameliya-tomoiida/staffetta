@@ -55,6 +55,16 @@ describe("受注の確認返信", () => {
     expect(eml).toMatch(/Subject: =\?UTF-8\?B\?/);
   });
 
+  it("締めに間に合ったかは、注文を受けた時刻で決める（今が締めを過ぎていても、締めの前に受けた注文は受けられる）", async () => {
+    const { createReply } = await import("../store");
+    // ピザ（3日前が締め）を、10/20 に受けていた 11/2 納品の注文。今（11/1）は締めを過ぎている
+    mem.db.orders.push(order("T-R8", { source: { channel: "fax", refs: [], receivedAt: "2026-10-20T09:00:00+09:00" }, lines: [line("T-R8-0", "P11", 10)] }));
+    expect((await createReply("T-R8", WHO)).late).toBe(0);
+    // 同じ注文を今受けたなら、受けられない
+    mem.db.orders.push(order("T-R9", { source: { channel: "fax", refs: [], receivedAt: "2026-11-01T09:00:00+09:00" }, lines: [line("T-R9-0", "P11", 10)] }));
+    expect((await createReply("T-R9", WHO)).late).toBe(1);
+  });
+
   it("LINE・要確認の注文は作らない。送った返事は作り直さない", async () => {
     const { createReply, markReplySent } = await import("../store");
     mem.db.orders.push(order("T-R3", { source: { channel: "line", refs: [], receivedAt: "2026-11-01T00:00:00Z" } }), order("T-R4", { status: "needs_review" }), order("T-R5"));

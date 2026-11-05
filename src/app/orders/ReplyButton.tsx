@@ -19,12 +19,13 @@ export function ReplyButton({ orderId, who }: { orderId: string; who: string }) 
       );
     });
   return (
-    <div className="space-y-1">
-      <Button disabled={pending || !who} onClick={make} title={who ? undefined : "上で担当する人をえらんでください"}>
+    // 結果の文で右の列が広がって注文のカードが細くならないよう、幅を決めておく
+    <div className="w-full space-y-1 md:w-48">
+      <Button className="w-full" disabled={pending || !who} onClick={make} title={who ? undefined : "上で担当する人をえらんでください"}>
         返事を作る
       </Button>
       {msg && (
-        <Notice tone={msg.ok ? "ok" : "alert"}>
+        <Notice tone={msg.ok ? "ok" : "alert"} className="text-sm">
           {msg.text}
           {msg.ok && <> <Link className="underline" href="/outbound#replies">送り出しで確かめて送る</Link></>}
         </Notice>

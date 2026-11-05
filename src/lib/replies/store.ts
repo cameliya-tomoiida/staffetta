@@ -126,9 +126,11 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
   if (prev?.status === "sent") throw new Error("この注文の返事はもう送っています");
   // 中身（品名・締めの判定）は DB のマスタで計算する
   // 受けられない品と代わりの日は③の suggestAlternatives（締め・納品しない曜日・ラインの上限）
+  // 締めに間に合ったかは「注文を受けた時刻」で決める（今で決めると、締めの前に受けた注文まで「受けられない」になる）
   const now = nowIso();
-  const alt = suggestAlternatives(order, now, { masters, otherOrders: (await readDb()).orders });
-  const content = withMasters(masters, () => buildReply(order, now, { alt }));
+  const at = judgeTime(order, now);
+  const alt = suggestAlternatives(order, at, { masters, otherOrders: (await readDb()).orders });
+  const content = withMasters(masters, () => buildReply(order, at, { alt }));
   const fileName = await writeFiles(id, content);
   const r: StoredReply = {
     id, orderId: order.id, customerId: order.customerId, customerName: content.customerName, kind: content.kind, to: content.to,
@@ -174,6 +176,12 @@ export async function ensureAutoReplies(): Promise<StoredReply[]> {
     out.push(r);
   }
   return out;
+}
+
+/** 締めの判定に使う時刻：注文を受けた時刻（無い・おかしいときは今） */
+export function judgeTime(order: Order, now: string): string {
+  const r = order.source.receivedAt;
+  return r && Number.isFinite(Date.parse(r)) && Date.parse(r) < Date.parse(now) ? r : now;
 }
 
 export function markReplySent(id: string, who: string): StoredReply {
