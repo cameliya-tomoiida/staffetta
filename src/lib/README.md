@@ -231,3 +231,17 @@ master.ts（①）と production.ts（③）の両方を見る窓口。商品名
 
 ## 古いもの
 `plan.ts` は最初の下書き。集計の決まり（intent・仮発注）だけは合わせてあるが、新しい画面は上の関数を使ってください。画面が移ったら消します。
+
+### アラート（お知らせ）`alerts/`
+| 関数 | 入力 → 出力 |
+|---|---|
+| `evaluateAlerts(db, masters, now, { isOn, ...opts })` | → `Alert[]`（id = dedupeKey・kind・level・title・message・due・actions・relatedIds）。重い順 |
+| `ALERT_KINDS` / `alertFeatureKey(kind)` | 種類の一覧（#1〜#14）と、①の機能の ON/OFF の key（`alert_<種類>`） |
+
+- db に無いもの（入荷の記録・単価の変化・見直しの依頼・棚卸の日・商品の登録日・保存前の発注書の下書き）は opts で渡す。渡さなければ、その種類は出さない。
+- ボタンの種類と payload は `alerts/kinds.ts` の `AlertActionKind`。
+
+### ロットで流す（ラインの「流すロット（個）」）
+- `LineMaster.lotSize` を入れると、開始時刻から組むライン（ピザ）の当日の工程を、ロットごとに次の工程へ流す（前の工程の最初のロットが終わったら次を始める）。待つだけの工程はロットごとに同時に進む。
+- 流している途中で設備が使えない時間帯（霜取り）は止まって終わりが延びる（`ScheduleStep.pausedMinutes`。警告にしない）。
+- 空なら今までどおり。実際の1日との比べ: `docs/schedule-accuracy.md`。

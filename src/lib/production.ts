@@ -259,6 +259,8 @@ export interface ScheduleStep {
   note?: string;
   ccp?: boolean;
   prevDay: boolean;
+  /** ロットで流す工程が、設備の使えない時間帯（霜取りなど）で止まった分（分）。止まる分だけ終わりが延びている */
+  pausedMinutes?: number;
 }
 
 export interface ScheduleRow {
@@ -352,6 +354,14 @@ function laterFree(start: number, dur: number, downs: [number, number][]): numbe
   return t;
 }
 
+/** [start, end) の中で、使えない時間帯（毎日くり返す）に重なる分の合計 */
+function overlapMinutes(start: number, end: number, downs: [number, number][]): number {
+  let sum = 0;
+  for (let day = Math.floor(start / 1440) - 1; day <= Math.floor(end / 1440) + 1; day++)
+    for (const [a, b] of downs) sum += Math.max(0, Math.min(end, day * 1440 + b) - Math.max(start, day * 1440 + a));
+  return sum;
+}
+
 /** end で終わる dur 分が、使えない時間帯に重なるとき、どれだけ前にずらせばよいか（分） */
 function earlierShift(end: number, dur: number, downs: [number, number][]): number {
   const start = end - dur;
@@ -403,15 +413,42 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   // 前から積むライン
   for (const b of plan.doughs.filter((b) => fromOf(b.line) === "start")) {
     let t = opts.startMinute?.[b.line] ?? findLine(b.line).startMinute;
-    const today = findDough(b.doughId)!.steps.filter((s) => !s.prevDay).map((s) => {
+    // ロットで流す: 次の工程は、前の工程の最初のロットが終わったら始められる（終わりは、前の工程の最後のロット＋1ロット分より後）
+    const lotSize = findLine(b.line).lotSize;
+    const lots = lotSize && b.pieces > lotSize ? Math.ceil(b.pieces / lotSize) : 1;
+    let firstReady = t;
+    let prevEnd = t;
+    const today = findDough(b.doughId)!.steps.filter((s) => !s.prevDay).map((s, i) => {
       const key = s.resource ? `today:${s.resource}` : undefined;
       const dur = stepMinutes(s, b);
-      // 設備の使えない時間帯（霜取りなど）にかかるなら、終わるまで待つ
-      const start = laterFree(Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0), dur, downtimesOf(s.equipmentId));
-      const end = start + dur;
+      if (lots === 1) {
+        // 設備の使えない時間帯（霜取りなど）にかかるなら、終わるまで待つ
+        const start = laterFree(Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0), dur, downtimesOf(s.equipmentId));
+        const end = start + dur;
+        if (key) freeAfter.set(key, end);
+        t = end;
+        return toStep(s, start, end, false, b);
+      }
+      // 待つだけの工程（発酵・冷却）はロットごとに同時に進む。人・設備の工程は1ロットずつ
+      const isWait = !s.piecesPerHour && !s.minutesPerBatch && !(s.people && s.people > 0);
+      const per = isWait ? dur : dur / lots;
+      const start = laterFree(Math.max(i === 0 ? t : firstReady, key ? (freeAfter.get(key) ?? 0) : 0), Math.ceil(per), downtimesOf(s.equipmentId));
+      let end = Math.ceil(Math.max(start + dur, prevEnd + per));
+      // 流している途中で設備が使えない時間帯（霜取りなど）は止まる。その分だけ終わりを延ばす（前の工程の品物はラックで待つ）
+      const downs = downtimesOf(s.equipmentId);
+      let paused = 0;
+      for (let k = 0; k < 5 && downs.length; k++) {
+        const over = overlapMinutes(start, end, downs) - paused;
+        if (over <= 0) break;
+        paused += over;
+        end += over;
+      }
       if (key) freeAfter.set(key, end);
+      firstReady = Math.ceil(start + per);
+      prevEnd = end;
       t = end;
-      return toStep(s, start, end, false, b);
+      const st = toStep(s, start, end, false, b);
+      return paused ? { ...st, pausedMinutes: paused, note: [st.note, `${findEquipment(s.equipmentId!)?.name ?? ""}が使えない時間帯で ${paused}分 止まる`].filter(Boolean).join("。") } : st;
     });
     rows.set(b.key, { key: b.key, ...(b.waveName ? { waveName: b.waveName } : {}), line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.key)!, ...today], from: "start", warnings: [] });
   }
@@ -524,7 +561,7 @@ export function checkScheduleConstraints(rows: ScheduleRow[]): void {
 
   // 設備の使えない時間帯（霜取りなど）に重なっていないか
   for (const { row, step } of uses) {
-    if (!step.equipmentId || step.end <= step.start) continue;
+    if (!step.equipmentId || step.end <= step.start || step.pausedMinutes) continue;
     if (earlierShift(step.end, step.end - step.start, downtimesOf(step.equipmentId)) > 0) {
       const eq = findEquipment(step.equipmentId)!;
       row.warnings.push(`${row.doughName}: ${step.name}（${fmtTime(step.start)}〜${fmtTime(step.end)}）が ${eq.name} の使えない時間（${(eq.downtimes ?? []).join("・")}）にかかっています`);

@@ -53,6 +53,7 @@ export const lineDef: MasterDef<LineMaster> = {
     { key: "shipBufferMinutes", label: "積み込み・配送の時間（分）", type: "integer", min: 0, default: 0, example: "60" },
     { key: "earliestStartMinute", label: "いちばん早い開始（分）", type: "integer", default: 0, example: "-180", help: "0:00 からの分。前日21:00 なら -180" },
     { key: "prevDayStartTime", label: "前日の仕込みの開始", type: "time", default: "13:00", example: "13:00" },
+    { key: "lotSize", label: "流すロット（個）", type: "integer", min: 1, example: "400", help: "入れると、当日の工程をこの数ごとに次の工程へ流す（伸ばし→焼成→包装を同時に進める）。空なら1つの工程が全部終わってから次へ" },
   ],
 };
 
