@@ -486,6 +486,8 @@ export interface CustomerMaster {
   deliveryHowTo?: string;
   /** 注意事項（駐車・時間・気をつけること） */
   deliveryCaution?: string;
+  /** この先の納品にかかる時間（分）。空なら便の「1件の納品の時間」（それも空なら 10 分） */
+  serviceMinutes?: number;
   /** 地図の位置（住所から国土地理院の住所検索で出す。手で直してもよい） */
   lat?: number;
   lng?: number;

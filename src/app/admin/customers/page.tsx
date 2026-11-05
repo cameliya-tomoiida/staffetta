@@ -37,6 +37,7 @@ export default async function CustomersAdmin() {
     deliveryCaution: c.deliveryCaution ?? "",
     lat: c.lat ?? "",
     lng: c.lng ?? "",
+    serviceMinutes: c.serviceMinutes ?? "",
     active: c.active !== false,
     lineUserIds: c.lineUserIds?.length ? `${c.lineUserIds.length}人` : "",
   }));

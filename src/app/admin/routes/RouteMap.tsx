@@ -43,15 +43,27 @@ export interface MapPin {
   /** ふきだしに出す行 */
   lines: string[];
   late: boolean;
+  /** 色（見直し案でコースごとに色を分けるとき） */
+  color?: string;
+}
+
+/** 線（見直し案のように、コースが何本もあるとき） */
+export interface MapLine {
+  color: string;
+  /** 道順の線（[緯度, 経度]）。無ければ points を点線で結ぶ */
+  road?: [number, number][];
+  points: [number, number][];
 }
 
 export function RouteMap({
-  depot, pins, line, selected, onSelect,
+  depot, pins, line, lines, selected, onSelect,
 }: {
   depot: { lat: number; lng: number; name: string };
   pins: MapPin[];
   /** 道順の線（[緯度, 経度]）。無ければ工場→各先→工場を点線で結ぶ */
   line?: [number, number][];
+  /** コースが何本もあるとき（これがあれば line は使わない） */
+  lines?: MapLine[];
   selected?: string;
   onSelect?: (id: string) => void;
 }) {
@@ -91,7 +103,7 @@ export function RouteMap({
 
   // 印と線を描き直す
   const pinKey = JSON.stringify(pins.map((p) => [p.id, p.no, p.lat, p.lng, p.late, p.lines]));
-  const lineKey = JSON.stringify(line ?? null);
+  const lineKey = JSON.stringify([line ?? null, lines ?? null]);
   useEffect(() => {
     const L = lib;
     const m = map.current;
@@ -99,7 +111,12 @@ export function RouteMap({
     if (!L || !m || !g) return;
     g.clearLayers();
     const pts: [number, number][] = [[depot.lat, depot.lng], ...pins.map((p) => [p.lat, p.lng] as [number, number]), [depot.lat, depot.lng]];
-    if (line?.length) L.polyline(line, { color: "#8f1d1d", weight: 5, opacity: 0.75 }).addTo(g);
+    if (lines) {
+      for (const l of lines) {
+        if (l.road?.length) L.polyline(l.road, { color: l.color, weight: 5, opacity: 0.8 }).addTo(g);
+        else L.polyline(l.points, { color: l.color, weight: 4, opacity: 0.7, dashArray: "8 8" }).addTo(g);
+      }
+    } else if (line?.length) L.polyline(line, { color: "#8f1d1d", weight: 5, opacity: 0.75 }).addTo(g);
     else if (pins.length) L.polyline(pts, { color: "#8f1d1d", weight: 4, opacity: 0.6, dashArray: "8 8" }).addTo(g);
     L.marker([depot.lat, depot.lng], {
       icon: L.divIcon({
@@ -114,7 +131,7 @@ export function RouteMap({
       .addTo(g);
     for (const p of pins) {
       const on = p.id === selected;
-      const bg = p.late ? "#7a2a1c" : "#8f1d1d";
+      const bg = p.late ? "#7a2a1c" : (p.color ?? "#8f1d1d");
       const mk = L.marker([p.lat, p.lng], {
         icon: L.divIcon({
           className: "",

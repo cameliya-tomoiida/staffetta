@@ -57,7 +57,7 @@ export const toHHMM = (min: number) => {
 
 export type Stop = Pick<
   CustomerMaster,
-  "id" | "name" | "address" | "lat" | "lng" | "deliveryWindowFrom" | "deliveryWindowTo" | "deliveryHowTo" | "deliveryCaution" | "closedWeekdays" | "deliveryTime"
+  "id" | "name" | "address" | "lat" | "lng" | "deliveryWindowFrom" | "deliveryWindowTo" | "deliveryHowTo" | "deliveryCaution" | "closedWeekdays" | "deliveryTime" | "serviceMinutes"
 >;
 
 export interface TimelineRow {
@@ -147,7 +147,7 @@ export function buildTimeline(
     const from = st.deliveryWindowFrom ? toMin(st.deliveryWindowFrom) : undefined;
     const to = st.deliveryWindowTo ? toMin(st.deliveryWindowTo) : undefined;
     const startAt = from != null && arrive < from ? from : arrive;
-    const leave = startAt + service;
+    const leave = startAt + (st.serviceMinutes ?? service);
     const late = to != null && startAt > to ? startAt - to : 0;
     const brk = i + 1 === bAt ? (course.breakMinutes ?? 0) : 0;
     rows.push({
