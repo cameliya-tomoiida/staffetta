@@ -337,6 +337,12 @@ export const courseDef: MasterDef<CourseMaster> = {
     { key: "dayOffset", label: "出発する日", type: "integer", min: -3, max: 0, default: 0, example: "0", help: "0 = 納品日の当日、-1 = 前日（宅配便・冷凍便）" },
     { key: "weekdays", label: "走る曜日", type: "weekdays", example: "月;火;水;木;金;土", help: "空なら毎日" },
     { key: "note", label: "メモ", type: "text" },
+    // 配送コースの地図（⑦）
+    { key: "stops", label: "回る順番", type: "textlist", example: "C02;C01;C07", help: "取引先ID を回る順に ; で区切る。配送コースの地図の画面で並べ替えられる" },
+    { key: "serviceMinutes", label: "1件の納品の時間（分）", type: "integer", min: 0, example: "10", help: "空なら 10 分" },
+    { key: "breakMinutes", label: "休けい（分）", type: "integer", min: 0, example: "30" },
+    { key: "breakAfter", label: "休けいを取る（何件目のあと）", type: "integer", min: 1, example: "5", help: "空なら真ん中" },
+    { key: "vehicle", label: "車", type: "text", example: "軽バン" },
     ACTIVE,
   ],
 };
