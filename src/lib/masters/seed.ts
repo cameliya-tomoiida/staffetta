@@ -4,7 +4,7 @@
 import { customers as masterCustomers } from "@/data/master";
 import { customerDeliveryTime, doughRecipes, lineSettings, toppingRecipes, type ProcessStep } from "@/data/production";
 import type {
-  CustomerMaster, DoughMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
+  CourseMaster, CustomerMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster, SupplierMaster,
 } from "@/data/types";
 import { legacyMaterials as allMaterials, legacyProducts as allProducts, legacySuppliers as allSuppliers } from "./legacy";
@@ -127,6 +127,48 @@ export const SAMPLE_STAFF: StaffAssignmentMaster[] = [
   { shiftId: "SH-PA", line: "pizza", stepKey: "pack", people: 3 },
 ];
 
+// ───────── 便（架空。④の取引先の初期値と同じ便の名前） ─────────
+export const SAMPLE_COURSES: CourseMaster[] = [
+  { id: "東コース（早朝便）", name: "東コース（早朝便）", departTime: "05:30", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true },
+  { id: "東コース（朝便）", name: "東コース（朝便）", departTime: "07:00", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true },
+  { id: "西コース", name: "西コース", departTime: "05:30", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true },
+  { id: "南コース（早朝便）", name: "南コース（早朝便）", departTime: "05:45", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true },
+  { id: "南コース", name: "南コース", departTime: "08:30", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5], active: true },
+  { id: "午後便（売店）", name: "午後便（売店）", departTime: "13:00", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5], active: true, note: "売店・昼の補充" },
+  { id: "ヤマト便", name: "ヤマト便", departTime: "16:00", loadMinutes: 60, dayOffset: -1, weekdays: [0, 1, 2, 3, 4, 5], active: true, note: "前日の集荷" },
+  { id: "冷凍便", name: "冷凍便", departTime: "16:00", loadMinutes: 60, dayOffset: -1, active: true },
+];
+
+/** 架空の取引先の便・納品時刻（④の取引先の初期値 src/lib/db/seed/customers.ts と同じ値） */
+const CUSTOMER_COURSE: Record<string, { course: string; deliveryTime: string; deliveryWeekdays?: number[] }> = {
+  C01: { course: "東コース（朝便）", deliveryTime: "08:30" },
+  C02: { course: "東コース（早朝便）", deliveryTime: "07:30" },
+  C03: { course: "西コース", deliveryTime: "09:00" },
+  C04: { course: "西コース", deliveryTime: "06:10" },
+  C05: { course: "南コース（早朝便）", deliveryTime: "07:00", deliveryWeekdays: [2, 4, 6] },
+  C06: { course: "西コース", deliveryTime: "06:40" },
+  C07: { course: "東コース（朝便）", deliveryTime: "09:30" },
+  C08: { course: "南コース（早朝便）", deliveryTime: "07:30" },
+  C09: { course: "東コース（朝便）", deliveryTime: "08:00" },
+  C10: { course: "ヤマト便", deliveryTime: "10:30" },
+  C11: { course: "南コース", deliveryTime: "10:00" },
+  C12: { course: "冷凍便", deliveryTime: "13:00" },
+  C13: { course: "ヤマト便", deliveryTime: "09:00" },
+};
+
+// ───────── 定期注文（架空） ─────────
+const so = (customerId: string, weekdays: number[], productId: string, quantity: number, unit = "個", piecesPerUnit = 1): StandingOrderMaster[] =>
+  weekdays.map((w) => ({ id: `SO-${customerId}-${w}-${productId}`, customerId, weekday: w, productId, quantity, unit, piecesPerUnit, active: true }));
+
+export const SAMPLE_STANDING_ORDERS: StandingOrderMaster[] = [
+  // グループホーム: 火・木・土に、いつものロールと食パン（ドライバーが聞き取っていた分）
+  ...so("C05", [2, 4, 6], "P01", 30),
+  ...so("C05", [2, 4, 6], "P03", 2, "斤"),
+  // 喫茶店: 月〜土の朝に黒糖ロールとふんわりロール
+  ...so("C04", [1, 2, 3, 4, 5, 6], "P02", 20),
+  ...so("C04", [1, 2, 3, 4, 5, 6], "P18", 16),
+];
+
 // ───────── まとめ ─────────
 export function sampleMasters(): Masters {
   const lines: LineMaster[] = Object.values(lineSettings).map((l) => ({
@@ -194,7 +236,7 @@ export function sampleMasters(): Masters {
   const customers: CustomerMaster[] = masterCustomers.map((c) => ({
     id: c.id, name: c.name, channel: c.channel, cutoff: c.cutoff, active: true,
     ...(c.fax ? { fax: c.fax } : {}), ...(c.externalCode ? { externalCode: c.externalCode } : {}), ...(c.lineUserId ? { lineUserId: c.lineUserId } : {}),
-    ...(customerDeliveryTime[c.id] ? { deliveryTime: customerDeliveryTime[c.id] } : {}), ...(c.note ? { note: c.note } : {}),
+    ...(CUSTOMER_COURSE[c.id] ?? (customerDeliveryTime[c.id] ? { deliveryTime: customerDeliveryTime[c.id] } : {})), ...(c.note ? { note: c.note } : {}),
   }));
 
   return {
@@ -212,6 +254,8 @@ export function sampleMasters(): Masters {
     suppliers,
     supplierDeliveries,
     customers,
+    courses: SAMPLE_COURSES,
+    standingOrders: SAMPLE_STANDING_ORDERS,
     shifts: SAMPLE_SHIFTS,
     staffAssignments: SAMPLE_STAFF,
   };

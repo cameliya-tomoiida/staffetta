@@ -3,7 +3,7 @@
 // 工程の時間割（工程表）を出す。全部ふつうの計算で、同じ入力なら必ず同じ結果になる。
 import type { Line, ProcessKey } from "@/data/production";
 import type { DayTotals } from "./aggregate";
-import { allLines, allShifts, customerDeliveryMinute, findDough, findEquipment, findLine, findMaterial, findProduct, findTopping } from "./catalog";
+import { allLines, allShifts, customerDeadline, customerDeliveryMinute, findDough, findEquipment, findLine, findMaterial, findProduct, findTopping } from "./catalog";
 
 export interface DoughItem {
   productId: string;
@@ -14,6 +14,8 @@ export interface DoughItem {
   toppingId?: string;
   /** この商品を注文した得意先（納品時刻から工程を逆算するのに使う） */
   customers?: string[];
+  /** 得意先ごとの個数（便で分けるのに使う） */
+  customerPieces?: { customerId: string; pieces: number }[];
 }
 
 export interface DoughIngredient {
@@ -24,7 +26,11 @@ export interface DoughIngredient {
 }
 
 export interface DoughBatchPlan {
+  /** 生地を便で分けたときの区別（分けないときは doughId と同じ。分けたら "DG01#2"） */
+  key: string;
   doughId: string;
+  /** 便で分けたときの名前（例: 「午後便（売店）」） */
+  waveName?: string;
   name: string;
   line: Line;
   items: DoughItem[];
@@ -84,6 +90,11 @@ export interface ProductionPlan {
 }
 
 export interface ProductionOptions {
+  /**
+   * 便（出発時刻）で生地を分ける間隔（分）。同じ生地の得意先で、作り終える時刻がこれ以上離れていたら別の仕込みにする。
+   * 初期値 120。0 にすると分けない。
+   */
+  waveGapMinutes?: number;
   /** ラインの上限を上書きする（例: { pizza: 1500 }） */
   lineCaps?: Partial<Record<Line, number>>;
   /** 生地のロス率を上書き（棚卸の補正案を人が承認したもの）。doughId → 0.05 など */
@@ -117,12 +128,18 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
     }
     byDough.set(spec.doughId, [
       ...(byDough.get(spec.doughId) ?? []),
-      { productId: t.productId, name: t.name, pieces: t.pieces, doughGram: spec.doughGram, toppingId: spec.toppingId, customers: t.customers.map((c) => c.customerId) },
+      { productId: t.productId, name: t.name, pieces: t.pieces, doughGram: spec.doughGram, toppingId: spec.toppingId, customers: t.customers.map((c) => c.customerId), customerPieces: t.customers.map((c) => ({ customerId: c.customerId, pieces: c.pieces })) },
     ]);
     if (spec.toppingId) toppings.push({ productId: t.productId, toppingId: spec.toppingId, pieces: t.pieces });
   }
 
-  const doughs: DoughBatchPlan[] = [...byDough.entries()].map(([doughId, items]) => doughBatch(doughId, items, opts.lossRates?.[doughId]));
+  const doughs: DoughBatchPlan[] = [...byDough.entries()].flatMap(([doughId, items]) =>
+    splitByWave(doughId, items, opts.waveGapMinutes ?? 120).map((w, i, all) => ({
+      ...doughBatch(doughId, w.items, opts.lossRates?.[doughId]),
+      key: all.length > 1 ? `${doughId}#${i + 1}` : doughId,
+      ...(all.length > 1 ? { waveName: w.name } : {}),
+    })),
+  );
 
   const lines: LinePlan[] = allLines().map((l) => l.line).map((line) => {
     const ls = findLine(line);
@@ -155,6 +172,45 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
   };
 }
 
+/**
+ * 生地の得意先を「作り終える時刻」（便の出発 − 積み込み）で分ける。時刻が gap 分以上離れたら別の仕込み。
+ * 開始時刻から組むライン（冷凍のピザ）や、得意先が分からないときは分けない。
+ */
+function splitByWave(doughId: string, items: DoughItem[], gap: number): { name?: string; items: DoughItem[] }[] {
+  const d = findDough(doughId);
+  if (!d || gap <= 0 || findLine(d.line).scheduleFrom !== "delivery") return [{ items }];
+  // 得意先ごとの個数と作り終える時刻
+  type Part = { customerId: string; minute: number; courseName: string };
+  const parts = new Map<string, Part>();
+  for (const it of items)
+    for (const c of it.customers ?? []) {
+      if (parts.has(c)) continue;
+      const dl = customerDeadline(c, d.line);
+      parts.set(c, { customerId: c, minute: dl.minute, courseName: dl.courseId ?? dl.basis });
+    }
+  if (parts.size < 2) return [{ items }];
+  const sorted = [...parts.values()].sort((a, b) => a.minute - b.minute);
+  const groups: Part[][] = [];
+  for (const p of sorted) {
+    const g = groups[groups.length - 1];
+    if (g && p.minute - g[0].minute < gap) g.push(p);
+    else groups.push([p]);
+  }
+  if (groups.length < 2) return [{ items }];
+  return groups.map((g) => {
+    const ids = new Set(g.map((p) => p.customerId));
+    return {
+      name: [...new Set(g.map((p) => p.courseName))].join("・"),
+      items: items
+        .map((it) => {
+          const share = (it.customerPieces ?? []).filter((x) => ids.has(x.customerId));
+          return { ...it, pieces: share.reduce((s, x) => s + x.pieces, 0), customers: share.map((x) => x.customerId), customerPieces: share };
+        })
+        .filter((it) => it.pieces > 0),
+    };
+  });
+}
+
 /** 生地1種類分: 個数 → 生地kg（ロス込み）→ 粉kg → 材料kg（ベーカーズ％） */
 export function doughBatch(doughId: string, items: DoughItem[], lossRateOverride?: number): DoughBatchPlan {
   const d = findDough(doughId);
@@ -167,6 +223,7 @@ export function doughBatch(doughId: string, items: DoughItem[], lossRateOverride
   const flourKg = doughKg / (totalPercent / 100);
   const batches = doughKg > 0 ? Math.ceil(doughKg / d.mixerMaxKg) : 0;
   return {
+    key: doughId,
     doughId,
     name: d.name,
     line: d.line,
@@ -205,6 +262,10 @@ export interface ScheduleStep {
 }
 
 export interface ScheduleRow {
+  /** 生地を便で分けたときの区別（DoughBatchPlan.key） */
+  key: string;
+  /** 便で分けたときの名前 */
+  waveName?: string;
   line: Line;
   doughId: string;
   doughName: string;
@@ -215,8 +276,10 @@ export interface ScheduleRow {
   /** 逆算のとき: いちばん早い納品時刻（0:00 からの分）と、その得意先 */
   deliveryMinute?: number;
   deliveryCustomerId?: string;
-  /** 逆算のとき: 最後の工程が終わっていなければならない時刻（納品時刻 − 積み込み・配送） */
+  /** 逆算のとき: 最後の工程が終わっていなければならない時刻（便の出発 − 積み込み、または 納品時刻 − 積み込み・配送） */
   deadline?: number;
+  /** 作り終える時刻の根拠（「東コース（早朝便） 05:30 出発」「納品 7:30」） */
+  deadlineBasis?: string;
   warnings: string[];
 }
 
@@ -256,7 +319,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   const prevSteps = new Map<string, ScheduleStep[]>();
   for (const b of plan.doughs) {
     let t = opts.prevDayStartMinute ?? findLine(b.line).prevDayStartMinute;
-    prevSteps.set(b.doughId, findDough(b.doughId)!.steps.filter((s) => s.prevDay).map((s) => {
+    prevSteps.set(b.key, findDough(b.doughId)!.steps.filter((s) => s.prevDay).map((s) => {
       const key = s.resource ? `prev:${s.resource}` : undefined;
       const start = Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0);
       const end = start + stepMinutes(s, b);
@@ -277,7 +340,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
       t = end;
       return toStep(s, start, end, false);
     });
-    rows.set(b.doughId, { line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.doughId)!, ...today], from: "start", warnings: [] });
+    rows.set(b.key, { key: b.key, ...(b.waveName ? { waveName: b.waveName } : {}), line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.key)!, ...today], from: "start", warnings: [] });
   }
 
   // 納品時刻から逆算するライン: 締めの遅い生地から順に、後ろから並べる
@@ -285,12 +348,14 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     .filter((b) => fromOf(b.line) === "delivery")
     .map((b) => {
       const custs = [...new Set(b.items.flatMap((i) => i.customers ?? []))];
-      const times = custs.map((c) => ({ c, m: opts.deliveryMinute?.[c] ?? customerDeliveryMinute(c) }));
-      const first = times.sort((a, b) => a.m - b.m)[0] ?? { c: undefined, m: customerDeliveryMinute("") };
-      return { b, deliveryMinute: first.m, customerId: first.c, deadline: first.m - findLine(b.line).shipBufferMinutes };
+      // 得意先ごとに「作り終える時刻」（便があれば出発 − 積み込み、無ければ納品 − 積み込み・配送）。いちばん早い得意先に合わせる
+      const times = custs.map((c) => ({ c, dl: customerDeadline(c, b.line, opts.deliveryMinute?.[c]), m: opts.deliveryMinute?.[c] ?? customerDeliveryMinute(c) }));
+      const first = times.sort((a, b) => a.dl.minute - b.dl.minute)[0];
+      if (!first) return { b, deliveryMinute: customerDeliveryMinute(""), customerId: undefined, deadline: customerDeliveryMinute("") - findLine(b.line).shipBufferMinutes, basis: "" };
+      return { b, deliveryMinute: first.m, customerId: first.c, deadline: first.dl.minute, basis: first.dl.basis };
     })
-    .sort((x, y) => y.deadline - x.deadline || x.b.doughId.localeCompare(y.b.doughId));
-  for (const { b, deliveryMinute, customerId, deadline } of backward) {
+    .sort((x, y) => y.deadline - x.deadline || x.b.key.localeCompare(y.b.key));
+  for (const { b, deliveryMinute, customerId, deadline, basis } of backward) {
     // 工程はすき間なく続けて並べる（発酵が延びないように）。設備がふさがっていれば、生地全体を前にずらす
     const src = findDough(b.doughId)!.steps.filter((s) => !s.prevDay);
     const durs = src.map((s) => stepMinutes(s, b));
@@ -307,14 +372,14 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     const shift = Math.max(0, ...today.filter((x) => x.resource).map((x) => x.end - (busyFrom.get(`today:${x.resource}`) ?? Infinity)));
     if (shift > 0) today = place(deadline - shift);
     for (const x of today) if (x.resource) busyFrom.set(`today:${x.resource}`, Math.min(busyFrom.get(`today:${x.resource}`) ?? Infinity, x.start));
-    const warnings = today.length && today[0].start < findLine(b.line).earliestStartMinute ? [`${b.name}: 納品 ${fmtTime(deliveryMinute)} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(findLine(b.line).earliestStartMinute)} より前）`] : [];
-    rows.set(b.doughId, {
-      line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.doughId)!, ...today],
-      from: "delivery", deliveryMinute, deliveryCustomerId: customerId, deadline, warnings,
+    const warnings = today.length && today[0].start < findLine(b.line).earliestStartMinute ? [`${b.name}${b.waveName ? `（${b.waveName}）` : ""}: ${basis || `納品 ${fmtTime(deliveryMinute)}`} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(findLine(b.line).earliestStartMinute)} より前）`] : [];
+    rows.set(b.key, {
+      key: b.key, ...(b.waveName ? { waveName: b.waveName } : {}), line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.key)!, ...today],
+      from: "delivery", deliveryMinute, deliveryCustomerId: customerId, deadline, ...(basis ? { deadlineBasis: basis } : {}), warnings,
     });
   }
 
-  const out = plan.doughs.map((b) => rows.get(b.doughId)!);
+  const out = plan.doughs.map((b) => rows.get(b.key)!);
   checkScheduleConstraints(out);
   return out;
 }

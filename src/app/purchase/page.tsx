@@ -5,7 +5,6 @@ import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
 import { addDays, fmtDate, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
-import { loadMasters } from "@/lib/masters/seed-db";
 import { deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
 import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
@@ -13,6 +12,8 @@ import { customerById } from "@/data/master";
 import { listPurchaseOrders } from "@/lib/purchase-store";
 import { nowMs } from "@/lib/clock";
 import { PurchaseClient, type PoView } from "./PurchaseClient";
+import { loadMasters } from "@/lib/masters/seed-db";
+import { withMasters } from "@/lib/catalog";
 
 export const metadata = { title: "発注書｜受発注ハブ" };
 
@@ -26,13 +27,14 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
   const date = pickDate(q.date, dates, today);
 
   // 発注書の下書きは③（src/lib）が作る。画面は表示と、人の承認・送信の操作だけ
-  const r = runPipeline(orders, date, { masters: await loadMasters() });
+  const masters = await loadMasters(); // マスタ画面で直した値で計算（③の loadMasters）
+  const r = runPipeline(orders, date, { masters });
   const shortage = new Map(r.shortages.map((s) => [s.materialId, s]));
   // 承認・送信済みの記録は③の purchase-store から（承認済みのものは中身も保存した方を見せる）
   const stored = new Map((await listPurchaseOrders()).map((p) => [p.id, p]));
 
   const view = (po: PurchaseOrderDraft): PoView => {
-    const s = findSupplier(po.supplierId);
+    const s = withMasters(masters, () => findSupplier(po.supplierId));
     return {
       id: po.id,
       supplierName: po.supplierName,
@@ -81,7 +83,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       serverNow={nowMs()}
       lateMaterials={r.materialPlan.lateItems.map((x) => x.message)}
       unconfirmed={orders.filter((o) => o.deliveryDate === date && (o.status === "needs_review" || o.status === "provisional")).length}
-      costBox={<CostBox s={dayCostSummary(r)} show={["purchase", "material"]} />}
+      costBox={<CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} />}
       dateNav={
         dates.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">

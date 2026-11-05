@@ -31,6 +31,10 @@ export const isScreenName = (s: string): s is ScreenName => (SCREEN_NAMES as str
 let seeded = false;
 /** まだ空なら、サンプル（架空データ）を入れる。③のマスタは③の seedSampleMasters、取り込みの設定は⑤の初期値 */
 export async function ensureSeeded(name: ScreenName) {
+  if (name === "customers") {
+    await seedCustomers(); // 取引先の初期値は④（空のときだけ）
+    return;
+  }
   if (isChannelMaster(name)) {
     await seedMastersIfEmpty(name, (CHANNEL_SEEDS[name]() as Rec[]).map((r) => ({ ...r })));
     return;
@@ -94,6 +98,11 @@ export async function saveOne(name: ScreenName, id: string | undefined, input: R
   const base = id ? all.find((r) => r.id === id) : undefined;
   if (id && !base) throw new Error("見つかりません");
   const values = { ...input };
+  // 定期注文の ID は 得意先-曜日-商品（同じ組み合わせを2回入れないように）
+  if (!base && name === "standingOrders" && !values.id?.trim() && values.customerId && values.weekday && values.productId) {
+    const wd = "日月火水木金土".indexOf(values.weekday.trim().replace(/曜日?$/, ""));
+    values.id = `SO-${values.customerId.trim()}-${wd >= 0 ? wd : values.weekday.trim()}-${values.productId.trim()}`;
+  }
   if (!base && def.keyColumns.length === 1 && def.keyColumns[0] === "id" && !values.id?.trim() && ID_PREFIX[name]) {
     values.id = nextId(ID_PREFIX[name]!, all.map((r) => r.id));
   }

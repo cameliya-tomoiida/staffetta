@@ -7,8 +7,10 @@
 //   POST JSON { action: "save", id?, input, who }   … 1件の追加・修正
 //   POST JSON { action: "delete" | "restore", id, who }
 //   POST JSON { action: "stocktake", id, counted, who, note? } … 棚卸（材料・包材）
+//   POST JSON { action: "makeWeek", who, customerId?, weekOf? } … 定期注文から今週分の注文（要確認）を作る（name = standingOrders）
 //   POST JSON { action: "saveRecipe", doughId, lines: [{ materialId, percent }], who } … 生地1つの配合をまとめて置き換え（name = recipeItems）
 import { revalidatePath } from "next/cache";
+import { createStandingOrdersForWeek } from "@/lib/masters/standing";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   applyUpload, exportFile, history, isScreenName, previewUpload, remove, restore, saveOne, saveRecipe, stocktake, templateFile,
@@ -24,7 +26,7 @@ const csvResponse = (buf: Buffer, fileName: string) =>
   });
 
 const LABEL: Record<string, string> = {
-  suppliers: "仕入先", supplierDeliveries: "仕入先の便", materials: "材料", packaging: "包材",
+  suppliers: "仕入先", supplierDeliveries: "仕入先の便", materials: "材料", packaging: "包材", customers: "取引先",
   sheet_sources: "読みに行くシート", sheet_columns: "シートの列と商品", kirara_items: "専用サイトのコード表", infomart_headers: "インフォマートの列名",
 };
 
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
       if (action === "apply") result = await applyUpload(name, buf, file.name, String(form.get("who") ?? ""), String(form.get("hash") ?? "") || undefined);
       else result = await previewUpload(name, buf, file.name);
     } else {
-      const b = (await req.json()) as { action: string; id?: string; input?: Record<string, string>; who?: string; counted?: number; note?: string; doughId?: string; lines?: RecipeLineInput[] };
+      const b = (await req.json()) as { action: string; id?: string; input?: Record<string, string>; who?: string; counted?: number; note?: string; doughId?: string; lines?: RecipeLineInput[]; customerId?: string; weekOf?: string };
       const who = b.who ?? "";
       if (b.action === "save") result = await saveOne(name, b.id, b.input ?? {}, who);
       else if (b.action === "delete") result = await remove(name, b.id ?? "", who);
@@ -65,6 +67,9 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
         result = await saveRecipe(b.doughId ?? "", b.lines ?? [], who);
         revalidatePath("/masters/recipes");
         revalidatePath("/plan");
+      } else if (b.action === "makeWeek" && name === "standingOrders") {
+        result = await createStandingOrdersForWeek({ who, customerId: b.customerId, weekOf: b.weekOf });
+        revalidatePath("/", "layout");
       } else if (b.action === "stocktake") result = await stocktake(name, b.id ?? "", Number(b.counted), who, b.note);
       else throw new Error(`知らない操作です: ${b.action}`);
     }

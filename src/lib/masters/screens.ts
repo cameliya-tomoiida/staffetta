@@ -19,7 +19,7 @@ export const MASTER_GROUPS: { label: string; names: ScreenName[] }[] = [
   { label: "商品と製造", names: ["products", "doughs", "recipeItems", "steps", "toppings", "toppingItems", "productPackaging"] },
   { label: "設備と人員", names: ["lines", "equipment", "shifts", "staffAssignments"] },
   { label: "仕入と在庫", names: ["suppliers", "supplierDeliveries", "materials", "packaging"] },
-  { label: "取引先", names: ["customers"] },
+  { label: "取引先と配送", names: ["customers", "courses", "standingOrders"] },
   { label: "取り込みの設定", names: ["sheet_sources", "sheet_columns", "kirara_items", "infomart_headers"] },
 ];
 
@@ -42,7 +42,9 @@ export const LIST_KEYS: Record<ScreenName, string[]> = {
   equipment: ["name", "kind", "line", "count", "piecesPerHour", "id", "availableFrom", "availableTo", "maxBatchKg", "lanes", "capacityPieces", "exclusiveGroup", "active"],
   shifts: ["name", "line", "from", "to", "headcount", "id"],
   staffAssignments: ["shiftId", "line", "stepKey", "people", "id"],
-  customers: ["name", "channel", "cutoff", "deliveryTime", "course", "id", "fax", "externalCode", "note", "active"],
+  customers: ["name", "channel", "cutoff", "deliveryTime", "course", "deliveryWeekdays", "id", "fax", "externalCode", "note", "active"],
+  courses: ["name", "departTime", "loadMinutes", "dayOffset", "weekdays", "id", "note", "active"],
+  standingOrders: ["customerId", "weekday", "productId", "quantity", "unit", "id", "piecesPerUnit", "from", "to", "note", "active"],
   suppliers: ["name", "method", "cutoff", "leadDays", "minLot", "id", "contact", "active"],
   supplierDeliveries: ["supplierId", "name", "cutoff", "leadDays", "arrival", "id", "customerIds"],
   materials: ["name", "stock", "safetyStock", "supplierId", "leadDays", "id", "orderUnitLabel", "minLot", "location"],
