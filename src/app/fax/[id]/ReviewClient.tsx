@@ -231,7 +231,7 @@ export function ReviewClient({
   const matrix = isOrderish && kind !== "change" && allDates.length > 1 && !needsTemplate;
 
   /** 数量の入力欄（大きな数字。直した所は赤で「元 → 新 変更」） */
-  const qtyCell = (i: number) => {
+  const qtyCell = (i: number, compact = false) => {
     const r = rows[i];
     const edited = r.quantity !== r.aiQuantity;
     return (
@@ -247,7 +247,7 @@ export function ReviewClient({
             onFocus={() => setSelected(i)}
             onChange={(e) => setQty(i, e.target.value === "" ? NaN : Number(e.target.value))}
             aria-label={`${r.writtenName} の数量`}
-            className={`h-14 w-[5.5em] rounded-lg border-2 px-3 text-right text-[1.3em] font-black tabular-nums ${
+            className={`${compact ? "h-12 w-[3.4em] px-2 text-[1.15em]" : "h-14 w-[5.5em] px-3 text-[1.3em]"} rounded-lg border-2 text-right font-black tabular-nums ${
               edited ? "border-[#a51e28] bg-[#fff0f1] text-[#a51e28]" : "border-rule-strong bg-sheet"
             } ${!Number.isInteger(r.quantity) || r.quantity < 0 ? "outline outline-2 outline-[#a51e28]" : ""}`}
           />
@@ -499,7 +499,7 @@ export function ReviewClient({
                     <thead>
                       <tr className="bg-off-bg text-left">
                         <th className="w-10 px-2 py-2 text-[0.9em]">行</th>
-                        <th className="px-2 py-2 text-[0.9em]">品名</th>
+                        <th className="sticky left-0 z-10 min-w-[9em] bg-off-bg px-2 py-2 text-[0.9em]">品名</th>
                         {allDates.map((d) => <th key={d} className="px-2 py-2 text-right text-[0.9em] whitespace-nowrap">{md(d)}</th>)}
                       </tr>
                     </thead>
@@ -510,7 +510,7 @@ export function ReviewClient({
                         return (
                           <tr key={name} id={`fax-row-${first}`} className={`border-t border-rule align-top ${look ? "bg-[#fff3c4]" : ""}`} onMouseEnter={() => setSelected(first)}>
                             <td className="px-2 py-3 tabular-nums">{n + 1}</td>
-                            <td className="px-2 py-3">
+                            <td className={`sticky left-0 z-10 min-w-[9em] px-2 py-3 ${look ? "bg-[#fff3c4]" : "bg-sheet"}`}>
                               <div className="font-bold">{name}</div>
                               {productPicker(first, true)}
                             </td>
@@ -519,7 +519,7 @@ export function ReviewClient({
                               if (i < 0) return <td key={d} className="px-2 py-3 text-right text-ink-faint">—</td>;
                               return (
                                 <td key={d} className={`px-2 py-3 ${rowCls(i)}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}>
-                                  {qtyCell(i)}
+                                  {qtyCell(i, true)}
                                   {why(rows[i])}
                                   {checkBox(i, `${n + 1}行目の${md(d)}`)}
                                 </td>
