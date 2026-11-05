@@ -1,13 +1,14 @@
 import "server-only";
 // 衛生チェックシートを AI とのチャットで作る（⑦の(24)）。Claude を呼ぶところ。
-// キーは環境変数 ANTHROPIC_API_KEY（①の「設定 → AI」ができたら、そこから）。無ければ画面にボタンを出さない。
-import Anthropic from "@anthropic-ai/sdk";
+// キーは①の「設定 → AI」（無ければ環境変数 ANTHROPIC_API_KEY）。呼ぶのは①の aiClient（月の上限・使った量の記録）。キーが無ければ画面にボタンを出さない。
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { aiClient } from "@/lib/ai/client";
+import { apiKey } from "@/lib/ai/settings";
 import { AiSheetSchema, draftText, normalizeDraft } from "./ai-sheet";
 import type { SheetDef } from "./sheets";
 
 export const SHEET_AI_MODEL = "claude-opus-5-5";
-export const hasAiKey = () => !!process.env.ANTHROPIC_API_KEY;
+export const hasAiKey = () => !!apiKey();
 
 const SYSTEM = `あなたは食品工場（パン・ピザ・米飯）の衛生管理の担当です。工場の人と話しながら、毎月印刷して現場で書く「衛生管理のチェックシート」を作ります。
 決まり:
@@ -26,7 +27,7 @@ export interface ChatTurn {
 /** 会話といまの下書きから、次の下書きと返事を作る */
 export async function chatSheet(turns: ChatTurn[], current: SheetDef | undefined, id: string) {
   if (!hasAiKey()) throw new Error("AI のキーがありません（設定 → AI）");
-  const client = new Anthropic({ timeout: 120_000 });
+  const client = aiClient("衛生シートの AI", { timeout: 120_000 });
   const messages = turns.map((t, i) => ({
     role: t.role,
     content: i === turns.length - 1 && t.role === "user" ? `## いまの下書き\n${draftText(current)}\n\n## 人の話\n${t.text}` : t.text,

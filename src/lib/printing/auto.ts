@@ -4,7 +4,8 @@ import "server-only";
 //   記録 … kv の auto_print_log（新しい順に 100 件）
 //   印刷の前 … 衛生管理なら「休業日の入れ忘れ・先月の記入もれ・範囲の外なのに措置なし」を見て、お知らせに出す
 //   月末 … 「今月の衛生のまとめ」を作る（Claude の API キーがあれば AI が文にする。無ければ決まりの集計だけ）
-import Anthropic from "@anthropic-ai/sdk";
+import { aiClient } from "@/lib/ai/client";
+import { apiKey } from "@/lib/ai/settings";
 import { syncAlerts, type AlertCandidate } from "@/lib/db/alerts-store";
 import { kvGet, kvSet } from "@/lib/db/sqlite";
 import { runDays, sheetProblems, type SheetRecord } from "@/lib/hygiene/sheets";
@@ -128,7 +129,7 @@ export interface MonthSummary {
 export const getMonthSummary = (month: string) => kvGet<MonthSummary>(`hygiene_summary:${month}`);
 
 /** その月の衛生のまとめを作る（AI はキーがあるときだけ）。保存して返す */
-export async function makeMonthSummary(month: string, now: string, ai = !!process.env.ANTHROPIC_API_KEY): Promise<MonthSummary> {
+export async function makeMonthSummary(month: string, now: string, ai = !!apiKey()): Promise<MonthSummary> {
   const today = new Date(Date.parse(now) + 9 * 3600_000).toISOString().slice(0, 10);
   const recs = recordsOf(month);
   const holidays = holidaysOf(month);
@@ -145,7 +146,7 @@ export async function makeMonthSummary(month: string, now: string, ai = !!proces
   const summary: MonthSummary = { month, at: now, facts };
   if (ai) {
     try {
-      const client = new Anthropic({ timeout: 60_000 });
+      const client = aiClient("衛生のまとめ", { timeout: 60_000 });
       const res = await client.messages.create({
         model: "claude-opus-5-5",
         max_tokens: 800,
