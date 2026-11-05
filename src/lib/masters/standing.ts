@@ -1,6 +1,6 @@
 import "server-only";
 // 定期注文の「今週分を作る」（⑤の画面のボタンの中身）。作るのは③の generateStandingOrders、保存は注文の保存の口（store）。
-// 作るのは要確認（needs_review）の注文だけ。確定するのは人。ID が 得意先×納品日 なので、何回押しても二重にならない。
+// 作るのは要確認（needs_review）の注文だけ。あしたより前の納品日は作らない。確定するのは人。ID が 得意先×納品日 なので、何回押しても二重にならない。
 import { withMasters } from "@/lib/catalog";
 import { nowIso, todayJst } from "@/lib/clock";
 import { generateStandingOrders, mondayOf, type StandingSkip } from "@/lib/standing-orders";
@@ -22,6 +22,11 @@ export async function createStandingOrdersForWeek(input: { who: string; customer
   const r = withMasters(masters, () =>
     generateStandingOrders(weekStart, { existingOrders, now: nowIso(), who: input.who, customerId: input.customerId || undefined }),
   );
+  // 過ぎた日と今日の分は作らない（あしたの納品から）。③の notBefore と同じ決まり
+  const notBefore = todayJst(1);
+  r.orders = r.orders.filter((o) => o.deliveryDate >= notBefore);
+  r.existing = r.existing.filter((id) => id.slice(-10) >= notBefore);
+  r.skipped = r.skipped.filter((x) => x.date >= notBefore);
   // 保存する直前にもう一度、同じ ID が無いか確かめる（同時に2回押されたとき）
   const added = await updateDb((db) => {
     const have = new Set(db.orders.map((o) => o.id));
