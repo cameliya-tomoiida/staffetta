@@ -20,7 +20,7 @@
 #   05_doughs.csv     生地          ← 生地レシピ
 #   06_recipeItems.csv 生地の配合（ベーカーズ%）← 生地明細
 #   07_steps.csv      工程          ← 商品工程（その生地の代表の商品）＋生地工程（条件をメモへ）
-#   08_products.csv   商品          ← 商品マスタ（売価は取引先商品の卸価格のいちばん低い値）
+#   08_products.csv   商品          ← 商品マスタ（売価は取引先商品の卸価格のいちばん高い値）
 #   09_productPackaging.csv 商品の包材 ← 商品包材
 #   report.txt        読めなかった行・決めたことの一覧
 import collections
@@ -325,7 +325,9 @@ def main():
     for r in table(wb, "取引先商品"):
         n, v = str(r.get("商品名") or "").strip(), num(r.get("卸価格"))
         if n and v is not None and v > 0:
-            price[n] = min(price.get(n, v), v)
+            # 取引先ごとに卸価格が違うときは、いちばん高い値（商品のマスタの売価は1つだけなので）。
+            # いちばん低い値にすると、ほかの取引先の分まで「粗利がマイナス」のお知らせが出てしまう
+            price[n] = max(price.get(n, v), v)
     p_rows = []
     for p in prods:
         n = str(p["商品名"]).strip()
