@@ -43,7 +43,7 @@ const kindInfo = {
 } as const;
 
 export function ReviewClient({
-  fax, orders, others, templates, customers, products, levels, aliases, leadTimes = {},
+  fax, orders, others, templates, customers, products, levels, aliases, leadTimes = {}, unreadFaxes = 0,
 }: {
   fax: FaxDoc;
   orders: Order[]; // このFAXから作った注文
@@ -57,6 +57,8 @@ export function ReviewClient({
   aliases: Record<string, Record<string, string>>;
   /** 行（"注文の番号-行の番号"）ごとの締めの判定（③の checkLeadTime）。間に合わない・仮発注で過ぎた行だけ */
   leadTimes?: Record<string, { status: "late" | "warn"; reason: string }>;
+  /** まだ読み取っていない FAX の枚数（変更FAX の元の注文が、そこに入っているかもしれない） */
+  unreadFaxes?: number;
 }) {
   const read = fax.read!;
   const [learned, setLearned] = useState<Record<string, string>>({}); // この画面で辞書に入れたもの（"取引先|呼び名" → 商品ID）
@@ -126,6 +128,13 @@ export function ReviewClient({
     }
     return null;
   };
+  // 変更FAX: 元の注文がまだ別の FAX で確認待ちなら、そちらを先に確定してもらう（二重に数えないため。サーバーでも止める）
+  const waitingOriginal = (r: Row) =>
+    others.find((o) => o.customerId === customerId && o.deliveryDate === r.deliveryDate && o.status === "needs_review" && (o.intent ?? "new") === "new");
+  const waitingFaxes = kind === "change" && !done
+    ? [...new Set(rows.filter((r) => !r.removed && !findOriginal(r)).map(waitingOriginal).filter((o): o is Order => !!o)
+        .map((o) => o.source.refs.find((x) => x.kind === "fax_pdf")?.faxId ?? o.id))]
+    : [];
   // 本発注: 置き換わる仮発注
   const provisionalToReplace =
     kind === "order" && !done
@@ -236,6 +245,20 @@ export function ReviewClient({
                   : flagged
                     ? `黄色の ${flagged} 行は、元のFAXと見比べて確かめてください。数字をタップすると直せます。`
                     : "要確認の行はありません。元のFAXと見比べて、合っていれば確定してください。"}
+              </div>
+            )}
+            {kind === "change" && !done && waitingFaxes.length === 0 && unreadFaxes > 0 && rows.some((r) => !r.removed && !findOriginal(r)) && (
+              <div className="rounded-lg bg-review-bg px-3 py-2 text-sm font-bold text-review-ink">
+                元の注文が見つからない行があります。まだ読み取っていない FAX が {unreadFaxes} 枚あるので、元の注文がそこに入っているかもしれません。先に受信箱で読み取ってから確定すると安全です。
+              </div>
+            )}
+            {waitingFaxes.length > 0 && (
+              <div className="rounded-lg bg-alert-bg px-3 py-2 text-sm font-bold text-alert-ink">
+                元の注文がまだ確定前です。先に{" "}
+                {waitingFaxes.map((id, k) => (
+                  <span key={id}>{k > 0 && "・"}<a className="underline" href={`/fax/${id}`}>{id}</a></span>
+                ))}
+                {" "}を確定してから、この変更を確定してください（いま確定すると数が二重になります）。
               </div>
             )}
             {kind === "provisional_order" && !done && (
@@ -413,7 +436,11 @@ export function ReviewClient({
                                     )}
                                   </>
                                 ) : (
+                                  waitingOriginal(r) ? (
+                                  <div className="text-xs font-bold text-alert-ink">元の注文は<br />まだ確定前</div>
+                                ) : (
                                   <div className="text-xs font-bold text-alert-ink">元の注文なし<br />→ 追加として入れる</div>
+                                )
                                 )}
                               </td>
                             )}
@@ -458,7 +485,7 @@ export function ReviewClient({
               {isOrderish ? (
                 <>
                   <button className="text-sm text-ink-faint underline" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: "not_order", who }))}>注文ではない</button>
-                  <button className="btn-primary px-6 py-3 text-lg" disabled={pending || !customerId || needsTemplate} onClick={submit}>
+                  <button className="btn-primary px-6 py-3 text-lg" disabled={pending || !customerId || needsTemplate || waitingFaxes.length > 0} onClick={submit}>
                     {pending ? "確定中…" : kind === "change" ? "この変更を反映する" : kind === "provisional_order" ? "仮発注として登録" : "この内容で確定"}
                   </button>
                 </>

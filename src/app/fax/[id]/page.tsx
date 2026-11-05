@@ -53,6 +53,7 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
       levels={levels}
       aliases={aliases}
       leadTimes={leadTimes}
+      unreadFaxes={db.faxes.filter((f) => f.status === "new" || f.status === "reading").length}
     />
   );
 }

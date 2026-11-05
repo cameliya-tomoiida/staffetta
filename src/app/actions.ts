@@ -236,6 +236,9 @@ export async function confirmChangeAction(input: {
     if (!fax?.read) throw new Error("FAXが見つかりません");
     if (fax.status === "confirmed") throw new Error("このFAXはもう確定済みです");
     if (fax.read.kind !== "change") throw new Error("このFAXは変更のFAXではありません");
+    // 元の注文がまだ確定前（別の FAX で確認待ち）なのに「追加」として入れると、あとでその FAX を確定したとき二重になる
+    const waiting = pendingOriginalsFor(db.orders, fax.id, input.customerId, input.additions.map((a) => a.deliveryDate));
+    if (waiting.length) throw new Error(`元の注文がまだ確定前です。先に ${waiting.join("・")} を確定してから、この変更を確定してください`);
     const at = now();
     const ref = { kind: "fax_pdf" as const, faxId: fax.id, pdfUrl: fax.file };
     for (const c of input.changes) {
@@ -279,6 +282,18 @@ export async function confirmChangeAction(input: {
     fax.status = "confirmed";
   });
   revalidatePath("/", "layout");
+}
+
+/**
+ * 変更FAX の元になりそうな、まだ確定前の注文（同じ取引先・納品日・intent new・needs_review、別の入口のもの）。
+ * 見つかったら、その FAX の番号（FAX 以外は注文の番号）を返す。
+ */
+function pendingOriginalsFor(orders: Order[], faxId: string, customerId: string, dates: string[]): string[] {
+  const want = new Set(dates);
+  const hits = orders.filter(
+    (o) => !o.id.startsWith(`${faxId}-`) && o.customerId === customerId && want.has(o.deliveryDate) && o.status === "needs_review" && (o.intent ?? "new") === "new",
+  );
+  return [...new Set(hits.map((o) => o.source.refs.find((r) => r.kind === "fax_pdf")?.faxId ?? o.id))];
 }
 
 /** 電話・ドライバー聞き取りの注文を手で入れる（人が入れるのでそのまま確定） */
