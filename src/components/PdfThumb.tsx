@@ -2,7 +2,7 @@
 import { openPdf } from "@/lib/pdfjs";
 import { useEffect, useRef, useState } from "react";
 
-/** 受信箱のサムネイル。2ページ以上の FAX は、1・2ページ目を2枚並べる（縦長は横に、横長は縦に。担当者の指示 11/5） */
+/** 受信箱のサムネイル。2ページ以上の FAX は、1・2ページ目を2枚並べる（縦長は横に、横長は縦に。作者の指示 11/5） */
 export function PdfThumb({ url, rotation = 0 }: { url: string; rotation?: number }) {
   const ref1 = useRef<HTMLCanvasElement>(null);
   const ref2 = useRef<HTMLCanvasElement>(null);

@@ -239,6 +239,7 @@ export async function confirmChangeAction(input: {
   /** 元の注文が見つからなかった行（新しい注文として入れる） */
   additions: { deliveryDate: string; productId: string; quantity: number; piecesPerUnit: number; writtenName: string }[];
 }) {
+  if (!customers.some((c) => c.id === input.customerId)) throw new Error("お店（得意先）と商品を決めてから確定してください");
   await updateDb((db) => {
     const fax = db.faxes.find((f) => f.id === input.faxId);
     if (!fax?.read) throw new Error("FAXが見つかりません");
@@ -345,7 +346,7 @@ export async function resetDemoAction(input?: { understood?: boolean }) {
   revalidatePath("/", "layout");
 }
 
-// ───────── 自動確定（担当者の方針 11/5：迷わなかった FAX は人を待たない） ─────────
+// ───────── 自動確定（作者の方針 11/5：迷わなかった FAX は人を待たない） ─────────
 
 /**
  * 読み取りのあとに呼ぶ。迷わなかった FAX は読み取りのまま確定する（AI は値を書き換えない）。

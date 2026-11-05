@@ -1,4 +1,5 @@
 import "server-only";
+import { confirmBlocker } from "@/lib/confirm-guard";
 // ⑤の自動の仕事（決まった時刻・ふだんどおりのときだけ）。runDueAutomations() を、画面を開いたときと
 // /api/automation/tick（Windows のタスクスケジューラなどから数分おきに呼ぶ）から呼ぶ。同じ区切りに2回は動かない。
 //   A11 定期注文 … 設定の曜日・時刻を過ぎたら、次週分を作って自動で確定（週に1回）
@@ -43,6 +44,7 @@ export async function runStandingIfDue(now = nowIso()) {
   await updateDb((db) => {
     for (const o of db.orders) {
       if (!ids.has(o.id) || o.status !== "needs_review") continue;
+      if (confirmBlocker(o)) continue; // 得意先・商品が空なら要確認のまま（人が見る）
       o.status = "confirmed";
       o.confirmedAt = now;
       o.confirmedBy = who;

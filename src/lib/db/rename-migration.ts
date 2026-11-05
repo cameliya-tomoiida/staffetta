@@ -21,8 +21,22 @@ export const RENAME_MARK = "rename_real_names_v1";
 
 export const renameText = (s: string) => RENAMES.reduce((t, [a, b]) => t.split(a).join(b), s);
 
-/** DB の全部の表の文字の列を書き換える（済みなら何もしない）。書き換えた行の数を返す */
+/**
+ * 2回目（公開前・自社の名前）: コードの識別子に残っていた自社の名前（きららの届け先のキー）を架空の名前に変えた。
+ * 人の名前・社名の値（DB の中の本物のデータ）は書き換えない。変わったのはコードの識別子だけ。
+ */
+export const RENAMES_V2: [string, string][] = [[OLD("Y2FtZWxpYV9tYWlu"), "self_main"], [OLD("Y2FtZWxpYV9wYWNr"), "self_pack"]];
+export const RENAME_MARK_V2 = "rename_real_names_v2";
+
+/** DB の全部の表の文字の列を書き換える（1回目・2回目とも、済みなら何もしない）。書き換えた行の数を返す */
 export function migrateRenamedNames(db: DatabaseSync, dataDir?: string): number {
+  return renameOnce(db, RENAME_MARK, RENAMES, dataDir) + renameOnce(db, RENAME_MARK_V2, RENAMES_V2, dataDir);
+}
+
+function renameOnce(db: DatabaseSync, mark: string, renames: [string, string][], dataDir?: string): number {
+  const RENAMES = renames;
+  const RENAME_MARK = mark;
+  const renameText = (s: string) => RENAMES.reduce((t, [a, b]) => t.split(a).join(b), s);
   db.exec(`CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, json TEXT NOT NULL, updated_at TEXT NOT NULL);`);
   if (db.prepare("SELECT 1 FROM kv WHERE key = ?").get(RENAME_MARK)) return 0;
   let changed = 0;

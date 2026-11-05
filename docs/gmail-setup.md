@@ -11,7 +11,7 @@
 - 受け口の合言葉: ヘッダー `X-Hub-Token` = `.env.local` の `FAX_INBOUND_TOKEN`。
 - setup を実行した時刻より前のメールは送らない（過去の実FAXを流し込まない）。
 
-## 手順（担当者の操作は ★）
+## 手順（作者の操作は ★）
 1. ハブを起動し、トンネルで公開URLを出す（docs/tunnel.md）。
 2. ★ Chrome で fax-inbox@example.com にログインした状態で script.google.com → 新しいプロジェクト。
 3. ★ `gas/fax-forwarder.gs` の中身を貼り付けて保存（プロジェクト名: 受発注ハブ FAX転送）。

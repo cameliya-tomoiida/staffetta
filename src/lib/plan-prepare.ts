@@ -32,8 +32,12 @@ export async function preparePlanIfDue(now: string): Promise<PreparedPlan | unde
   const key = `plan_prepared_${date}`;
   if (kvGet(key)) return undefined;
 
-  const [{ allOrders }, { loadMasters }, { runPipeline }] = await Promise.all([import("@/demo/all-orders"), import("./masters/seed-db"), import("./pipeline")]);
-  const { orders } = await allOrders();
+  // allOrders()（readRecentDb）は画面用で connection() を呼ぶため、5分ごとの判定（リクエストの外）からは使えない。
+  // 同じ中身（最近の分＋見本の注文）を、保存先から直接読んで作る。
+  const [{ loadRecentDb }, { demoOrders }, { loadMasters }, { runPipeline }] = await Promise.all([import("./db/hub-store"), import("@/demo/orders"), import("./masters/seed-db"), import("./pipeline")]);
+  const saved = (await loadRecentDb({ since: new Date(Date.parse(j) - 60 * 86400_000).toISOString().slice(0, 10) })).orders;
+  const ids = new Set(saved.map((o) => o.id));
+  const orders = [...saved, ...demoOrders().filter((o) => !ids.has(o.id))];
   const r = runPipeline(orders, date, { masters: await loadMasters() });
   const dayOrders = orders.filter((o) => o.deliveryDate === date && o.status !== "cancelled");
   const products = new Set(dayOrders.flatMap((o) => o.lines.map((l) => l.productId))).size;

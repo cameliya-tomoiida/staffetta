@@ -8,6 +8,7 @@ import { findProduct } from "@/lib/catalog";
 import { customerById } from "@/data/master";
 import { updateDb } from "@/lib/store";
 import { addAlias, normalizeAlias, type AliasRow } from "@/lib/aliases";
+import { CONFIRM_BLOCKED_MESSAGE, confirmBlocker } from "@/lib/confirm-guard";
 
 type Result = { ok: true; channel: string } | { ok: false; error: string };
 
@@ -27,14 +28,19 @@ export async function confirmOrderAction(input: { orderId: string; who: string; 
         o.edits.push({ at, who: input.who, field: "customerId", from: o.customerId || "（不明）", to: input.customerId });
         o.customerId = input.customerId;
       }
-      if (!o.customerId) throw new Error("取引先を選んでください");
+      if (!o.customerId?.trim()) throw new Error(CONFIRM_BLOCKED_MESSAGE);
       // 先に全部の行を確かめてから書き換える（途中で止まって半端に変わらないように）
       const next = o.lines.map((l) => {
         const c = input.lines.find((x) => x.lineId === l.id);
         const q = c ? Math.max(0, Math.round(c.quantity)) : l.quantity;
-        if (q > 0 && !findProduct(l.productId)) throw new Error(`商品が決まっていない行があります（${l.read?.writtenName ?? l.id}）`);
+        if (q > 0 && !findProduct(l.productId)) throw new Error(`${CONFIRM_BLOCKED_MESSAGE}（「${l.read?.writtenName || l.id}」の商品が決まっていません）`);
         return { l, q };
       });
+      // 確定になる注文は、得意先と商品が決まっていること（全部 0 にした取り消しは通す）
+      if (next.some((x) => x.q > 0)) {
+        const why = confirmBlocker({ customerId: o.customerId, lines: next.map(({ l, q }) => ({ ...l, quantity: q })) });
+        if (why) throw new Error(why);
+      }
       for (const { l, q } of next) {
         // 0 にした行も消さずに残す（個数 0 なので集計には入らない。元の値と修正の記録が残る）
         if (q !== l.quantity) l.edits.push({ at, who: input.who, field: "quantity", from: String(l.quantity), to: String(q) });

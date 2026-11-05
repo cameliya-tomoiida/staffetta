@@ -1,4 +1,5 @@
 import "server-only";
+import { confirmBlocker } from "@/lib/confirm-guard";
 // A8・A9（⑤）: 取り込んだ注文のうち、迷わなかったものを自動で確定する。値は書き換えない（読んだ値のまま確定するだけ）。
 //   A8 シート・インフォマート・専用サイトの CSV … 全行の商品が辞書（列の対応・コード表・名寄せ辞書）で決まっている
 //   A9 メール … 全行の商品が決まり、印（attention）が無く、自信が設定以上（①の FAX の自動確定と同じ考え）
@@ -19,7 +20,7 @@ const IMPORT_CHANNELS = new Set(["google_sheet", "infomart", "customer_site"]);
 /** 自動で確定してよいか。だめなら理由（人に回す理由） */
 export function whyNotAuto(o: Order, now: string, minConfidence: number): string | undefined {
   if (o.status !== "needs_review") return "要確認ではありません";
-  if (!o.customerId) return "取引先が決まっていません";
+  if (!o.customerId?.trim()) return "取引先が決まっていません";
   if (!o.lines.length) return "行がありません";
   const isImport = IMPORT_CHANNELS.has(o.source.channel);
   for (const l of o.lines) {
@@ -66,6 +67,12 @@ export async function autoConfirmImported(ids: string[]) {
           continue;
         }
         const label = ch === "email" ? "メールを迷わず読めた" : "辞書で全部決まった";
+        // 確定の直前の守り（判定を通っても、得意先・商品が空なら確定しない）
+        const blocked = confirmBlocker(o);
+        if (blocked) {
+          out.held.push({ id, why: blocked });
+          continue;
+        }
         if ((o.intent ?? "new") === "change") {
           const orig = db.orders.find((x) => x.id === o.changeOf);
           if (!orig || (orig.status !== "confirmed" && orig.status !== "provisional")) {

@@ -62,7 +62,7 @@ export const kiraraItem = (code: string) => KIRARA_ITEMS.find((i) => i.code === 
 
 /**
  * CSV の列（0始まり）。実物の EDI CSV と同じ並び。
- * 数量の列は「100倍の値」で入っている（400 → 4パック）と見ている【推】。担当者に要確認。
+ * 数量の列は「100倍の値」で入っている（400 → 4パック）と見ている【推】。作者に要確認。
  */
 export const KIRARA_COL = {
   recordType: 0,
