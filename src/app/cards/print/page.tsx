@@ -145,10 +145,16 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
                 <td className={td}>{v.packStaff ?? ""}</td>
               </tr>
               <tr>
-                <th className={th}>イースト</th>
-                <td className={`${td} whitespace-nowrap text-[10pt]`}>納入 {md(v.yeastReceived ?? base.yeast?.receivedDate)}</td>
-                <td className={`${td} whitespace-nowrap text-[10pt]`}>期限 {md(v.yeastExpiry, true)}</td>
-                <td className={`${td} text-[10pt] text-[#444]`}>{base.yeast?.name ?? ""}</td>
+                <th className={th} rowSpan={2}>イースト</th>
+                <td className={`${td} h-[8mm] text-[10.5pt] text-[#444]`} colSpan={3}>
+                  品名　{base.yeast?.name ?? ""}
+                </td>
+              </tr>
+              <tr>
+                <td className={`${td} h-[8mm] whitespace-nowrap text-[10pt]`}>納入日 {md(v.yeastReceived ?? base.yeast?.receivedDate)}</td>
+                <td className={`${td} h-[8mm] whitespace-nowrap text-[10pt]`} colSpan={2}>
+                  賞味期限 {md(v.yeastExpiry, true)}
+                </td>
               </tr>
             </tbody>
           </table>
