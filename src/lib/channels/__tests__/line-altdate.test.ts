@@ -110,5 +110,8 @@ describe("確定の連絡の「代わりの日の提案」と、その返事", (
     expect(o.alternativeOffers(ok)).toEqual([]);
     expect(o.confirmationText(ok)).not.toContain("お届けできない");
     expect(o.alternativeOffers({ ...base, intent: "cancel" })).toEqual([]);
+    // 受け付けたときは間に合っていた（11/4 朝）なら、連絡がいま（締め 11/5 11:00 のあと）でも提案しない
+    const intime = { ...base, lines: [{ ...base.lines[0], id: "x3", productId: "P10", quantity: 2, unit: "袋" }] };
+    expect(o.alternativeOffers(intime)).toEqual([]);
   });
 });
