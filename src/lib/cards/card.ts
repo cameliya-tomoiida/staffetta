@@ -12,6 +12,7 @@
 // 分かっていること（CardBase）はアプリが入れる。現場で測ること（CardInput）だけ人が入れる。
 import type { DoughMaster, ProcessStepKey, ProcessStepMaster, ProductMaster, ShiftMaster, StaffAssignmentMaster } from "@/data/types";
 import type { DoughBatchPlan, ScheduleRow } from "@/lib/production";
+import { templateFor, type CardField, type CardTemplate } from "./template";
 
 /** 許す幅が登録されていないときの値 */
 export const DEFAULT_KNEAD_TOLERANCE_C = 2;
@@ -49,7 +50,8 @@ export interface CardItem {
 
 /** 工程の行（アプリが入れる所） */
 export interface CardProcess {
-  key: ProcessStepKey;
+  /** 工程のキー（工程のマスタのキー、または形で足した工程 "x-…"） */
+  key: string;
   name: string;
   /** 工程表の予定（"4:10" / "前日 21:30"） */
   plannedStart?: string;
@@ -60,6 +62,12 @@ export interface CardProcess {
   temp?: { target?: number; min?: number; max?: number };
   /** CCP（重要管理点） */
   ccp?: boolean;
+  /** 書く欄（第3版の形から。無ければ 時刻・担当・温度の基準があれば温度） */
+  fields?: CardField[];
+  /** この工程のロスを製品の表に書く（見出し） */
+  lossLabel?: string;
+  qtyLabel?: string;
+  checkLabel?: string;
 }
 
 /** アプリが入れる所 */
@@ -77,6 +85,8 @@ export interface CardBase {
   items: CardItem[];
   /** 工程の行（第2版） */
   processes?: CardProcess[];
+  /** 使った形（第3版） */
+  template?: { id: string; name: string };
   /** 目標の捏上温度（生地のマスタ。登録が無ければ空）と許す幅 */
   targetKneadC?: number;
   kneadToleranceC?: number;
@@ -99,6 +109,8 @@ export interface CardItemInput {
   stock?: number;
   metal?: Check;
   sensory?: Check;
+  /** 工程ごとのロス数（キー＝工程。第3版）。前の版の loss は包装のロスとして読む */
+  losses?: Record<string, number>;
 }
 
 /** ミキサー1回分（同じ生地をまとめてこねる。回ごとに1行） */
@@ -116,6 +128,10 @@ export interface StepInput {
   staff?: string;
   /** 確かめた温度（急速冷凍の庫内温度など） */
   tempC?: number;
+  /** 数（冷却した数・ケース数など） */
+  qty?: number;
+  /** ○× */
+  check?: Check;
 }
 
 /** 現場で入れる所 */
@@ -126,7 +142,7 @@ export interface CardInput {
   yeastReceived?: string;
   yeastExpiry?: string;
   /** 工程ごと（第2版） */
-  steps?: Partial<Record<ProcessStepKey, StepInput>>;
+  steps?: Record<string, StepInput>;
   /** ミキサーの回ごと */
   mixes?: MixInput[];
   items: Record<string, CardItemInput>;
@@ -196,6 +212,8 @@ export function buildCardBase(args: {
   assignments: StaffAssignmentMaster[];
   doughs?: DoughMaster[];
   products?: ProductMaster[];
+  /** 製品カードの形（第3版）。この生地に使う形があれば、工程の行はその形から */
+  templates?: CardTemplate[];
   yeast?: { name: string; receivedDate?: string };
   weather?: Weather;
 }): CardBase {
@@ -217,7 +235,22 @@ export function buildCardBase(args: {
     const s = schedule?.steps.find((x) => x.key === k && x.end > x.start);
     return s ? (s.prevDay ? s[which] - 1440 : s[which]) : undefined;
   };
-  const processes: CardProcess[] = keys.map((k) => {
+  const tpl = args.templates ? templateFor(args.templates, dough.doughId, dough.line) : undefined;
+  const fromTemplate: CardProcess[] | undefined = tpl?.steps.map((ts) => {
+    const m = master.find((s) => s.key === ts.key);
+    const st = at(ts.key, "start");
+    const en = at(ts.key, "end");
+    const hint = staffText(dough.line, ts.key, st, args.shifts, args.assignments, dow);
+    const mt = m && (m.tempTargetC != null || m.tempMinC != null || m.tempMaxC != null) ? { target: m.tempTargetC, min: m.tempMinC, max: m.tempMaxC } : undefined;
+    const temp = ts.fields.includes("temp") ? (ts.temp ?? mt) : undefined;
+    return {
+      key: ts.key, name: ts.name, fields: ts.fields,
+      ...(st != null ? { plannedStart: fmt(st) } : {}), ...(en != null ? { plannedEnd: fmt(en) } : {}),
+      ...(hint ? { staffHint: hint } : {}), ...(temp ? { temp } : {}), ...(ts.ccp || m?.ccp ? { ccp: true } : {}),
+      ...(ts.lossLabel ? { lossLabel: ts.lossLabel } : {}), ...(ts.qtyLabel ? { qtyLabel: ts.qtyLabel } : {}), ...(ts.checkLabel ? { checkLabel: ts.checkLabel } : {}),
+    };
+  });
+  const processes: CardProcess[] = fromTemplate ?? keys.map((k) => {
     const m = master.find((s) => s.key === k);
     const st = at(k, "start");
     const en = at(k, "end");
@@ -250,6 +283,7 @@ export function buildCardBase(args: {
       };
     }),
     processes,
+    ...(tpl ? { template: { id: tpl.id, name: tpl.name } } : {}),
     ...(dm?.kneadTargetC != null ? { targetKneadC: dm.kneadTargetC, kneadToleranceC: dm.kneadToleranceC ?? DEFAULT_KNEAD_TOLERANCE_C } : {}),
     ...(args.yeast ? { yeast: args.yeast } : {}),
     ...(args.weather ? { weather: args.weather } : {}),
@@ -269,18 +303,42 @@ export function processesOf(base: CardBase): CardProcess[] {
 }
 
 /** 工程ごとの入力（前の版の divideStart などは、その工程に読みかえる） */
-export function stepsOf(input: CardInput): Partial<Record<ProcessStepKey, StepInput>> {
-  const legacy: Partial<Record<ProcessStepKey, StepInput>> = {};
-  const put = (k: ProcessStepKey, v: StepInput) => {
+export function stepsOf(input: CardInput): Record<string, StepInput> {
+  const legacy: Record<string, StepInput> = {};
+  const put = (k: string, v: StepInput) => {
     const clean = Object.fromEntries(Object.entries(v).filter(([, x]) => x != null && x !== "")) as StepInput;
     if (Object.keys(clean).length) legacy[k] = clean;
   };
   put("divide", { start: input.divideStart, end: input.divideEnd, staff: input.divideStaff });
   put("bake", { start: input.bakeStart, end: input.bakeEnd, staff: input.bakeStaff });
   put("pack", { staff: input.packStaff });
-  const out: Partial<Record<ProcessStepKey, StepInput>> = { ...legacy };
-  for (const [k, v] of Object.entries(input.steps ?? {})) out[k as ProcessStepKey] = { ...legacy[k as ProcessStepKey], ...v };
+  const out: Record<string, StepInput> = { ...legacy };
+  for (const [k, v] of Object.entries(input.steps ?? {})) out[k] = { ...legacy[k], ...v };
   return out;
+}
+
+/** 工程の行の書く欄（第3版の形が無ければ 時刻・担当、温度の基準があれば温度も） */
+export function fieldsOf(p: CardProcess): CardField[] {
+  return p.fields ?? ["time", "staff", ...(p.temp ? (["temp"] as const) : [])];
+}
+
+/** 製品の表のロスの列（第3版の形の lossLabel。無い前の版は「ロス」1列＝包装） */
+export function lossColumns(base: CardBase): { key: string; label: string }[] {
+  const cols = processesOf(base).flatMap((p) => (p.lossLabel ? [{ key: p.key, label: p.lossLabel }] : []));
+  return cols.length ? cols : [{ key: "pack", label: "ロス" }];
+}
+
+/** その工程のロス数（前の版の loss は包装のロス） */
+export function lossOf(x: CardItemInput | undefined, key: string): number | undefined {
+  const v = x?.losses?.[key];
+  if (v != null) return v;
+  return key === "pack" ? x?.loss : undefined;
+}
+
+/** ロスの合計 */
+export function totalLoss(base: CardBase, x: CardItemInput | undefined): number | undefined {
+  const vals = lossColumns(base).map((c) => lossOf(x, c.key)).filter((v): v is number => v != null);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) : undefined;
 }
 
 /** ミキサーの回ごとの入力（前の形＝1回分だけの kneadTempC などは1回目に読みかえる） */
@@ -328,6 +386,7 @@ export function checkCard(base: CardBase, input: CardInput): Problem[] {
     const s = steps[pr.key];
     if (!s) continue;
     if (backwards(s.start, s.end)) p.push({ field: `steps.${pr.key}.end`, message: `${pr.name}の終わりが始めより前です` });
+    if (s.check === "ng") p.push({ field: `steps.${pr.key}.check`, message: `${pr.name}: ${pr.checkLabel ?? "確認"}が × です` });
     if (pr.temp && s.tempC != null && ((pr.temp.min != null && s.tempC < pr.temp.min) || (pr.temp.max != null && s.tempC > pr.temp.max))) {
       p.push({ field: `steps.${pr.key}.tempC`, message: `${pr.name}の温度が管理の範囲（${pr.temp.min ?? ""}〜${pr.temp.max ?? ""}℃）から外れています` });
     }

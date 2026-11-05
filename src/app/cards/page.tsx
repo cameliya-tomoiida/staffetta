@@ -56,6 +56,9 @@ export default async function CardsPage(props: PageProps<"/cards">) {
             この日のカードを全部印刷する
           </Link>
         )}
+        <Link href="/cards/templates" className="link text-lg">
+          製品カードの形（工程を足す・並べかえる）
+        </Link>
       </div>
       {cards.length === 0 && <p className="card p-6 text-xl">この日は、作る生地がありません。</p>}
       <ul className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
