@@ -18,6 +18,7 @@ import { DatabaseSync } from "node:sqlite";
 const FILES: [string, string][] = [
   ["lines", "00_lines.csv"],
   ["equipment", "00b_equipment.csv"],
+  ["equipment", "00e_equipment_new.csv"],
   ["shifts", "00c_shifts.csv"],
   ["staffAssignments", "00d_staffAssignments.csv"],
   ["materials", "01_materials.csv"],
@@ -29,6 +30,7 @@ const FILES: [string, string][] = [
   ["steps", "07_steps.csv"],
   ["steps", "07b_steps_override.csv"],
   ["products", "08_products.csv"],
+  ["products", "08b_products_override.csv"],
   ["productPackaging", "09_productPackaging.csv"],
 ];
 

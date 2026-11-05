@@ -195,6 +195,10 @@ export interface LineMaster {
    * 空なら、1つの工程が全部終わってから次の工程（今までどおり）
    */
   lotSize?: number;
+  /** 段取り替え（分）。同じ設備・作業場で、ちがう生地に替えるときに あいだに入れる */
+  changeoverMinutes?: number;
+  /** 1日の終わりの洗浄・片付け（分）。その日の最後の工程のあとに入れる */
+  cleanupMinutes?: number;
 }
 
 /** 設備の種類 */
@@ -208,6 +212,7 @@ export type EquipmentKind =
   | "slicer" // スライサー
   | "packer" // 包装機
   | "metal_detector" // 金属検出機
+  | "freezer" // 冷凍庫（できた品物を保管する）
   | "other";
 
 /** 設備。同じ設備は台数ぶんまでしか同時に使えない */
@@ -233,6 +238,8 @@ export interface Equipment {
   maxPieceGram?: number;
   /** 1回に入る数（オーブン・ホイロの段・天板の数 × 1枚あたり） */
   capacityPieces?: number;
+  /** 入るケース数（冷凍庫）。その日に作った品物のケース数がこれを超えたら注意 */
+  capacityCases?: number;
   /** 同時に動かせない設備のまとまり（電気の容量などで、同じグループの設備は1台ずつしか回せない） */
   exclusiveGroup?: string;
   /** 毎日の使えない時間帯（霜取り・清掃など）。"17:00-17:40" の形で複数 */
@@ -515,6 +522,8 @@ export interface ShiftMaster {
   to: string;
   /** その班の人数 */
   headcount: number;
+  /** 休けいの時間帯（"13:00-14:00"）。その時間は人数に数えない */
+  breaks?: string[];
 }
 
 /** 工程ごとの配置人数（班ごと）。工程の people より優先する */

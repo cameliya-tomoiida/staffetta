@@ -13,7 +13,7 @@ export const LINE_OPTIONS = opts({ bread: "パン", pizza: "ピザ" });
 export const LINE_OR_COMMON = opts({ bread: "パン", pizza: "ピザ", common: "共用" });
 export const EQUIPMENT_KIND_OPTIONS = opts({
   mixer: "ミキサー", divider: "分割機", moulder: "成形機", proofer: "ホイロ", oven: "オーブン", cooler: "冷却",
-  slicer: "スライサー", packer: "包装機", metal_detector: "金属検出機", other: "その他",
+  slicer: "スライサー", packer: "包装機", metal_detector: "金属検出機", freezer: "冷凍庫", other: "その他",
 });
 export const STEP_KEY_OPTIONS = opts({
   weigh: "計量", mix: "ミキシング", ferment: "1次発酵", divide: "分割", bench: "ベンチタイム", shape: "成形", retard: "冷蔵発酵",
@@ -53,6 +53,8 @@ export const lineDef: MasterDef<LineMaster> = {
     { key: "shipBufferMinutes", label: "積み込み・配送の時間（分）", type: "integer", min: 0, default: 0, example: "60" },
     { key: "earliestStartMinute", label: "いちばん早い開始（分）", type: "integer", default: 0, example: "-180", help: "0:00 からの分。前日21:00 なら -180" },
     { key: "prevDayStartTime", label: "前日の仕込みの開始", type: "time", default: "13:00", example: "13:00" },
+    { key: "changeoverMinutes", label: "段取り替え（分）", type: "integer", min: 0, example: "20", help: "同じ設備・作業場で、ちがう生地に替えるときに あいだに入れる時間" },
+    { key: "cleanupMinutes", label: "1日の終わりの洗浄・片付け（分）", type: "integer", min: 0, example: "60", help: "その日の最後の工程のあとに入れる" },
     { key: "lotSize", label: "流すロット（個）", type: "integer", min: 1, example: "400", help: "入れると、当日の工程をこの数ごとに次の工程へ流す（伸ばし→焼成→包装を同時に進める）。空なら1つの工程が全部終わってから次へ" },
   ],
 };
@@ -74,6 +76,7 @@ export const equipmentDef: MasterDef<Equipment> = {
     { key: "minPieceGram", label: "1個の重さ 下限（g）", type: "number", min: 0, example: "20", help: "分割機" },
     { key: "maxPieceGram", label: "1個の重さ 上限（g）", type: "number", min: 0, example: "150", help: "分割機" },
     { key: "capacityPieces", label: "1回に入る数", type: "integer", min: 1, example: "", help: "オーブン・ホイロ" },
+    { key: "capacityCases", label: "入るケース数", type: "integer", min: 1, example: "90", help: "冷凍庫。その日に作った品物のケース数が超えたら注意" },
     { key: "downtimes", label: "使えない時間帯", type: "textlist", example: "17:00-17:40", help: "霜取り・清掃など。毎日くり返す。複数なら ; で区切る" },
     { key: "exclusiveGroup", label: "同時に動かせないグループ", type: "text", example: "ミキサー", help: "同じグループの設備は1台ずつしか回せない（同じ時間に他のミキサーは回せない など）" },
     ACTIVE,
@@ -353,6 +356,7 @@ export const shiftDef: MasterDef<ShiftMaster> = {
     { key: "from", label: "開始", type: "time", required: true, example: "22:00" },
     { key: "to", label: "終了", type: "time", required: true, example: "07:00" },
     { key: "headcount", label: "人数", type: "integer", min: 0, required: true, example: "6" },
+    { key: "breaks", label: "休けい", type: "textlist", example: "13:00-14:00", help: "その時間は人数に数えない。複数なら ; で区切る" },
   ],
 };
 

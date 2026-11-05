@@ -3,7 +3,7 @@
 // 工程の時間割（工程表）を出す。全部ふつうの計算で、同じ入力なら必ず同じ結果になる。
 import type { Line, ProcessKey } from "@/data/production";
 import type { DayTotals } from "./aggregate";
-import { allLines, allShifts, customerDeadline, customerDeliveryMinute, findDough, findEquipment, findLine, findMaterial, findProduct, findTopping } from "./catalog";
+import { allLines, allShifts, currentMasters, customerDeadline, customerDeliveryMinute, findDough, findEquipment, findLine, findMaterial, findProduct, findTopping } from "./catalog";
 
 export interface DoughItem {
   productId: string;
@@ -75,6 +75,8 @@ export interface LinePlan {
   capReason?: string;
   /** 上限を超えた数（超えていなければ 0） */
   overBy: number;
+  /** 冷凍庫（設備の種類「冷凍庫」の「入るケース数」）が登録されているとき: この日に作るケース数と上限 */
+  freezerCases?: { need: number; cap: number };
   doughs: DoughBatchPlan[];
   warnings: string[];
 }
@@ -159,7 +161,9 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
     const overBy = cap !== undefined ? Math.max(0, pieces - cap) : 0;
     const lw: string[] = [];
     if (overBy > 0) lw.push(`${ls.name} ${fmtNum(pieces)}${ls.unit}: ${capReason} ${fmtNum(cap!)}${ls.unit}を ${fmtNum(overBy)}${ls.unit} 超えています`);
-    return { line, name: ls.name, unit: ls.unit, pieces, cap, capReason, overBy, doughs: lineDoughs, warnings: lw };
+    const fz = freezerFor(line, lineDoughs);
+    if (fz && fz.need > fz.cap) lw.push(`${ls.name}: この日に作る ${fmtNum(fz.need)}ケース が、冷凍庫（${fz.names}）の ${fmtNum(fz.cap)}ケース に入りきりません`);
+    return { line, name: ls.name, unit: ls.unit, pieces, cap, capReason, overBy, ...(fz ? { freezerCases: { need: fz.need, cap: fz.cap } } : {}), doughs: lineDoughs, warnings: lw };
   });
 
   return {
@@ -296,6 +300,22 @@ export interface ScheduleOptions {
   deliveryMinute?: Record<string, number>;
 }
 
+/**
+ * 冷凍庫の容量: そのライン（または共用）の設備の種類「冷凍庫」の「入るケース数」の合計と、この日に作るケース数。
+ * ケース数は商品の「ケースの入数」で割って切り上げ（入数が無い商品は数えない）。冷凍庫が登録されていなければ undefined。
+ */
+function freezerFor(line: Line, doughs: DoughBatchPlan[]): { need: number; cap: number; names: string } | undefined {
+  const m = currentMasters();
+  const fz = m.equipment.filter((e) => e.kind === "freezer" && e.active !== false && (e.line === line || e.line === "common") && (e.capacityCases ?? 0) > 0);
+  if (!fz.length) return undefined;
+  const cap = fz.reduce((a, e) => a + (e.capacityCases ?? 0) * (e.count || 1), 0);
+  const need = doughs.flatMap((d) => d.items).reduce((a, it) => {
+    const cs = m.products.find((p) => p.id === it.productId)?.caseSize;
+    return a + (cs && cs > 0 ? Math.ceil(it.pieces / cs) : 0);
+  }, 0);
+  return { need, cap, names: fz.map((e) => e.name).join("・") };
+}
+
 /** 手で分割するときの速さ（1人・1時間あたりの個数）と人数 */
 export const HAND_DIVIDE_PER_PERSON_HOUR = 300;
 export const HAND_DIVIDE_PEOPLE = 2;
@@ -393,6 +413,19 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   const rows = new Map<string, ScheduleRow>();
   const freeAfter = new Map<string, number>(); // 前から積む: 設備 → 空く時刻
   const busyFrom = new Map<string, number>(); // 後ろから積む: 設備 → これより前なら空いている
+  // 段取り替え: 同じ設備・作業場で、前とちがう生地に替えるときは、ラインの「段取り替え（分）」だけあける
+  const lastDough = new Map<string, string>(); // 設備 → 最後に使った生地
+  const freeFor = (key: string | undefined, b: DoughBatchPlan) => {
+    if (!key) return 0;
+    const f = freeAfter.get(key);
+    if (f === undefined) return 0;
+    return f + (lastDough.get(key) !== b.doughId ? findLine(b.line).changeoverMinutes : 0);
+  };
+  const use = (key: string | undefined, b: DoughBatchPlan, end: number) => {
+    if (!key) return;
+    freeAfter.set(key, end);
+    lastDough.set(key, b.doughId);
+  };
   const fromOf = (line: Line) => (opts.mode === "forward" ? "start" : findLine(line).scheduleFrom);
 
   // 前日の作業（ピザの仕込みなど）は、どのラインも前日 13:00 から前へ順に積む
@@ -402,9 +435,9 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     prevSteps.set(b.key, findDough(b.doughId)!.steps.filter((s) => s.prevDay).map((s) => {
       const key = s.resource ? `prev:${s.resource}` : undefined;
       const dur = stepMinutes(s, b);
-      const start = laterFree(Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0), dur, downtimesOf(s.equipmentId));
+      const start = laterFree(Math.max(t, freeFor(key, b)), dur, downtimesOf(s.equipmentId));
       const end = start + dur;
-      if (key) freeAfter.set(key, end);
+      use(key, b, end);
       t = end;
       return toStep(s, start, end, true, b);
     }));
@@ -413,9 +446,11 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
   // 前から積むライン
   for (const b of plan.doughs.filter((b) => fromOf(b.line) === "start")) {
     let t = opts.startMinute?.[b.line] ?? findLine(b.line).startMinute;
+    // 前日の作業（冷凍庫で12時間 など）が当日の朝まで続くときは、それが終わってから当日の作業を始める
+    const prevDone = Math.max(-Infinity, ...prevSteps.get(b.key)!.map((x) => x.end)) - 1440;
+    if (prevDone > t) t = prevDone;
     // ロットで流す: 次の工程は、前の工程の最初のロットが終わったら始められる（終わりは、前の工程の最後のロット＋1ロット分より後）
-    const lotSize = findLine(b.line).lotSize;
-    const lots = lotSize && b.pieces > lotSize ? Math.ceil(b.pieces / lotSize) : 1;
+    const lots = lotsOf(b);
     let firstReady = t;
     let prevEnd = t;
     const today = findDough(b.doughId)!.steps.filter((s) => !s.prevDay).map((s, i) => {
@@ -423,16 +458,15 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
       const dur = stepMinutes(s, b);
       if (lots === 1) {
         // 設備の使えない時間帯（霜取りなど）にかかるなら、終わるまで待つ
-        const start = laterFree(Math.max(t, key ? (freeAfter.get(key) ?? 0) : 0), dur, downtimesOf(s.equipmentId));
+        const start = laterFree(Math.max(t, freeFor(key, b)), dur, downtimesOf(s.equipmentId));
         const end = start + dur;
-        if (key) freeAfter.set(key, end);
+        use(key, b, end);
         t = end;
         return toStep(s, start, end, false, b);
       }
       // 待つだけの工程（発酵・冷却）はロットごとに同時に進む。人・設備の工程は1ロットずつ
-      const isWait = !s.piecesPerHour && !s.minutesPerBatch && !(s.people && s.people > 0);
-      const per = isWait ? dur : dur / lots;
-      const start = laterFree(Math.max(i === 0 ? t : firstReady, key ? (freeAfter.get(key) ?? 0) : 0), Math.ceil(per), downtimesOf(s.equipmentId));
+      const per = isWaitStep(s) ? dur : dur / lots;
+      const start = laterFree(Math.max(i === 0 ? t : firstReady, freeFor(key, b)), Math.ceil(per), downtimesOf(s.equipmentId));
       let end = Math.ceil(Math.max(start + dur, prevEnd + per));
       // 流している途中で設備が使えない時間帯（霜取りなど）は止まる。その分だけ終わりを延ばす（前の工程の品物はラックで待つ）
       const downs = downtimesOf(s.equipmentId);
@@ -443,7 +477,7 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
         paused += over;
         end += over;
       }
-      if (key) freeAfter.set(key, end);
+      use(key, b, end);
       firstReady = Math.ceil(start + per);
       prevEnd = end;
       t = end;
@@ -453,7 +487,8 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     rows.set(b.key, { key: b.key, ...(b.waveName ? { waveName: b.waveName } : {}), line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.key)!, ...today], from: "start", warnings: [] });
   }
 
-  // 納品時刻から逆算するライン: 締めの遅い生地から順に、後ろから並べる
+  // 納品時刻から逆算するライン: 締めの遅い生地から順に、後ろから並べる（ロットで流すラインは、流したときの並びのまま後ろに合わせる）
+  const busyDough = new Map<string, string>(); // 後ろから積む: 設備 → いちばん前で使っている生地
   const backward = plan.doughs
     .filter((b) => fromOf(b.line) === "delivery")
     .map((b) => {
@@ -469,28 +504,33 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
     // 工程はすき間なく続けて並べる（発酵が延びないように）。設備がふさがっていれば、生地全体を前にずらす
     const src = findDough(b.doughId)!.steps.filter((s) => !s.prevDay);
     const durs = src.map((s) => stepMinutes(s, b));
-    const total = durs.reduce((x, y) => x + y, 0);
-    const place = (end: number) => {
-      let t = end - total;
-      return src.map((s, i) => {
-        const st = toStep(s, t, t + durs[i], false, b);
-        t += durs[i];
-        return st;
-      });
-    };
+    const rel = flowLayout(src, durs, lotsOf(b));
+    const total = rel.length ? rel[rel.length - 1][1] : 0;
+    const place = (end: number) => src.map((s, i) => toStep(s, end - total + rel[i][0], end - total + rel[i][1], false, b));
     let shift = 0;
     let today = place(deadline);
     for (let k = 0; k < 10; k++) {
       const need = Math.max(
         0,
-        ...today.filter((x) => x.resource).map((x) => x.end - (busyFrom.get(`today:${x.resource}`) ?? Infinity)),
+        ...today.filter((x) => x.resource).map((x) => {
+          const k = `today:${x.resource}`;
+          const co = busyDough.has(k) && busyDough.get(k) !== b.doughId ? findLine(b.line).changeoverMinutes : 0;
+          return x.end - ((busyFrom.get(k) ?? Infinity) - co);
+        }),
         ...today.map((x) => earlierShift(x.end, x.end - x.start, downtimesOf(x.equipmentId))),
       );
       if (need <= 0) break;
       shift += need;
       today = place(deadline - shift);
     }
-    for (const x of today) if (x.resource) busyFrom.set(`today:${x.resource}`, Math.min(busyFrom.get(`today:${x.resource}`) ?? Infinity, x.start));
+    for (const x of today) {
+      if (!x.resource) continue;
+      const k = `today:${x.resource}`;
+      if (x.start < (busyFrom.get(k) ?? Infinity)) {
+        busyFrom.set(k, x.start);
+        busyDough.set(k, b.doughId);
+      }
+    }
     const warnings = today.length && today[0].start < findLine(b.line).earliestStartMinute ? [`${b.name}${b.waveName ? `（${b.waveName}）` : ""}: ${basis || `納品 ${fmtTime(deliveryMinute)}`} に間に合わせるには ${fmtTime(today[0].start)} に始める必要があります（${fmtTime(findLine(b.line).earliestStartMinute)} より前）`] : [];
     rows.set(b.key, {
       key: b.key, ...(b.waveName ? { waveName: b.waveName } : {}), line: b.line, doughId: b.doughId, doughName: b.name, pieces: b.pieces, steps: [...prevSteps.get(b.key)!, ...today],
@@ -506,8 +546,45 @@ export function buildSchedule(plan: ProductionPlan, opts: ScheduleOptions = {}):
       if (e.handNote) row.warnings.push(`${b.name}: 分割機の重さの範囲の外なので ${e.handNote.replace(/^手分割 /, "")} を手で分割します（${HAND_DIVIDE_PEOPLE}人）`);
     }
   }
+  // 1日の終わりの洗浄・片付け: ラインのその日の最後の工程のあとに入れる
+  for (const line of [...new Set(out.map((r) => r.line))]) {
+    const mins = findLine(line).cleanupMinutes;
+    if (!mins) continue;
+    let last: { row: ScheduleRow; step: ScheduleStep } | undefined;
+    for (const row of out.filter((r) => r.line === line))
+      for (const step of row.steps.filter((x) => !x.prevDay)) if (!last || step.end > last.step.end) last = { row, step };
+    if (!last) continue;
+    last.row.steps.push({ key: "cleanup", name: "洗浄・片付け（1日の終わり）", start: last.step.end, end: last.step.end + mins, people: Math.max(1, last.step.people), prevDay: false, note: `ラインの設定「1日の終わりの洗浄・片付け」${mins}分` });
+  }
   checkScheduleConstraints(out);
   return out;
+}
+
+/** 待つだけの工程（発酵・冷却など。人も設備の能力も使わない） */
+const isWaitStep = (s: StepLike) => !s.piecesPerHour && !s.minutesPerBatch && !(s.people && s.people > 0);
+
+/** ラインの「流すロット」で、この生地を何ロットに分けるか（流さないなら 1） */
+function lotsOf(b: DoughBatchPlan): number {
+  const lotSize = findLine(b.line).lotSize;
+  return lotSize && b.pieces > lotSize ? Math.ceil(b.pieces / lotSize) : 1;
+}
+
+/**
+ * ロットで流したときの、工程ごとの [始め, 終わり]（最初の工程の始めを 0 とした分）。
+ * 次の工程は、前の工程の最初のロットが終わったら始まり、終わりは「前の工程の最後のロット＋1ロット分」より後。
+ * lots = 1 なら、すき間なく1つずつ並べるのと同じ。
+ */
+function flowLayout(src: StepLike[], durs: number[], lots: number): [number, number][] {
+  let firstReady = 0;
+  let prevEnd = 0;
+  return src.map((s, i) => {
+    const per = lots === 1 || isWaitStep(s) ? durs[i] : durs[i] / lots;
+    const start = i === 0 ? 0 : firstReady;
+    const end = Math.ceil(Math.max(start + durs[i], prevEnd + per));
+    firstReady = Math.ceil(start + per);
+    prevEnd = end;
+    return [start, end];
+  });
 }
 
 const tod = (min: number) => ((Math.round(min) % 1440) + 1440) % 1440;
@@ -517,6 +594,13 @@ function inWindow(min: number, from: string, to: string): boolean {
   const f = hhmm(from);
   const t = hhmm(to);
   return f <= t ? m >= f && m <= t : m >= f || m <= t;
+}
+/** inWindow と同じだが、終わりの時刻は含めない（人数の区切りに使う） */
+function inSpan(min: number, from: string, to: string): boolean {
+  const m = tod(min);
+  const f = hhmm(from);
+  const t = hhmm(to);
+  return f <= t ? m >= f && m < t : m >= f || m < t;
 }
 const hhmm = (s: string) => {
   const [h, m] = s.split(":").map(Number);
@@ -574,14 +658,23 @@ export function checkScheduleConstraints(rows: ScheduleRow[]): void {
     const lineShifts = shifts.filter((s) => s.line === line || s.line === "common");
     if (!lineShifts.length) continue;
     const act = uses.filter((u) => u.row.line === line && !u.step.prevDay && u.step.people > 0 && u.step.end > u.step.start);
-    const points = [...new Set(act.flatMap((u) => [u.step.start, u.step.end]))].sort((a, b) => a - b);
+    // 区切り: 工程の始め・終わりと、班の出入り・休けいの始め・終わり（人数が変わる時刻）
+    const lo = Math.min(...act.map((u) => u.step.start));
+    const hi = Math.max(...act.map((u) => u.step.end));
+    const shiftPoints = lineShifts.flatMap((x) => [x.from, x.to, ...(x.breaks ?? []).flatMap((w) => w.split("-").map((y) => y.trim()))])
+      .filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map(hhmm)
+      .flatMap((m) => [m - 1440, m, m + 1440]).filter((m) => m > lo && m < hi);
+    const points = [...new Set([...act.flatMap((u) => [u.step.start, u.step.end]), ...shiftPoints])].sort((a, b) => a - b);
     type Seg = { from: number; to: number; need: number; have: number; uses: Use[] };
     const short: Seg[] = [];
     for (let i = 0; i + 1 < points.length; i++) {
       const from = points[i], to = points[i + 1];
       const on = act.filter((u) => u.step.start <= from && from < u.step.end);
       const need = on.reduce((s, u) => s + u.step.people, 0);
-      const have = lineShifts.filter((s) => inWindow(from, s.from, s.to)).reduce((s, x) => s + x.headcount, 0);
+      // 班の時間・休けいは「始め以上・終わり未満」で数える（18:00 に帰る班は 18:00 からの区切りに入れない）
+      const have = lineShifts
+        .filter((s) => inSpan(from, s.from, s.to) && !(s.breaks ?? []).some((w) => { const [a, b] = w.split("-").map((x) => x.trim()); return !!a && !!b && inSpan(from, a, b); }))
+        .reduce((s, x) => s + x.headcount, 0);
       if (need <= have) continue;
       const last = short[short.length - 1];
       if (last && last.to === from) {
