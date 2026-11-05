@@ -10,7 +10,9 @@
     "fax:simulate": "node scripts/fax-simulate.mjs",
     "test": "vitest run",
     "demo:reset": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/demo-reset.ts",
-    "check": "next typegen && tsc --noEmit && eslint && vitest run"
+    "check": "next typegen && tsc --noEmit && eslint && vitest run",
+    "simulate:year": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/simulate-year.ts",
+    "measure:db": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/measure-db.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
