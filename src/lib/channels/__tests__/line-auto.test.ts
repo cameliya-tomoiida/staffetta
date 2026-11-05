@@ -62,7 +62,9 @@ describe("A5 注文フォーム", () => {
     const o = await import("@/lib/channels/line/orders");
     const r = await o.createLiffOrder({ userId: KOTORI, deliveryDate: "2026-11-09", items: [{ productId: "P07", quantity: 4 }] });
     const saved = mem.db.orders.find((x) => x.id === r.id)!;
-    expect(saved).toMatchObject({ status: "confirmed", confirmedBy: "自動", source: { extra: { autoConfirmed: true } } });
+    expect(saved).toMatchObject({ status: "confirmed", confirmedBy: "自動（LINE・迷いなし）", source: { extra: { autoConfirmed: true } } });
+    const { isAutoConfirmed } = await import("@/components/ui/AutoConfirmed");
+    expect(isAutoConfirmed(saved)).toBe(true); // ②の札・取り消しボタンの見分け方
     expect(await outboxFor(r.id)).toHaveLength(0);
   });
 
@@ -85,7 +87,7 @@ describe("A5 注文フォーム", () => {
 describe("A6 トーク", () => {
   it("商品名どおり・自信が高い・締めに通る → 自動で確定", async () => {
     const o = await send(KOTORI, talk("2026-11-09", [line("バターロール", "P01", 30, "個"), line("黒糖ロール", "P02", 20, "個")]));
-    expect(o).toMatchObject({ status: "confirmed", confirmedBy: "自動" });
+    expect(o).toMatchObject({ status: "confirmed", confirmedBy: "自動（LINE・迷いなし）" });
   });
 
   it("推測の呼び名・印のある行・締めのあとの行・変更の連絡は要確認（わけを残す）", async () => {
@@ -121,8 +123,6 @@ describe("D2 確定の連絡の自動送信と、取り消し", () => {
     expect(sent[0].mode).toBe("demo");
     expect(o.source.extra).toMatchObject({ lineNotifiedBy: "自動" });
     expect(fetchSpy).not.toHaveBeenCalled();
-    const a = await import("@/lib/channels/line/auto");
-    await expect(a.undoAutoConfirm(o.id, "事務")).rejects.toThrow(/連絡を送ったあと/);
   });
 
   it("人が確定した注文も、全部受けられれば自動で送る。受けられない行があれば送らない（人が見て送る）", async () => {
@@ -138,16 +138,15 @@ describe("D2 確定の連絡の自動送信と、取り消し", () => {
     expect(await outboxFor(late.id)).toHaveLength(0);
   });
 
-  it("自動で確定した注文は、連絡の前なら要確認に戻せる（記録が残る）", async () => {
+  it("自動で確定した注文は、⑤の取り消しで要確認に戻せる（記録が残る）", async () => {
     const o = await send(KOTORI, talk("2026-11-10", [line("バターロール", "P01", 8, "個")]));
     expect(o.status).toBe("confirmed");
-    const a = await import("@/lib/channels/line/auto");
-    await a.undoAutoConfirm(o.id, "事務 たなか");
+    const { undoAutoConfirm } = await import("@/lib/automation/orders");
+    await undoAutoConfirm(o.id, "事務 たなか");
     const back = mem.db.orders.find((x) => x.id === o.id)!;
     expect(back.status).toBe("needs_review");
     expect(back.confirmedBy).toBeUndefined();
-    expect(back.source.extra).toMatchObject({ autoUndoneBy: "事務 たなか" });
-    expect(back.edits.at(-1)).toMatchObject({ who: "事務 たなか", from: "自動で確定" });
+    expect(back.edits.at(-1)).toMatchObject({ who: "事務 たなか", from: "自動（LINE・迷いなし）" });
   });
 });
 

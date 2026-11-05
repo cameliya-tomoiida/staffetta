@@ -6,7 +6,8 @@ import { confirmationText, lineLeadTimes, unlinkedLineUsers } from "@/lib/channe
 import { LeadTimeNote } from "@/components/line/LeadTimeNote";
 import { readLineState } from "@/lib/channels/line/state";
 import { readDb } from "@/lib/store";
-import { NotifyButton, UndoAutoButton } from "./buttons";
+import { NotifyButton } from "./buttons";
+import { AutoTag, isAutoConfirmed, UndoAutoButton } from "@/components/ui/AutoConfirmed";
 import { getLineAutoSettings } from "@/lib/channels/line/auto";
 import { fmtDate, fmtDateTime, Notice, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
 
@@ -14,6 +15,8 @@ import { fmtDate, fmtDateTime, Notice, OrderStatusTag, PageHeader, Tag } from "@
 // - LINEで来た注文の一覧（中身の確認・確定は受注一覧の画面で行う）
 // - 確定した注文の「確定の連絡」と、LINEで返した文面の記録
 // LINE の人と取引先のひも付けは、取引先マスタの管理画面（/admin/customers）で行う。
+
+const STAFF_WHO = "事務"; // ログインの仕組みができたら、その人の名前にする（buttons.tsx と同じ）
 
 const intentText = { new: "", change: "変更", cancel: "取消の連絡" } as const;
 
@@ -62,7 +65,7 @@ export default async function LinePage() {
                     {flagged > 0 && <Tag tone="review">要確認 {flagged} 行</Tag>}
                     {lateCount > 0 && <Tag tone="review">締め切り後 {lateCount} 行</Tag>}
                     {o.source.extra?.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
-                    {o.source.extra?.autoConfirmed === true && <Tag tone="info">自動で確定</Tag>}
+                    {isAutoConfirmed(o) && <AutoTag by={o.confirmedBy} />}
                   </div>
                   {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
                   {o.lines.length === 0 ? (
@@ -84,7 +87,8 @@ export default async function LinePage() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  {o.status === "confirmed" && o.source.extra?.autoConfirmed === true && !notified && <UndoAutoButton orderId={o.id} />}
+                  {/* 取り消しは確定の連絡を送る前だけ（送ったあとは、お客さんに知らせてから受注一覧で直す） */}
+                  {isAutoConfirmed(o) && !notified && <UndoAutoButton orderId={o.id} who={STAFF_WHO} />}
                   {o.status === "confirmed" && notified && o.source.extra?.lineNotifiedBy === "自動" && <Tag tone="info">自動で送信</Tag>}
                   {o.status === "confirmed" &&
                     (notified ? (
