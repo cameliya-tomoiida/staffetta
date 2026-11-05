@@ -2,6 +2,7 @@ import "server-only";
 // B5（⑤）: 納品書（写真・PDF）を Claude で読み、発注書と照合する。
 // Claude がするのは「読み取り」と「どの発注の行か」の対応付けまで。数が全部合えば自動で入荷、差がある行は人が直す（値は書き換えない）。
 import Anthropic from "@anthropic-ai/sdk";
+import { aiClient } from "@/lib/ai/client";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { PurchaseOrderLine } from "@/data/types";
@@ -32,7 +33,7 @@ const SYSTEM = `あなたはパン工場の事務の手伝いです。仕入先�
 - quantity_in_order_units は、発注書の「量」の単位（kg・個など）に直した数です。例：発注書が「25kg袋 ×2 = 50kg」で納品書が「2袋」なら 50。直せなければ -1。`;
 
 export async function readDeliveryNote(input: { base64: string; mediaType: string; poLines: PurchaseOrderLine[]; supplierName: string }) {
-  const client = new Anthropic();
+  const client = aiClient("納品書の読み取り");
   const doc: Anthropic.Beta.BetaContentBlockParam =
     input.mediaType === "application/pdf"
       ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: input.base64 } }

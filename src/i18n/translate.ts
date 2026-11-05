@@ -8,7 +8,7 @@ import "server-only";
 // 画面は待たない: 訳がまだ無い語は日本語のまま出し、裏で訳を作る（できたら画面が取り直して差し替える）。
 // マスタを保存したときは warmMasterTranslations() で10言語ぶんを裏でまとめて作っておく。
 // 訳した言葉は画面で「機械翻訳」と表示する。訳せなかったときは日本語のまま（画面は止めない）。
-import Anthropic from "@anthropic-ai/sdk";
+import { aiClient } from "@/lib/ai/client";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { promises as fs } from "node:fs";
@@ -52,7 +52,7 @@ async function askClaude(lang: Lang, terms: string[]): Promise<Record<string, st
     lang === "ja-easy"
       ? "やさしい日本語（漢字を使わず、ひらがな・カタカナで。外国人の新人スタッフが読める短いことば）"
       : `${info.ja}（${info.native}）`;
-  const client = new Anthropic();
+  const client = aiClient("翻訳");
   const res = await client.beta.messages.parse({
     model: TRANSLATE_MODEL,
     max_tokens: 8000,

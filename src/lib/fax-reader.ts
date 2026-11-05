@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { aiClient } from "@/lib/ai/client";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { promises as fs } from "node:fs";
 import { faxFilePath } from "./store";
@@ -65,7 +65,7 @@ export async function readFax(
   knownMappings: Record<string, Record<string, string>>,
   recentFixes: string[] = [],
 ): Promise<{ read: FaxRead; model: string }> {
-  const client = new Anthropic();
+  const client = aiClient("FAX の読み取り");
   const pdf = await fs.readFile(faxFilePath(publicFile));
 
   const response = await client.beta.messages.parse({

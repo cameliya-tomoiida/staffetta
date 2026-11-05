@@ -2,6 +2,7 @@ import "server-only";
 // メール（本文・PDF添付・Excel添付）を Claude で読み取る。
 // 読むだけ。換算・修正はしない。変更・キャンセルのメールは intent で見分ける。
 import Anthropic from "@anthropic-ai/sdk";
+import { aiClient } from "@/lib/ai/client";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { customers } from "@/data/master";
@@ -74,7 +75,7 @@ export async function readEmail(input: {
   date: string;
   parts: MailPart[];
 }): Promise<{ read: EmailRead; model: string }> {
-  const client = new Anthropic();
+  const client = aiClient("メールの読み取り");
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
   for (const p of input.parts) {
     if (p.kind === "pdf") {

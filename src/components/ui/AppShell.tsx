@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { TodayBar } from "./TodayBar";
 import { canOpen, homeOf, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";
+import { AiChat } from "@/components/AiChat";
 
 /** ログインしている人（ログインを使っていないときは null） */
 export type ShellUser = { name: string; role: Role; via: "password" | "line" } | null;
@@ -95,6 +96,7 @@ export const MENU: Group[] = [
       // 自動のスイッチ（FAX・LINE・自動化）は「機能の ON/OFF」の各行からリンクで開く。LINE（スタッフ）は④のスタッフの登録
       { href: "/settings/features", label: "機能の ON/OFF" },
       { href: "/settings/staff", label: "スタッフの登録" },
+      { href: "/settings/ai", label: "AI（キー・使った量）" },
       { href: "/settings/backup", label: "バックアップ" },
       { href: "/settings/line", label: "LINE（スタッフ）" },
       { href: "/settings/demo", label: "デモ" },
@@ -277,6 +279,8 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
           <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={120} height={32} className="mb-2 hidden h-8 w-auto print:block" />
           {children}
         </main>
+        {/* 全画面の右下「AI に聞く」 */}
+        <AiChat />
       </div>
     </div>
   );
