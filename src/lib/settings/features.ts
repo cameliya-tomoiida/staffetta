@@ -75,12 +75,16 @@ export const FEATURES = [
   // ───── 在庫 ─────
   { key: "stock", group: "在庫", kind: "feature", default: true, owner: "⑤",
     label: "在庫の出入り", description: "入荷・製造で使った分・棚卸を記録し、材料と包材の在庫の数を足し引きします。使わないと、在庫の数は変わりません。" },
+  { key: "receipt_auto_receive", group: "在庫", kind: "auto", default: false, owner: "⑤", dependsOn: "stock",
+    label: "納品書を読んで自動で入荷", description: "送り出しの「入荷」に納品書の写真・PDF を入れると Claude が読み、発注書と全部の数が合えば入荷にします。OFF だと、読んだ数を案として出し、人が「入荷した」を押します。" },
   // ───── アラート ─────
   { key: "alerts", group: "アラート", kind: "feature", default: true, owner: "①",
     label: "お知らせ（アラート）", description: "締めが近い・届いていない・在庫が少ないなどを、お知らせとして出します。" },
   { key: "alert_line_notify", group: "アラート", kind: "auto", default: false, owner: "④", dependsOn: "alerts",
     label: "お知らせを LINE で送る", description: "急ぎのお知らせを、担当の人の LINE に送ります。OFF だと、画面に出すだけです。" },
   // ───── 仕組み ─────
+  { key: "scheduler_automations", group: "仕組み", kind: "feature", default: true, owner: "⑤",
+    label: "時刻で動く仕事", description: "5分ごとに、決まった時刻の仕事（定期注文の自動作成・夜の「作り終えた」・発注書の自動承認・返事）を動かします。それぞれの仕事は、上の「自動」のスイッチが ON のときだけ動きます。使わないと、時刻では何も動きません。" },
   { key: "system_watch", group: "仕組み", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
     label: "仕組みの見張り", description: "FAX がいつもの時間に届かない・バックアップが7日ない・ディスクの空きが少ない、をお知らせします。" },
 ] as const satisfies readonly FeatureDef[];

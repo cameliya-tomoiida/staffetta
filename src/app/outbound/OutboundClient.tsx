@@ -9,6 +9,7 @@ const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 import type { EntryRow } from "@/lib/channels/outbound/render";
 import { ReceivePanel } from "./ReceivePanel";
 import type { StoredReply } from "@/lib/replies/store";
+import type { OutgoingDraft } from "@/lib/drafts/store";
 import type { OutboundRecord } from "@/lib/channels/outbound/workflow";
 
 type View = OutboundRecord & {
@@ -28,7 +29,7 @@ const methodLabel: Record<string, string> = {
 const file = (po: string, name: string) => `/api/outbound/file?po=${encodeURIComponent(po)}&name=${encodeURIComponent(name)}`;
 const iso = (v: unknown) => (typeof v === "string" ? v : undefined);
 
-export function OutboundClient({ records, dates, replies = [] }: { records: View[]; dates: string[]; replies?: StoredReply[] }) {
+export function OutboundClient({ records, dates, replies = [], drafts = [] }: { records: View[]; dates: string[]; replies?: StoredReply[]; drafts?: OutgoingDraft[] }) {
   const router = useRouter();
   const [who, setWho] = useState("");
   const [busy, setBusy] = useState(false);
@@ -120,6 +121,26 @@ export function OutboundClient({ records, dates, replies = [] }: { records: View
           </div>
         ))}
       </section>
+
+      {/* そのほかの連絡（アラートから：原価見直しの資料の依頼・入荷の問い合わせ・仮発注の確認）。送るのは人 */}
+      {drafts.length > 0 && (
+        <section id="drafts" className="space-y-2 rounded-sm border border-rule-strong bg-sheet p-4">
+          <h2 className="text-xl font-black">そのほかの連絡 送信待ち（<span className="num">{drafts.filter((x) => x.status === "draft").length}</span> 件）</h2>
+          {drafts.map((x) => (
+            <div key={x.id} className={`flex flex-wrap items-center gap-3 border-t border-dashed border-rule pt-2 ${x.status === "sent" ? "opacity-60" : ""}`}>
+              <div className="min-w-60 flex-1">
+                <div className="text-lg font-black">{x.toName} <span className="text-base font-bold">御中</span></div>
+                <div className="text-sm text-ink-soft">
+                  {x.subject} ／ {x.via === "fax" ? "FAX" : "メール"} <b className="num text-ink">{x.to || "（宛先を入れてください）"}</b>
+                  {x.status === "sent" && <> ／ 送信済み {x.sentAt && fmtDateTime(x.sentAt)}（{x.sentBy}）</>}
+                </div>
+              </div>
+              <a className={buttonClass("ghost", "md", "text-sm")} href={file(x.id, x.fileName)} target="_blank" rel="noreferrer">{x.via === "fax" ? "FAX（PDF）" : "メール（下書き）"}</a>
+              {x.status === "draft" && <Button variant="ok" disabled={busy || !who} onClick={() => act({ action: "draft_sent", draftId: x.id }, "送信済みにしました")}>送った</Button>}
+            </div>
+          ))}
+        </section>
+      )}
 
       {records.map((r) => {
         const po = r.po;

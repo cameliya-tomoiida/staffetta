@@ -16,6 +16,7 @@ import { makeSimplePdf } from "@/lib/channels/pdf";
 import { nowIso } from "@/lib/clock";
 import { ensureTables, getDb } from "@/lib/db/sqlite";
 import { getAutomationSettings } from "@/lib/automation/settings";
+import { isOn } from "@/lib/settings/features";
 import { logAuto } from "@/lib/automation/log";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { demoOrders } from "@/demo/orders";
@@ -145,6 +146,7 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
 /** 受注一覧の「返事を作る」。確定・仮発注の注文だけ */
 export async function createReply(orderId: string, who: string): Promise<StoredReply> {
   if (!who.trim()) throw new Error("返事を作る人を選んでください");
+  if (!isOn("order_reply_drafts")) throw new Error("受注の確認の返事は使わない設定です（設定 → 機能の ON/OFF）");
   // 保存した注文、なければ画面に出している見本の注文
   const order = (await readDb()).orders.find((o) => o.id === orderId) ?? demoOrders().find((o) => o.id === orderId);
   if (!order) throw new Error("注文が見つかりません");

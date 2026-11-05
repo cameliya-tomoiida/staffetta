@@ -1,0 +1,127 @@
+// 5分ごとの判定（①）。タスクスケジューラを使わず、サーバーの中で回す（本番モード next start でも動く）。
+// 起動: src/instrumentation.ts が startScheduler() を呼ぶ。止める: 環境変数 HUB_SCHEDULER=off（テスト中は動かない）。
+// 1回にすること（runScheduledTick）:
+//   1. アラートの判定（runAlertCheck）: 判定元ごとに「いま出すべきアラート」を集めて保存し、解消したものを済みにする。
+//      期限切れの段上げ。大事なものをスタッフの LINE に（④ sendAlertsToStaff。④の側で1日1回・夜は送らない）
+//   2. 時刻で動く仕事（⑤ runDueAutomations：定期注文の自動作成・夜の「作り終えた」・発注書の自動承認・返事）
+// どれも機能の ON/OFF（src/lib/settings/features.ts）で止められる。
+// 出来事のあと（確定・承認・入荷など）は checkAlertsSoon() を呼ぶと、数秒後に1回だけアラートを見直す。
+import { nowIso } from "./clock";
+import { listAlerts, syncAlerts, tickAlerts, type AlertCandidate, type AlertRow } from "./db/alerts-store";
+import { isOn, type FeatureKey } from "./settings/features";
+import { gatherSystem } from "./system-watch";
+
+export interface AlertSource {
+  /** 判定元の名前（解消の判定は、この名前の中で行う） */
+  name: string;
+  /** この機能が OFF なら、この判定元のアラートは全部済みにする */
+  feature?: FeatureKey;
+  run: (now: string) => Promise<AlertCandidate[]>;
+}
+
+/**
+ * アラートの判定元。③の evaluateAlerts は、master に入ったらここに1行足す:
+ *   { name: "logic", run: async (now) => (await import("./alerts")).evaluateAlertsForStore(now) },
+ * （③の判定の結果を AlertCandidate の形にして返す関数）
+ */
+export const ALERT_SOURCES: AlertSource[] = [{ name: "system", feature: "system_watch", run: gatherSystem }];
+
+const g = globalThis as unknown as { __hubScheduler?: { timer: ReturnType<typeof setInterval>; running: boolean; last?: TickResult }; __hubAlertSoon?: ReturnType<typeof setTimeout> };
+
+export interface TickResult {
+  at: string;
+  alerts?: { fresh: number; escalated: number; open: number; staff?: { sent: number; skipped: number } };
+  automations?: unknown;
+  errors: string[];
+}
+
+/** アラートを見直す（判定・保存・期限の段上げ・スタッフの LINE） */
+export async function runAlertCheck(now = nowIso(), sources: AlertSource[] = ALERT_SOURCES): Promise<TickResult["alerts"] & { errors: string[] }> {
+  const errors: string[] = [];
+  const { ensureStore } = await import("./db/hub-store");
+  await ensureStore();
+  if (!isOn("alerts")) return { fresh: 0, escalated: 0, open: 0, errors };
+  const fresh: AlertRow[] = [];
+  for (const s of sources) {
+    try {
+      const list = s.feature && !isOn(s.feature) ? [] : await s.run(now);
+      fresh.push(...syncAlerts(s.name, list, now));
+    } catch (e) {
+      errors.push(`${s.name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  const escalated = tickAlerts(now);
+  const open = listAlerts({ states: ["new", "seen"] });
+  let staff: { sent: number; skipped: number } | undefined;
+  if (isOn("alert_line_notify")) {
+    try {
+      const { sendAlertsToStaff } = await import("./channels/line/staff-alerts");
+      const r = await sendAlertsToStaff(
+        open.map((a) => ({ key: a.dedupeKey, level: a.level, title: a.title, action: a.action, assignee: a.escalatedTo ?? a.assignee, href: a.href })),
+      );
+      staff = { sent: r.sent.length, skipped: r.skipped.length };
+    } catch (e) {
+      errors.push(`スタッフの LINE: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  return { fresh: fresh.length, escalated: escalated.length, open: open.length, staff, errors };
+}
+
+/** 5分ごとの1回分 */
+export async function runScheduledTick(now = nowIso()): Promise<TickResult> {
+  const out: TickResult = { at: now, errors: [] };
+  try {
+    const a = await runAlertCheck(now);
+    out.errors.push(...a.errors);
+    out.alerts = { fresh: a.fresh, escalated: a.escalated, open: a.open, staff: a.staff };
+  } catch (e) {
+    out.errors.push(`アラート: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  // ⑤の時刻で動く仕事は、機能の一覧で「自動でやる」が1つでも ON のときだけ呼ぶ。
+  // （⑤の自前の設定は既定がすべて ON なので、⑤が各仕事の中で isOn を見る形に置き換えるまでは、ここで止めておく。既定は全部 OFF）
+  const autoKeys: FeatureKey[] = ["standing_auto_create", "production_done_auto", "purchase_auto_approve", "order_reply_auto_send", "import_auto_confirm"];
+  if (isOn("scheduler_automations") && autoKeys.some((k) => isOn(k))) {
+    try {
+      const { runDueAutomations } = await import("./automation/tasks");
+      out.automations = await runDueAutomations(now);
+    } catch (e) {
+      out.errors.push(`時刻で動く仕事: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  return out;
+}
+
+const FIVE_MIN = 5 * 60_000;
+
+/** サーバーの起動時に1回呼ぶ（2回呼んでも1つだけ） */
+export function startScheduler() {
+  if (g.__hubScheduler || process.env.HUB_SCHEDULER === "off" || process.env.NODE_ENV === "test" || process.env.VITEST) return;
+  const run = async () => {
+    const s = g.__hubScheduler!;
+    if (s.running) return; // 前の回がまだ終わっていなければ飛ばす
+    s.running = true;
+    try {
+      s.last = await runScheduledTick();
+      if (s.last.errors.length) console.error("[scheduler]", s.last.errors.join(" / "));
+    } catch (e) {
+      console.error("[scheduler]", e);
+    } finally {
+      s.running = false;
+    }
+  };
+  g.__hubScheduler = { timer: setInterval(run, FIVE_MIN), running: false };
+  setTimeout(run, 30_000); // 起動の30秒後に1回目
+}
+
+/** 出来事（確定・承認・入荷など）のあとに呼ぶ。数秒後に1回だけアラートを見直す（続けて呼ばれたら1回にまとめる） */
+export function checkAlertsSoon() {
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) return;
+  if (g.__hubAlertSoon) clearTimeout(g.__hubAlertSoon);
+  g.__hubAlertSoon = setTimeout(() => {
+    g.__hubAlertSoon = undefined;
+    void runAlertCheck().catch((e) => console.error("[alerts]", e));
+  }, 3000);
+}
+
+/** 最後の回の結果（/api/alerts で見せる） */
+export const lastTick = () => g.__hubScheduler?.last;

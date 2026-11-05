@@ -1,7 +1,8 @@
 import "server-only";
-// ⑤の自動化のスイッチ（設定画面で変える）。保存は①の kv（"automation_settings"）。
+// ⑤の自動化の設定。ON/OFF は①の機能の一覧（isOn・setFlag）、時刻・上限金額・幅は⑤の kv（"automation_settings"）。
 // 方針（11/5 担当者）: AI は値を書き換えない。迷わなかったものは人の確認を待たずに確定してよい。自動で決めたものは「自動」と分かり、取り消せる。
 import { kvGet, kvSet } from "@/lib/db/sqlite";
+import { isOn, setFlag, type FeatureKey } from "@/lib/settings/features";
 
 export interface AutomationSettings {
   /** A8: シート・CSV・インフォマート・専用サイトの取り込みで、商品が辞書で決まった注文は自動で確定。差分は変更として自動反映 */
@@ -30,29 +31,38 @@ export interface AutomationSettings {
   receiptAutoReceive: boolean;
 }
 
-export const DEFAULT_AUTOMATION: AutomationSettings = {
-  importAutoConfirm: true,
-  emailAutoConfirm: true,
+/** スイッチ（ON/OFF）は①の機能の一覧（src/lib/settings/features.ts）にある。ここは時刻・上限・幅だけを持つ */
+export const SWITCH_KEYS = {
+  importAutoConfirm: "import_auto_confirm",
+  emailAutoConfirm: "import_auto_confirm",
+  standingAuto: "standing_auto_create",
+  poAutoApprove: "purchase_auto_approve",
+  productionAutoDone: "production_done_auto",
+  replyAutoQueue: "order_reply_drafts",
+  receiptAutoReceive: "receipt_auto_receive",
+} as const satisfies Partial<Record<keyof AutomationSettings, FeatureKey>>;
+type SwitchName = keyof typeof SWITCH_KEYS;
+
+export const DEFAULT_AUTOMATION = {
   emailMinConfidence: 0.9,
-  standingAuto: true,
   standingWeekday: 4,
   standingTime: "07:00",
-  poAutoApprove: true,
   poBandPct: 20,
   poMaxYen: 50000,
-  productionAutoDone: true,
   productionTime: "22:00",
-  replyAutoQueue: true,
-  receiptAutoReceive: true,
-};
+} satisfies Omit<AutomationSettings, SwitchName>;
 
 const KEY = "automation_settings";
 
+/** いまの設定。スイッチは isOn（①の機能の一覧）、数・時刻は⑤の設定 */
 export function getAutomationSettings(): AutomationSettings {
-  return { ...DEFAULT_AUTOMATION, ...(kvGet<Partial<AutomationSettings>>(KEY) ?? {}) };
+  const stored = kvGet<Partial<AutomationSettings>>(KEY) ?? {};
+  const nums = Object.fromEntries(Object.keys(DEFAULT_AUTOMATION).map((k) => [k, stored[k as keyof AutomationSettings] ?? DEFAULT_AUTOMATION[k as keyof typeof DEFAULT_AUTOMATION]]));
+  const sw = Object.fromEntries(Object.entries(SWITCH_KEYS).map(([k, f]) => [k, isOn(f)]));
+  return { ...nums, ...sw } as unknown as AutomationSettings;
 }
 
-/** 設定を変える（変えた人と時刻も残す） */
+/** 設定を変える（スイッチは①の setFlag に、数・時刻は⑤の設定に。変えた人と時刻も残す） */
 export function saveAutomationSettings(patch: Partial<AutomationSettings>, who: string): AutomationSettings {
   if (!who.trim()) throw new Error("変える人を選んでください");
   const cur = getAutomationSettings();
@@ -62,9 +72,13 @@ export function saveAutomationSettings(patch: Partial<AutomationSettings>, who: 
   if (!(next.poMaxYen >= 0)) throw new Error("金額の上限は 0 以上で入れてください");
   if (!(next.standingWeekday >= 0 && next.standingWeekday <= 6)) throw new Error("曜日が正しくありません");
   for (const t of [next.standingTime, next.productionTime]) if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) throw new Error(`時刻「${t}」は 07:00 の形で入れてください`);
-  kvSet(KEY, next);
+  for (const [k, f] of Object.entries(SWITCH_KEYS)) {
+    const v = patch[k as SwitchName];
+    if (typeof v === "boolean" && v !== cur[k as SwitchName]) setFlag(f, v, who);
+  }
+  kvSet(KEY, Object.fromEntries(Object.keys(DEFAULT_AUTOMATION).map((k) => [k, next[k as keyof AutomationSettings]])));
   kvSet(`${KEY}_changed`, { at: new Date().toISOString(), who });
-  return next;
+  return getAutomationSettings();
 }
 
 export function automationSettingsChanged() {
