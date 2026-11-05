@@ -66,6 +66,7 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
   }));
 
   let orders: Order[];
+  const dictHit = new Set<string>(); // 名寄せ辞書で商品が決まった行（自動確定の判定に使う）
   try {
     // 名寄せ辞書（①の aliases。人が確定した「呼び名 → 商品」）。読み取りの指示文に渡し、読んだあとにも当てる
     const dict = customerId ? ((await aliasMapFor(customerId))[customerId] ?? {}) : {};
@@ -89,6 +90,7 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
         // 辞書にある呼び名なら、その商品にする（読み取りの値は read にそのまま残す）
         const fromDict = l.written_name ? byAlias.get(normalizeAlias(l.written_name)) : undefined;
         const pid = fromDict && productById(fromDict) ? fromDict : productById(l.product_id) ? l.product_id : "";
+        if (fromDict && pid === fromDict) dictHit.add(`${idBase}-${oi}-${li}`);
         const dictNote = fromDict && pid === fromDict && fromDict !== l.product_id ? `名寄せ辞書で ${fromDict}${l.product_id ? `（読み取りは ${l.product_id}）` : ""}` : undefined;
         return {
           id: `${idBase}-${oi}-${li}`,
@@ -129,7 +131,10 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
     if (db.orders.some((o) => o.id === idBase || o.id.startsWith(`${idBase}-`))) return;
     db.orders.push(...orders);
   });
-  return { duplicated: false, orders };
+  // 迷わなかった注文は自動で確定（A6。設定で止められる）。迷った行があれば要確認のまま
+  const { autoConfirmLineOrders } = await import("./auto");
+  const auto = await autoConfirmLineOrders(orders.map((o) => o.id), { dictHit });
+  return { duplicated: false, orders, auto };
 }
 
 // ───────── 締め・配送曜日（③の checkLeadTime） ─────────
@@ -280,7 +285,10 @@ export async function createLiffOrder(input: LiffOrderInput) {
   await updateDb((db) => {
     db.orders.push(order);
   });
-  return order;
+  // 選んで入れる注文で、締め・曜日に通れば自動で確定（A5。設定で止められる）
+  const { autoConfirmLineOrders } = await import("./auto");
+  const auto = await autoConfirmLineOrders([order.id]);
+  return auto.confirmed.length ? { ...order, status: "confirmed" as const, confirmedBy: "自動" } : order;
 }
 
 /** LIFFの画面に出す内容: いつもの商品・前回の注文・お店の名前 */
@@ -396,7 +404,10 @@ export async function lineUsersForAdmin() {
 
 /** ひも付けがまだのLINEの人（初回確認待ち） */
 export async function unlinkedLineUsers() {
-  return (await lineUsersForAdmin()).filter((u) => !u.customerId);
+  // スタッフとして登録した LINE の人は、お客さんのひも付け待ちに出さない
+  const { listStaffLine } = await import("./staff-alerts");
+  const staff = new Set(listStaffLine().map((s) => s.userId));
+  return (await lineUsersForAdmin()).filter((u) => !u.customerId && !staff.has(u.userId));
 }
 
 // ───────── 確定の連絡 ─────────

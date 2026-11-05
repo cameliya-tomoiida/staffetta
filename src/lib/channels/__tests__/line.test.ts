@@ -2,7 +2,7 @@
 // Claude の読み取り（readLineText）は「Claude が返すはずの形」の見本に差し替える（API を呼ばない）。
 // 見本はスキーマ（LineReadSchema）で検査してから使うので、形がずれていればここで落ちる。
 // LINE の送信（pushText）・LINE の保存先（data/line.json）・db.json もメモリに差し替える。
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LineRead } from "@/lib/channels/line/reader";
 import { mem, resetMem } from "./memdb";
 import { expectImportedOrder } from "./rules";
@@ -42,6 +42,11 @@ vi.mock("@/lib/channels/line/reader", async (importOriginal) => {
       return { read: orig.LineReadSchema.parse(f(recent)), model: "test-fixture" };
     },
   };
+});
+
+beforeAll(async () => {
+  // この試験は人が確定する流れを見る（自動確定は line-auto.test.ts）
+  (await import("@/lib/channels/line/auto")).setLineAutoSettings({ autoConfirm: false }, "試験");
 });
 
 const { ingestTalkMessage, notifyOrderConfirmed, confirmationText } = await import("@/lib/channels/line/orders");

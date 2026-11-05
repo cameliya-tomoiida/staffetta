@@ -6,7 +6,8 @@ import { confirmationText, lineLeadTimes, unlinkedLineUsers } from "@/lib/channe
 import { LeadTimeNote } from "@/components/line/LeadTimeNote";
 import { readLineState } from "@/lib/channels/line/state";
 import { readDb } from "@/lib/store";
-import { NotifyButton } from "./buttons";
+import { NotifyButton, UndoAutoButton } from "./buttons";
+import { getLineAutoSettings } from "@/lib/channels/line/auto";
 import { fmtDate, fmtDateTime, Notice, OrderStatusTag, PageHeader, Tag } from "@/components/ui";
 
 // LINE受付の画面（工場のスタッフ用）。
@@ -20,12 +21,13 @@ export default async function LinePage() {
   const [db, state, unlinked, customers] = await Promise.all([readDb(), readLineState(), unlinkedLineUsers(), listCustomerSettings()]);
   const orders = db.orders.filter((o) => o.source.channel === "line").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const customerById = (id: string) => customers.find((c) => c.id === id);
+  const auto = getLineAutoSettings();
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="LINE受付"
-        lead={`LINEのトーク・注文フォームから来た注文です。中身の確認と確定は「受注一覧」で行います。${isLineLive() ? "（LINEにつながっています）" : "（デモモード：LINEには送らず、送る文面を記録だけします）"}`}
+        lead={`LINEのトーク・注文フォームから来た注文です。迷わなかった注文は${auto.autoConfirm ? "自動で確定します" : "自動で確定しません（設定で止めています）"}。迷った注文の確認と確定は「受注一覧」で行います。確定の連絡は${auto.autoNotify ? "全部受けられるとき自動で送ります" : "人が押したときだけ送ります"}。${isLineLive() ? "（LINEにつながっています）" : "（デモモード：LINEには送らず、送る文面を記録だけします）"}`}
       />
 
       {unlinked.length > 0 && (
@@ -60,6 +62,7 @@ export default async function LinePage() {
                     {flagged > 0 && <Tag tone="review">要確認 {flagged} 行</Tag>}
                     {lateCount > 0 && <Tag tone="review">締め切り後 {lateCount} 行</Tag>}
                     {o.source.extra?.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
+                    {o.source.extra?.autoConfirmed === true && <Tag tone="info">自動で確定</Tag>}
                   </div>
                   {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
                   {o.lines.length === 0 ? (
@@ -76,8 +79,13 @@ export default async function LinePage() {
                     </ul>
                   )}
                   {o.changeOf && <div className="text-sm text-alert-ink">対象の注文: {o.changeOf}</div>}
+                  {o.status === "needs_review" && typeof o.source.extra?.autoHold === "string" && (
+                    <div className="text-sm text-ink-soft">自動で確定しなかったわけ: {o.source.extra.autoHold}</div>
+                  )}
                 </div>
-                <div className="flex items-start">
+                <div className="flex flex-col items-end gap-2">
+                  {o.status === "confirmed" && o.source.extra?.autoConfirmed === true && !notified && <UndoAutoButton orderId={o.id} />}
+                  {o.status === "confirmed" && notified && o.source.extra?.lineNotifiedBy === "自動" && <Tag tone="info">自動で送信</Tag>}
                   {o.status === "confirmed" &&
                     (notified ? (
                       <Tag tone="info">確定の連絡ずみ</Tag>
