@@ -81,6 +81,8 @@ export const FEATURES = [
   { key: "alert_line_notify", group: "アラート", kind: "auto", default: false, owner: "④", dependsOn: "alerts",
     label: "お知らせを LINE で送る", description: "急ぎのお知らせを、担当の人の LINE に送ります。OFF だと、画面に出すだけです。" },
   // ───── 仕組み ─────
+  { key: "scheduler_automations", group: "仕組み", kind: "feature", default: true, owner: "⑤",
+    label: "時刻で動く仕事", description: "5分ごとに、決まった時刻の仕事（定期注文の自動作成・夜の「作り終えた」・発注書の自動承認・返事）を動かします。それぞれの仕事は、上の「自動」のスイッチが ON のときだけ動きます。使わないと、時刻では何も動きません。" },
   { key: "system_watch", group: "仕組み", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
     label: "仕組みの見張り", description: "FAX がいつもの時間に届かない・バックアップが7日ない・ディスクの空きが少ない、をお知らせします。" },
 ] as const satisfies readonly FeatureDef[];

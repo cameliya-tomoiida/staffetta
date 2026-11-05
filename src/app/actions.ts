@@ -10,6 +10,7 @@ import { readDb, resetDb, updateDb } from "@/lib/store";
 import type { ConfirmedLine, FaxDoc } from "@/lib/types";
 import { AUTO_WHO, judgeAutoConfirm } from "@/lib/fax-auto";
 import { autoConfirmEnabled } from "@/lib/fax-auto-setting";
+import { checkAlertsSoon } from "@/lib/scheduler";
 
 // 時刻は共通の時計から（撮影日は DEMO_NOW で「今日」をそろえる）
 const now = () => nowIso();
@@ -221,6 +222,7 @@ export async function confirmFaxAction(input: { faxId: string; customerId: strin
   for (const l of learned) await addAlias({ customerId: input.customerId, ...l, source: "fax", who: input.who });
   // 元の注文が確定したので、待っていた変更 FAX を自動で反映できるか、もう一度見る
   await retryChangeFaxes(input.customerId);
+  checkAlertsSoon(); // 確定したので、お知らせを見直す（数秒後に1回）
   revalidatePath("/", "layout");
 }
 
