@@ -3,7 +3,7 @@ import "server-only";
 // AI は値を書き換えない。確定するかどうかを決めるだけ。迷った行・締めに通らない行が1つでもあれば、今までどおり「要確認」で人が見る。
 // 自動で確定・送信したものは、確定した人＝「自動」と、source.extra に札（autoConfirmed / lineNotifiedBy=自動）を残す。取り消せる。
 import type { Order } from "@/data/types";
-import { kvGet, kvSet } from "@/lib/db/sqlite";
+import { isOn, setFlag } from "@/lib/settings/features";
 import { findProduct } from "@/lib/catalog";
 import { checkLeadTime } from "@/lib/leadtime";
 import { normalizeAlias } from "@/lib/aliases";
@@ -19,17 +19,17 @@ export interface LineAutoSettings {
   autoNotify: boolean;
 }
 
-const KEY = "line_auto_settings";
 export const DEFAULT_LINE_AUTO: LineAutoSettings = { autoConfirm: true, autoNotify: false };
 
+/** 設定は①の機能の ON/OFF の一覧（line_auto_confirm・line_auto_send）。LINE 注文そのもの（line_orders）が OFF なら、どちらも OFF */
 export function getLineAutoSettings(): LineAutoSettings {
-  return { ...DEFAULT_LINE_AUTO, ...(kvGet<Partial<LineAutoSettings>>(KEY) ?? {}) };
+  return { autoConfirm: isOn("line_auto_confirm"), autoNotify: isOn("line_auto_send") };
 }
 
 export function setLineAutoSettings(next: Partial<LineAutoSettings>, who: string): LineAutoSettings {
-  const v = { ...getLineAutoSettings(), ...next };
-  kvSet(KEY, { ...v, updatedBy: who, updatedAt: nowIso() });
-  return v;
+  if (next.autoConfirm !== undefined) setFlag("line_auto_confirm", next.autoConfirm, who);
+  if (next.autoNotify !== undefined) setFlag("line_auto_send", next.autoNotify, who);
+  return getLineAutoSettings();
 }
 
 /** 自動で確定してよいか。だめなら、人が見るわけ（画面に出す） */
