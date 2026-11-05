@@ -194,9 +194,12 @@ function stockShortage(db: Db, masters: Masters, now: string, opts: AlertOptions
     if (!day) continue;
     if (day.productionDate > addDays(today, lead + 1)) continue;
     const late = !!day.late;
+    // stockBefore は「頼む分を足したあと」の在庫。文には、頼む前の在庫を出す
+    const have = Math.round((day.stockBefore - day.orderUnits) * 10) / 10;
+    const r1 = (x: number) => Math.round(x * 10) / 10;
     res.push(mk("stock_shortage", `${row.materialId}|${day.productionDate}`, late ? "danger" : "warn",
       `${row.name}が足りなくなりそうです`,
-      `${md(day.productionDate)}の製造で ${row.name}を ${Math.round(day.need * 10) / 10}${row.unit} 使い、在庫（${Math.round(day.stockBefore * 10) / 10}${row.unit}）では安全在庫（${row.safetyStock}${row.unit}）を割ります。` +
+      `${md(day.productionDate)}の製造で ${row.name}を ${r1(day.need)}${row.unit} 使うと、在庫（${have}${row.unit}）が ${r1(have - day.need)}${row.unit} になり、安全在庫（${row.safetyStock}${row.unit}）を割ります。` +
         (late ? "発注の締めを過ぎています。電話で間に合うか確かめてください。" : `${row.orderUnitLabel} × ${day.orderPacks} の注文をしますか？`),
       [
         { label: late ? "仕入先に電話する（メモ）" : "注文しますか？（発注書の下書きを作る）", kind: late ? "call_memo" : "create_po_draft",

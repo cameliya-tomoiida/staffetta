@@ -163,7 +163,10 @@ export function buildProductPurchaseOrders(day: DayTotals, opts: ProductPurchase
   const mode = opts.mode ?? "per_customer";
   const drafts = new Map<string, PurchaseOrderDraft>();
   const draftFor = (supplierId: string, deliveryId: string) => {
-    const key = `${supplierId}|${deliveryId}`;
+    // 知らない便ID（"1" など）は、その仕入先の最初の便にまとめる（同じ便で発注書が2つにならないように）
+    const s = findSupplier(supplierId);
+    const resolved = s?.deliveries.find((x) => x.id === deliveryId)?.id ?? s?.deliveries[0]?.id ?? deliveryId;
+    const key = `${supplierId}|${resolved}`;
     const d = drafts.get(key) ?? newDraft("product", supplierId, deliveryId, day.date);
     drafts.set(key, d);
     return d;

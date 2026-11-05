@@ -134,8 +134,10 @@ export function buildCatalog(m: Masters): Built {
     return base;
   });
 
+  // 便の ID: DB では「仕入先ID|便ID」（2列をつないだ行の鍵）で入っていることがある → 便ID だけにそろえる
+  const dlId = (d: { supplierId: string; id: string }) => (d.id.startsWith(`${d.supplierId}|`) ? d.id.slice(d.supplierId.length + 1) : d.id);
   const suppliers: CatalogSupplier[] = m.suppliers.filter((s) => s.active !== false).map((s) => {
-    const dls = m.supplierDeliveries.filter((d) => d.supplierId === s.id);
+    const dls = m.supplierDeliveries.filter((d) => d.supplierId === s.id).map((d) => ({ ...d, id: dlId(d) }));
     return {
       id: s.id, name: s.name, method: s.method, ...(s.siteName ? { siteName: s.siteName } : {}), contact: s.contact, minLot: s.minLot ?? 1,
       deliveries: (dls.length ? dls : [{ id: "1", name: "通常便" } as SupplierDelivery]).map((d) => ({
@@ -144,7 +146,7 @@ export function buildCatalog(m: Masters): Built {
     };
   });
   const binOf = new Map<string, string>();
-  for (const d of m.supplierDeliveries) for (const c of d.customerIds ?? []) binOf.set(`${d.supplierId}|${c}`, d.id);
+  for (const d of m.supplierDeliveries) for (const c of d.customerIds ?? []) binOf.set(`${d.supplierId}|${c}`, dlId(d));
 
   const materials: CatalogMaterial[] = m.materials.filter((x) => x.active !== false).map((x) => {
     const sup = suppliers.find((s) => s.id === x.supplierId);
