@@ -1,5 +1,5 @@
 "use client";
-// 全画面の右下の「AI に聞く」（作者 11/6 (25)）。アプリの使い方・困りごとを聞くと、答えと、必要ならその画面へのボタンを出す。
+// 全画面の上の「AI に聞く」（作者 11/6 (25)）。押すと右下に相談の窓が開く。アプリの使い方・困りごとを聞くと、答えと、必要ならその画面へのボタンを出す。
 // いま見ている画面の中身（文字）も一緒に送るので、「この注文が要確認になった理由は？」のような聞き方ができる。
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
@@ -43,8 +43,9 @@ export function AiChat() {
   return (
     <div className="no-print">
       {!open && (
+        // 上の行（日付の横）に置く。画面の右下に浮かせると、保存などのボタンに重なるため
         <button type="button" onClick={() => setOpen(true)}
-          className="fixed right-4 bottom-4 z-30 flex min-h-14 items-center gap-2 rounded-full bg-[#8b1a1a] px-5 text-[18px] font-bold text-white shadow-lg hover:bg-[#701414]">
+          className="flex min-h-11 items-center gap-1.5 rounded-full bg-[#8b1a1a] px-4 text-[17px] font-bold text-white hover:bg-[#701414]">
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M4 5h16v11H9l-5 4Z" />
             <path d="M9 9.5h6M9 12.5h4" />

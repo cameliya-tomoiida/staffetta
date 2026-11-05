@@ -14,12 +14,17 @@ const now = () => Date.now();
 
 export async function currentUser(): Promise<CurrentUser | undefined> {
   const jar = await cookies();
-  const u = verifyUserSession(jar.get(USER_COOKIE)?.value, now());
+  return userFromCookies((name) => jar.get(name)?.value);
+}
+
+/** cookie の値から（proxy.ts は request.cookies を渡す） */
+export function userFromCookies(get: (name: string) => string | undefined): CurrentUser | undefined {
+  const u = verifyUserSession(get(USER_COOKIE), now());
   if (u) {
     const s = findStaffById(u.id);
     if (s?.active) return { id: s.id, name: s.name, role: s.role, via: "password" };
   }
-  const line = verifyStaffSession(jar.get(STAFF_COOKIE)?.value, now());
+  const line = verifyStaffSession(get(STAFF_COOKIE), now());
   const s = findStaffByName(line?.n);
   if (s) return { id: s.id, name: s.name, role: s.role, via: "line" };
   return undefined;
