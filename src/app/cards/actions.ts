@@ -44,3 +44,13 @@ export async function resetTemplatesAction() {
   resetTemplates();
   revalidatePath("/cards");
 }
+
+/** 製品カードの形を AI と話して直す（⑦の(30)）。保存はしない（画面の「保存」で） */
+export async function chatTemplateAction(turns: { role: "user" | "assistant"; text: string }[], current: CardTemplate) {
+  try {
+    const { chatTemplate } = await import("@/lib/cards/ai-template-chat");
+    return { ok: true as const, ...(await chatTemplate(turns, current)) };
+  } catch (e) {
+    return { ok: false as const, error: msg(e) };
+  }
+}

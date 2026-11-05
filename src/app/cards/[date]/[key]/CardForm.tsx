@@ -26,7 +26,7 @@ const MARK = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "�
 
 /** 「自動」の印 */
 export function AutoMark() {
-  return <span className="ml-1 inline-block rounded border border-[#5b84b1] bg-white px-1 align-middle text-[13px] leading-tight font-bold text-[#1f3f66]">自動</span>;
+  return <span className="ml-1 inline-block rounded border border-[#5b84b1] bg-white px-1 align-middle text-[13px] leading-tight font-bold whitespace-nowrap text-[#1f3f66]">自動</span>;
 }
 
 export function CardForm({ date, base, initial, updated }: { date: string; base: CardBase; initial?: CardInput; updated?: string }) {
@@ -144,7 +144,7 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
       <table className="w-full table-fixed border-collapse">
         <thead>
           <tr>
-            {["日付", "天候（名古屋 朝5時）", "室温（℃）", "湿度（％）", "生地", "記入者"].map((h) => (
+            {["日付", "天候（朝5時）", "室温（℃）", "湿度（％）", "生地", "記入者"].map((h) => (
               <th key={h} className={TH}>{h}</th>
             ))}
           </tr>
@@ -156,7 +156,8 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
             <td className={TD}>{num(v.roomTempC, (n) => set("roomTempC", n), "室温")}</td>
             <td className={TD}>{num(v.roomHumidity, (n) => set("roomHumidity", n), "湿度")}</td>
             <td className={`${AUTO} text-lg`}>
-              <b>{base.doughName}</b> {round1(base.doughKg)} kg<AutoMark />
+              <b>{base.doughName}</b> <span className="whitespace-nowrap">{round1(base.doughKg)}kg</span>
+              <AutoMark />
             </td>
             <td className={TD}>{text(v.writer, (s) => set("writer", s), "記入者")}</td>
           </tr>
@@ -170,11 +171,11 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
           <table className="w-full min-w-[940px] table-fixed border-collapse">
             <colgroup>
               <col className="w-[12%]" />
-              <col className="w-[15%]" />
+              <col className="w-[18%]" />
               <col />
               <col />
-              <col className="w-[20%]" />
-              <col className="w-[19%]" />
+              <col className="w-[18%]" />
+              <col className="w-[18%]" />
             </colgroup>
             <thead>
               <tr>
@@ -195,9 +196,9 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                       {pr.name}
                       {pr.ccp && <span className="ml-1 rounded bg-alert-ink px-1 text-sm text-white">CCP</span>}
                     </th>
-                    <td className={`${AUTO} text-base leading-snug`}>
-                      {pr.plannedStart ? `${pr.plannedStart}${pr.plannedEnd ? `〜${pr.plannedEnd}` : ""}` : "—"}
-                      {pr.staffHint && <span className="block">{pr.staffHint}</span>}
+                    <td className={`${AUTO} overflow-hidden text-base leading-snug`} title={pr.staffHint}>
+                      <span className="block text-sm whitespace-nowrap">{pr.plannedStart ? `${short(pr.plannedStart)}${pr.plannedEnd ? `〜${short(pr.plannedEnd)}` : ""}` : "—"}</span>
+                      {pr.staffHint && <span className="block truncate text-sm">{pr.staffHint}</span>}
                     </td>
                     {fieldsOf(pr).includes("time") ? (
                       <>
@@ -209,30 +210,41 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                     )}
                     <td className={TD}>{fieldsOf(pr).includes("staff") ? text(s.staff, (x) => setStep(pr.key, "staff", x), `${pr.name}の担当者`) : <span className="px-1 text-ink-soft">—</span>}</td>
                     <td className={TD}>
-                      {fieldsOf(pr).includes("qty") ? (
-                        <div className="flex items-center gap-1">
-                          {num(s.qty, (n) => setStep(pr.key, "qty", n), `${pr.name}の${pr.qtyLabel ?? "数"}`)}
-                          <span className="shrink-0 text-base leading-tight">{pr.qtyLabel ?? "数"}</span>
-                        </div>
-                      ) : fieldsOf(pr).includes("check") ? (
-                        <div className="flex items-center gap-1">
-                          <OkNg label={`${pr.name}の${pr.checkLabel ?? "確認"}`} disabled={approved} value={s.check} onChange={(c) => setStep(pr.key, "check", c)} />
-                          <span className="shrink-0 text-sm leading-tight">{pr.checkLabel ?? ""}</span>
-                        </div>
-                      ) : pr.temp && fieldsOf(pr).includes("temp") ? (
-                        <div className="flex items-center gap-1">
-                          {num(s.tempC, (n) => setStep(pr.key, "tempC", n), `${pr.name}の温度`, `steps.${pr.key}.tempC`, pr.temp.target != null ? String(pr.temp.target) : "")}
-                          <span className="shrink-0 text-base leading-tight">
-                            ℃
-                            <br />
-                            {pr.temp.min ?? ""}〜{pr.temp.max ?? ""}
+                      {(() => {
+                        // 温度・数・○× は、選んだものを全部ならべる
+                        const f = fieldsOf(pr);
+                        const parts: React.ReactNode[] = [];
+                        if (pr.temp && f.includes("temp"))
+                          parts.push(
+                            <div key="t" className="flex min-w-0 flex-1 items-center gap-1">
+                              {num(s.tempC, (n) => setStep(pr.key, "tempC", n), `${pr.name}の温度`, `steps.${pr.key}.tempC`, pr.temp.target != null ? String(pr.temp.target) : "")}
+                              <span className="shrink-0 text-sm leading-tight whitespace-nowrap">
+                                ℃
+                                <br />
+                                {pr.temp.min ?? ""}〜{pr.temp.max ?? ""}
+                              </span>
+                            </div>,
+                          );
+                        if (f.includes("qty"))
+                          parts.push(
+                            <div key="q" className="flex min-w-0 flex-1 items-center gap-1">
+                              {num(s.qty, (n) => setStep(pr.key, "qty", n), `${pr.name}の${pr.qtyLabel ?? "数"}`)}
+                              <span className="shrink-0 text-sm leading-tight whitespace-nowrap">{pr.qtyLabel ?? "数"}</span>
+                            </div>,
+                          );
+                        if (f.includes("check"))
+                          parts.push(
+                            <div key="c" className="flex min-w-0 flex-1 items-center gap-1" title={pr.checkLabel}>
+                              <OkNg label={`${pr.name}の${pr.checkLabel ?? "確認"}`} disabled={approved} value={s.check} onChange={(c) => setStep(pr.key, "check", c)} />
+                            </div>,
+                          );
+                        if (parts.length) return <div className="flex gap-1">{parts}</div>;
+                        return (
+                          <span className="px-1 text-base whitespace-nowrap text-ink-soft">
+                            {pr.key === "mix" ? "ミキサー表へ" : pr.key === "bake" ? "製品の表へ" : pr.key === "metal_check" ? "製品の表で○×" : pr.key === "pack" ? "製品の表へ" : ""}
                           </span>
-                        </div>
-                      ) : (
-                        <span className="px-1 text-base text-ink-soft">
-                          {pr.key === "mix" ? "下のミキサーの表" : pr.key === "bake" ? "製品の表（温度・時間）" : pr.key === "metal_check" ? "製品の表（金属○×）" : pr.key === "pack" ? "製品の表（数）" : ""}
-                        </span>
-                      )}
+                        );
+                      })()}
                     </td>
                   </tr>
                 );
@@ -432,6 +444,8 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
+/** "前日 22:15" → "前22:15"（折り返さないように短く） */
+const short = (t?: string) => (t ? t.replace("前日 ", "前") : "");
 
 function nowHHMM() {
   const d = new Date();
