@@ -87,7 +87,7 @@ def read_master(path):
 
 
 def read_sales(paths):
-    out = collections.defaultdict(lambda: {"dates": set(), "tantou": collections.Counter(), "nounyu": set(), "lines": 0, "name": ""})
+    out = collections.defaultdict(lambda: {"dates": set(), "tantou": collections.Counter(), "nounyu": set(), "lines": 0, "name": "", "items": collections.defaultdict(list)})
     for p in paths:
         wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
         ws = wb.worksheets[0]
@@ -117,6 +117,12 @@ def read_sales(paths):
             if s(r.get("納入先名")):
                 x["nounyu"].add(s(r.get("納入先名")))
             x["lines"] += 1
+            pc = s(r.get("商品コード"))
+            if pc and s(r.get("内訳")) == "通常" and isinstance(d, dt.datetime):
+                x["items"][pc].append({
+                    "date": d.date(), "name": s(r.get("商品名/摘要")), "unit": s(r.get("単位")), "qty": float(r.get("数量") or 0),
+                    "price": float(r.get("単価") or 0), "cost": float(r.get("原単価") or 0), "wh": s(r.get("倉庫名")),
+                })
     return out
 
 
@@ -178,6 +184,35 @@ def read_route(path):
     return out
 
 
+# 自社便のコースの担当者（担当者・11/6）: 担当A〜H
+OWN_TANTOU = {"001", "002", "003", "006", "007", "009", "029", "44"}
+
+
+def num_text(v):
+    return (f"{v:.2f}".rstrip("0").rstrip(".")) if v else ""
+
+
+def product_rows(rid, items, min_days):
+    """取引先1つの商品ごとの行（いちばん新しい単価・原価、ちがう単価があれば要確認、数量、よく出る曜日、最後に出た日）"""
+    out = []
+    for code, lines in sorted(items.items()):
+        lines.sort(key=lambda x: x["date"])
+        last = lines[-1]
+        prices = [p for p in dict.fromkeys(x["price"] for x in reversed(lines)) if p]
+        costs = [x["cost"] for x in reversed(lines) if x["cost"]]
+        days = collections.Counter(d.weekday() for d in {x["date"] for x in lines})
+        wd = sorted(((w + 1) % 7) for w, n in days.items() if n >= max(2, min_days - 1))
+        wh = collections.Counter(x["wh"] for x in lines if x["wh"]).most_common(1)
+        out.append({
+            "得意先ID": rid, "商品コード": code, "商品名": last["name"], "単位": unicodedata.normalize("NFKC", last["unit"]),
+            "卸価格（円）": num_text(last["price"]), "原価（円）": num_text(costs[0]) if costs else "",
+            "単価の要確認": "/".join(num_text(p) for p in prices) if len(prices) > 1 else "",
+            "仕入れ元の目安": wh[0][0] if wh else "", "期間の数量": num_text(sum(x["qty"] for x in lines)),
+            "よく出る曜日": ";".join("日月火水木金土"[d] for d in wd), "最後に出た日": last["date"].isoformat(), "使う": "はい",
+        })
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--master", required=True)
@@ -185,7 +220,7 @@ def main():
     ap.add_argument("--address", required=True)
     ap.add_argument("--route", required=True)
     ap.add_argument("--out", default=os.path.join("data", "import-real", "customers"))
-    ap.add_argument("--found", help="住所の無い先を調べた結果（JSON）")
+    ap.add_argument("--found", action="append", default=[], help="住所の無い先を調べた結果（JSON）。何回でも。あとのファイルが優先")
     ap.add_argument("--min-days", type=int, default=3, help="この日数以上売上がある曜日を「納品する曜日」にする")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
@@ -195,15 +230,17 @@ def main():
     addr = read_address(a.address)
     route = read_route(a.route)
     found = {}
-    if a.found:
-        import json
-        with open(a.found, encoding="utf-8") as f:
+    import json
+    for fp in a.found:
+        with open(fp, encoding="utf-8") as f:
             for x in json.load(f):
-                if x.get("found") and x.get("address"):
-                    found[x["id"]] = x
+                # 形が2通り: {found, postal, address, tel, confidence} と {zip, address, deliver_to, tel, confidence}
+                if x.get("address") and x.get("found", True) and x.get("confidence") != "none":
+                    found[x["id"]] = {**x, "postal": x.get("postal") or x.get("zip") or ""}
     report = []
 
     rows = []
+    cp_rows = []
     tantou = collections.defaultdict(lambda: {"name": "", "n": 0, "addr": 0, "route": 0, "lines": 0})
     for k, sl in sorted(sales.items(), key=lambda x: x[0].zfill(8)):
         m = master.get(k)
@@ -241,7 +278,20 @@ def main():
             tel = tel or fx.get("tel", "")
             if fx.get("confidence") == "low":
                 caution = ("住所は推測・要確認。" + caution).strip()
-        method = "オフィス自社便" if rid.lower().startswith("r-oc") else ""
+            if fx.get("deliver_to"):
+                caution = (f"届け先: {fx['deliver_to']}。" + caution).strip()
+        nn = unicodedata.normalize("NFKC", name).upper()
+        if rid.lower().startswith("r-oc"):
+            method = "オフィス自社便"
+        elif "ECR" in nn:
+            method = "冷凍便"  # ECR 系は全部冷凍ピザ（担当者）
+        elif "宅配の店A" in nn or "宅配の店B" in nn or "宅配の店B" in nn:
+            method = "宅配・路線便"  # ヤマト便（担当者）
+        elif tcode in OWN_TANTOU:
+            method = "自社便"
+        else:
+            method = ""
+        cp_rows.extend(product_rows(rid, sl["items"], a.min_days))
         rows.append({
             "得意先ID": rid,
             "名前": name,
@@ -268,6 +318,11 @@ def main():
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
+    with open(os.path.join(a.out, "11_customerProducts.csv"), "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(cp_rows[0].keys()))
+        w.writeheader()
+        w.writerows(cp_rows)
+    report.append(f"取引先の商品: {len(cp_rows)}行（単価が何通りかある: {sum(1 for x in cp_rows if x['単価の要確認'])}行・原価あり: {sum(1 for x in cp_rows if x['原価（円）'])}行）")
     with open(os.path.join(a.out, "tantou.csv"), "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(["担当者コード", "担当者名", "7〜9月に売上がある先", "うち住所あり", "うちコース表にある", "売上の行数"])

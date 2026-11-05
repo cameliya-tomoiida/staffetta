@@ -4,7 +4,7 @@
 import { customers as masterCustomers } from "@/data/master";
 import { customerDeliveryTime, doughRecipes, lineSettings, toppingRecipes, type ProcessStep } from "@/data/production";
 import type {
-  CourseMaster, CustomerMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
+  CourseMaster, CustomerMaster, CustomerProductMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster, SupplierMaster,
 } from "@/data/types";
 import { legacyMaterials as allMaterials, legacyProducts as allProducts, legacySuppliers as allSuppliers } from "./legacy";
@@ -74,6 +74,8 @@ export function sampleSteps(): ProcessStepMaster[] {
         prevDay: !!s.prevDay,
         ccp: !!s.ccp,
         ...(s.note ? { note: s.note } : {}),
+        // 急速冷凍の温度の基準（見本）
+        ...(s.key === "freeze" ? { tempTargetC: -26, tempMinC: -28, tempMaxC: -24 } : {}),
       });
       // 食パンは冷ましたあとにスライス
       if (d.id === "DG03" && s.key === "cool")
@@ -184,6 +186,8 @@ export function sampleMasters(): Masters {
 
   const doughs: DoughMaster[] = doughRecipes.map((d) => ({
     id: d.id, name: d.name, line: d.line, lossRate: d.lossRate,
+    // 目標の捏上温度（見本。⑦の製品カード）
+    kneadTargetC: d.line === "pizza" ? 24 : 26, kneadToleranceC: 2,
     // ミキサーの上限は、使うミキサー（設備）の値を使う
   }));
   const recipeItems = doughRecipes.flatMap((d) => d.items.map((i) => ({ doughId: d.id, materialId: i.materialId, percent: i.percent })));
@@ -202,6 +206,8 @@ export function sampleMasters(): Masters {
         packStyle: shokupan ? "single" : "bulk", packMethod: "machine", metalCheck: "after_pack",
         ...(p.id === "P03" ? { sliceMm: 15 } : p.id === "P04" ? { sliceMm: 20 } : {}),
         ...(s.laborCost !== undefined ? { laborCost: s.laborCost } : {}),
+        // 焼成の目安（見本。⑦の製品カード）: ピザ 450℃・2分、食パン 210℃・35分、ほか 200℃・12分
+        ...(d?.line === "pizza" ? { bakeTempC: 450, bakeMinutes: 2 } : shokupan ? { bakeTempC: 210, bakeMinutes: 35 } : { bakeTempC: 200, bakeMinutes: 12 }),
       };
     }
     if (s.kind === "buy")
@@ -262,7 +268,44 @@ export function sampleMasters(): Masters {
     customers,
     courses: SAMPLE_COURSES,
     standingOrders: SAMPLE_STANDING_ORDERS,
+    customerProducts: sampleCustomerProducts(products, customers),
     shifts: SAMPLE_SHIFTS,
     staffAssignments: SAMPLE_STAFF,
   };
+}
+
+/**
+ * 取引先の商品と卸価格の見本（⑦。架空）。定期注文にある組み合わせ ＋ 定期注文の無い取引先には自社製造の商品を3つ。
+ * 卸価格は商品の売価、原価はその 55%（見本）。
+ */
+function sampleCustomerProducts(products: ProductMaster[], customers: CustomerMaster[]): CustomerProductMaster[] {
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const make = products.filter((p) => p.kind === "make");
+  const pairs = new Map<string, { customerId: string; productId: string; weekdays: number[] }>();
+  // 取引先マスタの見本（C01 など）だけ。動画用の取引先などは入れない
+  const known = new Set(customers.filter((c) => /^C\d+$/.test(c.id)).map((c) => c.id));
+  for (const s of SAMPLE_STANDING_ORDERS) {
+    if (!known.has(s.customerId)) continue;
+    const k = `${s.customerId}|${s.productId}`;
+    const cur = pairs.get(k) ?? { customerId: s.customerId, productId: s.productId, weekdays: [] };
+    if (!cur.weekdays.includes(s.weekday)) cur.weekdays.push(s.weekday);
+    pairs.set(k, cur);
+  }
+  customers.forEach((c, i) => {
+    if (!known.has(c.id) || [...pairs.values()].some((x) => x.customerId === c.id)) return;
+    for (let j = 0; j < 3 && make.length; j++) {
+      const p = make[(i * 3 + j) % make.length];
+      pairs.set(`${c.id}|${p.id}`, { customerId: c.id, productId: p.id, weekdays: [] });
+    }
+  });
+  return [...pairs.values()].flatMap(({ customerId, productId, weekdays }) => {
+    const p = byId.get(productId);
+    if (!p) return [];
+    return [{
+      customerId, code: p.id, name: p.name, productId: p.id, unit: p.unit, price: p.price, cost: Math.round(p.price * 0.55 * 10) / 10, source: p.kind === "buy" ? "仕入" : "自社",
+      // 期間（3か月・13週）の数量の見本: 曜日の数 × 13週 × 20
+      quantity: (weekdays.length || 3) * 13 * 20,
+      ...(weekdays.length ? { weekdays: weekdays.sort((a, b) => a - b) } : {}), active: true,
+    }];
+  });
 }

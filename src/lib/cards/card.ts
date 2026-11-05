@@ -1,23 +1,32 @@
-// 製品カード（⑦の(13)）。工場で毎日書いている紙（生地ごと・日ごとに1枚）をタブレットで入力する。純関数だけ。
-// 紙の並び: 日付・天候・室温・湿度 → 計量（生地名・記入者・イーストの納入日/賞味期限）→ ミキサー（水温・捏上温度・捏上時間・担当者）
-//          → 分割・成型（開始/終了・担当者・①〜⑥ 製品名/重量g/注文数/仕込数/製品数）→ 焼成（開始/終了・担当者・①〜⑥ 温度/時間）
-//          → 包装（①〜⑥ 製品数/ロス数/在庫/金属検査/官能検査・担当者）→ 責任者確認
+// 製品カード（⑦の(13)・第2版 (20)）。工場で毎日書いている紙（生地ごと・日ごとに1枚）をタブレットで入力する。純関数だけ。
+// 「この1枚を残せば、その生地の製品が どの工程を・だれが・何時に 通ったか全部わかる」形:
+//   上の帯（日付・天候・室温・湿度・生地・記入者）
+//   工程の表（計量・ミキサー・分割・成型・焼成・急速冷凍・包装・金属検査 … 生地の工程のマスタの順。はじめ／おわり／担当者／温度の確認）
+//   ミキサーの表（こねた回ごと: 水温・捏上時間・捏上温度・担当者）
+//   製品の表（この生地からとった製品ごと: 重量・注文数・仕込数・製品数・焼成の温度と時間・包装の数・ロス・在庫・金属・官能）
+//   メモ・責任者の確認
+// 基準はマスタから（プログラムに固定の値は持たない）:
+//   目標の捏上温度・許す幅 … 生地（マスタ管理 → レシピと工程）
+//   焼成の温度・時間・許す幅 … 商品（マスタ管理 → 商品）
+//   工程の温度（急速冷凍など） … 工程（マスタ管理 → くわしいマスタ → 工程）
 // 分かっていること（CardBase）はアプリが入れる。現場で測ること（CardInput）だけ人が入れる。
-import type { ProcessStepMaster, ShiftMaster, StaffAssignmentMaster } from "@/data/types";
+import type { DoughMaster, ProcessStepKey, ProcessStepMaster, ProductMaster, ShiftMaster, StaffAssignmentMaster } from "@/data/types";
 import type { DoughBatchPlan, ScheduleRow } from "@/lib/production";
 
-/** 目標のこね上げ温度（℃）と、許す幅 */
-export const TARGET_KNEAD_C = 26;
-export const KNEAD_TOLERANCE_C = 2;
-/** 焼成温度が目安からどれだけ外れたら赤にするか（℃） */
-export const BAKE_TOLERANCE_C = 10;
+/** 許す幅が登録されていないときの値 */
+export const DEFAULT_KNEAD_TOLERANCE_C = 2;
+export const DEFAULT_BAKE_TOLERANCE_C = 10;
+
+/** 製品カードに行を出す工程（待つだけの工程＝発酵・ベンチ・ホイロ・冷却などは出さない） */
+export const CARD_STEP_KEYS: ProcessStepKey[] = ["weigh", "mix", "divide", "shape", "topping", "bake", "freeze", "slice", "pack", "metal_check", "case_pack"];
+const STEP_NAME: Partial<Record<ProcessStepKey, string>> = {
+  weigh: "計量", mix: "ミキサー", divide: "分割", shape: "成型", topping: "トッピング", bake: "焼成", freeze: "急速冷凍", slice: "スライス", pack: "包装", metal_check: "金属検査", case_pack: "箱詰め",
+};
 
 export interface Weather {
   /** 晴れ・くもり・雨 など */
   label: string;
-  /** 外の気温（℃） */
   tempC?: number;
-  /** 外の湿度（％） */
   humidity?: number;
   /** どの時刻の値か（"05:00"） */
   at?: string;
@@ -29,50 +38,62 @@ export interface CardItem {
   name: string;
   /** 1個の重さ（g・分割の重さ） */
   gram: number;
-  /** 注文数 */
   orders: number;
   /** 仕込数（ロス込み） */
   prep: number;
+  /** 焼成の目安（商品のマスタ。登録が無ければ空） */
+  bakeTempC?: number;
+  bakeMinutes?: number;
+  bakeToleranceC?: number;
+}
+
+/** 工程の行（アプリが入れる所） */
+export interface CardProcess {
+  key: ProcessStepKey;
+  name: string;
+  /** 工程表の予定（"4:10" / "前日 21:30"） */
+  plannedStart?: string;
+  plannedEnd?: string;
+  /** 配置（"夜班 2人"） */
+  staffHint?: string;
+  /** この工程で確かめる温度（工程のマスタ） */
+  temp?: { target?: number; min?: number; max?: number };
+  /** CCP（重要管理点） */
+  ccp?: boolean;
 }
 
 /** アプリが入れる所 */
 export interface CardBase {
-  /** 製造計画の日付（/plan の日付） */
   date: string;
-  /** 作る日 */
   productionDate: string;
-  /** 曜日（日〜土） */
   weekday: string;
-  /** 生地のキー（便で分けたら "DG01#2"） */
   key: string;
   doughId: string;
   doughName: string;
   line: "bread" | "pizza";
-  /** 生地 kg・ミキサーの回数・1回の量（kg） */
   doughKg: number;
   batches: number;
   batchKg?: number;
   items: CardItem[];
-  /** 工程表の予定（"4:10" / "前日 21:30"） */
-  planned: { mix?: string; divideStart?: string; divideEnd?: string; bakeStart?: string; bakeEnd?: string };
-  /** 担当（班と配置の人数から。"夜班 2人"） */
-  staff: { mix?: string; divide?: string; bake?: string; pack?: string };
-  /** 使うイースト（レシピから）と、いちばん新しい入荷の日 */
+  /** 工程の行（第2版） */
+  processes?: CardProcess[];
+  /** 目標の捏上温度（生地のマスタ。登録が無ければ空）と許す幅 */
+  targetKneadC?: number;
+  kneadToleranceC?: number;
   yeast?: { name: string; receivedDate?: string };
-  targetKneadC: number;
-  /** 焼成の目安（工程のマスタのメモから。"200℃ 12分"） */
-  bakeGuide?: { tempC?: number; minutes?: number; text: string };
   weather?: Weather;
+  // ── 前の版（保存してあるカードを読むため） ──
+  planned?: { mix?: string; divideStart?: string; divideEnd?: string; bakeStart?: string; bakeEnd?: string };
+  staff?: { mix?: string; divide?: string; bake?: string; pack?: string };
+  bakeGuide?: { tempC?: number; minutes?: number; text: string };
 }
 
 export type Check = "" | "ok" | "ng";
 
 export interface CardItemInput {
-  /** 分割・成型の製品数 */
   made?: number;
   bakeTempC?: number;
   bakeMinutes?: number;
-  /** 包装 */
   packed?: number;
   loss?: number;
   stock?: number;
@@ -83,21 +104,36 @@ export interface CardItemInput {
 /** ミキサー1回分（同じ生地をまとめてこねる。回ごとに1行） */
 export interface MixInput {
   waterTempC?: number;
-  /** 捏上時間（"22:38"） */
   kneadTime?: string;
   kneadTempC?: number;
   staff?: string;
 }
 
+/** 工程1つ分 */
+export interface StepInput {
+  start?: string;
+  end?: string;
+  staff?: string;
+  /** 確かめた温度（急速冷凍の庫内温度など） */
+  tempC?: number;
+}
+
 /** 現場で入れる所 */
 export interface CardInput {
-  /** ミキサーの回ごと（1回目・2回目…） */
-  mixes?: MixInput[];
   roomTempC?: number;
   roomHumidity?: number;
   writer?: string;
   yeastReceived?: string;
   yeastExpiry?: string;
+  /** 工程ごと（第2版） */
+  steps?: Partial<Record<ProcessStepKey, StepInput>>;
+  /** ミキサーの回ごと */
+  mixes?: MixInput[];
+  items: Record<string, CardItemInput>;
+  approvedBy?: string;
+  approvedAt?: string;
+  note?: string;
+  // ── 前の版 ──
   waterTempC?: number;
   kneadTempC?: number;
   kneadTime?: string;
@@ -109,16 +145,10 @@ export interface CardInput {
   bakeEnd?: string;
   bakeStaff?: string;
   packStaff?: string;
-  /** 商品ごと（CardBase.items と同じ productId） */
-  items: Record<string, CardItemInput>;
-  /** 責任者の確認 */
-  approvedBy?: string;
-  approvedAt?: string;
-  note?: string;
 }
 
 export interface Problem {
-  /** どの欄か（"kneadTempC"・"items.P01.metal" など） */
+  /** どの欄か（"mixes.0.kneadTempC"・"steps.freeze.tempC"・"items.P01.metal" など） */
   field: string;
   message: string;
 }
@@ -128,14 +158,6 @@ const fmt = (min: number) => {
   const m = ((Math.round(min) % 1440) + 1440) % 1440;
   return `${prev ? "前日 " : ""}${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
 };
-
-/** 工程のマスタのメモ（"200℃ 12分" "上火210/下火190℃・15分"）から焼成の目安を読む */
-export function parseBakeGuide(note?: string): CardBase["bakeGuide"] {
-  if (!note) return undefined;
-  const t = /(\d{2,3})\s*(?:℃|度)/.exec(note);
-  const m = /(\d{1,3})\s*分/.exec(note);
-  return { text: note, ...(t ? { tempC: Number(t[1]) } : {}), ...(m ? { minutes: Number(m[1]) } : {}) };
-}
 
 const inWindow = (minute: number, from: string, to: string) => {
   const m = ((Math.round(minute) % 1440) + 1440) % 1440;
@@ -172,23 +194,42 @@ export function buildCardBase(args: {
   steps: ProcessStepMaster[];
   shifts: ShiftMaster[];
   assignments: StaffAssignmentMaster[];
+  doughs?: DoughMaster[];
+  products?: ProductMaster[];
   yeast?: { name: string; receivedDate?: string };
   weather?: Weather;
 }): CardBase {
   const { dough, schedule } = args;
   const dow = new Date(`${args.productionDate}T12:00:00Z`).getUTCDay();
-  const step = (k: string) => schedule?.steps.find((s) => s.key === k && s.end > s.start);
+  const loss = dough.lossRate > 0 && dough.lossRate < 1 ? dough.lossRate : 0;
+  const dm = args.doughs?.find((d) => d.id === dough.doughId);
+  const productOf = new Map((args.products ?? []).map((p) => [p.id, p]));
+
+  // 工程の行: 工程のマスタ（この生地）の順。無ければ工程表の順。包装・金属検査は無くても足す（包装のところでやる）
+  const master = args.steps.filter((s) => s.doughId === dough.doughId).sort((a, b) => a.seq - b.seq);
+  const keys: ProcessStepKey[] = [];
+  for (const k of [...master.map((s) => s.key), ...(schedule?.steps.map((s) => s.key as ProcessStepKey) ?? [])]) {
+    if (CARD_STEP_KEYS.includes(k) && !keys.includes(k)) keys.push(k);
+  }
+  if (!keys.length) keys.push("weigh", "mix", "divide", "shape", "bake");
+  for (const k of ["pack", "metal_check"] as const) if (!keys.includes(k)) keys.push(k);
   const at = (k: string, which: "start" | "end") => {
-    const s = step(k);
+    const s = schedule?.steps.find((x) => x.key === k && x.end > x.start);
     return s ? (s.prevDay ? s[which] - 1440 : s[which]) : undefined;
   };
-  const mix = at("mix", "start");
-  const divS = at("divide", "start");
-  const bakeS = at("bake", "start");
-  const packS = at("pack", "start");
-  const staff = (k: string, minute?: number) => staffText(dough.line, k, minute, args.shifts, args.assignments, dow);
-  const bakeStep = args.steps.find((s) => s.doughId === dough.doughId && s.key === "bake");
-  const loss = dough.lossRate > 0 && dough.lossRate < 1 ? dough.lossRate : 0;
+  const processes: CardProcess[] = keys.map((k) => {
+    const m = master.find((s) => s.key === k);
+    const st = at(k, "start");
+    const en = at(k, "end");
+    const hint = staffText(dough.line, k, st, args.shifts, args.assignments, dow);
+    const temp = m && (m.tempTargetC != null || m.tempMinC != null || m.tempMaxC != null) ? { target: m.tempTargetC, min: m.tempMinC, max: m.tempMaxC } : undefined;
+    return {
+      key: k, name: m?.name ?? STEP_NAME[k] ?? k,
+      ...(st != null ? { plannedStart: fmt(st) } : {}), ...(en != null ? { plannedEnd: fmt(en) } : {}),
+      ...(hint ? { staffHint: hint } : {}), ...(temp ? { temp } : {}), ...(m?.ccp || k === "metal_check" ? { ccp: true } : {}),
+    };
+  });
+
   return {
     date: args.date,
     productionDate: args.productionDate,
@@ -200,25 +241,46 @@ export function buildCardBase(args: {
     doughKg: dough.doughKg,
     batches: dough.batches,
     batchKg: dough.batchKg,
-    items: dough.items.map((i) => ({ productId: i.productId, name: i.name, gram: i.doughGram, orders: i.pieces, prep: Math.ceil(i.pieces / (1 - loss)) })),
-    planned: {
-      ...(mix != null ? { mix: fmt(mix) } : {}),
-      ...(divS != null ? { divideStart: fmt(divS) } : {}),
-      ...(at("divide", "end") != null ? { divideEnd: fmt(at("divide", "end")!) } : {}),
-      ...(bakeS != null ? { bakeStart: fmt(bakeS) } : {}),
-      ...(at("bake", "end") != null ? { bakeEnd: fmt(at("bake", "end")!) } : {}),
-    },
-    staff: {
-      ...(staff("mix", mix) ? { mix: staff("mix", mix) } : {}),
-      ...(staff("divide", divS) ? { divide: staff("divide", divS) } : {}),
-      ...(staff("bake", bakeS) ? { bake: staff("bake", bakeS) } : {}),
-      ...(staff("pack", packS) ? { pack: staff("pack", packS) } : {}),
-    },
+    items: dough.items.map((i) => {
+      const p = productOf.get(i.productId);
+      return {
+        productId: i.productId, name: i.name, gram: i.doughGram, orders: i.pieces, prep: Math.ceil(i.pieces / (1 - loss)),
+        ...(p?.bakeTempC != null ? { bakeTempC: p.bakeTempC } : {}), ...(p?.bakeMinutes != null ? { bakeMinutes: p.bakeMinutes } : {}),
+        ...(p?.bakeToleranceC != null ? { bakeToleranceC: p.bakeToleranceC } : {}),
+      };
+    }),
+    processes,
+    ...(dm?.kneadTargetC != null ? { targetKneadC: dm.kneadTargetC, kneadToleranceC: dm.kneadToleranceC ?? DEFAULT_KNEAD_TOLERANCE_C } : {}),
     ...(args.yeast ? { yeast: args.yeast } : {}),
-    targetKneadC: TARGET_KNEAD_C,
-    ...(parseBakeGuide(bakeStep?.note) ? { bakeGuide: parseBakeGuide(bakeStep?.note) } : {}),
     ...(args.weather ? { weather: args.weather } : {}),
   };
+}
+
+/** 工程の行（前の版で保存したカードは、分割・焼成・包装の行を作る） */
+export function processesOf(base: CardBase): CardProcess[] {
+  if (base.processes?.length) return base.processes;
+  return [
+    { key: "mix", name: "ミキサー", plannedStart: base.planned?.mix, staffHint: base.staff?.mix },
+    { key: "divide", name: "分割", plannedStart: base.planned?.divideStart, plannedEnd: base.planned?.divideEnd, staffHint: base.staff?.divide },
+    { key: "bake", name: "焼成", plannedStart: base.planned?.bakeStart, plannedEnd: base.planned?.bakeEnd, staffHint: base.staff?.bake },
+    { key: "pack", name: "包装", staffHint: base.staff?.pack },
+    { key: "metal_check", name: "金属検査", ccp: true },
+  ];
+}
+
+/** 工程ごとの入力（前の版の divideStart などは、その工程に読みかえる） */
+export function stepsOf(input: CardInput): Partial<Record<ProcessStepKey, StepInput>> {
+  const legacy: Partial<Record<ProcessStepKey, StepInput>> = {};
+  const put = (k: ProcessStepKey, v: StepInput) => {
+    const clean = Object.fromEntries(Object.entries(v).filter(([, x]) => x != null && x !== "")) as StepInput;
+    if (Object.keys(clean).length) legacy[k] = clean;
+  };
+  put("divide", { start: input.divideStart, end: input.divideEnd, staff: input.divideStaff });
+  put("bake", { start: input.bakeStart, end: input.bakeEnd, staff: input.bakeStaff });
+  put("pack", { staff: input.packStaff });
+  const out: Partial<Record<ProcessStepKey, StepInput>> = { ...legacy };
+  for (const [k, v] of Object.entries(input.steps ?? {})) out[k as ProcessStepKey] = { ...legacy[k as ProcessStepKey], ...v };
+  return out;
 }
 
 /** ミキサーの回ごとの入力（前の形＝1回分だけの kneadTempC などは1回目に読みかえる） */
@@ -228,6 +290,20 @@ export function mixesOf(input: CardInput): MixInput[] {
     return [{ waterTempC: input.waterTempC, kneadTime: input.kneadTime, kneadTempC: input.kneadTempC, staff: input.mixStaff }];
   }
   return [];
+}
+
+/** 捏上温度の基準（生地のマスタ）。登録が無ければ undefined（赤にしない） */
+export function kneadRule(base: CardBase): { target: number; tol: number } | undefined {
+  if (base.targetKneadC == null) return undefined;
+  return { target: base.targetKneadC, tol: base.kneadToleranceC ?? DEFAULT_KNEAD_TOLERANCE_C };
+}
+
+/** 焼成の基準（商品のマスタ。前の版で保存したカードは、そのときの目安） */
+export function bakeRule(base: CardBase, item: CardItem): { temp?: number; minutes?: number; tol: number } | undefined {
+  const temp = item.bakeTempC ?? base.bakeGuide?.tempC;
+  const minutes = item.bakeMinutes ?? base.bakeGuide?.minutes;
+  if (temp == null && minutes == null) return undefined;
+  return { temp, minutes, tol: item.bakeToleranceC ?? DEFAULT_BAKE_TOLERANCE_C };
 }
 
 /** 終わりが始めより前か（0:00 をまたぐのはよい。12時間より長くなる並びだけ「前」とみなす） */
@@ -240,20 +316,29 @@ function backwards(from?: string, to?: string) {
 /** 目標から外れている所（赤にする） */
 export function checkCard(base: CardBase, input: CardInput): Problem[] {
   const p: Problem[] = [];
+  const kr = kneadRule(base);
   mixesOf(input).forEach((m, i) => {
-    if (m.kneadTempC != null && Math.abs(m.kneadTempC - base.targetKneadC) > KNEAD_TOLERANCE_C) {
-      p.push({ field: `mixes.${i}.kneadTempC`, message: `${i + 1}回目の捏上温度が目標（${base.targetKneadC}℃ ±${KNEAD_TOLERANCE_C}）から外れています` });
+    if (kr && m.kneadTempC != null && Math.abs(m.kneadTempC - kr.target) > kr.tol) {
+      p.push({ field: `mixes.${i}.kneadTempC`, message: `${i + 1}回目の捏上温度が目標（${kr.target}℃ ±${kr.tol}）から外れています` });
     }
   });
   if (input.yeastExpiry && input.yeastExpiry < base.productionDate) p.push({ field: "yeastExpiry", message: "イーストの賞味期限が過ぎています" });
-  if (backwards(input.divideStart, input.divideEnd)) p.push({ field: "divideEnd", message: "分割の終わりが始めより前です" });
-  if (backwards(input.bakeStart, input.bakeEnd)) p.push({ field: "bakeEnd", message: "焼成の終わりが始めより前です" });
+  const steps = stepsOf(input);
+  for (const pr of processesOf(base)) {
+    const s = steps[pr.key];
+    if (!s) continue;
+    if (backwards(s.start, s.end)) p.push({ field: `steps.${pr.key}.end`, message: `${pr.name}の終わりが始めより前です` });
+    if (pr.temp && s.tempC != null && ((pr.temp.min != null && s.tempC < pr.temp.min) || (pr.temp.max != null && s.tempC > pr.temp.max))) {
+      p.push({ field: `steps.${pr.key}.tempC`, message: `${pr.name}の温度が管理の範囲（${pr.temp.min ?? ""}〜${pr.temp.max ?? ""}℃）から外れています` });
+    }
+  }
   for (const it of base.items) {
     const x = input.items[it.productId];
     if (!x) continue;
     const f = (k: string) => `items.${it.productId}.${k}`;
-    if (base.bakeGuide?.tempC != null && x.bakeTempC != null && Math.abs(x.bakeTempC - base.bakeGuide.tempC) > BAKE_TOLERANCE_C) {
-      p.push({ field: f("bakeTempC"), message: `${it.name}: 焼成温度が目安（${base.bakeGuide.tempC}℃）から外れています` });
+    const br = bakeRule(base, it);
+    if (br?.temp != null && x.bakeTempC != null && Math.abs(x.bakeTempC - br.temp) > br.tol) {
+      p.push({ field: f("bakeTempC"), message: `${it.name}: 焼成温度が目安（${br.temp}℃ ±${br.tol}）から外れています` });
     }
     if (x.metal === "ng") p.push({ field: f("metal"), message: `${it.name}: 金属検査が × です（責任者に知らせる）` });
     if (x.sensory === "ng") p.push({ field: f("sensory"), message: `${it.name}: 官能検査が × です` });
@@ -269,6 +354,11 @@ export function cardStatus(base: CardBase, input?: CardInput): "empty" | "writin
   const m0 = mixesOf(input)[0] ?? {};
   const need = [m0.kneadTempC, m0.waterTempC, input.writer, ...base.items.flatMap((i) => [input.items[i.productId]?.packed, input.items[i.productId]?.metal || undefined])];
   if (need.every((v) => v != null && v !== "")) return "done";
-  const any = Object.entries(input).some(([k, v]) => k !== "items" && v != null && v !== "") || Object.values(input.items).some((x) => Object.values(x).some((v) => v != null && v !== ""));
+  const filled = (o: object | undefined) => !!o && Object.values(o).some((v) => v != null && v !== "");
+  const any =
+    Object.entries(input).some(([k, v]) => !["items", "steps", "mixes"].includes(k) && v != null && v !== "") ||
+    Object.values(input.items).some(filled) ||
+    mixesOf(input).some(filled) ||
+    Object.values(input.steps ?? {}).some(filled);
   return any ? "writing" : "empty";
 }

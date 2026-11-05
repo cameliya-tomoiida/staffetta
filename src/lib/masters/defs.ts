@@ -1,7 +1,7 @@
 // 各マスタの CSV 列定義（日本語の列名）と、種類ごとの検査（③）。
 // 型は src/data/types.ts の …Master。しくみは columns.ts。
 import type {
-  CourseMaster, CustomerMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
+  CourseMaster, CustomerMaster, CustomerProductMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, RecipeItemMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster,
   SupplierMaster, ToppingItemMaster, ToppingMaster,
 } from "@/data/types";
@@ -99,6 +99,8 @@ export const doughDef: MasterDef<DoughMaster> = {
     { key: "line", label: "ライン", type: "enum", options: LINE_OPTIONS, required: true, example: "パン" },
     { key: "lossRate", label: "ロス率", type: "number", min: 0, max: 0.5, required: true, example: "0.04", help: "4% なら 0.04" },
     { key: "mixerMaxKg", label: "ミキサー1回の上限（kg）", type: "number", min: 0.1, example: "60", help: "空なら使うミキサーの上限" },
+    { key: "kneadTargetC", label: "目標の捏上温度（℃）", type: "number", example: "26", help: "製品カードで、捏上温度がこの ± 許す幅から外れたら赤" },
+    { key: "kneadToleranceC", label: "捏上温度の許す幅（±℃）", type: "number", min: 0, example: "2", help: "空なら 2" },
     { key: "note", label: "メモ", type: "text" },
   ],
   check: (d, all) => {
@@ -136,6 +138,9 @@ export const stepDef: MasterDef<ProcessStepMaster> = {
     { key: "prevDay", label: "前日の作業", type: "boolean", default: false, example: "いいえ" },
     { key: "ccp", label: "CCP", type: "boolean", default: false, example: "いいえ" },
     { key: "note", label: "条件・メモ", type: "text", example: "捏ね上げ 26℃" },
+    { key: "tempTargetC", label: "確かめる温度（℃）", type: "number", example: "-26", help: "製品カードでこの工程の温度を書く欄を出す（急速冷凍など）" },
+    { key: "tempMinC", label: "温度の下限（℃）", type: "number", example: "-28" },
+    { key: "tempMaxC", label: "温度の上限（℃）", type: "number", example: "-24" },
   ],
   check: (s, all) => {
     const eq = s.equipmentId ? all.equipment?.find((e) => e.id === s.equipmentId) : undefined;
@@ -187,6 +192,9 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "sliceMm", label: "スライス幅（mm）", type: "number", min: 1, example: "" },
     { key: "metalCheck", label: "金属検査", type: "enum", options: METAL_CHECK_OPTIONS, example: "包装のあと" },
     { key: "laborCost", label: "人件費（円/個）", type: "number", min: 0 },
+    { key: "bakeTempC", label: "焼成の温度（℃）", type: "number", example: "200", help: "製品カードの焼成の目安。ピザは 450 など" },
+    { key: "bakeMinutes", label: "焼成の時間（分）", type: "number", min: 0, example: "12" },
+    { key: "bakeToleranceC", label: "焼成の温度の許す幅（±℃）", type: "number", min: 0, example: "10", help: "空なら 10" },
     { key: "supplierId", label: "仕入先ID", type: "text", ref: "suppliers", requiredWhen: (r) => kind("buy")(r) && "仕入は「仕入先ID」が必須です" },
     { key: "packSizes", label: "仕入の入数", type: "list", example: "6;8", requiredWhen: (r) => kind("buy")(r) && "仕入は「仕入の入数」が必須です（1個ずつなら 1）" },
     { key: "unitCost", label: "仕入値（円/個）", type: "number", min: 0 },
@@ -373,6 +381,28 @@ export const standingOrderDef: MasterDef<StandingOrderMaster> = {
   },
 };
 
+// ───────── 取引先の商品（⑦） ─────────
+export const customerProductDef: MasterDef<CustomerProductMaster> = {
+  name: "customerProducts", label: "取引先の商品と卸価格", keyColumns: ["customerId", "code"],
+  columns: [
+    { key: "customerId", label: "得意先ID", type: "text", required: true, ref: "customers", example: "C01" },
+    { key: "code", label: "商品コード", type: "text", required: true, example: "P01", help: "弥生販売の商品コード（STAFFETTA だけの商品なら商品ID）" },
+    { key: "name", label: "商品名", type: "text", required: true, example: "バターロール" },
+    { key: "productId", label: "STAFFETTA の商品ID", type: "text", ref: "products", example: "P01", help: "製造計画・注文とひも付ける商品（空でもよい）" },
+    { key: "unit", label: "単位", type: "text", example: "個" },
+    { key: "price", label: "卸価格（円）", type: "number", min: 0, example: "38", help: "この取引先に売る値段（1単位あたり）" },
+    { key: "cost", label: "原価（円）", type: "number", min: 0, example: "21.5", help: "仕入れて売る商品は仕入れ価格" },
+    { key: "priceNote", label: "単価の要確認", type: "text", example: "", help: "期間の中で単価がちがった日があれば、ここに並べる" },
+    { key: "source", label: "仕入れ元の目安", type: "text", example: "自社" },
+    { key: "quantity", label: "期間の数量", type: "number", min: 0, example: "1200" },
+    { key: "weekdays", label: "よく出る曜日", type: "weekdays", example: "月;水;金" },
+    { key: "lastDate", label: "最後に出た日", type: "text", example: "2026-09-30" },
+    { key: "note", label: "メモ", type: "text" },
+    ACTIVE,
+  ],
+  check: (r) => (r.lastDate && !/^\d{4}-\d{2}-\d{2}$/.test(r.lastDate) ? ["「最後に出た日」は 2026-09-30 の形で入れてください"] : []),
+};
+
 // ───────── 人員 ─────────
 export const shiftDef: MasterDef<ShiftMaster> = {
   name: "shifts", label: "班", keyColumns: ["id"],
@@ -403,14 +433,14 @@ export const staffAssignmentDef: MasterDef<StaffAssignmentMaster> = {
 export const MASTER_DEFS: Record<MasterName, MasterDef> = {
   lines: lineDef, equipment: equipmentDef, doughs: doughDef, recipeItems: recipeItemDef, steps: stepDef,
   toppings: toppingDef, toppingItems: toppingItemDef, products: productDef, materials: materialDef, packaging: packagingDef,
-  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef, standingOrders: standingOrderDef,
+  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef, standingOrders: standingOrderDef, customerProducts: customerProductDef,
   shifts: shiftDef, staffAssignments: staffAssignmentDef,
 } as unknown as Record<MasterName, MasterDef>;
 
 /** 取り込みの順番（参照される側から） */
 export const MASTER_ORDER: MasterName[] = [
   "lines", "suppliers", "supplierDeliveries", "courses", "customers", "materials", "packaging", "equipment", "doughs", "recipeItems",
-  "steps", "toppings", "toppingItems", "products", "productPackaging", "standingOrders", "shifts", "staffAssignments",
+  "steps", "toppings", "toppingItems", "products", "productPackaging", "standingOrders", "customerProducts", "shifts", "staffAssignments",
 ];
 
 /** マスタ一式をまとめて確かめる（参照・重複・種類ごとの検査）。画面の「マスタの点検」やテストで使う */
