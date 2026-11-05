@@ -57,6 +57,49 @@ function readRows<T>(table: string): T[] {
   return (getDb().prepare(`SELECT json FROM ${table}`).all() as { json: string }[]).map((r) => JSON.parse(r.json) as T);
 }
 
+/** 表を作り、初めてなら移行をすませる（中身は読まない。検索などの前に呼ぶ） */
+export async function ensureStore(): Promise<void> {
+  init();
+  await migrateOnce();
+}
+
+/**
+ * 画面に出すための「最近の分だけ」のデータ（長く使ってたまっても、画面を開くのが遅くならないように）。
+ * - 注文: 納品日が since 以降 ＋ 要確認・仮発注は日付に関係なく全部
+ * - FAX: 受信が since 以降 ＋ まだ確定・仕分けしていないものは全部
+ * - 発注書: 届けてほしい日が since 以降 ＋ まだ送っていないものは全部
+ * 古い分は検索（search.ts）で見る。
+ * 注意: これは読むだけ。saveDiff（updateDb）には渡せない（全件でないので、読まなかった行を消してしまうため）。
+ */
+export type RecentDb = Db & { readonly partialSince: string };
+
+export async function loadRecentDb(opts: { since: string }): Promise<RecentDb> {
+  init();
+  await migrateOnce();
+  const since = opts.since;
+  const rows = <T,>(sql: string, ...args: string[]) => (getDb().prepare(sql).all(...args) as { json: string }[]).map((r) => JSON.parse(r.json) as T);
+  const formats = await listMaster<FormatRow>(FAX_FORMATS);
+  const templates: Db["templates"] = {};
+  for (const f of formats) {
+    const { id: _id, disabled: _d, ...t } = f;
+    templates[f.customerId] = t;
+  }
+  const db: RecentDb = {
+    partialSince: since,
+    faxes: rows<FaxDoc>(`SELECT json FROM faxes WHERE received_at >= ? OR status NOT IN ('confirmed', 'other')`, since)
+      .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt) || a.id.localeCompare(b.id)),
+    orders: rows<Order>(`SELECT json FROM orders WHERE delivery_date >= ? OR status IN ('needs_review', 'provisional')`, since)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)),
+    purchaseOrders: rows<PurchaseOrder>(`SELECT json FROM purchase_orders WHERE delivery_date >= ? OR status IS NULL OR status != 'sent'`, since),
+    importedMessageIds: [],
+    templates,
+    mappings: kvGet<Db["mappings"]>("fax_mappings") ?? {},
+  };
+  const loss = kvGet<Db["lossRates"]>("loss_rates");
+  if (loss && typeof loss.rates === "object") db.lossRates = loss;
+  return db;
+}
+
 /** 保存されている全データを、いままでの Db の形で返す */
 export async function loadDb(): Promise<Db> {
   init();
@@ -118,6 +161,8 @@ function diffById<T extends { id: string }>(before: T[], after: T[], upsert: (x:
 
 /** before（読んだ時点）と after（書き換え後）を比べて、変わった所だけ保存する */
 export async function saveDiff(before: Db, after: Db) {
+  // 最近の分だけ読んだデータ（loadRecentDb）を渡すと、読まなかった古い行を消してしまう。絶対に混ぜない
+  if ("partialSince" in before || "partialSince" in after) throw new Error("saveDiff には全件のデータ（loadDb）を渡してください（loadRecentDb の結果は読むだけ）");
   init();
   // 様式（masters）は別のトランザクション（masters.ts が自前で持つ）
   const formatRows: FormatRow[] = [];
