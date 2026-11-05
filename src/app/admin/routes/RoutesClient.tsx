@@ -10,6 +10,7 @@ import { buildTimeline, suggestOrder, toHHMM, type Depot, type RouteSettings, ty
 import { geocodeMissingAction, moveCustomerAction, roadRouteAction, saveStopsAction } from "./actions";
 import { RouteMap, type MapPin } from "./RouteMap";
 import { CourseForm, DepotForm, ImportPanel } from "./RoutePanels";
+import type { RouteRule } from "@/lib/routes/ai-rules";
 import { OptimizePanel } from "./OptimizePanel";
 
 export type RouteCustomer = Stop & { course?: string; deliveryMethod?: DeliveryMethod; deliveryWeekdays?: number[] };
@@ -29,8 +30,8 @@ function initialOrder(course: CourseMaster, customers: RouteCustomer[]): string[
 }
 
 export function RoutesClient({
-  courses, customers, depot, settings, optWeekday, optRun,
-}: { courses: CourseMaster[]; customers: RouteCustomer[]; depot: Depot; settings: RouteSettings; optWeekday?: number; optRun?: boolean }) {
+  courses, customers, depot, settings, optWeekday, optRun, rules, hasAi,
+}: { courses: CourseMaster[]; customers: RouteCustomer[]; depot: Depot; settings: RouteSettings; optWeekday?: number; optRun?: boolean; rules: RouteRule[]; hasAi: boolean }) {
   // 地図に出すのは当日に走る便（前日に出す宅配便・冷凍便は除く）
   const own = courses.filter((c) => c.dayOffset === 0);
   const count = (id: string) => customers.filter((x) => x.course === id).length;
@@ -327,7 +328,7 @@ export function RoutesClient({
         </details>
       )}
 
-      <OptimizePanel courses={courses} customers={customers} depot={depot} settings={settings} initialWeekday={optWeekday} autoRun={optRun} />
+      <OptimizePanel courses={courses} customers={customers} depot={depot} settings={settings} initialWeekday={optWeekday} autoRun={optRun} rules={rules} hasAi={hasAi} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <CourseForm key={courseId} course={course} />

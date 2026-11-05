@@ -1,12 +1,14 @@
 "use client";
 // コースの見直し（⑦の(17)）。曜日を選んで「見直し案を出す」→ 何コースに分けて・どの順で・何時に出ればよいか、今のコースとの差を表と地図で。
 // 計算はこのブラウザの中（src/lib/routes/optimize.ts）。保存はしない（案を見て、人がコースを直す）。
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { CourseMaster } from "@/data/types";
 import { buttonClass, choiceClass } from "@/components/ui";
 import { currentRoutes, DEFAULT_OPTIMIZE, deliversOn, optimizeRoutes, type OptimizeOptions, type OptimizeResult, type OptStop, type RoutePlan, summarize, type Summary } from "@/lib/routes/optimize";
 import { toHHMM, type Depot, type RouteSettings } from "@/lib/routes/plan";
-import { roadRouteAction } from "./actions";
+import { applyRules, rulesForAi, ruleText, type RouteRule } from "@/lib/routes/ai-rules";
+import { chatRoutesAction, explainResultAction, roadRouteAction } from "./actions";
+import { RouteChat, RulesBox, type Turn } from "./RouteAi";
 import { RouteMap, type MapLine, type MapPin } from "./RouteMap";
 import type { RouteCustomer } from "./RoutesClient";
 
@@ -30,58 +32,123 @@ function stopsFor(customers: RouteCustomer[], courses: CourseMaster[], weekday: 
   });
 }
 
+type Form = { courses: string; earliestDepart: string; maxHours: string; serviceMinutes: string; deadlineSlack: string; breakMinutes: string };
+type Result = { key: string; opt: OptimizeResult; now: RoutePlan[]; ms: number; skipped: string[] };
+const DEFAULT_FORM: Form = {
+  courses: "", earliestDepart: DEFAULT_OPTIMIZE.earliestDepart, maxHours: String(DEFAULT_OPTIMIZE.maxHours),
+  serviceMinutes: String(DEFAULT_OPTIMIZE.serviceMinutes), deadlineSlack: String(DEFAULT_OPTIMIZE.deadlineSlack), breakMinutes: "0",
+};
+const keyOf = (wd: number, f: Form, rules: RouteRule[]) => JSON.stringify([wd, f, rules.filter((r) => r.on && r.kind !== "info").map((r) => r.id)]);
+
+/** 計算（条件を当ててから）。今のコースも同じ条件で時刻を出す */
+function compute(depot: Depot, settings: RouteSettings, courses: CourseMaster[], all: OptStop[], weekday: number, f: Form, rules: RouteRule[]): Result {
+  const o: OptimizeOptions = {
+    weekday, settings,
+    courses: f.courses ? Number(f.courses) : undefined,
+    earliestDepart: f.earliestDepart, maxHours: Number(f.maxHours) || 7, serviceMinutes: Number(f.serviceMinutes) || 10,
+    deadlineSlack: f.deadlineSlack === "" ? -1 : Number(f.deadlineSlack), breakMinutes: Number(f.breakMinutes) || 0,
+  };
+  const t0 = Date.now();
+  const a = applyRules(all, rules, weekday);
+  const opt = optimizeRoutes(depot, a.stops.filter((x) => x.lat != null && x.lng != null), { ...o, backBy: a.backBy, together: a.together });
+  const now = currentRoutes(depot, courses, a.stops, o);
+  return { key: keyOf(weekday, f, rules), opt, now, ms: Date.now() - t0, skipped: a.skipped };
+}
+
+/** AI に渡す結果のまとめ（説明・相談用） */
+function resultText(r: Result, weekday: number, rules: RouteRule[], nameOf: (id: string) => string): string {
+  const sum = (s: Summary) =>
+    `${s.routes}コース・${s.stops}件・いちばん早い出発 ${s.firstDepart != null ? toHHMM(s.firstDepart) : "—"}・いちばん遅い帰社 ${s.lastBack != null ? toHHMM(s.lastBack) : "—"}・走る ${dur(s.driveMinutes)}（${Math.round(s.km)}km）・出発〜帰社の合計 ${dur(s.workMinutes)}・遅れる先 ${s.late}件`;
+  const routes = (rs: RoutePlan[]) =>
+    rs.map((x) => `- ${x.name}: ${x.ids.length}件 ${toHHMM(x.timeline.depart)}発→${toHHMM(x.timeline.back)}帰 遅れ${x.timeline.lateCount}件（${x.ids.slice(0, 6).map(nameOf).join("・")}${x.ids.length > 6 ? "…" : ""}）`).join("\n");
+  return [
+    `${WD[weekday]}曜`,
+    `## 今のコース\n${sum(summarize(r.now))}\n${routes(r.now)}`,
+    `## 見直し案\n${sum(r.opt.summary)}\n${routes(r.opt.routes)}`,
+    r.opt.unassigned.length ? `## 入らなかった先\n${r.opt.unassigned.map((u) => `- ${u.name}: ${u.reason}`).join("\n")}` : "",
+    r.opt.warnings?.length ? `## 守れなかった決まり\n${r.opt.warnings.join("\n")}` : "",
+    `## 使った条件\n${rules.filter((x) => x.on && x.kind !== "info").map((x) => `- ${ruleText(x, nameOf)}`).join("\n") || "なし"}`,
+  ].filter(Boolean).join("\n\n");
+}
+
 export function OptimizePanel({
-  courses, customers, depot, settings, initialWeekday, autoRun,
-}: { courses: CourseMaster[]; customers: RouteCustomer[]; depot: Depot; settings: RouteSettings; initialWeekday?: number; autoRun?: boolean }) {
+  courses, customers, depot, settings, initialWeekday, autoRun, rules: rulesIn, hasAi,
+}: { courses: CourseMaster[]; customers: RouteCustomer[]; depot: Depot; settings: RouteSettings; initialWeekday?: number; autoRun?: boolean; rules: RouteRule[]; hasAi: boolean }) {
   const [weekday, setWeekday] = useState(initialWeekday ?? 1);
-  const [form, setForm] = useState({
-    courses: "", earliestDepart: DEFAULT_OPTIMIZE.earliestDepart, maxHours: String(DEFAULT_OPTIMIZE.maxHours),
-    serviceMinutes: String(DEFAULT_OPTIMIZE.serviceMinutes), deadlineSlack: String(DEFAULT_OPTIMIZE.deadlineSlack), breakMinutes: "0",
-  });
+  const [form, setForm] = useState<Form>(DEFAULT_FORM);
+  const [rules, setRules] = useState<RouteRule[]>(rulesIn);
   // URL の ?mitoshi=1 なら、開いたときに計算しておく（見直し案を人に見せるとき）
-  const [result, setResult] = useState<{ key: string; opt: OptimizeResult; now: RoutePlan[]; ms: number } | null>(() => {
+  const [result, setResult] = useState<Result | null>(() => {
     if (!autoRun) return null;
     const wd = initialWeekday ?? 1;
-    const o: OptimizeOptions = { ...DEFAULT_OPTIMIZE, weekday: wd, settings };
-    const all0 = stopsFor(customers, courses, wd);
-    const t0 = Date.now();
-    const opt = optimizeRoutes(depot, all0.filter((x) => x.lat != null && x.lng != null), o);
-    const key0 = JSON.stringify([wd, { courses: "", earliestDepart: o.earliestDepart, maxHours: String(o.maxHours), serviceMinutes: String(o.serviceMinutes), deadlineSlack: String(o.deadlineSlack), breakMinutes: "0" }]);
-    return { key: key0, opt, now: currentRoutes(depot, courses, all0, o), ms: Date.now() - t0 };
+    return compute(depot, settings, courses, stopsFor(customers, courses, wd), wd, DEFAULT_FORM, rulesIn);
   });
   const [view, setView] = useState<"plan" | "now">("plan");
   const [busy, setBusy] = useState(false);
   const [roads, setRoads] = useState<Record<string, [number, number][] | undefined>>({});
+  const [explain, setExplain] = useState<{ key: string; text: string } | null>(null);
+  const [turns, setTurns] = useState<Turn[]>([{ role: "assistant", text: "「〇〇さんは11時までに帰りたい」「3コースにして」「この2つの先は同じコースに」のように話すと、条件を直して計算し直し、結果を説明します。" }]);
+  const [aiPending, startAi] = useTransition();
 
   const all = useMemo(() => stopsFor(customers, courses, weekday), [customers, courses, weekday]);
   const placed = all.filter((s) => s.lat != null && s.lng != null);
   const noPos = all.length - placed.length;
-  const options = (): OptimizeOptions => ({
-    weekday, settings,
-    courses: form.courses ? Number(form.courses) : undefined,
-    earliestDepart: form.earliestDepart, maxHours: Number(form.maxHours) || 7, serviceMinutes: Number(form.serviceMinutes) || 10,
-    deadlineSlack: form.deadlineSlack === "" ? -1 : Number(form.deadlineSlack), breakMinutes: Number(form.breakMinutes) || 0,
-  });
-  const key = JSON.stringify([weekday, form]);
+  const key = keyOf(weekday, form, rules);
+  const byId = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
+  const nameOf = (id: string) => byId.get(id)?.name ?? id;
 
+  const runWith = (f: Form, rs: RouteRule[]) => compute(depot, settings, courses, all, weekday, f, rs);
+  const show = (r: Result) => {
+    setResult(r);
+    setRoads({});
+    setView("plan");
+  };
   const run = () => {
     setBusy(true);
     // 画面に「計算しています」を出してから計算する
     setTimeout(() => {
-      const o = options();
-      const t0 = performance.now();
-      const opt = optimizeRoutes(depot, placed, o);
-      const now = currentRoutes(depot, courses, all, o);
-      setResult({ key, opt, now, ms: performance.now() - t0 });
-      setRoads({});
-      setView("plan");
+      show(runWith(form, rules));
       setBusy(false);
     }, 30);
   };
+  const askExplain = (r: Result, rs: RouteRule[]) =>
+    startAi(async () => {
+      const x = await explainResultAction(resultText(r, weekday, rs, nameOf));
+      setExplain({ key: r.key, text: x.ok ? x.text : `（説明を出せませんでした: ${x.error}）` });
+    });
+  const onSend = (said: string) => {
+    const next = [...turns, { role: "user" as const, text: said }];
+    setTurns(next);
+    startAi(async () => {
+      const ctx = {
+        weekday,
+        options: { courses: form.courses, earliestDepart: form.earliestDepart, maxHours: form.maxHours, breakMinutes: form.breakMinutes },
+        rules: rulesForAi(rules.filter((r) => !r.customerIds.length || r.customerIds.some((id) => all.some((s) => s.id === id)))),
+        stops: all.map((s) => ({ id: s.id, name: s.name, ...(s.deliveryWindowFrom || s.deliveryWindowTo ? { window: `${s.deliveryWindowFrom ?? ""}〜${s.deliveryWindowTo ?? ""}` } : {}), ...(s.course ? { course: courses.find((c) => c.id === s.course)?.name ?? s.course } : {}) })),
+        ...(result && result.key === key ? { lastResult: resultText(result, weekday, rules, nameOf) } : {}),
+      };
+      const r = await chatRoutesAction(next.slice(-12), ctx, all.map((s) => [s.id, s.name]));
+      if (!r.ok) return setTurns([...next, { role: "assistant", text: `（うまくいきませんでした: ${r.error}）` }]);
+      const p = r.options;
+      const f: Form = {
+        ...form,
+        ...(p.courses != null ? { courses: p.courses > 0 ? String(Math.round(p.courses)) : "" } : {}),
+        ...(p.earliestDepart && /^\d{1,2}:\d{2}$/.test(p.earliestDepart) ? { earliestDepart: p.earliestDepart.padStart(5, "0") } : {}),
+        ...(p.maxHours != null && p.maxHours > 0 ? { maxHours: String(p.maxHours) } : {}),
+        ...(p.breakMinutes != null && p.breakMinutes >= 0 ? { breakMinutes: String(Math.round(p.breakMinutes)) } : {}),
+      };
+      setForm(f);
+      setRules(r.rules);
+      const res = runWith(f, r.rules);
+      show(res);
+      const warn = [...r.warnings, ...(res.opt.warnings ?? [])];
+      setTurns([...next, { role: "assistant", text: `${r.reply}${warn.length ? `\n！ ${warn.join("\n！ ")}` : ""}\n（計算し直しました。下に説明を出します）` }]);
+      const x = await explainResultAction(resultText(res, weekday, r.rules, nameOf));
+      setExplain({ key: res.key, text: x.ok ? x.text : `（説明を出せませんでした: ${x.error}）` });
+    });
+  };
 
   const shown = result ? (view === "plan" ? result.opt.routes : result.now) : [];
-  const byId = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
-
   // 地図の線を道の上の線に（コースごとに。取れなければ点線のまま）
   const shownKey = JSON.stringify(shown.map((r) => r.ids));
   useEffect(() => {
@@ -167,6 +234,7 @@ export function OptimizePanel({
       <p className="text-base text-ink-soft">
         「納品時刻だけの先の余裕」: 時間の希望（何時〜何時）が無く、納品時刻だけ入っている先は「納品時刻＋この分まで」に着く決まりとして計算します（空にすると締めなし）。1件の納品の時間は、取引先に入れてあればそちらを使います。
       </p>
+      <RulesBox rules={rules} setRules={setRules} ids={all.map((s) => s.id)} nameOf={nameOf} hasAi={hasAi} skipped={applyRules(all, rules, weekday).skipped} />
       <button type="button" className={buttonClass("primary", "lg")} disabled={busy || !placed.length} onClick={run}>
         {busy ? "計算しています…" : `${WD[weekday]}曜の見直し案を出す`}
       </button>
@@ -176,6 +244,23 @@ export function OptimizePanel({
       {result && (
         <div className="space-y-5">
           <Compare now={summarize(result.now)} plan={result.opt.summary} />
+
+          {result.opt.warnings?.map((w) => (
+            <p key={w} className="rounded-lg border-2 border-review-line bg-review-bg p-3 text-lg font-bold text-review-ink">！ {w}</p>
+          ))}
+          {hasAi && (
+            <div className="space-y-2 rounded-lg border-2 border-info-line bg-info-bg p-4 text-info-ink">
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-xl font-bold">AI の説明</h3>
+                {(!explain || explain.key !== result.key) && (
+                  <button type="button" className={buttonClass("ghost", "md")} disabled={aiPending} onClick={() => askExplain(result, rules)}>
+                    {aiPending ? "AI が考えています…" : "この結果を AI に説明してもらう"}
+                  </button>
+                )}
+              </div>
+              {explain && explain.key === result.key && <p className="text-lg whitespace-pre-wrap">{explain.text}</p>}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-3">
             <button type="button" aria-pressed={view === "plan"} className={choiceClass(view === "plan", "min-h-14 px-5 text-lg")} onClick={() => setView("plan")}>
@@ -200,10 +285,11 @@ export function OptimizePanel({
             </div>
           )}
           <p className="text-base text-ink-soft">
-            走る時間は直線の距離 × 係数 ÷ 速さ の目安です（地図の線だけ道の計算）。計算 {Math.round(result.ms)}ミリ秒。道の事情・車の大きさ・積める量はまだ見ていません。
+            走る時間は直線の距離 × 係数 ÷ 速さ の目安です（地図の線だけ道の計算）。計算 <span suppressHydrationWarning>{Math.round(result.ms)}</span>ミリ秒。道の事情・車の大きさ・積める量はまだ見ていません。
           </p>
         </div>
       )}
+      {hasAi && <RouteChat turns={turns} pending={aiPending} onSend={onSend} />}
     </section>
   );
 }

@@ -1,6 +1,10 @@
 "use server";
 // 配送コースの地図（⑦ /admin/routes）の画面から使う処理。中身は src/lib/routes/store.ts。
 import { revalidatePath } from "next/cache";
+import { listCustomerSettings } from "@/lib/channels/line/customers";
+import { chatRoutes, explainResult, readNotes, type ChatContext, type ChatTurn } from "@/lib/routes/ai-chat";
+import { normalizeRules, type RouteRule } from "@/lib/routes/ai-rules";
+import { listRouteRules, saveRouteRules } from "@/lib/routes/ai-store";
 import type { LatLng, RouteSettings } from "@/lib/routes/plan";
 import {
   applyImport, geocode, geocodeMissing, moveCustomer, previewImport, roadRoute, saveStops, setDepot, setRouteSettings, upsertCourse,
@@ -86,4 +90,62 @@ export async function applyImportAction(picks: ImportPick[]) {
   const r = await applyImport(picks, WHO);
   if (r.ok) revalidatePath("/", "layout");
   return r;
+}
+
+// ───────── ⑦(29) コースの見直しの AI ─────────
+
+export async function saveRouteRulesAction(rules: RouteRule[]) {
+  saveRouteRules(rules);
+  return { ok: true as const };
+}
+
+/** 配送メモを AI に読ませて、条件に足す（チャットの条件は残す） */
+export async function readNotesAction(ids: string[]) {
+  try {
+    const all = await listCustomerSettings();
+    const want = new Set(ids);
+    const mine = all.filter((c) => want.has(c.id));
+    const notes = mine
+      .filter((c) => c.deliveryHowTo?.trim() || c.deliveryCaution?.trim() || c.note?.trim())
+      .map((c) => ({
+        id: c.id, name: c.name,
+        ...(c.deliveryWindowFrom || c.deliveryWindowTo ? { window: `${c.deliveryWindowFrom ?? ""}〜${c.deliveryWindowTo ?? ""}` } : {}),
+        ...(c.deliveryHowTo ? { howTo: c.deliveryHowTo } : {}), ...(c.deliveryCaution ? { caution: c.deliveryCaution } : {}), ...(c.note ? { note: c.note } : {}),
+      }));
+    if (!notes.length) return { ok: true as const, rules: listRouteRules(), warnings: [], read: 0 };
+    const ai = await readNotes(notes);
+    const cur = listRouteRules();
+    const { rules, warnings } = normalizeRules(ai, new Map(mine.map((c) => [c.id, c.name])), "note", cur);
+    // この先たちのメモの条件は読み直したもので入れ替える（同じ中身は on/off を引きつぐ）。チャットの条件・ほかの先の条件は残す
+    const next = [...rules, ...cur.filter((r) => !(r.source === "note" && r.customerIds.some((id) => want.has(id))))];
+    saveRouteRules(next);
+    return { ok: true as const, rules: next, warnings, read: notes.length };
+  } catch (e) {
+    return { ok: false as const, error: msg(e) };
+  }
+}
+
+/** 人の話を条件と計算の決まりに直す */
+export async function chatRoutesAction(turns: ChatTurn[], ctx: ChatContext, known: [string, string][]) {
+  try {
+    const out = await chatRoutes(turns, ctx);
+    const cur = listRouteRules();
+    const { rules: chatRules, warnings } = normalizeRules(out.rules, new Map(known), "chat", cur);
+    // この曜日の一覧に無い先の条件（ほかの曜日のメモなど）は、そのまま残す
+    const here = new Set(known.map(([id]) => id));
+    const others = cur.filter((r) => r.customerIds.length && !r.customerIds.some((id) => here.has(id)));
+    const next = [...others, ...chatRules];
+    saveRouteRules(next);
+    return { ok: true as const, reply: out.reply, rules: next, options: out.options, warnings };
+  } catch (e) {
+    return { ok: false as const, error: msg(e) };
+  }
+}
+
+export async function explainResultAction(text: string) {
+  try {
+    return { ok: true as const, text: await explainResult(text) };
+  } catch (e) {
+    return { ok: false as const, error: msg(e) };
+  }
 }

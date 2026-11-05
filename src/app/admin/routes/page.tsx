@@ -1,3 +1,5 @@
+import { hasRouteAi } from "@/lib/routes/ai-chat";
+import { listRouteRules } from "@/lib/routes/ai-store";
 import { loadRouteData } from "@/lib/routes/store";
 import { RoutesClient, type RouteCustomer } from "./RoutesClient";
 
@@ -24,7 +26,7 @@ export default async function RoutesPage(props: PageProps<"/admin/routes">) {
           コースごとに、回る順番・着く時刻の目安・帰社の予定を見ます。順番を並べ替えると時刻をすぐ計算し直します。新しい人にコースを教えるときにも使えます。
         </p>
       </header>
-      <RoutesClient courses={courses} customers={rows} depot={depot} settings={settings} optWeekday={Number.isInteger(yobi) && yobi >= 0 && yobi <= 6 ? yobi : undefined} optRun={q.mitoshi === "1"} />
+      <RoutesClient courses={courses} customers={rows} depot={depot} settings={settings} optWeekday={Number.isInteger(yobi) && yobi >= 0 && yobi <= 6 ? yobi : undefined} optRun={q.mitoshi === "1"} rules={listRouteRules()} hasAi={hasRouteAi()} />
     </main>
   );
 }
