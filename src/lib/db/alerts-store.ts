@@ -41,7 +41,7 @@ export interface AlertAction {
   href?: string;
   ask?: string;
   run?: string;
-  args?: Record<string, string | number | boolean>;
+  args?: Record<string, unknown>;
   /** 主なボタン（強い色） */
   primary?: boolean;
 }

@@ -57,7 +57,7 @@ async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
       label: x.label,
       href: hrefOf(x.kind, x.payload),
       run: x.kind,
-      args: Object.fromEntries(Object.entries(x.payload).filter(([, v]) => ["string", "number", "boolean"].includes(typeof v))) as Record<string, string | number | boolean>,
+      args: x.payload, // 材料の一覧（配列）などもそのまま渡す
       primary: i === 0,
     })),
   }));
