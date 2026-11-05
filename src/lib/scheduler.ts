@@ -152,6 +152,13 @@ export async function runScheduledTick(now = nowIso()): Promise<TickResult> {
       out.errors.push(`時刻で動く仕事: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
+  // ⑦の自動印刷（設定 → 自動印刷 で ON にしたものだけ。既定は全部 OFF）と、月末の衛生のまとめ
+  try {
+    const { runDuePrints } = await import("./printing/auto");
+    await runDuePrints(now);
+  } catch (e) {
+    out.errors.push(`自動印刷: ${e instanceof Error ? e.message : String(e)}`);
+  }
   return out;
 }
 
