@@ -4,7 +4,7 @@
 import { customers as masterCustomers } from "@/data/master";
 import { customerDeliveryTime, doughRecipes, lineSettings, toppingRecipes, type ProcessStep } from "@/data/production";
 import type {
-  CourseMaster, CustomerMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
+  CourseMaster, CustomerMaster, CustomerProductMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, Masters, MaterialMaster, PackagingMaterial, ProcessStepKey, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster, SupplierMaster,
 } from "@/data/types";
 import { legacyMaterials as allMaterials, legacyProducts as allProducts, legacySuppliers as allSuppliers } from "./legacy";
@@ -262,7 +262,39 @@ export function sampleMasters(): Masters {
     customers,
     courses: SAMPLE_COURSES,
     standingOrders: SAMPLE_STANDING_ORDERS,
+    customerProducts: sampleCustomerProducts(products, customers),
     shifts: SAMPLE_SHIFTS,
     staffAssignments: SAMPLE_STAFF,
   };
+}
+
+/**
+ * 取引先の商品と卸価格の見本（⑦。架空）。定期注文にある組み合わせ ＋ 定期注文の無い取引先には自社製造の商品を3つ。
+ * 卸価格は商品の売価、原価はその 55%（見本）。
+ */
+function sampleCustomerProducts(products: ProductMaster[], customers: CustomerMaster[]): CustomerProductMaster[] {
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const make = products.filter((p) => p.kind === "make");
+  const pairs = new Map<string, { customerId: string; productId: string; weekdays: number[] }>();
+  for (const s of SAMPLE_STANDING_ORDERS) {
+    const k = `${s.customerId}|${s.productId}`;
+    const cur = pairs.get(k) ?? { customerId: s.customerId, productId: s.productId, weekdays: [] };
+    if (!cur.weekdays.includes(s.weekday)) cur.weekdays.push(s.weekday);
+    pairs.set(k, cur);
+  }
+  customers.forEach((c, i) => {
+    if ([...pairs.values()].some((x) => x.customerId === c.id)) return;
+    for (let j = 0; j < 3 && make.length; j++) {
+      const p = make[(i * 3 + j) % make.length];
+      pairs.set(`${c.id}|${p.id}`, { customerId: c.id, productId: p.id, weekdays: [] });
+    }
+  });
+  return [...pairs.values()].flatMap(({ customerId, productId, weekdays }) => {
+    const p = byId.get(productId);
+    if (!p) return [];
+    return [{
+      customerId, code: p.id, name: p.name, productId: p.id, unit: p.unit, price: p.price, cost: Math.round(p.price * 0.55 * 10) / 10, source: p.kind === "buy" ? "仕入" : "自社",
+      ...(weekdays.length ? { weekdays: weekdays.sort((a, b) => a - b) } : {}), active: true,
+    }];
+  });
 }

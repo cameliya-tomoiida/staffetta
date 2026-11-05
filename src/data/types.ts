@@ -576,6 +576,38 @@ export interface StaffAssignmentMaster {
 }
 
 /** マスタ一式（計算関数はこれを引数で受け取る） */
+/**
+ * 取引先の商品（⑦）。どの取引先に、どの商品を、いくらで卸しているか。
+ * 元は弥生販売の得意先別売上明細（商品コード・単価・原単価）。STAFFETTA の商品（productId）とひも付けられるものはひも付ける。
+ * 1行 = 取引先 × 商品コード。
+ */
+export interface CustomerProductMaster {
+  customerId: string;
+  /** 商品コード（弥生販売の商品コード。STAFFETTA だけの商品なら商品ID と同じでよい） */
+  code: string;
+  /** 商品名（弥生販売の名前） */
+  name: string;
+  /** STAFFETTA の商品（ひも付けたとき） */
+  productId?: string;
+  /** 単位（個・P・本・袋） */
+  unit?: string;
+  /** 卸価格（円/単位）。期間の中でいちばん新しい単価 */
+  price?: number;
+  /** 原価（円/単位）。仕入れて売る商品は仕入れ価格 */
+  cost?: number;
+  /** 期間の中で単価がちがう日があった（要確認）。"152/150" のように並べる */
+  priceNote?: string;
+  /** 仕入れ元の目安（弥生の倉庫名。メーカー直送の便など） */
+  source?: string;
+  /** 期間の数量の合計と、よく出る曜日 */
+  quantity?: number;
+  weekdays?: number[];
+  /** 最後に出た日 */
+  lastDate?: string;
+  note?: string;
+  active: boolean;
+}
+
 export interface Masters {
   lines: LineMaster[];
   equipment: Equipment[];
@@ -593,6 +625,7 @@ export interface Masters {
   customers: CustomerMaster[];
   courses: CourseMaster[];
   standingOrders: StandingOrderMaster[];
+  customerProducts: CustomerProductMaster[];
   shifts: ShiftMaster[];
   staffAssignments: StaffAssignmentMaster[];
 }
