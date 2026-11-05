@@ -293,6 +293,7 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "deliveryTime", label: "納品時刻", type: "time", example: "08:30", help: "工程表の逆算に使う。空なら 08:00" },
     { key: "course", label: "配送コース", type: "text", example: "東コース（朝便）", help: "便のマスタの便ID。便のマスタに無いコースは、納品時刻から工程を逆算する" },
     { key: "deliveryWeekdays", label: "納品する曜日", type: "weekdays", example: "月;水;金", help: "空なら便の曜日（それも空なら毎日）" },
+    { key: "replyRequired", label: "受けたら返事が要る", type: "boolean", default: false, example: "いいえ", help: "はい なら、仮発注・注文を受けたときに受付の返事（FAX・メール）の下書きを自動で作る（送るのは人）" },
     { key: "note", label: "メモ", type: "text" },
     ACTIVE,
   ],

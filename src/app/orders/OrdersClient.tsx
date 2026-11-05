@@ -10,6 +10,7 @@ import {
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
 import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
+import { ReplyButton } from "./ReplyButton";
 import { easyReasons, LOW_CONFIDENCE } from "@/components/ui/wording";
 
 const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
@@ -28,8 +29,8 @@ const barColor: Record<OrderStatus, string> = {
 export type LeadView = { lineId: string; status: "late" | "warn"; reason: string };
 
 export function OrdersClient({
-  orders, today, storedIds, linePreviews, initialStatus = "all", lead = {},
-}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]> }) {
+  orders, today, storedIds, linePreviews, initialStatus = "all", lead = {}, alt = {},
+}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]>; alt?: Record<string, string> }) {
   const [who, setWho] = useState(STAFF[0]);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
@@ -184,7 +185,7 @@ export function OrdersClient({
       ) : (
         <ul className="space-y-2.5">
           {list.map((o) => (
-            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} who={who} canConfirm={stored.has(o.id)} linePreview={linePreviews[o.id]} lead={lead[o.id] ?? []} />
+            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} who={who} canConfirm={stored.has(o.id)} linePreview={linePreviews[o.id]} lead={lead[o.id] ?? []} alt={alt[o.id]} />
           ))}
         </ul>
       )}
@@ -193,9 +194,9 @@ export function OrdersClient({
 }
 
 function OrderRow({
-  o, custName, dayName, all, onJump, who, canConfirm, linePreview, lead,
+  o, custName, dayName, all, onJump, who, canConfirm, linePreview, lead, alt,
 }: {
-  o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string; lead: LeadView[];
+  o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string; lead: LeadView[]; alt?: string;
 }) {
   const leadOf = (lineId: string) => lead.find((x) => x.lineId === lineId);
   const x = o.source.extra ?? {};
@@ -273,6 +274,13 @@ function OrderRow({
                 </div>
               );
             })}
+          {/* 代わりの日（③）: 受けられない行があるとき「○日なら受けられます」 */}
+          {!off && alt && (
+            <div className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-review-line bg-sheet px-2.5 py-1 font-bold text-ink">
+              <Icon.clock className="mt-1 h-4 w-4 shrink-0 text-review-ink" />
+              <span>{alt}</span>
+            </div>
+          )}
           {typeof x.notes === "string" && x.notes && <div className="mt-1 text-sm text-ink-soft">メモ：{x.notes}</div>}
           {typeof x.readError === "string" && x.readError && (
             <div className="mt-1 flex items-start gap-1.5 text-sm font-bold text-alert-ink">
@@ -317,6 +325,7 @@ function OrderRow({
             <ConfirmButton order={o} who={who} custName={custName} />
           )}
           {linePreview && <LineNotifyButton orderId={o.id} preview={linePreview} who={who} />}
+          {(o.status === "confirmed" || o.status === "provisional") && o.source.channel !== "line" && <ReplyButton orderId={o.id} who={who} />}
           {faxRef?.kind === "fax_pdf" && o.status === "needs_review" && (
             <Link href={`/fax/${faxRef.faxId}`} className={buttonClass("primary")}>
               見比べて確認

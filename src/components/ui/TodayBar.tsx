@@ -15,7 +15,7 @@ const left = (iso: string, now: number) => {
   return h < 24 ? `あと ${h}時間${m % 60 ? `${m % 60}分` : ""}` : `あと ${Math.floor(h / 24)}日`;
 };
 
-function Chip({ href, tone, label, value, sub }: { href: string; tone: "review" | "alert" | "ok" | "plain"; label: string; value: React.ReactNode; sub?: React.ReactNode }) {
+function Chip({ href, tone, label, short, value, sub }: { href: string; tone: "review" | "alert" | "ok" | "plain"; label: string; short?: string; value: React.ReactNode; sub?: React.ReactNode }) {
   const cls = {
     review: "border-review-line bg-review-bg text-review-ink",
     alert: "border-alert-line bg-alert-bg text-alert-ink",
@@ -23,9 +23,19 @@ function Chip({ href, tone, label, value, sub }: { href: string; tone: "review" 
     plain: "border-rule-strong bg-sheet text-ink",
   }[tone];
   return (
-    <Link href={href} className={`flex min-h-12 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 leading-tight ${cls}`}>
-      <span className="text-sm font-bold">{label}</span>
-      <span className="num text-xl font-black">{value}</span>
+    // スマホでは小さく（帯が画面の3分の1にならないように）。長い名前は短く
+    <Link href={href} className={`flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2 py-0.5 leading-tight sm:min-h-12 sm:gap-1.5 sm:px-2.5 sm:py-1 ${cls}`}>
+      <span className="text-xs font-bold sm:text-sm">
+        {short ? (
+          <>
+            <span className="sm:hidden">{short}</span>
+            <span className="hidden sm:inline">{label}</span>
+          </>
+        ) : (
+          label
+        )}
+      </span>
+      <span className="num text-lg font-black sm:text-xl">{value}</span>
       {sub && <span className="hidden text-xs font-bold xl:inline">{sub}</span>}
     </Link>
   );
@@ -113,7 +123,7 @@ export function TodayBar() {
         value={s.purchaseDraft + s.purchaseApproved ? `${s.purchaseDraft + s.purchaseApproved}枚` : "送信済み"}
         sub={s.overdue ? `締め過ぎ ${s.overdue}枚` : s.nextCutoff ? `締め ${fmtDateTime(s.nextCutoff).split(" ").pop()} ${left(s.nextCutoff, now)}` : `${fmtDate(s.purchaseDate)}納品`}
       />
-      {s.lowStock > 0 && <Chip href={s.lowStockHref} tone="alert" label="材料が足りなくなります" value={`${s.lowStock}件`} />}
+      {s.lowStock > 0 && <Chip href={s.lowStockHref} tone="alert" label="材料が足りなくなります" short="材料不足" value={`${s.lowStock}件`} />}
       {s.warnings > 0 && <Chip href={`/plan?date=${s.purchaseDate}`} tone="alert" label="注意" value={`${s.warnings}件`} />}
     </div>
   );
