@@ -5,6 +5,7 @@ import { KIND_LABEL, runDays, sheetProblems, type SheetDef, type SheetRecord } f
 import { holidaysOf, listManuals, listSheets, recordsOf } from "@/lib/hygiene/store";
 import { getMonthSummary } from "@/lib/printing/auto";
 import { SummaryBox } from "./SummaryBox";
+import { hasAiKey } from "@/lib/hygiene/ai-chat";
 
 export const metadata = { title: "衛生管理｜STAFFETTA" };
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ export default async function HygienePage(props: PageProps<"/hygiene">) {
         ))}
       </ul>
 
-      <SummaryBox month={month} summary={getMonthSummary(month)} ai={!!process.env.ANTHROPIC_API_KEY} />
+      <SummaryBox month={month} summary={getMonthSummary(month)} ai={hasAiKey()} />
 
       <p className="text-lg">
         毎月決まった日に自動で印刷するときは <Link href="/settings/auto-print">設定 → 自動印刷</Link>。

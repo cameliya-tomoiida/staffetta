@@ -52,11 +52,11 @@ const td = "h-[8.8mm] border border-black px-[1.5mm] align-middle text-[11.5pt]"
 const th = "h-[6.4mm] border border-black bg-[#ece6dc] px-[1.5mm] text-left align-middle text-[10pt] font-bold";
 const auto = `${td} bg-[#e6f0fb] text-[#1f3f66]`;
 /** 小さい字の欄（予定・配置・確認）。td と字の大きさがぶつからないよう別に持つ */
-const small = "h-[8.8mm] border border-black px-[1mm] align-middle text-[8pt] leading-tight overflow-hidden";
+const small = "h-[8.8mm] border border-black px-[1mm] align-middle text-[8pt] leading-tight overflow-hidden whitespace-nowrap";
 /** "前日 22:15" → "前22:15" */
 const short = (t?: string) => (t ? t.replace("前日 ", "前") : "");
 const num = `${td} text-right tabular-nums`;
-const Auto = () => <span className="ml-[1mm] rounded-[1mm] border border-[#5b84b1] px-[0.6mm] align-middle text-[6.5pt] font-bold text-[#1f3f66]">自動</span>;
+const Auto = () => <span className="ml-[1mm] inline-block rounded-[1mm] border border-[#5b84b1] px-[0.6mm] align-middle text-[6.5pt] leading-tight font-bold whitespace-nowrap text-[#1f3f66]">自動</span>;
 
 function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolean }) {
   const items = base.items;
@@ -95,10 +95,10 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
         <tbody>
           <tr>
             <td className={auto}>{base.productionDate.replace(/-/g, "/")}（{base.weekday}）<Auto /></td>
-            <td className={`${auto} text-[10pt]`}>{base.weather ? `${base.weather.label} ${base.weather.tempC}℃ ${base.weather.humidity}%` : ""}<Auto /></td>
+            <td className={`${auto} overflow-hidden text-[9.5pt] whitespace-nowrap`}>{base.weather ? `${base.weather.label} ${base.weather.tempC}℃ ${base.weather.humidity}%` : ""}<Auto /></td>
             <td className={num}>{n(v.roomTempC)} ℃</td>
             <td className={num}>{n(v.roomHumidity)} ％</td>
-            <td className={`${auto} text-[10pt]`}>{base.doughName} {round1(base.doughKg)}kg<Auto /></td>
+            <td className={`${auto} overflow-hidden text-[9.5pt] whitespace-nowrap`}>{base.doughName} {round1(base.doughKg)}kg<Auto /></td>
             <td className={td}>{v.writer ?? ""}</td>
           </tr>
         </tbody>
@@ -148,30 +148,32 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
                   )}
                   <td className={fieldsOf(pr).includes("staff") ? `${pTd} overflow-hidden text-[9.5pt] whitespace-nowrap` : `${pTd} bg-[#f4f4f4]`}>{s.staff ?? ""}</td>
                   <td className={pSmall}>
-                    {fieldsOf(pr).includes("qty") ? (
-                      <>
-                        <span className="text-[11pt]">{n(s.qty)}</span>
-                        <span className="block">{pr.qtyLabel ?? "数"}</span>
-                      </>
-                    ) : fieldsOf(pr).includes("check") ? (
-                      <>
-                        <span className="text-[11pt]">{ck(s.check)}</span>
-                        <span className="block">{pr.checkLabel ?? "○×"}</span>
-                      </>
-                    ) : pr.temp && fieldsOf(pr).includes("temp") ? (
-                      <>
-                        <span className="text-[11pt]">{n(s.tempC)}</span>℃
-                        <span className="block text-[#1f3f66]">管理 {pr.temp.min ?? ""}〜{pr.temp.max ?? ""}</span>
-                      </>
-                    ) : pr.key === "mix" ? (
-                      "右のミキサーの表"
-                    ) : pr.key === "bake" ? (
-                      "下の製品の表"
-                    ) : pr.key === "metal_check" ? (
-                      "下の製品の表で○×"
-                    ) : (
-                      ""
-                    )}
+                    {(() => {
+                      const f = fieldsOf(pr);
+                      const parts: React.ReactNode[] = [];
+                      if (pr.temp && f.includes("temp"))
+                        parts.push(
+                          <span key="t" className="inline-block pr-[1mm]">
+                            <span className="text-[11pt]">{n(s.tempC)}</span>℃<span className="block text-[#1f3f66]">管理 {pr.temp.min ?? ""}〜{pr.temp.max ?? ""}</span>
+                          </span>,
+                        );
+                      if (f.includes("qty"))
+                        parts.push(
+                          <span key="q" className="inline-block pr-[1mm]">
+                            <span className="text-[11pt]">{n(s.qty)}</span>
+                            <span className="block">{pr.qtyLabel ?? "数"}</span>
+                          </span>,
+                        );
+                      if (f.includes("check"))
+                        parts.push(
+                          <span key="c" className="inline-block">
+                            <span className="text-[11pt]">{ck(s.check)}</span>
+                            <span className="block">{pr.checkLabel ? (pr.checkLabel.length > 6 ? `${pr.checkLabel.slice(0, 6)}…` : pr.checkLabel) : "○×"}</span>
+                          </span>,
+                        );
+                      if (parts.length) return parts;
+                      return pr.key === "mix" ? "ミキサー表へ" : pr.key === "bake" ? "製品の表へ" : pr.key === "metal_check" ? "製品の表で○×" : "";
+                    })()}
                   </td>
                 </tr>
               );
@@ -251,16 +253,29 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
         <thead>
           <tr>
             <th className={th} rowSpan={2}>この生地からとった製品</th>
-            <th className={th} rowSpan={2}>焼成の目安</th>
+            <th className={th} rowSpan={2}>焼成目安</th>
             <th className={`${th} text-center`} colSpan={4}>分割・成型</th>
             <th className={`${th} text-center`} colSpan={2}>焼成</th>
             <th className={`${th} text-center`} colSpan={4}>包装・金属検査</th>
             <th className={`${th} text-center`} colSpan={lossCols.length + 1}>ロス数（どこで出たか）</th>
           </tr>
           <tr>
-            {["重量g", "注文数", "仕込数", "製品数", "温度℃", "時間分", "製品数", "在庫", "金属", "官能", ...lossCols.map((c) => c.label), "合計"].map((h, i) => (
-              <th key={i} className={`${th} text-center text-[9pt]`}>{h}</th>
+            {["重量g", "注文数", "仕込数", "製品数", "温度℃", "時間分", "製品数", "在庫", "金属", "官能"].map((h, i) => (
+              <th key={i} className={`${th} text-center text-[8.5pt] whitespace-nowrap`}>{h}</th>
             ))}
+            {lossCols.map((c) => (
+              // ロスの見出しは「・」のところでだけ折り返す（「分割・成形」が隣にはみ出さないように）
+              <th key={c.key} className={`${th} text-center text-[8pt] leading-tight`}>
+                {c.label.split("・").map((w, k, a) => (
+                  <span key={k} className="whitespace-nowrap">
+                    {w}
+                    {k < a.length - 1 ? "・" : ""}
+                    {k < a.length - 1 ? <wbr /> : null}
+                  </span>
+                ))}
+              </th>
+            ))}
+            <th className={`${th} text-center text-[8.5pt] whitespace-nowrap`}>合計</th>
           </tr>
         </thead>
         <tbody>

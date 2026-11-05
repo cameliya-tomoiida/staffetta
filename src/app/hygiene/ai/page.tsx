@@ -25,7 +25,7 @@ export default async function SheetAiPage(props: PageProps<"/hygiene/ai">) {
       ) : (
         <div className="card space-y-2 p-6 text-xl">
           <p className="font-bold">AI を使うには、Claude の API キーが要ります。</p>
-          <p>「設定 → AI」でキーを入れると、ここで AI と話してシートを作れるようになります（今はこのアプリを動かす環境の ANTHROPIC_API_KEY を使います）。</p>
+          <p><Link href="/settings/ai">設定 → AI</Link> でキーを入れると、ここで AI と話してシートを作れるようになります（キーが無いときは、このアプリを動かす環境の ANTHROPIC_API_KEY を使います）。</p>
           <p>
             キーが無くても、<Link href="/hygiene">衛生管理</Link>の各シートの「項目・記入する曜日を直す」で、手で直せます。
           </p>
