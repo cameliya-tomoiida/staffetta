@@ -29,14 +29,14 @@ describe("配送の画面（/driver）のその日の配送", () => {
       expect(d.back! > times.at(-1)!).toBe(true);
     }
     const east = driverDay({ course: course("東コース（朝便）"), customers, orders: [], date: DEMO_DATE, depot: DEFAULT_DEPOT, product });
-    expect(east.stops.map((s) => s.id)).toEqual(["C14", "C09", "C01", "C15", "C16", "C07"]);
+    expect(east.stops.map((s) => s.id)).toEqual(["DV01", "C09", "C01", "DV02", "DV03", "C07"]);
   });
 
   it("各先に渡すもの: その日の確定・要確認・仮発注（印つき）。ほかの日の注文は入れない", () => {
     const d = driverDay({ course: course("西コース"), customers, orders: driverDemoOrders(), date: DEMO_DATE, depot: DEFAULT_DEPOT, product });
-    const c17 = d.stops.find((s) => s.id === "C17")!;
+    const c17 = d.stops.find((s) => s.id === "DV04")!;
     expect(c17.items.map((i) => [i.productId, i.quantity, i.status])).toEqual([["P01", 150, "confirmed"], ["P03", 10, "confirmed"]]);
-    expect(d.stops.find((s) => s.id === "C19")!.items.every((i) => i.status === "provisional")).toBe(true);
+    expect(d.stops.find((s) => s.id === "DV06")!.items.every((i) => i.status === "provisional")).toBe(true);
     // 納品の仕方・注意・時間の希望・定休日も出す
     expect(c17).toMatchObject({ window: "05:45〜06:30", closedDays: "日・土" });
     expect(c17.howTo).toBeTruthy();
@@ -44,10 +44,10 @@ describe("配送の画面（/driver）のその日の配送", () => {
   });
 
   it("定休日の先は「お休み」として後ろに回し、渡すものは出さない", () => {
-    // 11/9 は月曜。カフェもくれん（C18）は月曜が定休日
+    // 11/9 は月曜。カフェもくれん（DV05）は月曜が定休日
     const d = driverDay({ course: course("西コース"), customers, orders: driverDemoOrders(), date: "2026-11-09", depot: DEFAULT_DEPOT, product });
     const off = d.stops.filter((s) => s.off);
-    expect(off.map((s) => s.id)).toContain("C18");
+    expect(off.map((s) => s.id)).toContain("DV05");
     expect(d.stops.at(-1)!.off).toBe(true);
     expect(off.every((s) => s.items.length === 0 && s.no === 0)).toBe(true);
   });

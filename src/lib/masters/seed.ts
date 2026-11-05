@@ -130,8 +130,8 @@ export const SAMPLE_STAFF: StaffAssignmentMaster[] = [
 // ───────── 便（架空。④の取引先の初期値と同じ便の名前） ─────────
 export const SAMPLE_COURSES: CourseMaster[] = [
   { id: "東コース（早朝便）", name: "東コース（早朝便）", departTime: "05:30", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true },
-  { id: "東コース（朝便）", name: "東コース（朝便）", departTime: "07:00", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true, stops: ["C14", "C09", "C01", "C15", "C16", "C07"] },
-  { id: "西コース", name: "西コース", departTime: "05:30", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true, stops: ["C17", "C04", "C18", "C06", "C19", "C03"] },
+  { id: "東コース（朝便）", name: "東コース（朝便）", departTime: "07:00", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true, stops: ["DV01", "C09", "C01", "DV02", "DV03", "C07"] },
+  { id: "西コース", name: "西コース", departTime: "05:30", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true, stops: ["DV04", "C04", "DV05", "C06", "DV06", "C03"] },
   { id: "南コース（早朝便）", name: "南コース（早朝便）", departTime: "05:45", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], active: true },
   { id: "南コース", name: "南コース", departTime: "08:30", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5], active: true },
   { id: "午後便（売店）", name: "午後便（売店）", departTime: "13:00", loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5], active: true, note: "売店・昼の補充" },
@@ -154,12 +154,12 @@ const CUSTOMER_COURSE: Record<string, { course: string; deliveryTime: string; de
   C11: { course: "南コース", deliveryTime: "10:00" },
   C12: { course: "冷凍便", deliveryTime: "13:00" },
   C13: { course: "ヤマト便", deliveryTime: "09:00" },
-  C14: { course: "東コース（朝便）", deliveryTime: "07:40" },
-  C15: { course: "東コース（朝便）", deliveryTime: "08:50" },
-  C16: { course: "東コース（朝便）", deliveryTime: "09:10" },
-  C17: { course: "西コース", deliveryTime: "06:00" },
-  C18: { course: "西コース", deliveryTime: "06:25" },
-  C19: { course: "西コース", deliveryTime: "07:20" },
+  DV01: { course: "東コース（朝便）", deliveryTime: "07:40" },
+  DV02: { course: "東コース（朝便）", deliveryTime: "08:50" },
+  DV03: { course: "東コース（朝便）", deliveryTime: "09:10" },
+  DV04: { course: "西コース", deliveryTime: "06:00" },
+  DV05: { course: "西コース", deliveryTime: "06:25" },
+  DV06: { course: "西コース", deliveryTime: "07:20" },
 };
 
 // ───────── 定期注文（架空） ─────────
