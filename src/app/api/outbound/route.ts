@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { allOrders } from "@/demo/all-orders";
 import { runPipeline } from "@/lib/pipeline";
+import { loadMasters } from "@/lib/masters/seed-db";
 import { approvePo, listOutbound, markSent, receiveDrafts } from "@/lib/channels/outbound/workflow";
 import type { PoLike } from "@/lib/channels/outbound/render";
 
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (b.action === "load") {
       if (!b.date || !/^\d{4}-\d{2}-\d{2}$/.test(b.date)) throw new Error("納品日を選んでください");
       const { orders } = await allOrders();
-      const r = runPipeline(orders, b.date);
+      const r = runPipeline(orders, b.date, { masters: await loadMasters() });
       result = await receiveDrafts([...r.productPurchaseOrders, ...r.materialPurchaseOrders], "発注書の計算");
     } else if (b.action === "receive") result = await receiveDrafts(b.drafts ?? []);
     else if (b.action === "approve") result = await approvePo(b.poId ?? "", b.who ?? "");
