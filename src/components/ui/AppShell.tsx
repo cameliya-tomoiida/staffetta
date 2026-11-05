@@ -266,7 +266,9 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
               <Brand factory={factory} />
             </span>
             <span className="text-[18px] font-bold">今日の仕事</span>
-            <span className="ml-auto text-[17px] text-ink-soft tabular-nums">{today}</span>
+            <span className="ml-auto" />
+            <AiChat />
+            <span className="text-[17px] text-ink-soft tabular-nums">{today}</span>
             {user && (
               <form action={logoutAction} className="flex items-center gap-2">
                 <span className="text-[17px] font-bold">{user.name} さん<span className="ml-1 text-[16px] font-normal text-ink-soft">（{user.role}）</span></span>
@@ -282,8 +284,6 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
           <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={120} height={32} className="mb-2 hidden h-8 w-auto print:block" />
           {children}
         </main>
-        {/* 全画面の右下「AI に聞く」 */}
-        <AiChat />
       </div>
     </div>
   );
