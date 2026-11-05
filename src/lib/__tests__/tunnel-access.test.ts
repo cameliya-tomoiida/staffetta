@@ -29,4 +29,10 @@ describe("トンネル経由のアクセス", () => {
     for (const [pathname, method] of [["/orders", "GET"], ["/api/alerts", "GET"], ["/fax/F001", "POST"]])
       expect(decideTunnelAccess({ ...base, pathname, method, staffOk: true }).kind).toBe("next");
   });
+
+  it("全データの書き出し（/api/backup）は、ログインしていてもトンネル経由では通さない（LAN だけ）", () => {
+    expect(decideTunnelAccess({ ...base, pathname: "/api/backup", staffOk: true }).kind).toBe("forbid");
+    expect(decideTunnelAccess({ ...base, pathname: "/api/backup", viaTunnel: false }).kind).toBe("next");
+    expect(decideTunnelAccess({ ...base, pathname: "/settings/backup", method: "POST", isServerAction: true, staffOk: true }).kind).toBe("forbid");
+  });
 });
