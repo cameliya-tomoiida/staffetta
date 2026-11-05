@@ -48,6 +48,14 @@ describe("定期注文から、その週の注文を作る", () => {
     expect(again.existing).toHaveLength(r.orders.length);
   });
 
+  it("週の途中で作るときは、あしたより前の日は作らない（notBefore）", () => {
+    // 11/11（水）に押した → 11/12（木）から
+    const mid = generateStandingOrders(WEEK, { now: AT, notBefore: "2026-11-12" });
+    expect(mid.orders.length).toBeGreaterThan(0);
+    expect(mid.orders.every((o) => o.deliveryDate >= "2026-11-12")).toBe(true);
+    expect(mid.orders.filter((o) => o.customerId === "C05").map((o) => o.deliveryDate)).toEqual(["2026-11-12", "2026-11-14"]);
+  });
+
   it("得意先・日数をしぼれる", () => {
     const one = generateStandingOrders(WEEK, { now: AT, customerId: "C05", days: 3 });
     expect(one.orders.map((o) => o.deliveryDate)).toEqual(["2026-11-10"]);

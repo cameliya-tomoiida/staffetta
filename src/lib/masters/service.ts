@@ -15,6 +15,7 @@ import { seedCustomers } from "@/lib/db/seed/customers";
 import { rowId } from "./columns";
 import { recipeItemDef } from "./defs";
 import { recipeSummary } from "./recipe";
+import { logStocktake, type StockMaster } from "@/lib/stock/store";
 import { loadMasters, seedSampleMasters } from "./seed-db";
 import { CHANNEL_SEEDS, ID_PREFIX, isChannelMaster, SCREEN_DEFS, SCREEN_NAMES, STOCK_MASTERS, type ScreenName } from "./screens";
 
@@ -142,6 +143,7 @@ export async function stocktake(name: ScreenName, id: string, counted: number, w
   if (!cur) throw new Error("見つかりません");
   const next: Rec = { ...cur, stock: counted, stockCountedAt: nowIso(), stockCountedBy: who, ...(note ? { stockNote: note } : {}) };
   await upsertMasters(name, [next], `${who}（棚卸）`);
+  logStocktake(name as StockMaster, id, Number(cur.stock ?? 0), counted, who, note);
   return { before: Number(cur.stock ?? 0), after: counted };
 }
 

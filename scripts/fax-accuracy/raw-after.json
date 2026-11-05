@@ -1,0 +1,754 @@
+{
+  "fax4": {
+    "read": {
+      "kind": "not_order",
+      "kind_reason": "「業務用オーブン 無料点検キャンペーン!!」という見出しで、FAX DMの営業案内。注文内容はなく、送り主（キッチンプロサービス）は得意先・仕入先のどちらにも該当しない。",
+      "layout_summary": "上部に大きな見出し「業務用オーブン 無料点検キャンペーン!!」、その下に対象・期間・お申込みの3行の表がある広告FAX。下部に社名と「今後のFAX案内は不要です」のチェック欄がある。品名・数量の欄はない。",
+      "format_kind": "other",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "株式会社キッチンプロサービス（デモ） 営業部",
+        "fax": "0000-77-7777",
+        "matched_customer_id": "",
+        "evidence": "上端の発信元表示「ｷｯﾁﾝﾌﾟﾛｻｰﾋﾞｽ」、本文の社名署名、お申込み欄のFAX番号。得意先一覧・仕入先一覧に該当なし。"
+      },
+      "document_title": "業務用オーブン 無料点検キャンペーン!!",
+      "orders": [],
+      "notes": "業務用オーブン無料点検キャンペーン（2026年11月1日〜11月30日、点検費0円）の広告FAX。注文ではない。配信停止希望の場合はチェックして返信する形式。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 8743
+  },
+  "fax2": {
+    "read": {
+      "kind": "order",
+      "kind_reason": "見出しが「パン発注書」で、納品日・納品場所・品名ごとの数量が記入された通常の発注書のため。仮発注・変更の文言はない。",
+      "layout_summary": "見出し「パン発注書」、宛先「あさひ製パン工場様」、右上に発信元（みどり給食サービス株式会社・FAX・担当）。納品場所・納品日（西暦年月日＋曜日、使用日も併記）の欄の下に、品名・規格・数量の表があり、ロールパンは「白・黒」を丸で選ぶ欄、規格は入数（3個入り・2個入り、8枚切り2枚入り等）、数量は袋で手書き。表の下に「ロールパンは1個25gのミニサイズ」の注記。",
+      "format_kind": "order_sheet",
+      "page_note": "",
+      "rotation_degrees": 180,
+      "sender": {
+        "name": "みどり給食サービス株式会社（さくら総合病院 栄養科）",
+        "fax": "0000-22-2222",
+        "matched_customer_id": "C02",
+        "evidence": "発信元表示「みどり給食サービス株式会社 FAX 0000-22-2222 担当：いとう」、納品場所「さくら総合病院 栄養科」が得意先C02と一致"
+      },
+      "document_title": "パン発注書",
+      "orders": [
+        {
+          "delivery_date": "2026-11-10",
+          "delivery_place": "さくら総合病院 栄養科",
+          "lines": [
+            {
+              "written_name": "ロールパン 黒（3個入り）",
+              "product_id": "P06",
+              "quantity": 11,
+              "previous_quantity": -1,
+              "unit_written": "袋",
+              "pieces_per_unit": 3,
+              "confidence": 0.9,
+              "attention": "丸の選択：黒に丸",
+              "y_percent": 28
+            },
+            {
+              "written_name": "ロールパン 黒（2個入り）",
+              "product_id": "P06",
+              "quantity": 39,
+              "previous_quantity": -1,
+              "unit_written": "袋",
+              "pieces_per_unit": 2,
+              "confidence": 0.9,
+              "attention": "丸の選択：黒に丸",
+              "y_percent": 32
+            }
+          ]
+        }
+      ],
+      "notes": "納品日2026年11月10日(火)、使用日11月11日(水)。食パン8枚切り2枚入り・6枚切り1枚入りは数量空欄で注文なし。注記「ロールパンは1個25gのミニサイズでお願いします」により、ロールパン（黒）はミニロール（黒糖）として対応。担当：いとう。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 14468
+  },
+  "fax5": {
+    "read": {
+      "kind": "supplier_reply",
+      "kind_reason": "見出しが「注文請書」で、仕入先の米田製粉株式会社からあさひ製パン工場宛てに「ご注文ありがとうございます。下記のとおりお受けいたしました」と書かれており、工場が出した発注への返事のため。",
+      "layout_summary": "見出し「注文請書」、左上に宛先（あさひ製パン工場 御中）、右上に発信元社名とFAX番号。表は品名・規格・数量・納品日の4列で、数量は袋単位、納品日は「11月9日（月）」のように月日と曜日で記載。表の下に手書き風の一言メッセージ欄がある。",
+      "format_kind": "other",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "米田製粉株式会社（デモ）",
+        "fax": "0000-44-4444",
+        "matched_customer_id": "",
+        "evidence": "右上の社名「米田製粉株式会社（デモ）」とFAX 0000-44-4444、上端の発信元「ﾖﾈﾀﾞｾｲﾌﾝ」。得意先ではなく仕入先S01（米田製粉）に該当。"
+      },
+      "document_title": "注文請書",
+      "orders": [],
+      "notes": "仕入先S01 米田製粉からの注文請書（工場が出した発注への受注確認）。内容: パン用強力粉 はるかぜ 25kg×4袋、中力粉 みのり 25kg×2袋、納品日11月9日（月）。「月曜午前に伺います」との一言あり。得意先からの注文ではないため注文登録は不要。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 6585
+  },
+  "fax1": {
+    "read": {
+      "kind": "order",
+      "kind_reason": "見出しが「週間パン注文表」で、納品週の各日に数量が記入された通常の注文表。12日の黒糖ロールに訂正があるが、注文表自体の記入時の訂正で、注文全体は新規の週間注文。",
+      "layout_summary": "「週間パン注文表」の見出しで、行が品名（バターロール・黒糖ロール・ミニロール白/黒糖・食パン8枚切/6枚切（斤）・ピザクラスト）、列が月〜金の日付の週間表。納品週は西暦で上部に記載され、数量は手書きで記入し空欄は注文なし。表の下に手書きの連絡欄がある。",
+      "format_kind": "weekly_table",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "ひまわり保育園",
+        "fax": "0000-11-1111",
+        "matched_customer_id": "C01",
+        "evidence": "右上の差出人表示「ひまわり保育園 FAX 0000-11-1111」、上端の発信元「ヒマワリホイクエン」"
+      },
+      "document_title": "週間パン注文表",
+      "orders": [
+        {
+          "delivery_date": "2026-11-09",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "バターロール",
+              "product_id": "P01",
+              "quantity": 60,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 26
+            },
+            {
+              "written_name": "ミニロール（白）",
+              "product_id": "P05",
+              "quantity": 32,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 33
+            }
+          ]
+        },
+        {
+          "delivery_date": "2026-11-10",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "黒糖ロール",
+              "product_id": "P02",
+              "quantity": 45,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 29
+            },
+            {
+              "written_name": "ミニロール（白）",
+              "product_id": "P05",
+              "quantity": 32,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 33
+            },
+            {
+              "written_name": "食パン 8枚切（斤）",
+              "product_id": "P03",
+              "quantity": 4,
+              "previous_quantity": -1,
+              "unit_written": "斤",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 41
+            }
+          ]
+        },
+        {
+          "delivery_date": "2026-11-11",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "バターロール",
+              "product_id": "P01",
+              "quantity": 60,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 26
+            },
+            {
+              "written_name": "ミニロール（白）",
+              "product_id": "P05",
+              "quantity": 32,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 33
+            }
+          ]
+        },
+        {
+          "delivery_date": "2026-11-12",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "黒糖ロール",
+              "product_id": "P02",
+              "quantity": 25,
+              "previous_quantity": 20,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.9,
+              "attention": "訂正あり 20→25（二重線で消して書き直し）",
+              "y_percent": 29
+            },
+            {
+              "written_name": "ミニロール（白）",
+              "product_id": "P05",
+              "quantity": 32,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 33
+            },
+            {
+              "written_name": "食パン 8枚切（斤）",
+              "product_id": "P03",
+              "quantity": 4,
+              "previous_quantity": -1,
+              "unit_written": "斤",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 41
+            }
+          ]
+        },
+        {
+          "delivery_date": "2026-11-13",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "バターロール",
+              "product_id": "P01",
+              "quantity": 58,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 26
+            },
+            {
+              "written_name": "ミニロール（白）",
+              "product_id": "P05",
+              "quantity": 32,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 33
+            },
+            {
+              "written_name": "食パン 6枚切（斤）",
+              "product_id": "P04",
+              "quantity": 3,
+              "previous_quantity": -1,
+              "unit_written": "斤",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 45
+            }
+          ]
+        }
+      ],
+      "notes": "納品週 2026年11月9日（月）〜13日（金）。手書き連絡「12日の黒糖は25こに変更です。よろしくお願いします。」（表内の訂正20→25と一致）。ミニロール（黒糖）・ピザクラストは全日空欄で注文なし。担当：なかむら。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 15633
+  },
+  "fax3": {
+    "read": {
+      "kind": "order",
+      "kind_reason": "見出しが「発注書」（No.5821）で、得意先のみなと給食センターから当工場宛て（あさひ製パン工場 御中）に納品日ごとの品名と数量が書かれているため。",
+      "layout_summary": "上部に宛先、発注書No.、発行日（YYYY/MM/DD）、右上に発信元名とFAX番号・調達係がある横長の発注書。表の列は納品日・品名・入数・数量・単位・備考。納品日（M/D（曜））ごとに複数行をまとめている。品名は印字で、数量だけ手書き。単位は ケ・枚・P。仕入品には〈ひので〉と付記される。",
+      "format_kind": "order_sheet",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "みなと給食センター",
+        "fax": "0000-33-3333",
+        "matched_customer_id": "C03",
+        "evidence": "右上の発信元表示「みなと給食センター FAX 0000-33-3333 調達係」と、FAX上端の発信元「ミナトキュウショクセンター」が得意先一覧C03と一致"
+      },
+      "document_title": "発注書",
+      "orders": [
+        {
+          "delivery_date": "2026-11-10",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "ピザクラスト 23cm",
+              "product_id": "P07",
+              "quantity": 40,
+              "previous_quantity": -1,
+              "unit_written": "枚",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 29
+            },
+            {
+              "written_name": "たまごサンドロール〈ひので〉",
+              "product_id": "P08",
+              "quantity": 120,
+              "previous_quantity": -1,
+              "unit_written": "ケ",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 35
+            },
+            {
+              "written_name": "ごまバンズ〈ひので〉",
+              "product_id": "P09",
+              "quantity": 6,
+              "previous_quantity": -1,
+              "unit_written": "P",
+              "pieces_per_unit": 10,
+              "confidence": 0.96,
+              "attention": "",
+              "y_percent": 40
+            }
+          ]
+        },
+        {
+          "delivery_date": "2026-11-11",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "黒糖ロール",
+              "product_id": "P02",
+              "quantity": 146,
+              "previous_quantity": -1,
+              "unit_written": "ケ",
+              "pieces_per_unit": 1,
+              "confidence": 0.96,
+              "attention": "",
+              "y_percent": 46
+            },
+            {
+              "written_name": "バターロール 35g",
+              "product_id": "P01",
+              "quantity": 348,
+              "previous_quantity": -1,
+              "unit_written": "ケ",
+              "pieces_per_unit": 1,
+              "confidence": 0.96,
+              "attention": "",
+              "y_percent": 51
+            },
+            {
+              "written_name": "超じゅくロール〈ひので〉",
+              "product_id": "P10",
+              "quantity": 65,
+              "previous_quantity": -1,
+              "unit_written": "ケ",
+              "pieces_per_unit": 1,
+              "confidence": 0.88,
+              "attention": "備考に「バラで」の指定あり。商品一覧は「超じゅくロール 6個入」だが、FAXは入数1・65ケ（6で割り切れない）",
+              "y_percent": 57
+            }
+          ]
+        }
+      ],
+      "notes": "発注書No.5821、発行日2026/11/05。納品日は11/10（火）と11/11（水）の2回。〈ひので〉付きの品は仕入品（ひので製パン扱い）。超じゅくロールは備考に「バラで」と指定あり。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 16287
+  },
+  "fax6": {
+    "read": {
+      "kind": "change",
+      "kind_reason": "見出しが「注文変更のお願い」で、先日送った週間パン注文表（11/9〜11/13）の数量を変更前・変更後で示しているため。",
+      "layout_summary": "見出し「注文変更のお願い」の変更連絡票。表は「納品日（11月10日（火）形式）・品名・変更前・変更後」の4列で、数量は手書き、単位の記載なし。下部に手書きの連絡メモ欄がある。",
+      "format_kind": "change_notice",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "ひまわり保育園",
+        "fax": "0000-11-1111",
+        "matched_customer_id": "C01",
+        "evidence": "右上の差出人「ひまわり保育園 FAX 0000-11-1111 担当：なかむら」と上端の発信元表示「ヒマワリホイクエン」"
+      },
+      "document_title": "注文変更のお願い",
+      "orders": [
+        {
+          "delivery_date": "2026-11-10",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "黒糖ロール",
+              "product_id": "P02",
+              "quantity": 50,
+              "previous_quantity": 45,
+              "unit_written": "",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 24
+            }
+          ]
+        },
+        {
+          "delivery_date": "2026-11-11",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "バターロール",
+              "product_id": "P01",
+              "quantity": 55,
+              "previous_quantity": 60,
+              "unit_written": "",
+              "pieces_per_unit": 1,
+              "confidence": 0.97,
+              "attention": "",
+              "y_percent": 28
+            }
+          ]
+        }
+      ],
+      "notes": "週間パン注文表（11/9〜11/13）の数量変更依頼。黒糖ロール 11/10 45→50、バターロール 11/11 60→55。手書きメモ「遠足で人数がかわりました。お手数おかけします。」単位の記載はなし。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 7200
+  },
+  "fax9": {
+    "read": {
+      "kind": "order",
+      "kind_reason": "「11月14日（土）は発注なしです」と書かれた、得意先からの発注なしの連絡。発注なしのFAXは order として扱い、lines は空にする。",
+      "layout_summary": "決まった表のない1枚の連絡文書。左上に宛先「あさひ製パン工場 御中」、右上に送り主名・FAX番号・担当者名がある。中央に大きく「○月○日（曜）は発注なしです」の見出しがあり、その下に理由と再開日が文章で書かれている。",
+      "format_kind": "other",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "みなと給食センター",
+        "fax": "0000-33-3333",
+        "matched_customer_id": "C03",
+        "evidence": "FAX上端の発信元「ミナトキュウショクセンター」、右上の「みなと給食センター FAX 0000-33-3333 担当：おおの」が得意先C03の名前・FAX番号と一致"
+      },
+      "document_title": "11月14日（土）は発注なしです",
+      "orders": [],
+      "notes": "2026年11月14日（土）は行事のため給食が休みで、発注なし。16日（月）からはいつもどおりとのこと。担当：おおの。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 6831
+  },
+  "fax8": {
+    "read": {
+      "kind": "order",
+      "kind_reason": "見出しが「発注書（本発注）」で、「11/5付の仮発注について、数量が確定しましたので発注いたします」とあり、確定した本発注のため order。",
+      "layout_summary": "見出しは「発注書（本発注）」で、宛先は左上、発信元・FAX番号・発注担当は右上にある。表の列は使用日・納品希望日・品名・数量で、日付は「11/13（金）」のように月/日と曜日で印字されている。数量欄だけが手書きで、単位（枚・コ）も手書きで添えられる。",
+      "format_kind": "order_sheet",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "めぐみ給食サービス",
+        "fax": "0000-66-6666",
+        "matched_customer_id": "C09",
+        "evidence": "右上に発信元「めぐみ給食サービス」、FAX 0000-66-6666、発注担当 さとう と記載されている。得意先一覧のC09と名称・FAX番号が一致する。"
+      },
+      "document_title": "発注書（本発注）",
+      "orders": [
+        {
+          "delivery_date": "2026-11-12",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "ピザ生地 23センチ（クラスト）",
+              "product_id": "P07",
+              "quantity": 92,
+              "previous_quantity": -1,
+              "unit_written": "枚",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 23
+            },
+            {
+              "written_name": "ミニロール 黒糖",
+              "product_id": "P06",
+              "quantity": 120,
+              "previous_quantity": -1,
+              "unit_written": "コ",
+              "pieces_per_unit": 1,
+              "confidence": 0.96,
+              "attention": "",
+              "y_percent": 28
+            }
+          ]
+        }
+      ],
+      "notes": "11/5付の仮発注に対する本発注（数量確定）です。仮発注分と置き換えになるか確認してください。使用日は11/13（金）、納品希望日は11/12（木）で、納品希望日を納品日としています。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 10649
+  },
+  "fax7": {
+    "read": {
+      "kind": "provisional_order",
+      "kind_reason": "見出しが「【仮発注】ご連絡」で、「下記は予定数量です。本発注は11月10日（火）にあらためてFAXいたします。」と書かれているため。",
+      "layout_summary": "見出し「【仮発注】ご連絡」の1枚もの発注連絡で、左上に宛先（あさひ製パン工場 様）、右上に発信元・FAX番号・発注担当を印字している。表の列は「使用日／納品希望日／品名／予定数」で、日付は「11/13（金）」のように月/日（曜日）形式。予定数は数字と単位（枚・コ）を手書き風に記入する形式で、丸で選ぶ欄はない。",
+      "format_kind": "order_sheet",
+      "page_note": "",
+      "rotation_degrees": 180,
+      "sender": {
+        "name": "めぐみ給食サービス",
+        "fax": "0000-66-6666",
+        "matched_customer_id": "C09",
+        "evidence": "右上の発信元表示「めぐみ給食サービス」とFAX番号「0000-66-6666」が得意先一覧C09と一致。"
+      },
+      "document_title": "【仮発注】ご連絡",
+      "orders": [
+        {
+          "delivery_date": "2026-11-12",
+          "delivery_place": "",
+          "lines": [
+            {
+              "written_name": "ピザ生地 23センチ（クラスト）",
+              "product_id": "P07",
+              "quantity": 80,
+              "previous_quantity": -1,
+              "unit_written": "枚",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 76
+            },
+            {
+              "written_name": "ミニロール 黒糖",
+              "product_id": "P06",
+              "quantity": 120,
+              "previous_quantity": -1,
+              "unit_written": "コ",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 72
+            }
+          ]
+        }
+      ],
+      "notes": "仮発注（予定数量）です。本発注は11月10日（火）に改めてFAXが届く予定。使用日は11/13（金）、納品希望日は11/12（木）のため納品希望日を納品日としています。書類は上下逆さまで受信。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 11513
+  },
+  "fax10": {
+    "read": {
+      "kind": "order",
+      "kind_reason": "見出しが「発注書兼検収記録簿」で、納品日・納品場所と発注数が手書きで記入された通常の発注書のため。",
+      "layout_summary": "みどり給食サービス株式会社（さくら総合病院 栄養科）の「発注書兼検収記録簿」。上部に納品日（YYYY年MM月DD日（曜））と納品場所の印字があります。表は品名・単位（斤/個）・前回発注数（印字）・発注数（手書き）・検収数・品温・異常（有・無）・検収者の列で、品名は食パン6枚切、食パン8枚切、バターロール、黒糖ロール、ミニロール（白）、ミニロール（黒糖）の順に固定で印字されています。",
+      "format_kind": "order_with_inspection",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "みどり給食サービス株式会社（さくら総合病院 栄養科）",
+        "fax": "0000-22-2222",
+        "matched_customer_id": "C02",
+        "evidence": "上端の発信元「トウカイメディカルフード」、右上の社名「みどり給食サービス株式会社」「さくら総合病院 栄養科」、FAX番号 0000-22-2222 が得意先一覧と一致します。"
+      },
+      "document_title": "発注書兼検収記録簿",
+      "orders": [
+        {
+          "delivery_date": "2026-11-17",
+          "delivery_place": "さくら総合病院 栄養科",
+          "lines": [
+            {
+              "written_name": "食パン 6枚切",
+              "product_id": "P04",
+              "quantity": 17,
+              "previous_quantity": -1,
+              "unit_written": "斤",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 24.6
+            },
+            {
+              "written_name": "食パン 8枚切",
+              "product_id": "P03",
+              "quantity": 16,
+              "previous_quantity": -1,
+              "unit_written": "斤",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 28.3
+            },
+            {
+              "written_name": "バターロール",
+              "product_id": "P01",
+              "quantity": 170,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 31.9
+            },
+            {
+              "written_name": "黒糖ロール",
+              "product_id": "P02",
+              "quantity": 60,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 35.5
+            },
+            {
+              "written_name": "ミニロール（白）",
+              "product_id": "P05",
+              "quantity": 71,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 39
+            },
+            {
+              "written_name": "ミニロール（黒糖）",
+              "product_id": "P06",
+              "quantity": 106,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 42.8
+            }
+          ]
+        }
+      ],
+      "notes": "納品日は2026年11月17日（火）、納品場所はさくら総合病院 栄養科、担当はいとうさんです。「前回発注数」の列は印字されている参考値です（食パン6枚切15、食パン8枚切14、バターロール160、黒糖ロール66、ミニロール（白）77、ミニロール（黒糖）100）。今回の数量は、手書きの「発注数」の列から読みました。検収数・品温・異常・検収者の欄は、納品時に先方が記入する欄のため空欄です。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 15681
+  },
+  "fax10s": {
+    "read": {
+      "kind": "order",
+      "kind_reason": "見出しが「発注書兼検収記録簿」で、発注数の欄に手書きで数量が記入されているため通常の注文と判断。",
+      "layout_summary": "見出し「発注書兼検収記録簿」、上部に納品日（西暦年月日）と納品場所の印字。表の列は品名・単位・前回発注数・発注数・検収数・品温・異常（有・無の選択）・検収者で、発注数のみ手書き記入。品名は食パン6枚切・8枚切（斤）、バターロール・黒糖ロール・ミニロール白・黒糖（個）の順。",
+      "format_kind": "order_with_inspection",
+      "page_note": "",
+      "rotation_degrees": 0,
+      "sender": {
+        "name": "みどり給食サービス株式会社",
+        "fax": "",
+        "matched_customer_id": "C02",
+        "evidence": "右上の発信元表示「みどり給食サービス株式会社」、納品場所「さくら総合病院 栄養科」の記載"
+      },
+      "document_title": "発注書兼検収記録簿",
+      "orders": [
+        {
+          "delivery_date": "2026-11-17",
+          "delivery_place": "さくら総合病院 栄養科",
+          "lines": [
+            {
+              "written_name": "食パン6枚切",
+              "product_id": "P04",
+              "quantity": 17,
+              "previous_quantity": -1,
+              "unit_written": "斤",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 25
+            },
+            {
+              "written_name": "食パン8枚切",
+              "product_id": "P03",
+              "quantity": 16,
+              "previous_quantity": -1,
+              "unit_written": "斤",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 28
+            },
+            {
+              "written_name": "バターロール",
+              "product_id": "P01",
+              "quantity": 170,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 32
+            },
+            {
+              "written_name": "黒糖ロール",
+              "product_id": "P02",
+              "quantity": 60,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 36
+            },
+            {
+              "written_name": "ミニロール（白）",
+              "product_id": "P05",
+              "quantity": 71,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 39
+            },
+            {
+              "written_name": "ミニロール（黒糖）",
+              "product_id": "P06",
+              "quantity": 106,
+              "previous_quantity": -1,
+              "unit_written": "個",
+              "pieces_per_unit": 1,
+              "confidence": 0.95,
+              "attention": "",
+              "y_percent": 43
+            }
+          ]
+        }
+      ],
+      "notes": "納品日 2026年11月17日、納品場所 さくら総合病院 栄養科。表には前回発注数（15・14・160・66・77・100）も印字されているが、今回の注文は手書きの発注数欄を採用。検収数・品温・異常・検収者の欄は受け取り側の記録欄のため読み取り対象外。"
+    },
+    "model": "claude-opus-5-5",
+    "ms": 14450
+  }
+}

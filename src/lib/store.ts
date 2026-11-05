@@ -2,7 +2,8 @@ import "server-only";
 import { connection } from "next/server";
 import path from "node:path";
 import type { Db } from "./types";
-import { clearFaxInbox, FAX_INBOX_DIR, loadDb, resetToDemo, saveDiff } from "./db/hub-store";
+import { clearFaxInbox, FAX_INBOX_DIR, loadDb, loadRecentDb, resetToDemo, saveDiff, type RecentDb } from "./db/hub-store";
+import { todayJst } from "./clock";
 import { resetLineDemo } from "./channels/line/state";
 
 // 保存先は SQLite（src/lib/db/）。ここは今までどおりの読み書きの口（readDb / updateDb）だけを持つ。
@@ -16,6 +17,15 @@ let queue: Promise<unknown> = Promise.resolve();
 export async function readDb(): Promise<Db> {
   await connection(); // 毎回その時点のデータを読む（事前生成しない）
   return loadDb();
+}
+
+/**
+ * 画面に出すための「最近の分だけ」（既定: 納品日・受信が60日前より後 ＋ 要確認・仮発注・未確定の FAX・未送信の発注書は全部）。
+ * 長く使ってたまっても画面が重くならないように。読むだけで、updateDb には使わない（updateDb は全件を読む）。
+ */
+export async function readRecentDb(days = 60): Promise<RecentDb> {
+  await connection();
+  return loadRecentDb({ since: todayJst(-days) });
 }
 
 /** 読み→書きを直列化して、同時更新で消えないようにする。変わった行だけ保存する */
