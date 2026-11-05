@@ -70,6 +70,16 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const byId = useMemo(() => Object.fromEntries(catalog.map((c) => [c.id, c])), [catalog]);
   const days = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8].map(jstDay).filter((d) => d.dow !== 0).slice(0, 7), []);
   const pastCutoff = ctx ? jstHHMM() >= ctx.cutoff : false;
+  // お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日。サーバーで出す）
+  const dayInfo = useCallback((ymd: string) => ctx?.days.find((d) => d.ymd === ymd), [ctx]);
+  const dayClosed = (ymd: string, i: number) => {
+    const info = dayInfo(ymd);
+    if (info?.closed) return "休み";
+    if (i === 0 && pastCutoff) return "締切";
+    if (ctx && info && ctx.productIds.every((id) => info.late[id])) return "締切";
+    return "";
+  };
+  const lateOn = (id: string) => dayInfo(date)?.late[id];
 
   const fillLast = useCallback((c: Ctx) => {
     if (!c.lastOrder) return;
@@ -83,7 +93,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
         const c = await liffLoadAction(a);
         setAuth(a);
         setCtx(c);
-        setDate((jstHHMM() >= c.cutoff ? days[1] : days[0]).ymd);
+        const open = days.find((d, i) => {
+          const info = c.days.find((x) => x.ymd === d.ymd);
+          return !info?.closed && !(i === 0 && jstHHMM() >= c.cutoff) && !(info && c.productIds.every((id) => info.late[id]));
+        });
+        setDate((open ?? days[1]).ymd);
         // リッチメニューから: ?view=history（履歴）・?repeat=1（前回と同じ）
         const q = new URLSearchParams(location.search);
         if (q.get("view") === "history") setView("history");
@@ -117,7 +131,9 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
     })();
   }, [sdkReady, liffId, demoUserId, load]);
 
-  const items = Object.entries(qty).filter(([, q]) => q > 0);
+  const chosen = Object.entries(qty).filter(([, q]) => q > 0);
+  const items = chosen.filter(([id]) => !lateOn(id));
+  const dropped = chosen.filter(([id]) => lateOn(id)).map(([id]) => byId[id]?.name ?? id);
   const set = (id: string, n: number) => {
     setRepeat(false);
     setQty((q) => ({ ...q, [id]: Math.max(0, Math.min(999, n)) }));
@@ -204,7 +220,8 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             <h2 className="px-5 text-[15px] font-bold text-ink-faint">お届け日</h2>
             <div className="mt-2 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pt-1 pb-3 [scrollbar-width:none]">
               {days.map((d, i) => {
-                const late = i === 0 && pastCutoff;
+                const closed = dayClosed(d.ymd, i);
+                const late = Boolean(closed);
                 const on = date === d.ymd;
                 return (
                   <button
@@ -224,7 +241,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                       {i === 0 ? "あした" : i === 1 ? "あさって" : `${d.m}月`}
                     </span>
                     <span className="text-[26px] font-bold leading-none tabular-nums">{d.d}</span>
-                    <span className="text-[13px]">{late ? "締切" : d.wd}</span>
+                    <span className="text-[13px]">{late ? closed : d.wd}</span>
                   </button>
                 );
               })}
@@ -275,6 +292,19 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 {g.ids.map((id) => {
                   const p = byId[id];
                   if (!p) return null;
+                  const late = lateOn(id);
+                  if (late)
+                    return (
+                      <li key={id} className="flex items-center gap-3 border-b border-rule bg-off-bg/60 py-3.5 pr-3 pl-3.5 text-off-ink last:border-b-0">
+                        <div className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl bg-cream opacity-50">
+                          <BreadArt name={p.name} className="h-10 w-10" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[18px] font-bold leading-snug">{p.name}</div>
+                          <div className="text-[13px]">この日のお届けは締め切りました</div>
+                        </div>
+                      </li>
+                    );
                   const q = qty[id] ?? 0;
                   return (
                     <li key={id} className="flex items-start gap-3 border-b border-rule py-3.5 pr-3 pl-3.5 last:border-b-0">
@@ -381,6 +411,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   </li>
                 ))}
               </ul>
+              {dropped.length > 0 && (
+                <p className="mt-3 rounded-xl bg-off-bg px-3 py-2 text-[14px] text-off-ink">
+                  {dropped.join("・")}は、この日のお届けの締め切りを過ぎたので外しました。
+                </p>
+              )}
             </div>
             {repeat && (
               <div className="mt-4">
@@ -389,7 +424,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   {days.slice(0, 4).map((d, i) => (
                     <button
                       key={d.ymd}
-                      disabled={i === 0 && pastCutoff}
+                      disabled={Boolean(dayClosed(d.ymd, i))}
                       onClick={() => setDate(d.ymd)}
                       className={`h-12 flex-1 rounded-xl text-[15px] font-bold disabled:bg-off-bg disabled:text-off-ink ${
                         date === d.ymd ? "bg-crust-600 text-white" : "bg-white ring-1 ring-rule"
