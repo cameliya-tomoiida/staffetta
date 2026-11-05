@@ -13,7 +13,8 @@ import { allProducts, withMasters } from "@/lib/catalog";
 import { fmtTime, type DoughBatchPlan, type LinePlan, type ScheduleRow, type ScheduleStep } from "@/lib/production";
 import { isLang, LANG_COOKIE, langInfo, LANGS, type Lang } from "@/i18n/langs";
 import { isReviewed, tr, trUnit, type Key } from "@/i18n/dict";
-import { translateTerms } from "@/i18n/translate";
+import { lookupTerms } from "@/i18n/translate";
+import { RefreshSoon } from "./RefreshSoon";
 import { PrintButton } from "./PrintButton";
 import { DailySheet, EquipmentChart, PlanSheet, StaffSheet, type MakeRow } from "./Forms";
 import { LangPicker } from "./LangPicker";
@@ -75,7 +76,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
     ...r.production.doughs.flatMap((d) => (d.waveName ? [d.waveName] : [])),
     ...r.schedule.flatMap((row) => (row.deadlineBasis ? [row.deadlineBasis] : [])),
   ];
-  const mt = await translateTerms(lang, jaNames);
+  // 訳が無い語は日本語のまま出して、裏で訳す（待たせない）。できたら RefreshSoon が取り直して差し替える
+  const { map: mt, pending } = await lookupTerms(lang, jaNames);
   const name: NameFn = (ja) => ({ text: mt[ja] ?? ja, machine: !!mt[ja], ja });
   const t: T = (k) => tr(lang, k);
   const href = (p: { lang?: Lang; date?: string }) => `/plan?${new URLSearchParams({ date: p.date ?? date, lang: p.lang ?? lang })}`;
@@ -285,6 +287,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
             </tbody>
           </table>
         </div>
+        {pending > 0 && <RefreshSoon label={`まだ訳が無いことばが ${pending} 個あります。日本語のまま出しています。訳ができたら自動で入れかわります。`} />}
         {showMt && (
           <p className="mb-4 flex items-center gap-2 text-sm text-ink-soft">
             <MachineTranslated label={t("machine")} />

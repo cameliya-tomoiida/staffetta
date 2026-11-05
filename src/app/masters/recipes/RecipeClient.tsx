@@ -82,7 +82,7 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
           </div>
           <table className="w-full text-base">
             <thead>
-              <tr className="border-b-2 border-rule-strong text-left text-sm text-ink-soft">
+              <tr className="border-b-2 border-rule-strong text-left text-sm text-ink-soft [&>th]:whitespace-nowrap">
                 <th className="py-1 pr-2">材料</th><th className="pr-2 text-right">ベーカーズ％</th><th className="pr-2 text-right">生地 {doughKg || "-"}kg なら</th><th />
               </tr>
             </thead>
@@ -101,7 +101,7 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
                   <td className="num pr-2 text-right">
                     {flourKg && Number(r.percent) ? `${Math.round(flourKg * Number(r.percent) * 10) / 1000} kg` : ""}
                   </td>
-                  <td className="text-right"><Button variant="quiet" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>行を消す</Button></td>
+                  <td className="text-right"><Button variant="quiet" className="whitespace-nowrap" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>行を消す</Button></td>
                 </tr>
               ))}
             </tbody>

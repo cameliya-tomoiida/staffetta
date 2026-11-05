@@ -210,6 +210,19 @@ function OrderRow({
             <OrderStatusTag status={o.status} />
             {intent && <Tag tone={intent.tone}>{intent.label}</Tag>}
             {x.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
+            {/* 締め（③の checkLeadTime）: 見出しに札を出して、何の黄色かを分かるように */}
+            {!off && lead.some((c) => c.status === "late") && (
+              <Tag tone="review">
+                <Icon.clock className="h-4 w-4" />
+                締めに間に合いません
+              </Tag>
+            )}
+            {!off && !lead.some((c) => c.status === "late") && lead.some((c) => c.status === "warn") && (
+              <Tag tone="plain">
+                <Icon.clock className="h-4 w-4" />
+                締め過ぎ（仮発注）
+              </Tag>
+            )}
             {x.lineNotifiedAt && <Tag tone="info">LINEで連絡済み</Tag>}
             <ChannelBadge channel={o.source.channel} />
             <span className="text-sm text-ink-soft">
@@ -249,7 +262,8 @@ function OrderRow({
                 <div key={c.reason} className={`mt-1 flex items-start gap-1.5 text-review-ink ${c.status === "late" ? "font-bold" : ""}`}>
                   <Icon.clock className="mt-1 h-4 w-4 shrink-0" />
                   <span>
-                    {o.lines.length > 1 && names.length > 0 && names.length < o.lines.length && <span className="mr-1 font-normal">{names.join("・")}：</span>}
+                    <span className="mr-1">{c.status === "late" ? "締め：" : "締め（仮発注）："}</span>
+                    {o.lines.length > 1 && names.length > 0 && names.length < o.lines.length && <span className="mr-1 font-normal">{names.join("・")}…</span>}
                     {c.reason}
                   </span>
                 </div>

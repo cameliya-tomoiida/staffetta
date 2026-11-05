@@ -16,6 +16,8 @@ import {
   applyUpload, exportFile, history, isScreenName, previewUpload, remove, restore, saveOne, saveRecipe, stocktake, templateFile,
   type RecipeLineInput,
 } from "@/lib/masters/service";
+import { warmMasterTranslations } from "@/i18n/translate";
+import { loadMasters } from "@/lib/masters/seed-db";
 
 const csvResponse = (buf: Buffer, fileName: string) =>
   new NextResponse(new Uint8Array(buf), {
@@ -43,6 +45,8 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/masters/[nam
   if (format === "history") return NextResponse.json({ history: await history(name, q.get("id") ?? undefined) });
   return NextResponse.json({ error: "format を指定してください" }, { status: 400 });
 }
+
+const TRANSLATED_MASTERS = new Set<string>(["products", "doughs", "steps", "equipment", "toppings", "lines", "recipeItems"]);
 
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[name]">) {
   const { name } = await ctx.params;
@@ -74,6 +78,8 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
       else throw new Error(`知らない操作です: ${b.action}`);
     }
     revalidatePath(`/masters/${name}`);
+    // 工程表に出る言葉（商品・生地・工程・設備など）を直したら、10言語の訳を裏で作っておく（②。待たない）
+    if (TRANSLATED_MASTERS.has(name)) void loadMasters().then(warmMasterTranslations).catch(() => undefined);
     return NextResponse.json(result ?? { ok: true });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 400 });
