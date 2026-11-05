@@ -8,6 +8,8 @@ import { allOrders, pickDate, visibleDates } from "./all-orders";
 import { nowMs } from "@/lib/clock";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { lowStockItems } from "@/lib/stock/store";
+import { alertCounts } from "@/lib/db/alerts-store";
+import { isOn } from "@/lib/settings/features";
 
 export interface TodaySummary {
   /** 要確認の注文（どの入口でも） */
@@ -31,6 +33,8 @@ export interface TodaySummary {
   /** 安全在庫を下回っている材料・包材の数（⑤の lowStockItems）と、押したときの行き先 */
   lowStock: number;
   lowStockHref: string;
+  /** お知らせ（①の alertCounts）。お知らせの機能を使わないときは null。new＝まだ見ていない（ベルの数）、danger＝急ぎ */
+  alerts: { new: number; open: number; danger: number } | null;
   /** サーバーの「いま」（ミリ秒。デモの時計なら、デモの時刻）。画面はここからの経過で数える */
   serverNow: number;
 }
@@ -61,6 +65,15 @@ export async function todaySummary(now = nowMs()): Promise<TodaySummary> {
     warnings: r.warnings.length,
     lowStock: low.length,
     lowStockHref: `/masters/${low.every((x) => x.master === "packaging") && low.length ? "packaging" : "materials"}#stock-moves`,
+    alerts: (() => {
+      try {
+        if (!isOn("alerts")) return null;
+        const c = alertCounts();
+        return { new: c.new, open: c.open, danger: c.danger };
+      } catch {
+        return null;
+      }
+    })(),
     serverNow: now,
   };
 }
