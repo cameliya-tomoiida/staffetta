@@ -5,8 +5,8 @@
 // - 1行 = 1取引先。id は C01 のような取引先コード。消すときは論理削除（disabled）か「使う」を いいえ（active）。
 // 架空のデータだけを入れる（公開リポジトリのため）。
 
-import type { CustomerMaster, OrderChannel } from "@/data/types";
-import { CHANNEL_OPTIONS as DEF_CHANNEL_OPTIONS, customerDef } from "./defs";
+import type { CustomerMaster, DeliveryMethod, OrderChannel } from "@/data/types";
+import { CHANNEL_OPTIONS as DEF_CHANNEL_OPTIONS, customerDef, DELIVERY_METHOD_OPTIONS } from "./defs";
 
 export const CUSTOMERS = "customers";
 
@@ -22,13 +22,16 @@ export const CHANNEL_LABEL = Object.fromEntries(DEF_CHANNEL_OPTIONS.map((o) => [
 
 export { customerDef };
 
+/** 納品の方法の表示名 */
+export const DELIVERY_METHOD_LABEL = Object.fromEntries(DELIVERY_METHOD_OPTIONS.map((o) => [o.value, o.label])) as Record<DeliveryMethod, string>;
+
 /** 納品時刻が空のときの値（③の工程表と同じ） */
 export const DEFAULT_CUSTOMER_DELIVERY_TIME = "08:00";
 
 type AdminColumn = {
   key: string;
   label: string;
-  type: "text" | "select" | "time" | "bool" | "textarea";
+  type: "text" | "select" | "time" | "bool" | "textarea" | "number";
   options?: { value: string; label: string }[];
   required?: boolean;
   help?: string;
@@ -37,14 +40,15 @@ type AdminColumn = {
   readOnly?: boolean;
 };
 
-const LIST_KEYS = new Set(["id", "name", "channel", "cutoff", "deliveryTime", "course", "active"]);
+const LIST_KEYS = new Set(["id", "name", "channel", "cutoff", "deliveryTime", "course", "deliveryMethod", "active"]);
+const TEXTAREA_KEYS = new Set(["note", "deliveryHowTo", "deliveryCaution"]);
 
 /** ②の管理画面の列（③の customerDef から作る ＋ LINE のひも付けの人数） */
 export function adminCustomerColumns(): AdminColumn[] {
   const cols: AdminColumn[] = customerDef.columns.map((c) => ({
     key: c.key,
     label: c.label,
-    type: c.type === "enum" ? "select" : c.type === "time" ? "time" : c.type === "boolean" ? "bool" : c.key === "note" ? "textarea" : "text",
+    type: c.type === "enum" ? "select" : c.type === "time" ? "time" : c.type === "boolean" ? "bool" : c.type === "number" ? "number" : TEXTAREA_KEYS.has(c.key) ? "textarea" : "text",
     ...(c.options ? { options: c.options.map((o) => ({ value: o.value, label: o.label })) } : {}),
     ...(c.required ? { required: true } : {}),
     ...(c.help ? { help: c.help } : {}),
@@ -64,5 +68,10 @@ export function validateCustomer(r: Partial<CustomerRow>): string[] {
   if (!r.channel || !(r.channel in CHANNEL_LABEL)) e.push(`注文の入口は ${Object.values(CHANNEL_LABEL).join("・")} のどれかにしてください`);
   if (!r.cutoff || !HHMM.test(r.cutoff)) e.push("締め時刻は 17:00 のように入れてください");
   if (r.deliveryTime && !HHMM.test(r.deliveryTime)) e.push("納品時刻は 08:00 のように入れてください");
+  if (r.deliveryWindowFrom && !HHMM.test(r.deliveryWindowFrom)) e.push("納品時間の希望（から）は 07:00 のように入れてください");
+  if (r.deliveryWindowTo && !HHMM.test(r.deliveryWindowTo)) e.push("納品時間の希望（まで）は 09:00 のように入れてください");
+  if (r.deliveryMethod && !DELIVERY_METHOD_LABEL[r.deliveryMethod]) e.push(`納品の方法は ${Object.values(DELIVERY_METHOD_LABEL).join("・")} のどれかにしてください`);
+  e.push(...(customerDef.check?.(r as CustomerMaster, {}) ?? []));
+  for (const k of ["lat", "lng"] as const) if (r[k] != null && !Number.isFinite(r[k])) e.push(`${k === "lat" ? "緯度" : "経度"}は数で入れてください`);
   return e;
 }

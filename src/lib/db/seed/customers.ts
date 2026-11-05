@@ -28,6 +28,27 @@ const demo: Record<string, { course: string; deliveryTime: string; cutoff?: stri
   C13: { course: "ヤマト便", deliveryTime: "09:00" },
 };
 
+/**
+ * 架空の取引先の「配送の情報」（⑦。配送コースの地図の見本）。
+ * 住所は町の名前まで（番地なし）・位置はその町のだいたいの真ん中。実在のお店の住所ではない。
+ */
+type DemoDelivery = Pick<CustomerRow, "address" | "lat" | "lng" | "deliveryMethod" | "closedWeekdays" | "deliveryWindowFrom" | "deliveryWindowTo" | "deliveryHowTo" | "deliveryCaution">;
+const demoDelivery: Record<string, DemoDelivery> = {
+  C01: { address: "愛知県名古屋市昭和区御器所", lat: 35.1475, lng: 136.93, deliveryMethod: "own", closedWeekdays: [0], deliveryWindowFrom: "08:00", deliveryWindowTo: "09:00", deliveryHowTo: "給食室の勝手口。番重を台の上に置き、前回の番重を持ち帰る", deliveryCaution: "園児の登園の時間（8:30ごろ）は門の前に車を止めない" },
+  C02: { address: "愛知県名古屋市瑞穂区", lat: 35.129, lng: 136.935, deliveryMethod: "own", deliveryWindowFrom: "07:00", deliveryWindowTo: "07:45", deliveryHowTo: "地下の搬入口から。栄養科の検品の人に渡し、受領のサインをもらう", deliveryCaution: "搬入口の守衛さんに業者名を言う" },
+  C03: { address: "愛知県名古屋市港区港楽", lat: 35.101, lng: 136.8845, deliveryMethod: "own", closedWeekdays: [0, 6], deliveryWindowFrom: "08:30", deliveryWindowTo: "09:30", deliveryHowTo: "検収室の前の台に置く。温度を記録表に書く" },
+  C04: { address: "愛知県名古屋市中村区", lat: 35.17, lng: 136.86, deliveryMethod: "own", closedWeekdays: [3], deliveryWindowTo: "06:30", deliveryHowTo: "開店前。裏口のボックスに入れて鍵をかける", deliveryCaution: "水曜は定休日。次回の注文を聞く" },
+  C05: { address: "愛知県名古屋市南区", lat: 35.095, lng: 136.93, deliveryMethod: "own", deliveryWindowFrom: "06:30", deliveryWindowTo: "07:30", deliveryHowTo: "玄関で職員さんに手渡し。次回の注文を聞く（火・木・土）" },
+  C06: { address: "愛知県あま市", lat: 35.189, lng: 136.804, deliveryMethod: "own", closedWeekdays: [1], deliveryWindowTo: "07:00", deliveryHowTo: "店の裏の棚" },
+  C07: { address: "愛知県名古屋市千種区今池", lat: 35.169, lng: 136.9375, deliveryMethod: "own", closedWeekdays: [0], deliveryWindowFrom: "09:00", deliveryWindowTo: "10:00", deliveryHowTo: "厨房の入口。冷蔵のものは冷蔵庫へ" },
+  C08: { address: "愛知県東海市", lat: 35.023, lng: 136.902, deliveryMethod: "own", deliveryWindowFrom: "07:00", deliveryWindowTo: "08:00", deliveryCaution: "大きいトラックは入れない（軽で行く）" },
+  C09: { address: "愛知県名古屋市名東区本郷", lat: 35.1755, lng: 137.007, deliveryMethod: "own", closedWeekdays: [0], deliveryWindowFrom: "07:30", deliveryWindowTo: "08:30", deliveryHowTo: "配膳室の前" },
+  C10: { address: "三重県四日市市", lat: 34.965, lng: 136.624, deliveryMethod: "parcel", deliveryHowTo: "前日の夕方に宅配便で出す（午前着）" },
+  C11: { address: "愛知県名古屋市緑区", lat: 35.07, lng: 136.953, deliveryMethod: "own", closedWeekdays: [0, 6], deliveryWindowFrom: "09:30", deliveryWindowTo: "10:30", deliveryHowTo: "食堂の厨房。社員の人に渡す" },
+  C12: { address: "静岡県浜松市", lat: 34.7108, lng: 137.7261, deliveryMethod: "frozen", deliveryHowTo: "冷凍便。前日に出す" },
+  C13: { address: "岐阜県岐阜市", lat: 35.423, lng: 136.76, deliveryMethod: "parcel", deliveryHowTo: "店舗ごとに箱を分けて宅配便" },
+};
+
 export function sampleCustomers(): CustomerRow[] {
   return customers.map((c) => ({
     id: c.id,
@@ -41,6 +62,7 @@ export function sampleCustomers(): CustomerRow[] {
     ...(c.fax ? { fax: c.fax } : {}),
     ...(c.externalCode ? { externalCode: c.externalCode } : {}),
     ...(c.lineUserId ? { lineUserIds: [c.lineUserId] } : {}),
+    ...(demoDelivery[c.id] ?? {}),
   }));
 }
 

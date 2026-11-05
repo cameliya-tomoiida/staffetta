@@ -27,6 +27,16 @@ export default async function CustomersAdmin() {
     note: c.note ?? "",
     deliveryWeekdays: (c.deliveryWeekdays ?? []).map((n) => "日月火水木金土"[n]).join(";"),
     replyRequired: c.replyRequired === true,
+    postalCode: c.postalCode ?? "",
+    address: c.address ?? "",
+    deliveryMethod: c.deliveryMethod ?? "",
+    closedWeekdays: (c.closedWeekdays ?? []).map((n) => "日月火水木金土"[n]).join(";"),
+    deliveryWindowFrom: c.deliveryWindowFrom ?? "",
+    deliveryWindowTo: c.deliveryWindowTo ?? "",
+    deliveryHowTo: c.deliveryHowTo ?? "",
+    deliveryCaution: c.deliveryCaution ?? "",
+    lat: c.lat ?? "",
+    lng: c.lng ?? "",
     active: c.active !== false,
     lineUserIds: c.lineUserIds?.length ? `${c.lineUserIds.length}人` : "",
   }));
@@ -35,7 +45,7 @@ export default async function CustomersAdmin() {
   return (
     <AdminPage
       title="取引先"
-      lead="注文をくれるお店・施設です。注文の入口・締め・納品時刻・配送コースと、LINE のひも付けを決めます。"
+      lead="注文をくれるお店・施設です。注文の入口・締め・納品時刻・配送コース・納品の仕方と、LINE のひも付けを決めます。"
       name="customers"
       idKey="id"
       columns={columns}

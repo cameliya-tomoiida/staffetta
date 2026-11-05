@@ -470,8 +470,30 @@ export interface CustomerMaster {
   /** 仮発注・注文を受けたら、受付の返事（FAX・メール）を出す先（⑤が下書きを自動で作る。送るのは人） */
   replyRequired?: boolean;
   note?: string;
+  // ── 配送の情報（⑦。配送コースの地図 /admin/routes が使う） ──
+  /** 郵便番号 "000-0000" */
+  postalCode?: string;
+  /** 納品先の住所 */
+  address?: string;
+  /** 納品の方法: own = 自社便（どの便かは course）、frozen = 冷凍便、parcel = 宅配・路線便、pickup = 引き取り */
+  deliveryMethod?: DeliveryMethod;
+  /** 定休日（0=日〜6=土） */
+  closedWeekdays?: number[];
+  /** 納品時間の希望 "HH:MM"（から・まで。どちらか片方でもよい） */
+  deliveryWindowFrom?: string;
+  deliveryWindowTo?: string;
+  /** 納品の仕方（置き場所・鍵・受け取る人など） */
+  deliveryHowTo?: string;
+  /** 注意事項（駐車・時間・気をつけること） */
+  deliveryCaution?: string;
+  /** 地図の位置（住所から国土地理院の住所検索で出す。手で直してもよい） */
+  lat?: number;
+  lng?: number;
   active: boolean;
 }
+
+/** 納品の方法 */
+export type DeliveryMethod = "own" | "frozen" | "parcel" | "pickup";
 
 /**
  * 便（配送コース）。工程表は、得意先の便の出発時刻から逆算する（積み込みの時間を引いた時刻までに作り終える）。
