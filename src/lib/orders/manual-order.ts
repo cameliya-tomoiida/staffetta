@@ -25,12 +25,13 @@ export type ManualOrderResult = { ok: true; orderId: string; late: string[]; dup
 export async function createManualOrder(input: ManualOrderInput): Promise<ManualOrderResult> {
   try {
     if (!input.who.trim()) throw new Error("受けた人を選んでください");
-    if (!customerById(input.customerId)) throw new Error("取引先を選んでください");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate)) throw new Error("納品日を選んでください");
     if (input.clientId !== undefined && !/^[A-Za-z0-9_-]{8,64}$/.test(input.clientId)) throw new Error("送信IDの形が違います");
     const items = input.items.filter((i) => Number.isInteger(i.quantity) && i.quantity > 0);
     if (!items.length) throw new Error("商品の数を入れてください");
     const masters = await loadMasters();
+    // 取引先は、マスタ（取り込んだ本物の取引先も）か、見本の決め打ちの一覧にあれば OK
+    if (!masters.customers.some((c) => c.id === input.customerId && c.active !== false) && !customerById(input.customerId)) throw new Error("取引先を選んでください");
     const at = nowIso();
     const id = `M${nowMs()}`;
     const order = withMasters(masters, () => {

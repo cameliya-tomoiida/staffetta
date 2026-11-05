@@ -26,6 +26,12 @@ const demo: Record<string, { course: string; deliveryTime: string; cutoff?: stri
   C11: { course: "南コース", deliveryTime: "10:00" },
   C12: { course: "冷凍便", deliveryTime: "13:00" },
   C13: { course: "ヤマト便", deliveryTime: "09:00" },
+  C14: { course: "東コース（朝便）", deliveryTime: "07:40", note: "納品のときに次回分を聞く" },
+  C15: { course: "東コース（朝便）", deliveryTime: "08:50" },
+  C16: { course: "東コース（朝便）", deliveryTime: "09:10" },
+  C17: { course: "西コース", deliveryTime: "06:00" },
+  C18: { course: "西コース", deliveryTime: "06:25" },
+  C19: { course: "西コース", deliveryTime: "07:20" },
 };
 
 /**
@@ -46,6 +52,12 @@ const demoDelivery: Record<string, DemoDelivery> = {
   C10: { address: "三重県四日市市", lat: 34.965, lng: 136.624, deliveryMethod: "parcel", deliveryHowTo: "前日の夕方に宅配便で出す（午前着）" },
   C11: { address: "愛知県名古屋市緑区", lat: 35.07, lng: 136.953, deliveryMethod: "own", closedWeekdays: [0, 6], deliveryWindowFrom: "09:30", deliveryWindowTo: "10:30", deliveryHowTo: "食堂の厨房。社員の人に渡す" },
   C12: { address: "静岡県浜松市", lat: 34.7108, lng: 137.7261, deliveryMethod: "frozen", deliveryHowTo: "冷凍便。前日に出す" },
+  C14: { address: "愛知県名古屋市瑞穂区", lat: 35.131, lng: 136.946, deliveryMethod: "own", closedWeekdays: [0], deliveryWindowFrom: "07:30", deliveryWindowTo: "08:15", deliveryHowTo: "門のインターホンを押す。給食の先生に手渡し", deliveryCaution: "園児の登園の時間。門の前に車を止めない" },
+  C15: { address: "愛知県名古屋市千種区覚王山", lat: 35.1655, lng: 136.951, deliveryMethod: "own", closedWeekdays: [2], deliveryWindowTo: "09:00", deliveryHowTo: "店の裏口の青い箱に入れる（鍵は箱の中）" },
+  C16: { address: "愛知県名古屋市千種区星が丘", lat: 35.1625, lng: 136.986, deliveryMethod: "own", deliveryWindowFrom: "08:30", deliveryWindowTo: "09:30", deliveryHowTo: "1階の厨房。栄養士さんに数を見てもらってサインをもらう", deliveryCaution: "駐車場は職員用の奥のほう" },
+  C17: { address: "愛知県名古屋市中川区", lat: 35.142, lng: 136.838, deliveryMethod: "own", closedWeekdays: [0, 6], deliveryWindowFrom: "05:45", deliveryWindowTo: "06:30", deliveryHowTo: "検収室の台に置き、温度を記録表に書く", deliveryCaution: "早朝は正門が閉まっている。東の通用口から" },
+  C18: { address: "愛知県名古屋市西区", lat: 35.191, lng: 136.885, deliveryMethod: "own", closedWeekdays: [1], deliveryWindowTo: "07:00", deliveryHowTo: "開店前。シャッターの横の棚" },
+  C19: { address: "愛知県清須市", lat: 35.198, lng: 136.851, deliveryMethod: "own", closedWeekdays: [0], deliveryWindowFrom: "07:00", deliveryWindowTo: "08:00", deliveryHowTo: "売店の人に手渡し。前日の残りを引き取る", deliveryCaution: "病院の正面玄関には止めない。業者用の駐車場へ" },
   C13: { address: "岐阜県岐阜市", lat: 35.423, lng: 136.76, deliveryMethod: "parcel", deliveryHowTo: "店舗ごとに箱を分けて宅配便" },
 };
 

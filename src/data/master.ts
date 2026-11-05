@@ -107,6 +107,13 @@ export const customers: Customer[] = [
   { id: "C10", name: "ピッツェリア やまのて（デモ）", channel: "email", cutoff: "15:00", note: "PDFの発注書をメールで送ってくる。発注番号あり" },
   { id: "C11", name: "とうわ工業 社員食堂（デモ）", channel: "email", cutoff: "15:00", note: "Excelの注文書をメールに添付" },
   { id: "C12", name: "まるしょう食品（デモ）", channel: "email", cutoff: "16:00", note: "本文で数量変更・キャンセルが来る" },
+  // 配送スタッフの画面（/driver）の見本: 東コース（朝便）・西コースを、それぞれ6件にする（①・11/6）
+  { id: "C14", name: "こすもす保育園（デモ）", channel: "driver", cutoff: "15:00", note: "納品のときに次回分を聞く" },
+  { id: "C15", name: "喫茶しろつめ（デモ）", channel: "driver", cutoff: "17:00" },
+  { id: "C16", name: "ひだまり老人ホーム（デモ）", channel: "phone", cutoff: "15:00" },
+  { id: "C17", name: "にしび給食センター（デモ）", channel: "driver", cutoff: "14:00" },
+  { id: "C18", name: "カフェもくれん（デモ）", channel: "driver", cutoff: "17:00" },
+  { id: "C19", name: "みずほ病院 売店（デモ）", channel: "phone", cutoff: "15:00" },
   { id: "C13", name: "ベーグル工房みなみ 本部（デモ）", channel: "google_sheet", cutoff: "12:00", note: "店舗別・月別のスプレッドシート" },
 ];
 

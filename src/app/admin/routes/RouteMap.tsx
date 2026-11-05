@@ -56,7 +56,7 @@ export interface MapLine {
 }
 
 export function RouteMap({
-  depot, pins, line, lines, selected, onSelect,
+  depot, pins, line, lines, selected, onSelect, height = "h-[520px]",
 }: {
   depot: { lat: number; lng: number; name: string };
   pins: MapPin[];
@@ -66,6 +66,8 @@ export function RouteMap({
   lines?: MapLine[];
   selected?: string;
   onSelect?: (id: string) => void;
+  /** 地図の高さ（Tailwind のクラス）。配送スタッフのスマホ画面（/driver）は低くする */
+  height?: string;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
@@ -154,7 +156,7 @@ export function RouteMap({
 
   return (
     <div className="relative">
-      <div ref={box} className="h-[520px] w-full rounded-lg border border-rule-strong bg-cream" role="application" aria-label="配送コースの地図" />
+      <div ref={box} className={`${height} w-full rounded-lg border border-rule-strong bg-cream`} role="application" aria-label="配送コースの地図" />
       {error && <p className="absolute inset-x-4 top-4 rounded-md border border-alert-line bg-alert-bg p-3 text-base text-alert-ink">{error}</p>}
     </div>
   );
