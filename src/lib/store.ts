@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import path from "node:path";
 import type { Db } from "./types";
-import { clearFaxInbox, FAX_INBOX_DIR, loadDb, loadRecentDb, resetToDemo, saveDiff, type RecentDb } from "./db/hub-store";
+import { clearFaxInbox, FAX_INBOX_DIR, loadDb, loadForUpdate, loadRecentDb, resetToDemo, type RecentDb } from "./db/hub-store";
 import { todayJst } from "./clock";
 import { resetLineDemo } from "./channels/line/state";
 
@@ -31,10 +31,9 @@ export async function readRecentDb(days = 60): Promise<RecentDb> {
 /** 読み→書きを直列化して、同時更新で消えないようにする。変わった行だけ保存する */
 export function updateDb<T>(fn: (db: Db) => T | Promise<T>): Promise<T> {
   const run = queue.then(async () => {
-    const before = await loadDb();
-    const db = structuredClone(before);
+    const { db, save } = await loadForUpdate(); // 全件を読む（読んだときの文字列と比べるので、写しは作らない）
     const result = await fn(db);
-    await saveDiff(before, db);
+    await save();
     return result;
   });
   queue = run.catch(() => undefined);

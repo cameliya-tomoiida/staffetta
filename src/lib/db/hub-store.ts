@@ -53,9 +53,6 @@ function init() {
 
 // ───────── 読み出し ─────────
 
-function readRows<T>(table: string): T[] {
-  return (getDb().prepare(`SELECT json FROM ${table}`).all() as { json: string }[]).map((r) => JSON.parse(r.json) as T);
-}
 
 /** 表を作り、初めてなら移行をすませる（中身は読まない。検索などの前に呼ぶ） */
 export async function ensureStore(): Promise<void> {
@@ -100,8 +97,14 @@ export async function loadRecentDb(opts: { since: string }): Promise<RecentDb> {
   return db;
 }
 
-/** 保存されている全データを、いままでの Db の形で返す */
-export async function loadDb(): Promise<Db> {
+/** 表の行（id と、保存してある JSON の文字列） */
+type Snap = Map<string, string>;
+function readRaw(table: string): { rows: unknown[]; snap: Snap } {
+  const all = getDb().prepare(`SELECT id, json FROM ${table}`).all() as { id: string; json: string }[];
+  return { rows: all.map((r) => JSON.parse(r.json)), snap: new Map(all.map((r) => [r.id, r.json])) };
+}
+
+async function readAll(): Promise<{ db: Db; snaps: { faxes: Snap; orders: Snap; purchaseOrders: Snap } }> {
   init();
   await migrateOnce();
   const formats = await listMaster<FormatRow>(FAX_FORMATS);
@@ -110,17 +113,40 @@ export async function loadDb(): Promise<Db> {
     const { id: _id, disabled: _d, ...t } = f;
     templates[f.customerId] = t;
   }
+  const faxes = readRaw("faxes");
+  const orders = readRaw("orders");
+  const pos = readRaw("purchase_orders");
   const db: Db = {
-    faxes: readRows<FaxDoc>("faxes").sort((a, b) => a.receivedAt.localeCompare(b.receivedAt) || a.id.localeCompare(b.id)),
-    orders: readRows<Order>("orders").sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)),
-    purchaseOrders: readRows<PurchaseOrder>("purchase_orders"),
+    faxes: (faxes.rows as FaxDoc[]).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt) || a.id.localeCompare(b.id)),
+    orders: (orders.rows as Order[]).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)),
+    purchaseOrders: pos.rows as PurchaseOrder[],
     importedMessageIds: (getDb().prepare("SELECT message_id FROM imported_messages ORDER BY at").all() as { message_id: string }[]).map((r) => r.message_id),
     templates,
     mappings: kvGet<Db["mappings"]>("fax_mappings") ?? {},
   };
   const loss = kvGet<Db["lossRates"]>("loss_rates");
   if (loss && typeof loss.rates === "object") db.lossRates = loss;
-  return db;
+  return { db, snaps: { faxes: faxes.snap, orders: orders.snap, purchaseOrders: pos.snap } };
+}
+
+/** 保存されている全データを、いままでの Db の形で返す */
+export async function loadDb(): Promise<Db> {
+  return (await readAll()).db;
+}
+
+/**
+ * 書き換えるために全件を読む（store.updateDb が使う）。返した db をそのまま書き換えてから save() を呼ぶと、変わった行だけ保存する。
+ * 読んだときの JSON の文字列と比べるので、全件の写し（structuredClone）を作らない。3年分で 1件の確定 1.2秒 → 約0.6秒。
+ * 読んだ中で消えた行は削除する（saveDiff と同じ）。
+ */
+export async function loadForUpdate(): Promise<{ db: Db; save: () => Promise<void> }> {
+  const { db, snaps } = await readAll();
+  // 行の表以外（小さい）は、比べるために写しを取っておく
+  const small = structuredClone({ templates: db.templates, mappings: db.mappings, lossRates: db.lossRates, importedMessageIds: db.importedMessageIds });
+  return {
+    db,
+    save: () => writeChanges(snaps, small, db),
+  };
 }
 
 // ───────── 書き込み（変わった行だけ） ─────────
@@ -148,21 +174,19 @@ function upsertPurchase(p: PurchaseOrder & { createdAt?: string }) {
     .run(p.id, p.supplierId ?? null, p.deliveryDate ?? null, p.status ?? null, p.createdAt ?? null, JSON.stringify(p));
 }
 
-function diffById<T extends { id: string }>(before: T[], after: T[], upsert: (x: T) => void, table: string) {
-  const old = new Map(before.map((x) => [x.id, JSON.stringify(x)]));
+function diffBySnap<T extends { id: string }>(snap: Snap, after: T[], upsert: (x: T) => void, table: string) {
   const seen = new Set<string>();
   for (const x of after) {
     seen.add(x.id);
-    if (old.get(x.id) !== JSON.stringify(x)) upsert(x);
+    if (snap.get(x.id) !== JSON.stringify(x)) upsert(x);
   }
   const del = getDb().prepare(`DELETE FROM ${table} WHERE id = ?`);
-  for (const id of old.keys()) if (!seen.has(id)) del.run(id);
+  for (const id of snap.keys()) if (!seen.has(id)) del.run(id);
 }
 
-/** before（読んだ時点）と after（書き換え後）を比べて、変わった所だけ保存する */
-export async function saveDiff(before: Db, after: Db) {
-  // 最近の分だけ読んだデータ（loadRecentDb）を渡すと、読まなかった古い行を消してしまう。絶対に混ぜない
-  if ("partialSince" in before || "partialSince" in after) throw new Error("saveDiff には全件のデータ（loadDb）を渡してください（loadRecentDb の結果は読むだけ）");
+type Small = Pick<Db, "templates" | "mappings" | "lossRates" | "importedMessageIds">;
+
+async function writeChanges(snaps: { faxes: Snap; orders: Snap; purchaseOrders: Snap }, before: Small, after: Db) {
   init();
   // 様式（masters）は別のトランザクション（masters.ts が自前で持つ）
   const formatRows: FormatRow[] = [];
@@ -170,9 +194,9 @@ export async function saveDiff(before: Db, after: Db) {
     if (JSON.stringify(before.templates?.[cid]) !== JSON.stringify(t)) formatRows.push({ id: cid, ...t });
   }
   transaction(() => {
-    diffById(before.faxes, after.faxes, upsertFax, "faxes");
-    diffById(before.orders, after.orders, upsertOrder, "orders");
-    diffById(before.purchaseOrders ?? [], after.purchaseOrders ?? [], upsertPurchase, "purchase_orders");
+    diffBySnap(snaps.faxes, after.faxes, upsertFax, "faxes");
+    diffBySnap(snaps.orders, after.orders, upsertOrder, "orders");
+    diffBySnap(snaps.purchaseOrders, after.purchaseOrders ?? [], upsertPurchase, "purchase_orders");
     const had = new Set(before.importedMessageIds);
     const ins = getDb().prepare("INSERT OR IGNORE INTO imported_messages (message_id, at) VALUES (?, ?)");
     for (const m of after.importedMessageIds ?? []) if (!had.has(m)) ins.run(m, new Date().toISOString());
@@ -180,6 +204,15 @@ export async function saveDiff(before: Db, after: Db) {
     if (JSON.stringify(before.lossRates) !== JSON.stringify(after.lossRates)) kvSet("loss_rates", after.lossRates);
   });
   for (const f of formatRows) await upsertMasters(FAX_FORMATS, [f], f.approvedBy || "（不明）");
+}
+
+const snapOf = (rows: { id: string }[]): Snap => new Map(rows.map((x) => [x.id, JSON.stringify(x)]));
+
+/** before（読んだ時点）と after（書き換え後）を比べて、変わった所だけ保存する（測定や移行用。画面の書き込みは loadForUpdate を使う） */
+export async function saveDiff(before: Db, after: Db) {
+  // 最近の分だけ読んだデータ（loadRecentDb）を渡すと、読まなかった古い行を消してしまう。絶対に混ぜない
+  if ("partialSince" in before || "partialSince" in after) throw new Error("saveDiff には全件のデータ（loadDb）を渡してください（loadRecentDb の結果は読むだけ）");
+  await writeChanges({ faxes: snapOf(before.faxes), orders: snapOf(before.orders), purchaseOrders: snapOf(before.purchaseOrders ?? []) }, before, after);
 }
 
 // ───────── まとめて入れ替え（移行・リセット・取り込み） ─────────
