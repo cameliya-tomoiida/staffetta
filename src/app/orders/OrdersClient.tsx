@@ -10,6 +10,7 @@ import {
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
 import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
+import { ReplyButton } from "./ReplyButton";
 import { easyReasons, LOW_CONFIDENCE } from "@/components/ui/wording";
 
 const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
@@ -317,6 +318,7 @@ function OrderRow({
             <ConfirmButton order={o} who={who} custName={custName} />
           )}
           {linePreview && <LineNotifyButton orderId={o.id} preview={linePreview} who={who} />}
+          {(o.status === "confirmed" || o.status === "provisional") && o.source.channel !== "line" && <ReplyButton orderId={o.id} who={who} />}
           {faxRef?.kind === "fax_pdf" && o.status === "needs_review" && (
             <Link href={`/fax/${faxRef.faxId}`} className={buttonClass("primary")}>
               見比べて確認

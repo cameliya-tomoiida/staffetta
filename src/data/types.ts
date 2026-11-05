@@ -447,6 +447,8 @@ export interface CustomerMaster {
   course?: string;
   /** 納品する曜日（0=日〜6=土）。空なら便の曜日、それも空なら毎日 */
   deliveryWeekdays?: number[];
+  /** 仮発注・注文を受けたら、受付の返事（FAX・メール）を出す先（⑤が下書きを自動で作る。送るのは人） */
+  replyRequired?: boolean;
   note?: string;
   active: boolean;
 }

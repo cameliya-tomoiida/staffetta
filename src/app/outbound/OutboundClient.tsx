@@ -8,6 +8,7 @@ import { Button, buttonClass, fmtDate, fmtDateTime, MethodIcon, Notice, Purchase
 const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 import type { EntryRow } from "@/lib/channels/outbound/render";
 import { ReceivePanel } from "./ReceivePanel";
+import type { StoredReply } from "@/lib/replies/store";
 import type { OutboundRecord } from "@/lib/channels/outbound/workflow";
 
 type View = OutboundRecord & {
@@ -27,7 +28,7 @@ const methodLabel: Record<string, string> = {
 const file = (po: string, name: string) => `/api/outbound/file?po=${encodeURIComponent(po)}&name=${encodeURIComponent(name)}`;
 const iso = (v: unknown) => (typeof v === "string" ? v : undefined);
 
-export function OutboundClient({ records, dates }: { records: View[]; dates: string[] }) {
+export function OutboundClient({ records, dates, replies = [] }: { records: View[]; dates: string[]; replies?: StoredReply[] }) {
   const router = useRouter();
   const [who, setWho] = useState("");
   const [busy, setBusy] = useState(false);
@@ -91,6 +92,29 @@ export function OutboundClient({ records, dates }: { records: View[]; dates: str
             ))}
             <Button variant="primary" disabled={busy} onClick={() => act({ action: "fax_send", poId: r.po.id })}>複合機から送信（デモ）</Button>
             <Button variant="ok" disabled={busy || !who} onClick={() => act({ action: "sent", poId: r.po.id }, "送信済みにしました")}>送った</Button>
+          </div>
+        ))}
+      </section>
+
+      {/* 受注の確認返信（⑤）。受注一覧の「返事を作る」と、「受けたら返事が要る」先の自動の下書き */}
+      <section id="replies" className="space-y-2 rounded-sm border border-rule-strong bg-sheet p-4">
+        <h2 className="text-xl font-black">お客さんへの返事 送信待ち（<span className="num">{replies.filter((x) => x.status === "draft").length}</span> 件）</h2>
+        <p className="text-sm text-ink-soft">受けた内容・変更・間に合わない品と代わりの日を書いた下書きです。開いて確かめ、送ったら「送った」を押してください（自動では送りません）。</p>
+        {!replies.length && <p className="text-sm text-ink-soft">返事の下書きはありません。受注一覧の「返事を作る」で作れます。</p>}
+        {replies.map((x) => (
+          <div key={x.id} className={`flex flex-wrap items-center gap-3 border-t border-dashed border-rule pt-2 ${x.status === "sent" ? "opacity-60" : ""}`}>
+            <div className="min-w-60 flex-1">
+              <div className="text-lg font-black">{x.customerName} <span className="text-base font-bold">御中</span></div>
+              <div className="text-sm text-ink-soft">
+                {x.kind === "fax" ? "FAX" : "メール"} <b className="num text-ink">{x.to || "（宛先を入れてください）"}</b> ／ 納品 <b className="num text-ink">{fmtDate(x.deliveryDate)}</b>
+                {x.auto && " ／ 自動（受けたら返事が要る先）"}
+                {x.changed > 0 && <> ／ 変更 {x.changed}</>}
+                {x.late > 0 && <b className="text-alert-ink"> ／ 間に合わない品 {x.late}{x.altDate && `（${fmtDate(x.altDate)}なら可）`}</b>}
+                {x.status === "sent" && <> ／ 送信済み {x.sentAt && fmtDateTime(x.sentAt)}（{x.sentBy}）</>}
+              </div>
+            </div>
+            <a className={buttonClass("ghost", "md", "text-sm")} href={file(x.id, x.fileName)} target="_blank" rel="noreferrer">{x.kind === "fax" ? "返信 FAX（PDF）" : "返信メール（下書き）"}</a>
+            {x.status === "draft" && <Button variant="ok" disabled={busy || !who} onClick={() => act({ action: "reply_sent", replyId: x.id }, "送信済みにしました")}>送った</Button>}
           </div>
         ))}
       </section>
