@@ -86,6 +86,7 @@ export interface TickResult {
   at: string;
   alerts?: { fresh: number; escalated: number; open: number; staff?: { sent: number; skipped: number } };
   automations?: unknown;
+  plan?: { date: string; orders: number; warnings: number };
   errors: string[];
 }
 
@@ -131,6 +132,15 @@ export async function runScheduledTick(now = nowIso()): Promise<TickResult> {
   } catch (e) {
     out.errors.push(`アラート: ${e instanceof Error ? e.message : String(e)}`);
   }
+  // C1: 夕方に翌日の製造計画・工程表を作る（plan_auto_prepare。既定 ON・印刷は OFF）
+  try {
+    const { preparePlanIfDue } = await import("./plan-prepare");
+    const plan = await preparePlanIfDue(now);
+    if (plan) out.plan = { date: plan.date, orders: plan.orders, warnings: plan.warnings.length };
+  } catch (e) {
+    out.errors.push(`翌日の製造計画: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  // C3（作り終えたの自動）は⑤の runDueAutomations の中（production_done_auto。既定 OFF）
   // ⑤の時刻で動く仕事は、機能の一覧で「自動でやる」が1つでも ON のときだけ呼ぶ。
   // （⑤の自前の設定は既定がすべて ON なので、⑤が各仕事の中で isOn を見る形に置き換えるまでは、ここで止めておく。既定は全部 OFF）
   const autoKeys: FeatureKey[] = ["standing_auto_create", "production_done_auto", "purchase_auto_approve", "order_reply_auto_send", "import_auto_confirm"];

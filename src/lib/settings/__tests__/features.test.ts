@@ -13,10 +13,10 @@ describe("機能の ON/OFF", () => {
     for (const f of FEATURES) if ("dependsOn" in f && f.dependsOn) expect(keys).toContain(f.dependsOn);
   });
 
-  it("既定: 機能は全部「使う」、自動は FAX と LINE の自動確定だけ ON（送信・承認の自動は OFF）", () => {
+  it("既定: 機能は全部「使う」、自動は FAX と LINE の自動確定と翌日の計画を作るだけ ON（送信・承認・印刷の自動は OFF）", () => {
     for (const f of FEATURES) if (f.kind === "feature") expect(isOn(f.key)).toBe(true);
     const autoOn = FEATURES.filter((f) => f.kind === "auto" && isOn(f.key)).map((f) => f.key).sort();
-    expect(autoOn).toEqual(["fax_auto_confirm", "line_auto_confirm"]);
+    expect(autoOn).toEqual(["fax_auto_confirm", "line_auto_confirm", "plan_auto_prepare"]);
   });
 
   it("切り替えると誰がいつ変えたかが残り、dependsOn が OFF なら子も OFF、メニューも隠れる", () => {

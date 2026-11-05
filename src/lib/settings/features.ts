@@ -63,6 +63,10 @@ export const FEATURES = [
   // ───── 製造 ─────
   { key: "production_plan", group: "製造", kind: "feature", default: true, owner: "③", menu: ["/plan"],
     label: "製造計画・工程表", description: "注文から、作る数・仕込み・工程表を出します。" },
+  { key: "plan_auto_prepare", group: "製造", kind: "auto", default: true, owner: "①", dependsOn: "production_plan",
+    label: "翌日の製造計画を夕方に自動で作る", description: "夕方の決まった時刻（既定 17:00）に、翌日の製造計画・工程表を作り、お知らせで「できました」と知らせます。OFF だと、人が製造計画の画面を開いて作ります。" },
+  { key: "plan_auto_print", group: "製造", kind: "auto", default: false, owner: "①", dependsOn: "plan_auto_prepare",
+    label: "翌日の工程表を自動で印刷する", description: "作った工程表を複合機で印刷します（印刷の設定がまだ無いので、いまは記録だけです）。OFF だと、人が画面から印刷します。" },
   { key: "production_done_auto", group: "製造", kind: "auto", default: false, owner: "⑤", dependsOn: "production_plan",
     label: "「作り終えた」の自動記録", description: "その日の製造を、計画どおり作り終えたとして自動で記録します（在庫から材料を引きます）。OFF だと、人が「作り終えた」を押します。" },
   // ───── 発注 ─────
