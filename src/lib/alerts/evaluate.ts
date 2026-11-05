@@ -33,6 +33,8 @@ export interface AlertOptions {
   priceChanges?: { materialId: string; before: number; after: number; changedAt: string }[];
   /** #12 粗利率がこれより低ければ出す（既定 0.2） */
   minMarginRate?: number;
+  /** #6 「今日は休み」にした取引先と納品日（⑤の listDayOffs()）。その日は「いつもの注文がまだ」を出さない */
+  dayOffs?: { customerId: string; date: string }[];
   /** #14 前回の棚卸の日（YYYY-MM-DD）。渡さなければ #14 は判定しない */
   lastStocktakeAt?: string;
 }
@@ -80,7 +82,7 @@ export function evaluateAlerts(db: Db, masters: Masters, now: string, opts: Aler
     run("stock_shortage", () => stockShortage(db, masters, now, opts));
     run("cost_review_due", () => costReviewDue(masters, now, opts));
     run("review_docs_missing", () => reviewDocsMissing(now, opts));
-    run("usual_order_missing", () => usualOrderMissing(db, masters, now));
+    run("usual_order_missing", () => usualOrderMissing(db, masters, now, opts));
     run("review_backlog", () => reviewBacklog(db, now));
     run("provisional_pending", () => provisionalPending(db, now));
     run("not_received", () => notReceived(db, now, opts));
@@ -269,7 +271,7 @@ function reviewDocsMissing(now: string, opts: AlertOptions): Alert[] {
 }
 
 // ───────── #6 いつもの注文がまだ ─────────
-function usualOrderMissing(db: Db, masters: Masters, now: string): Alert[] {
+function usualOrderMissing(db: Db, masters: Masters, now: string, opts: AlertOptions): Alert[] {
   const today = jstDate(now);
   const target = addDays(today, 1); // 締めは前日なので、明日の納品分を見る
   const wd = weekday(target);
@@ -278,6 +280,7 @@ function usualOrderMissing(db: Db, masters: Masters, now: string): Alert[] {
   for (const c of masters.customers) {
     if (c.active === false || !c.cutoff) continue;
     if (c.deliveryWeekdays?.length && !c.deliveryWeekdays.includes(wd)) continue;
+    if (opts.dayOffs?.some((d) => d.customerId === c.id && d.date === target)) continue;
     const had = weeks.filter((d) => db.orders.some((o) => o.customerId === c.id && o.deliveryDate === d && o.status !== "cancelled")).length;
     if (had < 3) continue;
     if (db.orders.some((o) => o.customerId === c.id && o.deliveryDate === target && o.status !== "cancelled")) continue;

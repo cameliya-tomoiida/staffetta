@@ -110,6 +110,8 @@ describe("アラートの判定", () => {
     expect(a[0]).toMatchObject({ level: "warn", due: "2026-11-05T15:00:00+09:00" });
     expect(a[0].actions.map((x) => x.kind)).toEqual(["call_memo", "mark_day_off"]);
     expect(evaluateAlerts(db({ orders: history }), masters, "2026-11-05T13:00:00+09:00", { isOn: only("usual_order_missing") })).toEqual([]);
+    // 「今日は休み」にした日は出さない
+    expect(evaluateAlerts(db({ orders: history }), masters, NOW, { isOn: only("usual_order_missing"), dayOffs: [{ customerId: "C01", date: "2026-11-06" }] })).toEqual([]);
     expect(evaluateAlerts(db({ orders: [...history, order("N1", "C01", "2026-11-06", [["P01", 60]])] }), masters, NOW, { isOn: only("usual_order_missing") })).toEqual([]);
   });
 
