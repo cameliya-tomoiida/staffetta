@@ -73,6 +73,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
     ...r.production.doughs.flatMap((d) => [d.name, ...d.items.map((i) => i.name)]),
     ...r.schedule.flatMap((row) => row.steps.map(eqName)).filter(Boolean),
     ...r.production.doughs.flatMap((d) => (d.waveName ? [d.waveName] : [])),
+    ...r.schedule.flatMap((row) => (row.deadlineBasis ? [row.deadlineBasis] : [])),
   ];
   const mt = await translateTerms(lang, jaNames);
   const name: NameFn = (ja) => ({ text: mt[ja] ?? ja, machine: !!mt[ja], ja });
@@ -139,6 +140,15 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           shortMax = Math.max(shortMax, need - have);
         }
       }
+    }
+    // ③の工程表の注意に「人が … たりません」があれば、それを正とする（班・配置のマスタを③が見ている）
+    const staffWarn = r.schedule.filter((x) => x.line === line).flatMap((x) => x.warnings).find((w) => /人が\s*\d+人\s*たりません/.test(w));
+    if (staffWarn) {
+      const m = /(\S*\d{1,2}:\d{2})〜/.exec(staffWarn);
+      shortAt ??= m ? m[1].replace(/^.*?(前日|翌)?(\d{1,2}:\d{2})$/, "$1$2") : "途中";
+      const n = /人が\s*(\d+)人\s*たりません/.exec(staffWarn);
+      if (n) shortMax = Math.max(shortMax, Number(n[1]));
+      hasShift = true;
     }
     return {
       line,
@@ -568,7 +578,10 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
                   <Name n={name(r.doughName)} lang={lang} />
                   {r.waveName && <WaveTag w={name(r.waveName).text} />}
                   {b && <span className="num text-xs text-ink-faint">{fmtNum(b.doughKg, 1)}kg</span>}
-                  {r.deliveryMinute != null && (
+                  {/* 締めの元（便から逆算したときは「西コース 05:30 出発」のような ③ の deadlineBasis） */}
+                  {r.deadlineBasis ? (
+                    <span className="num block text-xs font-bold text-alert-ink">{name(r.deadlineBasis).text}</span>
+                  ) : r.deliveryMinute != null && (
                     <span className="num block text-xs font-bold text-alert-ink">
                       {t("delivery_at")} {ft(r.deliveryMinute)}
                     </span>
@@ -628,7 +641,7 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
             {r.waveName && <WaveTag w={name(r.waveName).text} />}
             {r.deadline != null && (
               <div className="num mt-0.5 text-sm font-bold text-alert-ink">
-                {t("delivery_at")} {ft(r.deliveryMinute ?? r.deadline)} ／{" "}
+                {r.deadlineBasis ? name(r.deadlineBasis).text : `${t("delivery_at")} ${ft(r.deliveryMinute ?? r.deadline)}`} ／{" "}
                 {["ja", "ja-easy", "ko", "my", "ne"].includes(lang) ? `${ft(r.deadline)} ${t("finish_by")}` : `${t("finish_by")} ${ft(r.deadline)}`}
               </div>
             )}

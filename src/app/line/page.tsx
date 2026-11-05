@@ -2,7 +2,8 @@ import Link from "next/link";
 import { findProduct as productById } from "@/lib/catalog";
 import { isDemoLineUser, isLineLive } from "@/lib/channels/line/config";
 import { listCustomerSettings } from "@/lib/channels/line/customers";
-import { confirmationText, unlinkedLineUsers } from "@/lib/channels/line/orders";
+import { confirmationText, lineLeadTimes, unlinkedLineUsers } from "@/lib/channels/line/orders";
+import { LeadTimeNote } from "@/components/line/LeadTimeNote";
 import { readLineState } from "@/lib/channels/line/state";
 import { readDb } from "@/lib/store";
 import { NotifyButton } from "./buttons";
@@ -44,6 +45,8 @@ export default async function LinePage() {
             const notified = o.source.extra?.lineNotifiedAt;
             const demo = o.source.refs.some((r) => r.kind === "line_message" && isDemoLineUser(r.userId));
             const flagged = o.lines.filter((l) => l.confidence < 0.8 || l.read?.attention).length;
+            const lead = lineLeadTimes(o);
+            const lateCount = o.status === "cancelled" || o.status === "confirmed" ? 0 : Object.values(lead).filter((c) => c.status === "late").length;
             return (
               <li key={o.id} className="grid gap-3 p-5 md:grid-cols-[1fr_auto]">
                 <div className="space-y-1">
@@ -55,12 +58,23 @@ export default async function LinePage() {
                     <span className="text-lg font-black">{o.customerId ? customerById(o.customerId)?.name : <span className="text-review-ink">得意先 未確認</span>}</span>
                     <span className="font-bold">納品 <span className="num">{fmtDate(o.deliveryDate)}</span></span>
                     {flagged > 0 && <Tag tone="review">要確認 {flagged} 行</Tag>}
+                    {lateCount > 0 && <Tag tone="review">締め切り後 {lateCount} 行</Tag>}
                     {o.source.extra?.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
                   </div>
                   {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
-                  <div className="text-sm">
-                    {o.lines.map((l) => `${productById(l.productId)?.name ?? `（${l.read?.writtenName}）`} ${l.quantity}${l.unit}`).join("、") || "（品目なし）"}
-                  </div>
+                  {o.lines.length === 0 ? (
+                    <div className="text-sm">（品目なし）</div>
+                  ) : (
+                    <ul className="space-y-1 text-sm">
+                      {o.lines.map((l) => (
+                        <li key={l.id}>
+                          {productById(l.productId)?.name ?? `（${l.read?.writtenName}）`} {l.quantity}
+                          {l.unit}
+                          {o.status !== "cancelled" && o.status !== "confirmed" && <LeadTimeNote check={lead[l.id]} />}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {o.changeOf && <div className="text-sm text-alert-ink">対象の注文: {o.changeOf}</div>}
                 </div>
                 <div className="flex items-start">

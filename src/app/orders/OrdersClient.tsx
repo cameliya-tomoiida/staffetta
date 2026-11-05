@@ -24,9 +24,12 @@ const barColor: Record<OrderStatus, string> = {
   cancelled: "bg-off-line",
 };
 
+/** 締めに間に合うか（③の checkLeadTime の結果のうち、画面に出すもの） */
+export type LeadView = { lineId: string; status: "late" | "warn"; reason: string };
+
 export function OrdersClient({
-  orders, today, storedIds, linePreviews, initialStatus = "all",
-}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter }) {
+  orders, today, storedIds, linePreviews, initialStatus = "all", lead = {},
+}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]> }) {
   const [who, setWho] = useState(STAFF[0]);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
@@ -177,7 +180,7 @@ export function OrdersClient({
       ) : (
         <ul className="space-y-2.5">
           {list.map((o) => (
-            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} who={who} canConfirm={stored.has(o.id)} linePreview={linePreviews[o.id]} />
+            <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} who={who} canConfirm={stored.has(o.id)} linePreview={linePreviews[o.id]} lead={lead[o.id] ?? []} />
           ))}
         </ul>
       )}
@@ -186,10 +189,11 @@ export function OrdersClient({
 }
 
 function OrderRow({
-  o, custName, dayName, all, onJump, who, canConfirm, linePreview,
+  o, custName, dayName, all, onJump, who, canConfirm, linePreview, lead,
 }: {
-  o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string;
+  o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string; lead: LeadView[];
 }) {
+  const leadOf = (lineId: string) => lead.find((x) => x.lineId === lineId);
   const x = o.source.extra ?? {};
   const intent = o.intent && o.intent !== "new" ? orderIntent[o.intent] : null;
   const original = o.changeOf ? all.find((x) => x.id === o.changeOf) : undefined;
@@ -224,8 +228,11 @@ function OrderRow({
             {o.lines.map((l) => {
               const p = findProduct(l.productId);
               const warn = !!(l.read?.attention || l.confidence < 0.8);
+              const lt = leadOf(l.id);
+              // 締めに間に合わない（late）は黄、仮発注で警告だけ（warn）は薄い黄
+              const bg = off ? "" : warn || lt?.status === "late" ? "rounded bg-review-bg px-1" : lt?.status === "warn" ? "rounded bg-review-bg/45 px-1" : "";
               return (
-                <li key={l.id} className={warn && !off ? "rounded bg-review-bg px-1" : ""}>
+                <li key={l.id} className={bg}>
                   {p?.name ?? <span className="text-review-ink">{l.read?.writtenName ?? "（商品が 決まって いません）"}</span>}
                   <span className="num ml-1.5 text-lg font-black">{fmtNum(l.quantity)}</span>
                   <span className="text-sm">{l.unit}</span>
@@ -234,6 +241,20 @@ function OrderRow({
               );
             })}
           </ul>
+          {!off &&
+            // 同じ文が続くとき（曜日の問題など、どの行も同じ理由）は1回だけ
+            [...new Map(lead.map((c) => [c.reason, c])).values()].map((c) => {
+              const names = lead.filter((y) => y.reason === c.reason).map((y) => findProduct(o.lines.find((l) => l.id === y.lineId)?.productId ?? "")?.name).filter(Boolean);
+              return (
+                <div key={c.reason} className={`mt-1 flex items-start gap-1.5 text-review-ink ${c.status === "late" ? "font-bold" : ""}`}>
+                  <Icon.clock className="mt-1 h-4 w-4 shrink-0" />
+                  <span>
+                    {o.lines.length > 1 && names.length > 0 && names.length < o.lines.length && <span className="mr-1 font-normal">{names.join("・")}：</span>}
+                    {c.reason}
+                  </span>
+                </div>
+              );
+            })}
           {typeof x.notes === "string" && x.notes && <div className="mt-1 text-sm text-ink-soft">メモ：{x.notes}</div>}
           {typeof x.readError === "string" && x.readError && (
             <div className="mt-1 flex items-start gap-1.5 text-sm font-bold text-alert-ink">

@@ -40,9 +40,18 @@ export function TodayBar() {
   useEffect(() => {
     if (hidden) return;
     let alive = true;
-    // ふだんはサーバーが30秒ためた数を使う。確定・承認のあと（HUB_CHANGED）だけ取り直させる
-    const load = (fresh = false) =>
-      fetch(fresh ? "/api/today?fresh=1" : "/api/today", { cache: "no-store" })
+    // 取り直しは1本にまとめる: 取りに行っている間に頼まれたら、終わってから1回だけ取り直す。
+    // 確定・承認を続けて押しても、少し待ってまとめて1回（/api/today は重いので）
+    let inFlight = false;
+    let again = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = () => {
+      if (inFlight) {
+        again = true;
+        return;
+      }
+      inFlight = true;
+      fetch("/api/today", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!alive || !d) return;
@@ -50,21 +59,32 @@ export function TodayBar() {
           // 時計はサーバーに合わせる（デモの時刻でも、締めまでの残りがずれないように）
           setNow(d.serverNow ?? Date.now());
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => {
+          inFlight = false;
+          if (again && alive) {
+            again = false;
+            load();
+          }
+        });
+    };
+    const soon = () => {
+      clearTimeout(timer);
+      timer = setTimeout(load, 800);
+    };
     load();
-    const t = setInterval(() => load(), 120_000); // 計算が重いので2分ごと（①）
-    const onChanged = () => load(true);
-    const onFocus = () => load();
+    const t = setInterval(load, 120_000);
     // 確定・承認・リセットのあと（notifyHubChanged）と、画面に戻ってきたときにも取り直す
-    window.addEventListener(HUB_CHANGED, onChanged);
-    window.addEventListener("focus", onFocus);
+    window.addEventListener(HUB_CHANGED, soon);
+    window.addEventListener("focus", soon);
     return () => {
       alive = false;
       clearInterval(t);
-      window.removeEventListener(HUB_CHANGED, onChanged);
-      window.removeEventListener("focus", onFocus);
+      clearTimeout(timer);
+      window.removeEventListener(HUB_CHANGED, soon);
+      window.removeEventListener("focus", soon);
     };
-  }, [hidden, path]);
+  }, [hidden]);
 
   if (hidden) return null;
   if (!s) return <div className="h-12" aria-hidden />;

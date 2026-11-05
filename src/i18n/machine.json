@@ -1,14 +1,22 @@
 {
   "vi": {
+    "ジェットオーブン": "Lò nướng jet",
+    "スライサー": "Máy cắt lát",
     "バターロール": "Bánh mì cuộn bơ",
     "ピザクラスト 23cm": "Đế bánh pizza 23cm",
     "ピザクラスト 27cm": "Đế bánh pizza 27cm",
     "ピザ生地": "Bột bánh pizza",
     "ピザ生地玉 180g": "Viên bột pizza 180g",
     "マルゲリータ 21cm": "Pizza Margherita 21cm",
+    "ミキサー（ピザ）": "Máy trộn bột (pizza)",
+    "ミキサー（小）": "Máy trộn bột (nhỏ)",
+    "ミキサー（大）": "Máy trộn bột (lớn)",
     "ミニロール（黒糖）": "Bánh mì cuộn mini (đường nâu)",
     "ミニロール（白）": "Bánh mì cuộn mini (trắng)",
+    "ラックオーブン": "Lò nướng rack",
     "ロール生地": "Bột bánh cuộn",
+    "急速冷凍庫": "Tủ cấp đông nhanh",
+    "金属検出機": "Máy dò kim loại",
     "高加水ピザ 白（OEM）": "Pizza độ ẩm cao sốt trắng (OEM)",
     "高加水ピザ生地": "Bột pizza độ ẩm cao",
     "黒糖ロール": "Bánh mì cuộn đường nâu",
@@ -16,7 +24,11 @@
     "食パン 6枚切": "Bánh mì sandwich cắt 6 lát",
     "食パン 8枚切": "Bánh mì sandwich cắt 8 lát",
     "食パン生地": "Bột bánh mì sandwich",
-    "超じゅくロール 6個入": "Bánh cuộn siêu mềm (Choju Roll) 6 cái"
+    "超じゅくロール 6個入": "Bánh cuộn siêu mềm (Choju Roll) 6 cái",
+    "分割丸め機": "Máy chia và vo tròn bột",
+    "分割機（ピザ）": "Máy chia bột (pizza)",
+    "包装機（パン）": "Máy đóng gói (bánh mì)",
+    "包装機（ピザ）": "Máy đóng gói (pizza)"
   },
   "ja-easy": {
     "バターロール": "バターロール",
