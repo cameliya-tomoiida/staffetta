@@ -346,7 +346,7 @@ export async function resetDemoAction(input?: { understood?: boolean }) {
   revalidatePath("/", "layout");
 }
 
-// ───────── 自動確定（担当者の方針 11/5：迷わなかった FAX は人を待たない） ─────────
+// ───────── 自動確定（作者の方針 11/5：迷わなかった FAX は人を待たない） ─────────
 
 /**
  * 読み取りのあとに呼ぶ。迷わなかった FAX は読み取りのまま確定する（AI は値を書き換えない）。

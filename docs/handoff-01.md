@@ -59,7 +59,7 @@
 ## 5. 運用（Gmail / GAS / トンネル / 3100）
 - fax-inbox@example.com（Chrome の /u/4）。Apps Script「受発注ハブ FAX転送」、1分おき（forwardFaxes）、setup 済み（11/4 22:47 以降のメールだけ送る）
 - スクリプトプロパティ `HUB_URL`（トンネルの URL）・`HUB_TOKEN`（= `.env.local` の `FAX_INBOUND_TOKEN`）。`data/gas-properties.txt` に控え（git に入らない）
-- トンネル: 担当者がターミナルのタブ「tunnel 3100」で起動中（`cloudflared tunnel --url http://localhost:3100`）。**Claude からの起動は自動モードの安全ルールで止められる**。URL が変わったら HUB_URL を貼り直す
+- トンネル: 作者がターミナルのタブ「tunnel 3100」で起動中（`cloudflared tunnel --url http://localhost:3100`）。**Claude からの起動は自動モードの安全ルールで止められる**。URL が変わったら HUB_URL を貼り直す
 - 11/4 夜、テストメールで Gmail→GAS→トンネル→受け口→読み取り が通った（迷惑メールに入っていたので解除済み）。本物の FAX はまだ来ていない
 - 3100: **本番の LINE（④）も使っているので、再起動の前に④（受発注ハブ ④LINE注文）へ一言**。`.next` を消すと最初の1〜2分つながらない
 - **3100 の `.env.local` に DEMO_NOW を入れない**（撮影は `.claude/worktrees/video` の 3106 で⑥が行う）

@@ -32,19 +32,19 @@ describe("発注書の保存（下書き → 承認 → 送信済み）", () => 
   });
 
   it("承認 → 送信済み", () => {
-    const a = approveRecord(saved(), drafts[0].id, "担当", T1);
+    const a = approveRecord(saved(), drafts[0].id, "はやし", T1);
     const { record } = markSentRecord(a.list, drafts[0].id, "事務", T2, "FAX送信");
-    expect(record).toMatchObject({ status: "sent", sentAt: T2, sentBy: "事務", approvedBy: "担当" });
+    expect(record).toMatchObject({ status: "sent", sentAt: T2, sentBy: "事務", approvedBy: "はやし" });
     expect(record.history!.at(-1)).toMatchObject({ action: "sent", note: "FAX送信" });
   });
 
   it("2回承認はできない", () => {
-    const a = approveRecord(saved(), drafts[0].id, "担当", T1);
+    const a = approveRecord(saved(), drafts[0].id, "はやし", T1);
     expect(() => approveRecord(a.list, drafts[0].id, "別の人", T2)).toThrow(/下書きではありません/);
   });
 
   it("承認済みの発注書は、計算し直した下書きで上書きしない", () => {
-    const a = approveRecord(saved(), drafts[0].id, "担当", T1);
+    const a = approveRecord(saved(), drafts[0].id, "はやし", T1);
     const changed = { ...drafts[0], lines: [] };
     const r = upsertDraft(a.list, changed, T2);
     expect(r.saved).toBe(false);
@@ -61,11 +61,11 @@ describe("発注書の保存（下書き → 承認 → 送信済み）", () => 
   });
 
   it("見つからない id はエラー", () => {
-    expect(() => approveRecord(saved(), "nothing", "担当", T1)).toThrow(/見つかりません/);
+    expect(() => approveRecord(saved(), "nothing", "はやし", T1)).toThrow(/見つかりません/);
   });
 
   it("条件で絞り込める", () => {
-    const a = approveRecord(saved(), drafts[0].id, "担当", T1).list;
+    const a = approveRecord(saved(), drafts[0].id, "はやし", T1).list;
     expect(filterRecords(a, { status: "approved" }).map((p) => p.id)).toEqual([drafts[0].id]);
     expect(filterRecords(a, { supplierId: "S07" }).length).toBe(2);
     expect(filterRecords(a, { kind: "material" })).toEqual([]);

@@ -1,6 +1,6 @@
 import "server-only";
 // ⑤の自動化の設定。ON/OFF は①の機能の一覧（isOn・setFlag）、時刻・上限金額・幅は⑤の kv（"automation_settings"）。
-// 方針（11/5 担当者）: AI は値を書き換えない。迷わなかったものは人の確認を待たずに確定してよい。自動で決めたものは「自動」と分かり、取り消せる。
+// 方針（11/5 作者）: AI は値を書き換えない。迷わなかったものは人の確認を待たずに確定してよい。自動で決めたものは「自動」と分かり、取り消せる。
 import { kvGet, kvSet } from "@/lib/db/sqlite";
 import { isOn, setFlag, type FeatureKey } from "@/lib/settings/features";
 

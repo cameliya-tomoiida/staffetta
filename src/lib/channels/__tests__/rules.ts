@@ -1,5 +1,5 @@
 // テスト用: 取り込んだ Order が「共通の決まり」に合っているかを確かめる。
-// 決まり（src/data/types.ts・担当者のルール）:
+// 決まり（src/data/types.ts・作者のルール）:
 // - 取り込んだ直後は status = needs_review（確定するのは人）
 // - intent は new / change / cancel。change・cancel は元の注文（changeOf）か、見つからない旨の印を持つ
 // - source.refs に元資料への参照がある（入口に合った種類）

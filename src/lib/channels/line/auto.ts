@@ -1,6 +1,6 @@
 import "server-only";
 import { confirmBlocker } from "@/lib/confirm-guard";
-// LINE の注文の自動確定（A5・A6）と、確定の連絡の自動送信（D2）。担当者の方針（11/5）「AI が迷わなかったものは人を待たずに確定してよい」。
+// LINE の注文の自動確定（A5・A6）と、確定の連絡の自動送信（D2）。作者の方針（11/5）「AI が迷わなかったものは人を待たずに確定してよい」。
 // AI は値を書き換えない。確定するかどうかを決めるだけ。迷った行・締めに通らない行が1つでもあれば、今までどおり「要確認」で人が見る。
 // 自動で確定・送信したものは、確定した人＝「自動（LINE・迷いなし）」と、source.extra に札（autoConfirmed / lineNotifiedBy=自動）を残す。取り消せる（⑤の undoAutoConfirm）。
 import type { Order } from "@/data/types";
@@ -18,7 +18,7 @@ export const AUTO_CONFIRMED_BY = "自動（LINE・迷いなし）";
 export interface LineAutoSettings {
   /** LINE の注文を自動で確定する（既定: する） */
   autoConfirm: boolean;
-  /** 全部受けられる注文は、確定と同時に確定の連絡を送る（既定: しない。担当者が確かめてから入れる） */
+  /** 全部受けられる注文は、確定と同時に確定の連絡を送る（既定: しない。作者が確かめてから入れる） */
   autoNotify: boolean;
 }
 
