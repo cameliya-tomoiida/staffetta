@@ -364,6 +364,8 @@ export interface ProductMaster {
   packPrices?: Record<number, number>;
   /** 1本あたりの枚数（3斤を30枚に切る → 30） */
   slicesPerItem?: number;
+  /** ラインの1日の上限（個・枚）に数えない（生地玉など、別の作業で作るもの） */
+  excludeFromDailyCap?: boolean;
   // 包み直し
   sourceProductId?: string;
   slicesPerPack?: number;
@@ -524,6 +526,8 @@ export interface ShiftMaster {
   headcount: number;
   /** 休けいの時間帯（"13:00-14:00"）。その時間は人数に数えない */
   breaks?: string[];
+  /** 出る曜日（0=日〜6=土）。空なら毎日。曜日で時間がちがう班は、曜日ごとに1行ずつ */
+  weekdays?: number[];
 }
 
 /** 工程ごとの配置人数（班ごと）。工程の people より優先する */

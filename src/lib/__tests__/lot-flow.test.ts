@@ -146,3 +146,26 @@ describe("前日の作業が当日の朝まで続くとき", () => {
     expect(first.start).toBe(prevEnd);
   });
 });
+
+describe("班の曜日・ラインの上限に数えない商品", () => {
+  it("曜日のある班は、その曜日だけ人数に数える（空なら毎日）", () => {
+    const m = sampleMasters();
+    // 2026-11-10 は火曜。ピザの班を全部「月曜だけ」にすると、火曜は人がいない
+    const monOnly: Masters = { ...m, shifts: m.shifts.map((s) => (s.line === "pizza" ? { ...s, weekdays: [1] } : s)) };
+    const warn = (mm: Masters) => runPipeline([mOrder("A", "C10", [["P07", 600]])], DATE, { masters: mm }).schedule.flatMap((r) => r.warnings).filter((w) => /たりません/.test(w));
+    expect(warn(m)).toEqual([]);
+    expect(warn(monOnly).some((w) => /班 0人/.test(w))).toBe(true);
+    const tueOnly: Masters = { ...m, shifts: m.shifts.map((s) => (s.line === "pizza" ? { ...s, weekdays: [2] } : s)) };
+    expect(warn(tueOnly)).toEqual([]);
+  });
+
+  it("「ラインの上限に数えない」商品は、1日の上限の数に入れない", () => {
+    const m = sampleMasters();
+    const o = [mOrder("A", "C10", [["P07", 1500], ["P12", 500]])]; // 2,000枚 > 上限 1,800
+    const over = runPipeline(o, DATE, { masters: m }).production.lines.find((l) => l.line === "pizza")!;
+    expect(over.overBy).toBe(200);
+    const ex: Masters = { ...m, products: m.products.map((p) => (p.id === "P12" ? { ...p, excludeFromDailyCap: true } : p)) };
+    const ok = runPipeline(o, DATE, { masters: ex }).production.lines.find((l) => l.line === "pizza")!;
+    expect(ok).toMatchObject({ pieces: 2000, capPieces: 1500, overBy: 0 });
+  });
+});
