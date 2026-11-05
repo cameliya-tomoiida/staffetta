@@ -9,6 +9,8 @@ import { defOf, isScreenName, list, refOptions } from "@/lib/masters/service";
 import { MasterClient, type ClientColumn } from "./MasterClient";
 import { StandingPanel, type StandingCustomer } from "./StandingPanel";
 import { StockMoves } from "./StockMoves";
+import { DoughCards } from "@/components/recipe/DoughCards";
+import { loadDoughCards } from "@/components/recipe/load";
 
 const LEAD: Record<string, string> = {
   products: "商品の種類（自社製造・仕入・包み直し）・生地と分割g・包装・スライス幅・金属検査のタイミング・リードタイムと締め。新しい商品はここに入れます。",
@@ -50,7 +52,19 @@ export default async function MasterPage(props: PageProps<"/masters/[name]">) {
     <div className="space-y-5">
       <PageHeader title={`${def.label}マスタ`} lead={LEAD[name]} />
       {name === "standingOrders" && <StandingPanel customers={await standingByCustomer(rows)} />}
+      {/* 配合は1行ずつだと縦に長いので、生地ごとのカード（材料｜％｜g の横並び）を先に出し、1行ずつの一覧はたたむ */}
+      {name === "recipeItems" && <DoughCards cards={(await loadDoughCards()).cards} />}
       {/* マスタの種類は左のメニュー（マスタ管理・取り込みの設定）から選ぶ */}
+      {name === "recipeItems" ? (
+        <details className="rounded-lg border border-rule bg-sheet px-4" open={typeof sp.list === "string"}>
+          <summary className="flex min-h-12 cursor-pointer items-center font-bold text-crust-700 underline underline-offset-4">
+            1行ずつの一覧（CSV と同じ形・{rows.filter((x) => !x.disabled && x.active !== false).length}行）を出す
+          </summary>
+          <div className="pb-4">
+            <MasterClient name={name} label={def.label} columns={columns} listKeys={LIST_KEYS[name]} keyColumns={def.keyColumns} hasStock={false} rows={rows} refs={refs} />
+          </div>
+        </details>
+      ) : (
       <MasterClient
         name={name}
         label={def.label}
@@ -61,6 +75,7 @@ export default async function MasterPage(props: PageProps<"/masters/[name]">) {
         rows={rows}
         refs={refs}
       />
+      )}
       {(name === "materials" || name === "packaging") && <StockMoves master={name} item={typeof sp.item === "string" ? sp.item : undefined} rows={rows} />}
     </div>
   );
