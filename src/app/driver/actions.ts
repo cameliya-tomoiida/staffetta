@@ -97,3 +97,32 @@ export async function driverNewsAction(customerIds: string[]): Promise<DriverNew
     return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 30);
   });
 }
+
+/** 配送タブ: その日のコースの回る順・着く時刻の目安・各先に渡す商品と数・納品の仕方 */
+export async function driverDayAction(courseId: string, date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("日付が違います");
+  const [{ readRecentDb }, { loadMasters }, { withMasters, findProduct }, { getDepot, getRouteSettings }, { driverDay }] = await Promise.all([
+    import("@/lib/store"),
+    import("@/lib/masters/seed-db"),
+    import("@/lib/catalog"),
+    import("@/lib/routes/store"),
+    import("@/lib/driver/day"),
+  ]);
+  const [db, masters] = await Promise.all([readRecentDb(), loadMasters()]);
+  const course = masters.courses.find((c) => c.id === courseId);
+  if (!course) throw new Error("コースが見つかりません");
+  return withMasters(masters, () =>
+    driverDay({
+      course,
+      customers: masters.customers,
+      orders: db.orders,
+      date,
+      depot: getDepot(),
+      settings: getRouteSettings(),
+      product: (id) => {
+        const p = findProduct(id);
+        return p ? { name: p.name, unit: p.unit } : undefined;
+      },
+    }),
+  );
+}

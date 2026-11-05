@@ -87,6 +87,7 @@ export const MENU: Group[] = [
     items: [
       // 自動のスイッチ（FAX・LINE・自動化）は「機能の ON/OFF」の各行からリンクで開く。LINE（スタッフ）は④のスタッフの登録
       { href: "/settings/features", label: "機能の ON/OFF" },
+      { href: "/settings/staff", label: "スタッフの登録" },
       { href: "/settings/backup", label: "バックアップ" },
       { href: "/settings/line", label: "LINE（スタッフ）" },
       { href: "/settings/demo", label: "デモ" },
