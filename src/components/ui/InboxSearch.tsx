@@ -79,7 +79,7 @@ export function InboxSearch({
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-bold text-ink-soft">
           取引先
-          <select value={s.customer} onChange={(e) => set("customer", e.target.value)} className={field}>
+          <select value={s.customer} onChange={(e) => set("customer", e.target.value)} className={`${field} w-full max-w-[calc(100vw-4rem)] sm:w-auto`}>
             <option value="">すべて</option>
             {customers.map((c) => (
               <option key={c.id} value={c.id}>

@@ -251,7 +251,8 @@ function PoSheet({
   return (
     <section className={`flex flex-col rounded-sm border bg-sheet ${s.status === "draft" ? "border-rule-strong" : s.status === "approved" ? "border-ok-line" : "border-info-line"}`}>
       {/* 帳票の頭 */}
-      <div className="flex items-start justify-between gap-3 border-b border-rule px-4 pt-3 pb-2.5 sm:px-5">
+      {/* スマホでは、題（仕入先）を広く使うため、発注書の番号は下に回す */}
+      <div className="flex flex-col gap-1 border-b border-rule px-4 pt-3 pb-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:px-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <PurchaseStatusTag status={s.status} />
@@ -263,8 +264,8 @@ function PoSheet({
           </h2>
           <div className="text-sm text-ink-faint">発注元：{factory}</div>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="text-xs tracking-[0.4em] text-ink-faint">発注書</div>
+        <div className="shrink-0 sm:text-right">
+          <div className="hidden text-xs tracking-[0.4em] text-ink-faint sm:block">発注書</div>
           <div className="num text-xs text-ink-faint">{po.id}</div>
         </div>
       </div>
