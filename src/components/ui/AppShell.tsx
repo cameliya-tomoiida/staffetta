@@ -11,7 +11,7 @@ import { TodayBar } from "./TodayBar";
 import { canOpen, homeOf, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";
 import { AiChat } from "@/components/AiChat";
-import { BottomTabs, MenuSheet, MobileTopBar, tabsFor, titleOf, useTableCards } from "./MobileNav";
+import { BottomTabs, MenuSheet, MobileTopBar, SelectSheet, tabsFor, titleOf, useTableCards } from "./MobileNav";
 
 /** ログインしている人（ログインを使っていないときは null） */
 export type ShellUser = { name: string; role: Role; via: "password" | "line" } | null;
@@ -296,6 +296,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
         </main>
       </div>
       <BottomTabs path={path} tabs={tabsFor(user?.role)} onMenu={() => setSheet(true)} menuOpen={sheet} />
+      <SelectSheet />
       {sheet && <MenuSheet menu={MENU} path={path} role={user?.role} hidden={hidden} onClose={() => setSheet(false)} user={user} factory={factory} />}
     </div>
   );

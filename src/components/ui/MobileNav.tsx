@@ -282,3 +282,98 @@ export function useTableCards() {
     };
   }, []);
 }
+
+type Opt = { value: string; label: string; disabled: boolean };
+/**
+ * スマホ: 選択欄（select）を押すと、大きなボタンを並べたシートを下から出す（⑧ 決まり「選ぶものは大きなボタン」）。
+ * 選ぶと select の値を変えて change を出す（React の onChange もそのまま動く）。9つ以上ならさがす窓も出す。
+ * 出したくない select には data-native を付ける。
+ */
+export function SelectSheet() {
+  const [st, setSt] = useState<{ el: HTMLSelectElement; title: string; opts: Opt[]; value: string } | null>(null);
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const titleOf = (el: HTMLSelectElement) => {
+      const lab = el.getAttribute("aria-label") || (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent) || el.closest("label")?.textContent?.replace(el.textContent ?? "", "");
+      return (lab ?? "").trim() || "えらぶ";
+    };
+    const open = (e: Event) => {
+      const el = e.target instanceof HTMLSelectElement ? e.target : null;
+      if (!el || !mq.matches || el.multiple || el.disabled || el.hasAttribute("data-native") || el.size > 1) return;
+      e.preventDefault();
+      el.blur();
+      const opts = Array.from(el.options).map((o) => ({ value: o.value, label: o.label || o.text, disabled: o.disabled }));
+      setQ("");
+      setSt({ el, title: titleOf(el), opts, value: el.value });
+    };
+    // 指: 動かさずに離したときだけ開く（スクロールの指が select にふれても開かない）
+    let start: { x: number; y: number } | null = null;
+    const down = (e: TouchEvent) => {
+      const t = e.touches[0];
+      start = e.target instanceof HTMLSelectElement && t ? { x: t.clientX, y: t.clientY } : null;
+    };
+    const up = (e: TouchEvent) => {
+      const t = e.changedTouches[0];
+      if (!start || !t) return;
+      const moved = Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10;
+      start = null;
+      if (!moved) open(e);
+    };
+    document.addEventListener("mousedown", open, true);
+    document.addEventListener("touchstart", down, { capture: true, passive: true });
+    document.addEventListener("touchend", up, { capture: true, passive: false });
+    return () => {
+      document.removeEventListener("mousedown", open, true);
+      document.removeEventListener("touchstart", down, true);
+      document.removeEventListener("touchend", up, true);
+    };
+  }, []);
+  if (!st) return null;
+  const pick = (v: string) => {
+    const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+    set?.call(st.el, v);
+    st.el.dispatchEvent(new Event("change", { bubbles: true }));
+    st.el.dispatchEvent(new Event("input", { bubbles: true }));
+    setSt(null);
+  };
+  const shown = st.opts.filter((o) => !q.trim() || o.label.includes(q.trim()));
+  return (
+    <div className="no-print fixed inset-0 z-[60] flex flex-col justify-end bg-ink/45 md:hidden" onClick={() => setSt(null)}>
+      <div role="dialog" aria-label={st.title} className="m-sheet flex max-h-[80dvh] flex-col rounded-t-2xl bg-sheet shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div className="flex items-center gap-2 border-b border-rule px-4 pt-3 pb-2">
+          <p className="min-w-0 flex-1 truncate text-[19px] font-black">{st.title}</p>
+          <button type="button" onClick={() => setSt(null)} className="flex min-h-12 min-w-12 items-center justify-center rounded-lg border-2 border-rule-strong" aria-label="閉じる">
+            <MIcon name="close" />
+          </button>
+        </div>
+        {st.opts.length > 8 && (
+          <label className="mx-4 mt-3 flex min-h-12 items-center gap-2 rounded-xl border-2 border-rule-strong px-3">
+            <MIcon name="search" className="h-5 w-5 shrink-0 text-ink-soft" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="名前でさがす" className="min-w-0 flex-1 bg-transparent text-[17px] outline-none" aria-label="名前でさがす" />
+          </label>
+        )}
+        <ul className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto p-4">
+          {shown.map((o, i) => {
+            const on = o.value === st.value;
+            return (
+              <li key={`${o.value}-${i}`}>
+                <button
+                  type="button"
+                  disabled={o.disabled}
+                  onClick={() => pick(o.value)}
+                  aria-pressed={on}
+                  className={`flex min-h-12 w-full items-center gap-2 rounded-xl border-2 px-3 text-left text-[17px] font-bold active:bg-crust-50 disabled:opacity-60 ${on ? "border-crust-600 bg-crust-50 text-crust-700" : "border-rule bg-sheet"}`}
+                >
+                  <span className="flex-1">{o.label || "（えらばない）"}</span>
+                  {on && <span className="text-[15px]">いま</span>}
+                </button>
+              </li>
+            );
+          })}
+          {!shown.length && <li className="py-6 text-center text-[17px]">「{q}」はありません</li>}
+        </ul>
+      </div>
+    </div>
+  );
+}
