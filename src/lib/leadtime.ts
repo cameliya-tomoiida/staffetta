@@ -76,8 +76,8 @@ export function checkLeadTime(order: Order, now: string): LeadTimeCheck[] {
   const dayProblem = order.customerId ? deliveryDayProblem(order.customerId, order.deliveryDate) : undefined;
   return order.lines.map((l: OrderLine): LeadTimeCheck => {
     if (!l.productId) return { lineId: l.id, productId: "", status: "unknown", deadline: "", reason: "商品が決まっていません" };
-    // 納品しない曜日なら、締めより先にそれを知らせる（仮発注なら警告だけ）
-    if (dayProblem) return { lineId: l.id, productId: l.productId, status: provisional ? "warn" : "late", deadline: "", reason: dayProblem };
+    // 納品しない曜日なら、締めより先にそれを知らせる（仮発注でも受けられない。締めとちがって、あとで数を決めても変わらないため）
+    if (dayProblem) return { lineId: l.id, productId: l.productId, status: "late", deadline: "", reason: dayProblem };
     const { deadline, basis } = orderDeadline(l.productId, order.customerId, order.deliveryDate);
     if (!deadline) return { lineId: l.id, productId: l.productId, status: "unknown", deadline: "", reason: `締めを決められません（${basis}）` };
     const name = findProduct(l.productId)?.name ?? l.productId;
