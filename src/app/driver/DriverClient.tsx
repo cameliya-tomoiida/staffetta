@@ -332,7 +332,9 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                               </span>
                               {s.late > 0 && <span className="block text-[16px] font-bold text-[#a51e28]">時間の希望に {s.late} 分おくれそう</span>}
                               <span className="block text-[17px] text-[#565c57]">
-                                {s.items.length ? `${s.items[0].name} ${s.items[0].quantity}${s.items[0].unit}${s.items.length > 1 ? ` ほか${s.items.length - 1}品` : ""}` : "渡すものはありません"}
+                                {s.items.length
+                                  ? `${s.items[0].name} ${s.items[0].quantity}${s.items[0].unit}${s.items.length > 1 ? ` ほか${s.items.length - 1}品` : ""}`
+                                  : s.usual.length ? `注文なし（いつも: ${s.usual.slice(0, 2).map((u) => u.name).join("・")}${s.usual.length > 2 ? " ほか" : ""}）` : "渡すものはありません"}
                                 {s.items.some((i) => i.status === "needs_review") && <span className="ml-1 font-bold text-[#654700]">（要確認あり）</span>}
                               </span>
                             </>
@@ -505,6 +507,21 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                   </li>
                 ))}
               </ul>
+            )}
+
+            {open.usual.length > 0 && (
+              <>
+                <h2 className="mt-4 text-[18px] font-black">いつもの商品</h2>
+                <ul className="mt-1 flex flex-wrap gap-2">
+                  {open.usual.map((u) => (
+                    <li key={u.name} className={`rounded-lg border-2 px-3 py-1.5 text-[18px] ${u.today ? "border-[#8b1a1a] bg-[#faf1f1] font-bold" : "border-[#c5cac5] bg-white"}`}>
+                      {u.name}
+                      {u.weekdays && <span className="ml-1 text-[15px] font-normal text-[#565c57]">（{u.weekdays}）</span>}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-[15px] text-[#565c57]">赤い枠は、この曜日によく出る商品です</p>
+              </>
             )}
 
             <h2 className="mt-4 text-[18px] font-black">納品のしかた</h2>

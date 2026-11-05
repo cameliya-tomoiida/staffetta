@@ -2,7 +2,7 @@
 // - 回る順は ⑦ の便のマスタ（stops）。その日に届けない先（定休日・納品する曜日でない）は「お休み」として後ろに残す
 // - 着く時刻の目安は ⑦ の buildTimeline（直線距離 × 係数 ÷ 速さ。道の上の時間は使わない＝スマホで速く出すため）
 // - 各先に渡す商品と数は、その日の注文（確定・要確認・仮発注。変更・取消の連絡そのものは数えない）
-import type { CourseMaster, CustomerMaster, Order } from "@/data/types";
+import type { CourseMaster, CustomerMaster, CustomerProductMaster, Order } from "@/data/types";
 import { deliversOn } from "@/lib/routes/optimize";
 import { buildTimeline, orderedStops, toHHMM, type LatLng, type RouteSettings } from "@/lib/routes/plan";
 
@@ -34,6 +34,8 @@ export interface DriverDayStop {
   lat?: number;
   lng?: number;
   items: DriverDayItem[];
+  /** いつもの商品（⑦の取引先の商品 customerProducts から。その曜日によく出るものを先に・8品まで） */
+  usual: { name: string; unit?: string; weekdays: string; today: boolean }[];
 }
 
 export interface DriverDay {
@@ -58,6 +60,8 @@ export function driverDay(input: {
   depot: LatLng;
   settings?: RouteSettings;
   product: (id: string) => { name: string; unit: string } | undefined;
+  /** 取引先の商品（⑦）。無ければ「いつもの商品」は出さない */
+  customerProducts?: CustomerProductMaster[];
 }): DriverDay {
   const { course, date } = input;
   const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
@@ -84,6 +88,13 @@ export function driverDay(input: {
     }
     return [...out.values()];
   };
+  const usualOf = (customerId: string) =>
+    (input.customerProducts ?? [])
+      .filter((p) => p.customerId === customerId && p.active !== false)
+      .map((p) => ({ name: (p.productId && input.product(p.productId)?.name) || p.name, unit: p.unit || (p.productId ? input.product(p.productId)?.unit : undefined), weekdays: (p.weekdays ?? []).map((d) => W[d]).join("・"), today: !!p.weekdays?.includes(wd), q: p.quantity ?? 0 }))
+      .sort((a, b) => Number(b.today) - Number(a.today) || b.q - a.q)
+      .slice(0, 8)
+      .map((u) => ({ name: u.name, unit: u.unit, weekdays: u.weekdays, today: u.today }));
   const info = (c: CustomerMaster, no: number, isOff: boolean): DriverDayStop => {
     const r = row.get(c.id);
     const window = c.deliveryWindowFrom || c.deliveryWindowTo ? `${c.deliveryWindowFrom ?? ""}〜${c.deliveryWindowTo ?? ""}` : c.deliveryTime ? `${c.deliveryTime} ごろ` : undefined;
@@ -102,6 +113,7 @@ export function driverDay(input: {
       ...(c.fax ? { fax: c.fax } : {}),
       ...(c.lat != null && c.lng != null ? { lat: c.lat, lng: c.lng } : {}),
       items: isOff ? [] : itemsOf(c.id),
+      usual: usualOf(c.id),
     };
   };
   return {
