@@ -69,14 +69,14 @@ describe("checkLeadTime: 行ごとに 間に合う / 間に合わない", () => 
 });
 
 describe("配送曜日", () => {
-  it("納品しない曜日なら late（仮発注なら warn）。理由に納品する曜日を出す", async () => {
+  it("納品しない曜日なら late（仮発注でも）。理由に納品する曜日を出す", async () => {
     const { deliveryDayProblem } = await import("../leadtime");
     // グループホーム（C05）は 火・木・土。11/6 は金曜
     expect(deliveryDayProblem("C05", "2026-11-06")).toBe("グループホームあおばは金曜日に納品していません（納品する曜日: 火・木・土）");
     expect(deliveryDayProblem("C05", "2026-11-07")).toBeUndefined();
     const o = { ...byId("DO-08"), status: "confirmed" as const };
     expect(checkLeadTime(o, at("05T08:00")).map((c) => c.status)).toEqual(["late"]);
-    expect(checkLeadTime({ ...o, status: "provisional" }, at("05T08:00"))[0].status).toBe("warn");
+    expect(checkLeadTime({ ...o, status: "provisional" }, at("05T08:00"))[0].status).toBe("late"); // 曜日は仮発注でも受けられない（締めとちがって、あとで数を決めても変わらない）
   });
 
   it("便の曜日を使う（南コースは月〜金）。曜日の登録が無い得意先は毎日", async () => {
