@@ -1,7 +1,7 @@
 import "server-only";
 // LINE の注文の自動確定（A5・A6）と、確定の連絡の自動送信（D2）。担当者の方針（11/5）「AI が迷わなかったものは人を待たずに確定してよい」。
 // AI は値を書き換えない。確定するかどうかを決めるだけ。迷った行・締めに通らない行が1つでもあれば、今までどおり「要確認」で人が見る。
-// 自動で確定・送信したものは、確定した人＝「自動」と、source.extra に札（autoConfirmed / lineNotifiedBy=自動）を残す。取り消せる。
+// 自動で確定・送信したものは、確定した人＝「自動（LINE・迷いなし）」と、source.extra に札（autoConfirmed / lineNotifiedBy=自動）を残す。取り消せる（⑤の undoAutoConfirm）。
 import type { Order } from "@/data/types";
 import { isOn, setFlag } from "@/lib/settings/features";
 import { findProduct } from "@/lib/catalog";
@@ -11,6 +11,8 @@ import { nowIso } from "@/lib/clock";
 import { readDb, updateDb } from "@/lib/store";
 
 export const AUTO_WHO = "自動";
+/** 自動で確定した注文の confirmedBy（②の AutoTag が「LINE・迷いなし」を横に出す。⑤の isAuto と同じく「自動」で始める） */
+export const AUTO_CONFIRMED_BY = "自動（LINE・迷いなし）";
 
 export interface LineAutoSettings {
   /** LINE の注文を自動で確定する（既定: する） */
@@ -83,7 +85,8 @@ export async function autoConfirmLineOrders(orderIds: string[], opts: { dictHit?
       }
       o.status = "confirmed";
       o.confirmedAt = nowIso();
-      o.confirmedBy = AUTO_WHO;
+      o.confirmedBy = AUTO_CONFIRMED_BY;
+      o.edits.push({ at: o.confirmedAt, who: AUTO_CONFIRMED_BY, field: "note", from: "要確認", to: "自動で確定" });
       o.source.extra = { ...o.source.extra, autoConfirmed: true };
       confirmed.push(id);
     }
@@ -110,19 +113,5 @@ export async function autoNotifyIfAllowed(orderId: string): Promise<boolean> {
   }
 }
 
-/** 自動で確定した注文を取り消して、要確認に戻す（確定の連絡を送ったあとは戻さない） */
-export async function undoAutoConfirm(orderId: string, who: string) {
-  await updateDb((db) => {
-    const o = db.orders.find((x) => x.id === orderId);
-    if (!o) throw new Error("注文が見つかりません");
-    if (!o.source.extra?.autoConfirmed || o.status !== "confirmed") throw new Error("自動で確定した注文ではありません");
-    if (o.source.extra.lineNotifiedAt) throw new Error("確定の連絡を送ったあとなので、受注一覧で直してください");
-    o.edits.push({ at: nowIso(), who, field: "note", from: "自動で確定", to: "要確認に戻した" });
-    o.status = "needs_review";
-    o.confirmedAt = undefined;
-    o.confirmedBy = undefined;
-    const { autoConfirmed: _drop, ...rest } = o.source.extra;
-    void _drop;
-    o.source.extra = { ...rest, autoUndoneBy: who };
-  });
-}
+// 自動の確定の取り消しは、⑤の undoAutoConfirm（src/lib/automation/orders.ts・POST /api/automation）を使う。
+// LINE受付の画面では、確定の連絡を送ったあとは取り消しのボタンを出さない。

@@ -1,6 +1,6 @@
 "use client";
 // LINE受付のボタン。確認はブラウザの confirm() ではなく、画面の中の「はい／いいえ」で聞く。
-import { notifyLineConfirmedAction, undoAutoConfirmAction } from "@/lib/channels/line/actions";
+import { notifyLineConfirmedAction } from "@/lib/channels/line/actions";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
 
 const WHO = "事務"; // ログインの仕組みができたら、その人の名前にする
@@ -25,18 +25,3 @@ export function NotifyButton({ orderId, preview, demo = false }: { orderId: stri
   );
 }
 
-/** 自動で確定した注文を、要確認に戻す（確定の連絡を送る前だけ） */
-export function UndoAutoButton({ orderId }: { orderId: string }) {
-  return (
-    <ConfirmInline
-      variant="ghost"
-      align="right"
-      label="自動の確定を取り消す"
-      message="この注文を「要確認」に戻します。受注一覧で中身を見て、確定し直してください。"
-      yesLabel="要確認に戻す"
-      noLabel="やめる"
-      busyLabel="戻しています…"
-      onConfirm={() => undoAutoConfirmAction(orderId, WHO)}
-    />
-  );
-}

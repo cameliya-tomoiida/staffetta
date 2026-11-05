@@ -75,13 +75,6 @@ export async function removeStaffLineAction(userId: string) {
   revalidatePath("/", "layout");
 }
 
-/** LINE受付: 自動で確定した注文を、要確認に戻す */
-export async function undoAutoConfirmAction(orderId: string, who: string) {
-  const { undoAutoConfirm } = await import("./auto");
-  await undoAutoConfirm(orderId, who);
-  revalidatePath("/", "layout");
-}
-
 /** 管理画面: ひも付けを外す（人違いだったとき） */
 export async function unlinkLineUserAction(userId: string, who: string) {
   await unlinkUser(userId, who);
