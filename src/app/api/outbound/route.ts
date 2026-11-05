@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { allOrders } from "@/demo/all-orders";
 import { runPipeline } from "@/lib/pipeline";
+import { receivePurchaseOrder, type ReceiptLine } from "@/lib/stock/store";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { approvePo, listOutbound, markSent, receiveDrafts } from "@/lib/channels/outbound/workflow";
 import type { PoLike } from "@/lib/channels/outbound/render";
@@ -20,7 +21,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const b = (await req.json()) as { action: string; poId?: string; who?: string; drafts?: PoLike[]; date?: string };
+    const b = (await req.json()) as { action: string; poId?: string; who?: string; drafts?: PoLike[]; date?: string; lines?: ReceiptLine[]; note?: string };
     let result: unknown;
     if (b.action === "load") {
       if (!b.date || !/^\d{4}-\d{2}-\d{2}$/.test(b.date)) throw new Error("納品日を選んでください");
@@ -33,6 +34,14 @@ export async function POST(req: NextRequest) {
       // デモ用のダミー。複合機とはまだつないでいない（docs/fax-sending.md）。状態は変えない
       result = { dummy: true, message: "（デモ）複合機への送信はまだつないでいません。複合機から送ったら「送った」を押してください。" };
     } else if (b.action === "sent") result = await markSent(b.poId ?? "", b.who ?? "");
+    else if (b.action === "arrived") {
+      // 入荷（送信済みの発注書が届いた）。届いた量は直せる。材料・包材の在庫に足し、動きを残す
+      const r = await receivePurchaseOrder(b.poId ?? "", b.lines, b.who ?? "", b.note);
+      result = { ...r, message: `入荷を記録しました（在庫に ${r.moves.length} 品を足しました）` };
+      revalidatePath("/masters/materials");
+      revalidatePath("/masters/packaging");
+      revalidatePath("/", "layout");
+    }
     else return NextResponse.json({ error: `知らない操作です: ${b.action}` }, { status: 400 });
     revalidatePath("/outbound");
     revalidatePath("/purchase");

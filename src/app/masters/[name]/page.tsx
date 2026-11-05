@@ -8,6 +8,7 @@ import { LIST_KEYS, STOCK_MASTERS } from "@/lib/masters/screens";
 import { defOf, isScreenName, list, refOptions } from "@/lib/masters/service";
 import { MasterClient, type ClientColumn } from "./MasterClient";
 import { StandingPanel, type StandingCustomer } from "./StandingPanel";
+import { StockMoves } from "./StockMoves";
 
 const LEAD: Record<string, string> = {
   products: "商品の種類（自社製造・仕入・包み直し）・生地と分割g・包装・スライス幅・金属検査のタイミング・リードタイムと締め。新しい商品はここに入れます。",
@@ -37,6 +38,7 @@ const LEAD: Record<string, string> = {
 export default async function MasterPage(props: PageProps<"/masters/[name]">) {
   await connection();
   const { name } = await props.params;
+  const sp = await props.searchParams;
   if (!isScreenName(name)) notFound();
   const def = defOf(name);
   const [rows, refs] = await Promise.all([list(name, true), refOptions(name)]);
@@ -59,6 +61,7 @@ export default async function MasterPage(props: PageProps<"/masters/[name]">) {
         rows={rows}
         refs={refs}
       />
+      {(name === "materials" || name === "packaging") && <StockMoves master={name} item={typeof sp.item === "string" ? sp.item : undefined} rows={rows} />}
     </div>
   );
 }

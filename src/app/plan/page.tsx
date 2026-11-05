@@ -15,6 +15,8 @@ import { isLang, LANG_COOKIE, langInfo, LANGS, type Lang } from "@/i18n/langs";
 import { isReviewed, tr, trUnit, type Key } from "@/i18n/dict";
 import { translateTerms } from "@/i18n/translate";
 import { PrintButton } from "./PrintButton";
+import { ProductionDone, madeOf } from "./ProductionDone";
+import { getProductionActual } from "@/lib/stock/store";
 import { DailySheet, EquipmentChart, PlanSheet, StaffSheet, type MakeRow } from "./Forms";
 import { LangPicker } from "./LangPicker";
 import { cookies } from "next/headers";
@@ -413,6 +415,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
             <CostBox s={cost} show={["material", "margin"]} />
           </div>
         </details>
+        {/* 製造の実績（⑤）: 作り終えたら数を確かめて確定 → 材料・包材の在庫から引く */}
+        <ProductionDone date={r.productionDate} planned={madeOf(r.production.doughs)} actual={await getProductionActual(r.productionDate)} />
       </div>
 
     </div>
