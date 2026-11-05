@@ -1,7 +1,7 @@
 import "server-only";
 // インフォマート（受注）の明細 CSV を取り込む。
 // 列の名前は見出し行で探すので、実物の CSV で列の順番や数が違っても、見出しの言い方をマスタ「インフォマートの列名」に足せば読める（初期値は config.ts）。
-// 実物の形は、担当者がログインした画面で確認してから合わせる（docs/infomart-notes.md）。いまは架空の CSV で作っている。
+// 実物の形は、作者がログインした画面で確認してから合わせる（docs/infomart-notes.md）。いまは架空の CSV で作っている。
 import { customers } from "@/data/master";
 import { findProduct } from "@/lib/catalog";
 import { infomartHeaders } from "@/lib/masters/channel-settings";

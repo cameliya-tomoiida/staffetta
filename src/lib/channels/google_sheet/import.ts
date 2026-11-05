@@ -1,7 +1,7 @@
 import "server-only";
 // Google スプレッドシートの注文表（店舗別・月別シート。行＝納品日、列＝商品、セル＝ケース数）を読む。
 //
-// 読み方は2通り（どちらにするかは担当者が決める。docs/google-sheet-auth.md）
+// 読み方は2通り（どちらにするかは作者が決める。docs/google-sheet-auth.md）
 //  A. 公開CSV（リンクを知っている人が閲覧可 → CSV で出す URL を読む）… 設定がいちばん楽。鍵は要らない
 //  B. サービスアカウント（シートをサービスアカウントのメールに共有 → Sheets API で読む）… 外に公開しなくてよい
 // デモでは「demo:」で始まる URL のとき、public/samples/inbound/sheet/ の架空シートを読む。

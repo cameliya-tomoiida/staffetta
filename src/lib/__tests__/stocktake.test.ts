@@ -87,11 +87,11 @@ describe("人が承認してから反映", () => {
     expect(a.lossRates.DG04).toBe(r.proposals[0].suggestedLoss);
     expect(a.lossRates.DG01).toBe(0.05); // 前に承認した分は残る
     expect(a).toMatchObject({ approvedBy: "専務 はやし", approvedAt: "2026-08-04T10:00:00+09:00" });
-    expect(approveLossProposals(r.proposals, [], "担当").lossRates).toEqual({});
+    expect(approveLossProposals(r.proposals, [], "はやし").lossRates).toEqual({});
   });
 
   it("承認したロス率を planProduction に渡すと、生地kg が変わる（渡さなければ今までどおり）", () => {
-    const a = approveLossProposals(r.proposals, ["DG04"], "担当");
+    const a = approveLossProposals(r.proposals, ["DG04"], "はやし");
     const day = plans[0];
     const before = day.doughs[0].doughKg;
     const after = planProduction({ date: "x", warnings: [], products: [{ productId: "P07", name: "", unit: "枚", pieces: 300, customers: [] }] }, { lossRates: a.lossRates }).doughs[0];

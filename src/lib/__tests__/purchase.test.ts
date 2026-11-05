@@ -72,9 +72,9 @@ describe("仕入品の発注書（下書き）", () => {
   it("承認は人の名前が要る。下書き以外は変えない", () => {
     const d = drafts()[0];
     expect(() => approveDraft(d, " ")).toThrow();
-    const a = approveDraft(d, "担当");
-    expect(a).toMatchObject({ status: "approved", approvedBy: "担当" });
+    const a = approveDraft(d, "はやし");
+    expect(a).toMatchObject({ status: "approved", approvedBy: "はやし" });
     expect(d.status).toBe("draft");
-    expect(approveDraft({ ...a, status: "sent" as const }, "別の人").approvedBy).toBe("担当");
+    expect(approveDraft({ ...a, status: "sent" as const }, "別の人").approvedBy).toBe("はやし");
   });
 });
