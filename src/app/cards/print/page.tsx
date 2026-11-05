@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { fmtDate } from "@/components/ui";
 import { PrintButton } from "@/app/plan/PrintButton";
-import { bakeRule, kneadRule, mixesOf, processesOf, stepsOf, type CardBase, type CardInput, type Check } from "@/lib/cards/card";
+import { bakeRule, fieldsOf, kneadRule, lossColumns, lossOf, mixesOf, processesOf, stepsOf, totalLoss, type CardBase, type CardInput, type Check } from "@/lib/cards/card";
 import { loadCards } from "@/lib/cards/store";
 
 export const metadata = { title: "製品カード（印刷）｜STAFFETTA" };
@@ -60,12 +60,17 @@ const Auto = () => <span className="ml-[1mm] rounded-[1mm] border border-[#5b84b
 
 function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolean }) {
   const items = base.items;
-  const rows = Math.max(5, items.length);
+  // 工程が多い形（ピザ用など）は、工程の行を少し低く・空の製品の行を4つにして A4 横1枚に収める
+  const compact = processesOf(base).length > 8;
+  const rows = Math.max(compact ? 4 : 5, items.length);
+  const pTd = compact ? td.replace("h-[8.8mm]", "h-[7.1mm]") : td;
+  const pSmall = compact ? small.replace("h-[8.8mm]", "h-[7.1mm]") : small;
   const mixes = mixesOf(v);
   const mixRows = Math.max(2, base.batches || 0, mixes.length);
   const steps = stepsOf(v);
   const processes = processesOf(base);
   const kr = kneadRule(base);
+  const lossCols = lossColumns(base);
   const it = (i: number) => items[i];
   const x = (i: number) => (it(i) ? (v.items[it(i)!.productId] ?? {}) : {});
   return (
@@ -74,7 +79,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
         <h2 className="text-[18pt] font-bold">製品カード</h2>
         <p className="text-[8.5pt]">
           <span className="mr-[1mm] inline-block h-[3mm] w-[6mm] border border-black bg-[#e6f0fb] align-middle" />
-          青い地・<Auto />＝アプリが入れた所　白＝現場で書く所　｜　{fmtDate(base.date)} の製造計画から
+          青い地・<Auto />＝アプリが入れた所　白＝現場で書く所　｜　{fmtDate(base.date)} の製造計画から{base.template ? `・形「${base.template.name}」` : ""}
         </p>
       </div>
 
@@ -125,19 +130,35 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
               const s = steps[pr.key] ?? {};
               return (
                 <tr key={pr.key}>
-                  <th className={`${th} h-[8.8mm] whitespace-nowrap text-[9.5pt]`}>
+                  <th className={`${th} whitespace-nowrap text-[9.5pt]`}>
                     {pr.name}
                     {pr.ccp && <span className="ml-[0.5mm] text-[6.5pt]">CCP</span>}
                   </th>
-                  <td className={`${small} bg-[#e6f0fb] text-[#1f3f66]`}>
+                  <td className={`${pSmall} bg-[#e6f0fb] text-[#1f3f66]`}>
                     <span className="block whitespace-nowrap">{pr.plannedStart ? `${short(pr.plannedStart)}${pr.plannedEnd ? `〜${short(pr.plannedEnd)}` : ""}` : ""}</span>
                     {pr.staffHint ? <span className="block whitespace-nowrap">{pr.staffHint}</span> : null}
                   </td>
-                  <td className={td}>{s.start ?? ""}</td>
-                  <td className={td}>{s.end ?? ""}</td>
-                  <td className={`${td} text-[10pt]`}>{s.staff ?? ""}</td>
-                  <td className={small}>
-                    {pr.temp ? (
+                  {fieldsOf(pr).includes("time") ? (
+                    <>
+                      <td className={pTd}>{s.start ?? ""}</td>
+                      <td className={pTd}>{s.end ?? ""}</td>
+                    </>
+                  ) : (
+                    <td className={`${pTd} bg-[#f4f4f4]`} colSpan={2}></td>
+                  )}
+                  <td className={fieldsOf(pr).includes("staff") ? `${pTd} overflow-hidden text-[9.5pt] whitespace-nowrap` : `${pTd} bg-[#f4f4f4]`}>{s.staff ?? ""}</td>
+                  <td className={pSmall}>
+                    {fieldsOf(pr).includes("qty") ? (
+                      <>
+                        <span className="text-[11pt]">{n(s.qty)}</span>
+                        <span className="block">{pr.qtyLabel ?? "数"}</span>
+                      </>
+                    ) : fieldsOf(pr).includes("check") ? (
+                      <>
+                        <span className="text-[11pt]">{ck(s.check)}</span>
+                        <span className="block">{pr.checkLabel ?? "○×"}</span>
+                      </>
+                    ) : pr.temp && fieldsOf(pr).includes("temp") ? (
                       <>
                         <span className="text-[11pt]">{n(s.tempC)}</span>℃
                         <span className="block text-[#1f3f66]">管理 {pr.temp.min ?? ""}〜{pr.temp.max ?? ""}</span>
@@ -221,9 +242,9 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
       {/* 製品の表 */}
       <table className="mt-[2mm] w-full table-fixed border-collapse">
         <colgroup>
-          <col className="w-[52mm]" />
-          <col className="w-[22mm]" />
-          {Array.from({ length: 11 }, (_, i) => (
+          <col className="w-[44mm]" />
+          <col className="w-[20mm]" />
+          {Array.from({ length: 10 + lossCols.length + 1 }, (_, i) => (
             <col key={i} />
           ))}
         </colgroup>
@@ -233,11 +254,12 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
             <th className={th} rowSpan={2}>焼成の目安</th>
             <th className={`${th} text-center`} colSpan={4}>分割・成型</th>
             <th className={`${th} text-center`} colSpan={2}>焼成</th>
-            <th className={`${th} text-center`} colSpan={5}>包装・金属検査</th>
+            <th className={`${th} text-center`} colSpan={4}>包装・金属検査</th>
+            <th className={`${th} text-center`} colSpan={lossCols.length + 1}>ロス数（どこで出たか）</th>
           </tr>
           <tr>
-            {["重量g", "注文数", "仕込数", "製品数", "温度℃", "時間分", "製品数", "ロス数", "在庫", "金属", "官能"].map((h, i) => (
-              <th key={i} className={`${th} text-center`}>{h}</th>
+            {["重量g", "注文数", "仕込数", "製品数", "温度℃", "時間分", "製品数", "在庫", "金属", "官能", ...lossCols.map((c) => c.label), "合計"].map((h, i) => (
+              <th key={i} className={`${th} text-center text-[9pt]`}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -246,7 +268,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
             const br = it(i) ? bakeRule(base, it(i)!) : undefined;
             return (
               <tr key={i}>
-                <td className={`${td} text-[10.5pt]`}>
+                <td className={`${td} overflow-hidden text-[10pt] whitespace-nowrap`}>
                   {MARK[i] ?? i + 1} {it(i)?.name ?? ""}
                 </td>
                 <td className={it(i) ? `${small} whitespace-nowrap bg-[#e6f0fb] text-[9pt] text-[#1f3f66]` : td}>{br ? `${br.temp ?? "—"}℃ ${br.minutes ?? "—"}分` : ""}</td>
@@ -257,10 +279,13 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
                 <td className={num}>{n(x(i).bakeTempC)}</td>
                 <td className={num}>{n(x(i).bakeMinutes)}</td>
                 <td className={num}>{n(x(i).packed)}</td>
-                <td className={num}>{n(x(i).loss)}</td>
                 <td className={num}>{n(x(i).stock)}</td>
                 <td className={`${td} text-center`}>{ck(x(i).metal)}</td>
                 <td className={`${td} text-center`}>{ck(x(i).sensory)}</td>
+                {lossCols.map((c) => (
+                  <td key={c.key} className={num}>{n(lossOf(x(i), c.key))}</td>
+                ))}
+                <td className={`${num} font-bold`}>{it(i) ? n(totalLoss(base, x(i))) : ""}</td>
               </tr>
             );
           })}

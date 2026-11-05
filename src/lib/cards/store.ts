@@ -11,6 +11,31 @@ import { loadMasters } from "@/lib/masters/seed-db";
 import { runPipeline } from "@/lib/pipeline";
 import { listMoves } from "@/lib/stock/store";
 import { buildCardBase, checkCard, type CardBase, type CardInput, type Weather } from "./card";
+import { checkTemplate, DEFAULT_TEMPLATES, type CardTemplate } from "./template";
+
+/** 製品カードの形（第3版）。保存が無ければ、はじめの形（パン用・ピザ用） */
+export function listTemplates(): CardTemplate[] {
+  return kvGet<CardTemplate[]>("card_templates") ?? DEFAULT_TEMPLATES;
+}
+
+/** 形を保存（id が同じなら置きかえ・無ければ足す）。おかしい所があれば保存しない */
+export function saveTemplate(t: CardTemplate): string[] {
+  const errors = checkTemplate(t);
+  if (errors.length) return errors;
+  const list = listTemplates();
+  const i = list.findIndex((x) => x.id === t.id);
+  kvSet("card_templates", i >= 0 ? list.map((x, j) => (j === i ? t : x)) : [...list, t]);
+  return [];
+}
+
+export function deleteTemplate(id: string) {
+  kvSet("card_templates", listTemplates().filter((t) => t.id !== id));
+}
+
+/** はじめの形に戻す */
+export function resetTemplates() {
+  kvSet("card_templates", undefined);
+}
 
 const SQL = `
 CREATE TABLE IF NOT EXISTS product_cards (
@@ -90,6 +115,7 @@ export async function loadCards(date: string, opts: { weather?: boolean } = {}):
   const [{ orders }, masters] = await Promise.all([allOrders(), loadMasters()]);
   const r = runPipeline(orders, date, { masters });
   const weather = opts.weather === false ? undefined : await weatherFor(r.productionDate);
+  const templates = listTemplates();
   const saved = new Map(
     (getDb().prepare("SELECT dough_key, json, base_json, updated_at, updated_by FROM product_cards WHERE date = ?").all(date) as {
       dough_key: string; json: string; base_json: string | null; updated_at: string; updated_by: string;
@@ -99,7 +125,7 @@ export async function loadCards(date: string, opts: { weather?: boolean } = {}):
     const s = saved.get(d.key);
     const live = buildCardBase({
       date, productionDate: r.productionDate, dough: d, schedule: r.schedule.find((x) => x.key === d.key),
-      steps: masters.steps, shifts: masters.shifts, assignments: masters.staffAssignments, doughs: masters.doughs, products: masters.products,
+      steps: masters.steps, shifts: masters.shifts, assignments: masters.staffAssignments, doughs: masters.doughs, products: masters.products, templates,
       yeast: yeastOf(masters, d.doughId), weather,
     });
     // 責任者が確認したカードは、そのときの中身のまま（あとで注文が変わっても記録は変えない）

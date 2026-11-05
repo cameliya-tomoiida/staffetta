@@ -17,7 +17,7 @@
 #   - ID は「R-」＋得意先コード（見本の C01 などと重ならない）
 #   - --found（住所の無い先をあとから調べた結果。[{id, found, postal, address, tel, confidence, note}]）があれば、住所の無い先に入れる。
 #     confidence が low なら注意事項に「住所は推測・要確認」。電話はメモに入れる
-#   - コードが oc で始まる先はオフィス自社の設置先: 納品の方法＝オフィス自社便（自社便のコース計算には入れない）。
+#   - 納品の方法は --settings の設定ファイル（git の外）の決まりで入れる（担当者コード・得意先ID の頭・名前に含む文字）。
 #     ocp（PayPay の集計用）は取引先ではないので出さない
 #
 # 出すもの（出力フォルダ。data/ は git の外）:
@@ -184,8 +184,29 @@ def read_route(path):
     return out
 
 
-# 自社便のコースの担当者（担当者・11/6）: 担当A〜H
-OWN_TANTOU = {"001", "002", "003", "006", "007", "009", "029", "44"}
+def load_settings(path):
+    """納品の方法の決まり（git の外の設定ファイル。実在の名前はコードに書かない）
+    {
+      "own_tantou": ["001", ...],                       自社便のコースの担当者コード
+      "id_prefix_methods": [{"prefix": "R-xx", "method": "..."}],  得意先ID の頭で決める
+      "name_rules": [{"contains": ["..."], "method": "冷凍便"}]     名前に含む文字で決める
+    }"""
+    import json
+    if not path or not os.path.exists(path):
+        return {"own_tantou": [], "id_prefix_methods": [], "name_rules": []}
+    with open(path, encoding="utf-8") as f:
+        return {"own_tantou": [], "id_prefix_methods": [], "name_rules": [], **json.load(f)}
+
+
+def method_for(rid, name, tcode, rules):
+    nn = unicodedata.normalize("NFKC", name).upper()
+    for x in rules["id_prefix_methods"]:
+        if rid.upper().startswith(x["prefix"].upper()):
+            return x["method"]
+    for x in rules["name_rules"]:
+        if any(unicodedata.normalize("NFKC", w).upper() in nn for w in x["contains"]):
+            return x["method"]
+    return "自社便" if tcode in set(rules["own_tantou"]) else ""
 
 
 def num_text(v):
@@ -221,6 +242,7 @@ def main():
     ap.add_argument("--route", required=True)
     ap.add_argument("--out", default=os.path.join("data", "import-real", "customers"))
     ap.add_argument("--found", action="append", default=[], help="住所の無い先を調べた結果（JSON）。何回でも。あとのファイルが優先")
+    ap.add_argument("--settings", default=os.path.join("data", "import-real", "customers", "settings.json"), help="納品の方法の決まり（git の外）")
     ap.add_argument("--min-days", type=int, default=3, help="この日数以上売上がある曜日を「納品する曜日」にする")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
@@ -229,6 +251,7 @@ def main():
     sales = read_sales(a.sales)
     addr = read_address(a.address)
     route = read_route(a.route)
+    rules = load_settings(a.settings)
     found = {}
     import json
     for fp in a.found:
@@ -280,17 +303,7 @@ def main():
                 caution = ("住所は推測・要確認。" + caution).strip()
             if fx.get("deliver_to"):
                 caution = (f"届け先: {fx['deliver_to']}。" + caution).strip()
-        nn = unicodedata.normalize("NFKC", name).upper()
-        if rid.lower().startswith("r-oc"):
-            method = "オフィス自社便"
-        elif "ECR" in nn:
-            method = "冷凍便"  # ECR 系は全部冷凍ピザ（担当者）
-        elif "宅配の店A" in nn or "宅配の店B" in nn or "宅配の店B" in nn:
-            method = "宅配・路線便"  # ヤマト便（担当者）
-        elif tcode in OWN_TANTOU:
-            method = "自社便"
-        else:
-            method = ""
+        method = method_for(rid, name, tcode, rules)
         cp_rows.extend(product_rows(rid, sl["items"], a.min_days))
         rows.append({
             "得意先ID": rid,

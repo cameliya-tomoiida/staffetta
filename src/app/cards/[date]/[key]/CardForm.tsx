@@ -9,9 +9,8 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui";
-import type { ProcessStepKey } from "@/data/types";
 import {
-  bakeRule, checkCard, kneadRule, mixesOf, processesOf, stepsOf,
+  bakeRule, checkCard, fieldsOf, kneadRule, lossColumns, lossOf, mixesOf, processesOf, stepsOf, totalLoss,
   type CardBase, type CardInput, type CardItemInput, type Check, type MixInput, type StepInput,
 } from "@/lib/cards/card";
 import { approveCardAction, saveCardAction } from "../../actions";
@@ -46,12 +45,13 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
   const bad = (field: string) => problems.some((p) => p.field === field);
   const kr = kneadRule(base);
   const processes = processesOf(base);
+  const lossCols = lossColumns(base);
 
   const set = <K extends keyof CardInput>(k: K, val: CardInput[K]) => {
     setV((x) => ({ ...x, [k]: val }));
     setDirty(true);
   };
-  const setStep = (k: ProcessStepKey, f: keyof StepInput, val: StepInput[keyof StepInput]) => {
+  const setStep = (k: string, f: keyof StepInput, val: StepInput[keyof StepInput]) => {
     setV((x) => ({ ...x, steps: { ...x.steps, [k]: { ...x.steps?.[k], [f]: val } } }));
     setDirty(true);
   };
@@ -132,6 +132,9 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
             {kr ? <b>{kr.target}℃ ±{kr.tol}</b> : <b className="text-review-ink">まだ登録がありません</b>}（生地「{base.doughName}」の基準。<Link href="/masters/doughs">マスタ管理 → 生地</Link> で直せます）
           </li>
           <li>
+            カードの形：<b>{base.template?.name ?? "工程のマスタから"}</b>（工程を足す・外す・並べかえるのは <Link href="/cards/templates">製品カードの形</Link> の画面）
+          </li>
+          <li>
             焼成の温度・時間：製品ごと（<Link href="/masters/products">マスタ管理 → 商品</Link>）。急速冷凍などの温度：工程ごと（<Link href="/masters/steps">工程</Link>）。
           </li>
         </ul>
@@ -196,11 +199,27 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                       {pr.plannedStart ? `${pr.plannedStart}${pr.plannedEnd ? `〜${pr.plannedEnd}` : ""}` : "—"}
                       {pr.staffHint && <span className="block">{pr.staffHint}</span>}
                     </td>
-                    <td className={TD}>{time(s.start, (x) => setStep(pr.key, "start", x), `${pr.name}のはじめ`)}</td>
-                    <td className={TD}>{time(s.end, (x) => setStep(pr.key, "end", x), `${pr.name}のおわり`, `steps.${pr.key}.end`)}</td>
-                    <td className={TD}>{text(s.staff, (x) => setStep(pr.key, "staff", x), `${pr.name}の担当者`)}</td>
+                    {fieldsOf(pr).includes("time") ? (
+                      <>
+                        <td className={TD}>{time(s.start, (x) => setStep(pr.key, "start", x), `${pr.name}のはじめ`)}</td>
+                        <td className={TD}>{time(s.end, (x) => setStep(pr.key, "end", x), `${pr.name}のおわり`, `steps.${pr.key}.end`)}</td>
+                      </>
+                    ) : (
+                      <td className={`${TD} bg-off-bg/40 text-center text-ink-soft`} colSpan={2}>—</td>
+                    )}
+                    <td className={TD}>{fieldsOf(pr).includes("staff") ? text(s.staff, (x) => setStep(pr.key, "staff", x), `${pr.name}の担当者`) : <span className="px-1 text-ink-soft">—</span>}</td>
                     <td className={TD}>
-                      {pr.temp ? (
+                      {fieldsOf(pr).includes("qty") ? (
+                        <div className="flex items-center gap-1">
+                          {num(s.qty, (n) => setStep(pr.key, "qty", n), `${pr.name}の${pr.qtyLabel ?? "数"}`)}
+                          <span className="shrink-0 text-base leading-tight">{pr.qtyLabel ?? "数"}</span>
+                        </div>
+                      ) : fieldsOf(pr).includes("check") ? (
+                        <div className="flex items-center gap-1">
+                          <OkNg label={`${pr.name}の${pr.checkLabel ?? "確認"}`} disabled={approved} value={s.check} onChange={(c) => setStep(pr.key, "check", c)} />
+                          <span className="shrink-0 text-sm leading-tight">{pr.checkLabel ?? ""}</span>
+                        </div>
+                      ) : pr.temp && fieldsOf(pr).includes("temp") ? (
                         <div className="flex items-center gap-1">
                           {num(s.tempC, (n) => setStep(pr.key, "tempC", n), `${pr.name}の温度`, `steps.${pr.key}.tempC`, pr.temp.target != null ? String(pr.temp.target) : "")}
                           <span className="shrink-0 text-base leading-tight">
@@ -287,10 +306,10 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
       <section>
         <h2 className="mb-1 text-xl font-bold">この生地からとった製品</h2>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] table-fixed border-collapse">
+          <table className="w-full min-w-[1080px] table-fixed border-collapse">
             <colgroup>
-              <col className="w-[16%]" />
-              {Array.from({ length: 11 }, (_, i) => (
+              <col className="w-[14%]" />
+              {Array.from({ length: 10 + lossCols.length + 1 }, (_, i) => (
                 <col key={i} />
               ))}
             </colgroup>
@@ -299,11 +318,12 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                 <th className={TH} rowSpan={2}>製品名</th>
                 <th className={`${TH} text-center`} colSpan={4}>分割・成型</th>
                 <th className={`${TH} text-center`} colSpan={2}>焼成</th>
-                <th className={`${TH} text-center`} colSpan={5}>包装・金属検査</th>
+                <th className={`${TH} text-center`} colSpan={4}>包装・金属検査</th>
+                <th className={`${TH} text-center`} colSpan={lossCols.length + 1}>ロス数（どこで出たか）</th>
               </tr>
               <tr>
-                {["重量g", "注文数", "仕込数", "製品数", "温度℃", "時間分", "製品数", "ロス数", "在庫", "金属", "官能"].map((h, i) => (
-                  <th key={i} className={`${TH} text-center`}>{h}</th>
+                {["重量g", "注文数", "仕込数", "製品数", "温度℃", "時間分", "製品数", "在庫", "金属", "官能", ...lossCols.map((c) => c.label), "合計"].map((h, i) => (
+                  <th key={i} className={`${TH} text-center text-base`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -312,6 +332,15 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                 const x = v.items[it.productId] ?? {};
                 const f = (k: string) => `items.${it.productId}.${k}`;
                 const br = bakeRule(base, it);
+                const setLoss = (key: string, n: number | undefined) => {
+                  const losses = { ...(x.losses ?? {}) };
+                  if (n == null) delete losses[key];
+                  else losses[key] = n;
+                  setItem(it.productId, "losses", losses);
+                  // 前の版の loss（包装のロス）は、第3版のロスに移す
+                  if (x.loss != null) setItem(it.productId, "loss", undefined);
+                };
+                const tl = totalLoss(base, x);
                 return (
                   <tr key={it.productId}>
                     <td className={`${TD} px-2 text-lg font-bold`}>
@@ -327,10 +356,13 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                     <td className={TD}>{num(x.bakeTempC, (n) => setItem(it.productId, "bakeTempC", n), `${it.name} の焼成温度`, f("bakeTempC"), br?.temp != null ? String(br.temp) : "")}</td>
                     <td className={TD}>{num(x.bakeMinutes, (n) => setItem(it.productId, "bakeMinutes", n), `${it.name} の焼成時間`, undefined, br?.minutes != null ? String(br.minutes) : "")}</td>
                     <td className={TD}>{num(x.packed, (n) => setItem(it.productId, "packed", n), `${it.name} の製品数（包装）`, f("packed"))}</td>
-                    <td className={TD}>{num(x.loss, (n) => setItem(it.productId, "loss", n), `${it.name} のロス数`)}</td>
                     <td className={TD}>{num(x.stock, (n) => setItem(it.productId, "stock", n), `${it.name} の在庫`)}</td>
                     <td className={TD}><OkNg label={`${it.name} の金属検査`} disabled={approved} value={x.metal} onChange={(c) => setItem(it.productId, "metal", c)} /></td>
                     <td className={TD}><OkNg label={`${it.name} の官能検査`} disabled={approved} value={x.sensory} onChange={(c) => setItem(it.productId, "sensory", c)} /></td>
+                    {lossCols.map((c) => (
+                      <td key={c.key} className={TD}>{num(lossOf(x, c.key), (n) => setLoss(c.key, n), `${it.name} の${c.label}のロス数`)}</td>
+                    ))}
+                    <td className={`${AUTO} num text-right font-bold`}>{tl ?? ""}</td>
                   </tr>
                 );
               })}

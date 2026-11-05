@@ -486,7 +486,7 @@ export interface CustomerMaster {
   postalCode?: string;
   /** 納品先の住所 */
   address?: string;
-  /** 納品の方法: own = 自社便（どの便かは course）、frozen = 冷凍便、parcel = 宅配・路線便、pickup = 引き取り、oc = オフィス自社便（設置先。別のアプリのコースが回る） */
+  /** 納品の方法: own = 自社便（どの便かは course）、frozen = 冷凍便、parcel = 宅配・路線便、pickup = 引き取り、oc = 設置先の便（設置型のサービスの先。別のアプリのコースが回る） */
   deliveryMethod?: DeliveryMethod;
   /** 定休日（0=日〜6=土） */
   closedWeekdays?: number[];
