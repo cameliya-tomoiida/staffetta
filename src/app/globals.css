@@ -279,3 +279,38 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     display: none !important;
   }
 }
+/* スマホ: 押して開く所はボタンに見せる（枠つき＋›。開くと回る）・補足の字を薄くしすぎない（⑧） */
+@media screen and (max-width: 767px) {
+  main details > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 2px solid var(--color-rule-strong, #c9c0b4);
+    border-radius: 12px;
+    background: var(--color-sheet, #fff);
+    font-weight: 700;
+    list-style: none;
+    cursor: pointer;
+  }
+  main details > summary::-webkit-details-marker {
+    display: none;
+  }
+  main details > summary::after {
+    content: "›";
+    margin-left: auto;
+    font-size: 22px;
+    line-height: 1;
+    transition: transform 0.15s;
+  }
+  main details[open] > summary {
+    border-color: var(--color-crust-600, #a33b2a);
+  }
+  main details[open] > summary::after {
+    transform: rotate(90deg);
+  }
+  .text-ink-faint {
+    color: var(--color-ink-soft, #5f5650) !important;
+  }
+}

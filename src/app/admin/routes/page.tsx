@@ -19,7 +19,7 @@ export default async function RoutesPage(props: PageProps<"/admin/routes">) {
     deliveryWeekdays: c.deliveryWeekdays, serviceMinutes: c.serviceMinutes,
   }));
   return (
-    <main className="space-y-6 p-6">
+    <main className="space-y-6 md:p-6">
       <header>
         <h1 className="text-3xl font-bold">配送コースの地図</h1>
         <p className="mt-2 text-xl text-ink-soft">
