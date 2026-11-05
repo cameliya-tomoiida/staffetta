@@ -9,7 +9,7 @@ export const FaxReadSchema = z.object({
   kind: FaxKind.describe(
     "order=通常の注文 / change=既に出した注文の数量・日付の変更や訂正・キャンセル / provisional_order=仮発注・予定数（あとで本発注が来る） / supplier_reply=仕入先からの返信（注文請書・納期回答など、こちらが発注した側） / not_order=広告・案内など注文と関係ないもの",
   ),
-  kind_reason: z.string().describe("その種類だと判断した理由（書類の見出し・文面など）"),
+  kind_reason: z.string().describe("その種類だと判断した理由（書類の見出し・文面など）。1文・40字以内で短く"),
   layout_summary: z
     .string()
     .describe("この様式の特徴（見出し、日付の書き方、品名の並び、数量の単位、丸で選ぶ欄の有無など）を2〜3文で。様式の登録に使うので、向き・かすれ・受信日時などこの1枚だけの事情は書かない"),
@@ -28,7 +28,7 @@ export const FaxReadSchema = z.object({
     matched_customer_id: z
       .string()
       .describe("得意先一覧の id のうち一致するもの。判断できなければ空文字"),
-    evidence: z.string().describe("送り主を判定した根拠（上端の発信元表示・署名・FAX番号など）"),
+    evidence: z.string().describe("送り主を判定した根拠（上端の発信元表示・署名・FAX番号など）。1文・40字以内で短く"),
   }),
   document_title: z.string(),
   orders: z.array(
@@ -62,7 +62,7 @@ export const FaxReadSchema = z.object({
       ),
     }),
   ),
-  notes: z.string().describe("書類全体の手書きメモや連絡事項の要約。なければ空文字"),
+  notes: z.string().describe("書類全体の手書きメモや連絡事項の要約。3文・120字以内で、人が知るべきことだけ。なければ空文字"),
 });
 export type FaxRead = z.infer<typeof FaxReadSchema>;
 

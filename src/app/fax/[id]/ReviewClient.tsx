@@ -11,6 +11,7 @@ import { PdfView } from "@/components/PdfView";
 import { NumPad } from "@/components/NumPad";
 import { ReadButton } from "@/components/ReadButton";
 import { useStaffNames } from "@/components/ui/staff";
+import { faxDetailSummary } from "@/lib/fax-summary";
 
 interface Row {
   orderIndex: number;
@@ -640,6 +641,12 @@ export function ReviewClient({
             {/* 小さい説明（根拠・メモ・自動で確定しなかった理由）は畳んでおく */}
             <details className="mt-2 rounded-lg border border-rule bg-cream px-4 py-2">
               <summary className="min-h-11 cursor-pointer py-2 font-bold">くわしく（読み取りの根拠・メモ）</summary>
+              {/* まず3行の要約。全文は「全文を見る」の中 */}
+              <ul className="space-y-1 pb-2 text-[0.9em]">
+                {faxDetailSummary({ evidence: read.sender.evidence, kindReason: read.kind_reason, notes: read.notes, autoReasons: done ? [] : fax.autoReview?.reasons }).map((l, k) => <li key={k}>{l}</li>)}
+              </ul>
+              <details className="pb-2">
+                <summary className="min-h-11 cursor-pointer py-1 text-[0.85em] text-ink-soft underline">全文を見る</summary>
               <div className="space-y-2 pb-2 text-[0.85em]">
                 <div>送り主の判定の根拠: {read.sender.evidence}</div>
                 <div>種類の判断: {read.kind_reason}</div>
@@ -652,6 +659,7 @@ export function ReviewClient({
                 )}
                 <div className="text-ink-soft">読み取り: {fax.readModel}</div>
               </div>
+              </details>
             </details>
 
             {done && isOrderish && <EditHistory orders={kind === "change" ? others.filter((o) => o.source.refs.some((r) => r.kind === "fax_pdf" && r.faxId === fax.id)) : orders} productName={productName} />}
