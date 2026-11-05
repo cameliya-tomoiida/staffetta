@@ -83,7 +83,7 @@ export function AlertsClient({ open, done, now, lastAt, enabled }: { open: Alert
   const newOnes = active.filter((a) => a.state === "new");
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-3 border-b border-rule bg-paper/95 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5">
+      <div className="-mx-4 flex flex-wrap items-center gap-3 border-b border-rule bg-paper/95 px-4 py-2 backdrop-blur sm:sticky sm:top-0 sm:z-20 sm:-mx-5 sm:px-5">
         <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
           操作する人
           <select
@@ -193,22 +193,23 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 pt-1">
+        {/* スマホ: 次にすることのボタンは横いっぱい、「担当者に回す・あとで・済み」は1段に3つ */}
+        <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
           {actions.map((act, i) =>
             !act.ask && act.href ? (
-              <Link key={i} href={act.href} onClick={() => void seen().catch(() => undefined)} className={buttonClass(act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost", "lg")}>
+              <Link key={i} href={act.href} onClick={() => void seen().catch(() => undefined)} className={buttonClass(act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost", "lg", "w-full sm:w-auto")}>
                 {act.label}
               </Link>
             ) : (
-              <Button key={i} size="lg" variant={act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost"} disabled={pending} onClick={() => doAction(act)}>
+              <Button key={i} size="lg" className="w-full sm:w-auto" variant={act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost"} disabled={pending} onClick={() => doAction(act)}>
                 {act.label}
               </Button>
             ),
           )}
-          <span className="flex flex-wrap gap-2 sm:ml-auto">
-            <Button disabled={pending} aria-expanded={panel === "assign"} onClick={() => setPanel(panel === "assign" ? null : "assign")}>担当者に回す</Button>
-            <Button disabled={pending} aria-expanded={panel === "later"} onClick={() => setPanel(panel === "later" ? null : "later")}>あとで</Button>
-            <Button disabled={pending} onClick={() => run(() => updateAlertAction(a.dedupeKey, { state: "done" }, who), `「${a.title}」を済みにしました`)}>済み</Button>
+          <span className="grid grid-cols-3 gap-2 sm:ml-auto sm:flex sm:flex-wrap">
+            <Button className="!px-1 text-sm whitespace-nowrap sm:!px-5 sm:text-base" disabled={pending} aria-expanded={panel === "assign"} onClick={() => setPanel(panel === "assign" ? null : "assign")}>担当者に回す</Button>
+            <Button className="!px-1 text-sm whitespace-nowrap sm:!px-5 sm:text-base" disabled={pending} aria-expanded={panel === "later"} onClick={() => setPanel(panel === "later" ? null : "later")}>あとで</Button>
+            <Button className="!px-1 text-sm whitespace-nowrap sm:!px-5 sm:text-base" disabled={pending} onClick={() => run(() => updateAlertAction(a.dedupeKey, { state: "done" }, who), `「${a.title}」を済みにしました`)}>済み</Button>
           </span>
         </div>
 

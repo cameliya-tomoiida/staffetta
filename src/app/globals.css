@@ -134,3 +134,21 @@ main a:not([class]),
     text-decoration-thickness: 3px;
   }
 }
+
+/* FAX の確認画面の行（スマホ・タブレット。1024 でも右の欄は狭い）: 表のままだと品名と理由が数文字ずつ折れるので、1行を小さなカードにする。
+   1段目＝FAX の品名と理由（横いっぱい）、2段目＝商品｜数量｜個数、3段目＝消す など */
+@media (max-width: 1279px) {
+  table.fax-rows,
+  table.fax-rows tbody { display: block; }
+  table.fax-rows thead { display: none; }
+  table.fax-rows tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    column-gap: 0.5rem;
+    align-items: start;
+    padding: 0.25rem 0.5rem 0.5rem;
+  }
+  table.fax-rows td:first-child { grid-column: 1 / -1; }
+  table.fax-rows td:last-child { grid-column: 1 / -1; text-align: right; padding-top: 0; }
+}
+
