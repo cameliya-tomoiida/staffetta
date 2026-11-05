@@ -157,7 +157,8 @@ export type ProcessKey =
   | "cool" // 冷却
   | "freeze" // 急速冷凍
   | "pack" // 包装
-  | "metal_check"; // 金属検出（CCP）
+  | "metal_check" // 金属検出（CCP）
+  | "cleanup"; // 1日の終わりの洗浄・片付け（工程表が足す。ラインの設定）
 
 export interface ProcessStep {
   key: ProcessKey;

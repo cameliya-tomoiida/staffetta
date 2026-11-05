@@ -45,6 +45,7 @@ const stepColor: Record<ProcessKey, string> = {
   freeze: "#c8d3de",
   pack: "#e3ddd5",
   metal_check: "#f7e6e2",
+  cleanup: "#ecebe8",
 };
 const STEPS = Object.keys(stepColor) as ProcessKey[];
 

@@ -10,7 +10,7 @@
 //  - 上限を超える日は「前の日に作っておけるか」（冷凍で在庫にするライン＝開始時刻から組むラインだけ。賞味期限・冷凍庫の容量は今は見ない）
 import type { Masters, Order, ProductionLineId } from "@/data/types";
 import { countsInTotals, totalsForDate } from "./aggregate";
-import { findLine, findProduct, withMasters } from "./catalog";
+import { currentMasters, findLine, findProduct, withMasters } from "./catalog";
 import { deliveryDayProblem, orderDeadline } from "./leadtime";
 import { planProduction } from "./production";
 import { addDays } from "./purchase";
@@ -136,6 +136,13 @@ function run(order: Order, now: string, opts: AlternativeOptions): AlternativeRe
             const pd = addDays(order.deliveryDate, -k);
             if (pd <= today) break; // 今日より前・今日は作れない
             const room = roomOnDay(pd, others, doughLine, order.id);
+            // 冷凍庫が登録されていれば、その日に作る分＋作りだめの分が冷凍庫に入るかも見る
+            const fz = planProduction(totalsForDate(others.filter((o) => o.id !== order.id && countsInTotals(o)), pd)).lines.find((x) => x.line === doughLine)?.freezerCases
+              ?? planProduction(totalsForDate([{ ...order, deliveryDate: pd, status: "confirmed", intent: "new", lines: [l] }], pd)).lines.find((x) => x.line === doughLine)?.freezerCases;
+            const caseSize = currentMasters().products.find((p) => p.id === l.productId)?.caseSize;
+            const needCases = caseSize ? Math.ceil(need / caseSize) : 0;
+            const ownCases = fz && others.some((o) => o.deliveryDate === pd) ? fz.need : 0;
+            if (fz && ownCases + needCases > fz.cap) continue;
             if (room >= need) {
               res.makeEarlier = { productionDate: pd, room, reason: `${md(pd)}に作っておけば、納品日は ${md(order.deliveryDate)} のままで受けられます（その日の空き ${room === Infinity ? "上限なし" : `${room.toLocaleString("ja-JP")}${findLine(doughLine).unit}`}）` };
               break;
