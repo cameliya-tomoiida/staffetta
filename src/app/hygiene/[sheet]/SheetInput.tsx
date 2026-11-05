@@ -122,7 +122,10 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
   const set = (date: string, k: keyof TempEntry, v: TempEntry[keyof TempEntry]) =>
     update((r) => ({ ...r, temps: { ...r.temps, [date]: { ...r.temps?.[date], [k]: v, ...(who && !r.temps?.[date]?.who ? { who } : {}) } } }));
   const todayRow = useRef<HTMLTableRowElement>(null);
-  useEffect(() => todayRow.current?.scrollIntoView({ block: "center" }), []);
+  useEffect(() => {
+    // 新しい Chrome は scrollIntoView が Promise を返すので、返り値を effect の後片付けにしない
+    todayRow.current?.scrollIntoView({ block: "center" });
+  }, []);
   const range = [t.min != null ? `${t.min}${t.unit}` : "", t.max != null ? `${t.max}${t.unit}` : ""].join("〜");
   return (
     <section>

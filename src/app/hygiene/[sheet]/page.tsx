@@ -20,9 +20,16 @@ export default async function HygieneSheetPage(props: PageProps<"/hygiene/[sheet
   const { rec } = getRecord(def.id, month);
   return (
     <main className="mx-auto max-w-7xl space-y-4 p-6">
-      <Link href={`/hygiene?month=${month}`} className="link text-xl">
-        ← 衛生管理の一覧
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href={`/hygiene?month=${month}`} className="link text-xl">
+          ← 衛生管理の一覧
+        </Link>
+        {def.kind !== "label" && (
+          <Link href={`/hygiene/ai?sheet=${def.id}`} className="link text-xl">
+            AI と話してこのシートを直す
+          </Link>
+        )}
+      </div>
       <h1 className="text-3xl font-bold">
         {def.title}　<span className="text-2xl font-normal">{Number(month.slice(0, 4))}年{Number(month.slice(5))}月・{KIND_LABEL[def.kind]}</span>
       </h1>

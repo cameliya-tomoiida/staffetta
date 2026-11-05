@@ -47,7 +47,10 @@ export default async function HygienePage(props: PageProps<"/hygiene">) {
             </Link>
           );
         })}
-        <Link href={`/hygiene/print?month=${month}`} className="btn-primary ml-auto text-xl">
+        <Link href="/hygiene/ai" className="btn-ghost ml-auto text-xl">
+          AI と話してシートを作る
+        </Link>
+        <Link href={`/hygiene/print?month=${month}`} className="btn-primary text-xl">
           {Number(month.slice(5))}月の全部のシートを印刷
         </Link>
       </nav>

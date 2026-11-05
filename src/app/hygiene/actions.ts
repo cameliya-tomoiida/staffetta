@@ -45,3 +45,24 @@ export async function deleteManualAction(id: string) {
   deleteManual(id);
   revalidatePath("/hygiene/manuals");
 }
+
+/** AI とのチャット（⑦の(24)）: 会話といまの下書きから、次の下書きと返事 */
+export async function chatSheetAction(turns: { role: "user" | "assistant"; text: string }[], current: SheetDef | undefined, id: string) {
+  try {
+    const { chatSheet } = await import("@/lib/hygiene/ai-chat");
+    return { ok: true as const, ...(await chatSheet(turns, current, id)) };
+  } catch (e) {
+    return { ok: false as const, error: msg(e) };
+  }
+}
+
+/** AI と作ったシートを登録（同じ ID があれば置きかえ） */
+export async function registerSheetAction(def: SheetDef) {
+  if (!def.title.trim()) return { ok: false as const, error: "シートの名前がありません" };
+  if (def.kind === "temp" && !def.temp) return { ok: false as const, error: "温度の基準がありません" };
+  if ((def.kind === "clean" || def.kind === "check") && !def.items?.length) return { ok: false as const, error: "項目がありません" };
+  if (def.kind === "log" && !def.columns?.length) return { ok: false as const, error: "記録の列がありません" };
+  saveSheet({ ...def, active: true });
+  revalidatePath("/hygiene");
+  return { ok: true as const, id: def.id };
+}
