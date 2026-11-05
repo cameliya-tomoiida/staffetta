@@ -187,7 +187,7 @@ export function EquipmentChart({
                     <span
                       key={i}
                       title={`${eq}：${u.label} ${fmtTime(u.start)}–${fmtTime(u.end)}`}
-                      className={`absolute inset-y-0.5 overflow-hidden rounded-[3px] border px-1 text-[0.68rem] leading-7 font-bold whitespace-nowrap ${
+                      className={`@container absolute inset-y-0.5 overflow-hidden rounded-[3px] border px-1 text-[0.68rem] leading-7 font-bold whitespace-nowrap ${
                         u.wait ? "border-dashed border-review-line text-review-ink" : "border-rule-strong text-ink"
                       }`}
                       style={{
@@ -198,7 +198,8 @@ export function EquipmentChart({
                           : colors[u.stepKey] ?? "#eee",
                       }}
                     >
-                      {u.end - u.start >= 25 ? u.label : ""}
+                      {/* 帯が狭いと名前は出さない。少し狭いときは … で切る（印刷も同じ） */}
+                      <span className="hidden truncate @[1.5rem]:block">{u.label}</span>
                     </span>
                   ))}
                 </div>

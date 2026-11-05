@@ -47,8 +47,12 @@ export function ImportPanel({ samples }: Props) {
 
   const btn = buttonClass("primary");
   const sub = buttonClass("ghost", "md", "text-sm");
-  const input = "min-h-12 rounded-lg border border-rule-strong bg-sheet px-3";
-  const fileCls = "block text-sm text-ink-soft file:mr-3 file:min-h-12 file:rounded-lg file:border file:border-rule-strong file:bg-sheet file:px-4 file:font-bold file:text-ink";
+  // 入力欄は欄の幅いっぱい（min-w-0 が無いと、2列の欄が文字の数ぶん広がって横にはみ出す）
+  const input = "min-h-12 w-full min-w-0 rounded-lg border border-rule-strong bg-sheet px-3";
+  // ファイルを選ぶ所: 見出しの文字と、ボタン（file:）とファイル名を、箱の中で折り返す
+  const fileCls = "block text-sm font-bold text-ink-soft";
+  const fileInput =
+    "mt-1 block w-full min-w-0 max-w-full text-sm font-normal break-all text-ink-soft file:mr-3 file:min-h-12 file:cursor-pointer file:rounded-lg file:border-2 file:border-crust-600 file:bg-sheet file:px-4 file:font-bold file:text-crust-700";
 
   return (
     <div className="space-y-4">
@@ -64,7 +68,7 @@ export function ImportPanel({ samples }: Props) {
             ))}
           </div>
           <label className={fileCls}>
-            .eml ファイルを選ぶ <input className="mt-1 block" type="file" accept=".eml" onChange={upload("email")} disabled={!!busy} />
+            .eml ファイルを選ぶ <input className={fileInput} type="file" accept=".eml" onChange={upload("email")} disabled={!!busy} />
           </label>
         </section>
 
@@ -78,8 +82,8 @@ export function ImportPanel({ samples }: Props) {
           <div className="grid grid-cols-2 gap-2">
             <input className={`col-span-2 ${input}`} placeholder="シートの URL" value={sheet.url} onChange={(e) => setSheet({ ...sheet, url: e.target.value })} />
             <input className={input} placeholder="シート名" value={sheet.sheetName} onChange={(e) => setSheet({ ...sheet, sheetName: e.target.value })} />
-            <input className={input} placeholder="範囲（例 A1:H40）" value={sheet.range} onChange={(e) => setSheet({ ...sheet, range: e.target.value })} />
-            <input className={input} placeholder="得意先ID（例 C13）" value={sheet.customerId} onChange={(e) => setSheet({ ...sheet, customerId: e.target.value })} />
+            <input className={input} placeholder="範囲（A1:H40）" value={sheet.range} onChange={(e) => setSheet({ ...sheet, range: e.target.value })} />
+            <input className={input} placeholder="得意先ID（C13）" value={sheet.customerId} onChange={(e) => setSheet({ ...sheet, customerId: e.target.value })} />
             <input className={input} placeholder="納品先（店舗名）" value={sheet.place} onChange={(e) => setSheet({ ...sheet, place: e.target.value })} />
           </div>
           <button className={btn} disabled={!!busy || !sheet.url} onClick={() => run("sheet", sheet.sheetName, sheet)}>このシートを読む</button>
@@ -94,7 +98,7 @@ export function ImportPanel({ samples }: Props) {
             ))}
           </div>
           <label className={fileCls}>
-            CSV を選ぶ <input className="mt-1 block" type="file" accept=".csv" onChange={upload("kirara")} disabled={!!busy} />
+            CSV を選ぶ <input className={fileInput} type="file" accept=".csv" onChange={upload("kirara")} disabled={!!busy} />
           </label>
         </section>
 
@@ -107,7 +111,7 @@ export function ImportPanel({ samples }: Props) {
             ))}
           </div>
           <label className={fileCls}>
-            CSV を選ぶ <input className="mt-1 block" type="file" accept=".csv" onChange={upload("infomart")} disabled={!!busy} />
+            CSV を選ぶ <input className={fileInput} type="file" accept=".csv" onChange={upload("infomart")} disabled={!!busy} />
           </label>
         </section>
       </div>

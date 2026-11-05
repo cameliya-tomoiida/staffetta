@@ -6,8 +6,10 @@ import { LANG_COOKIE, LANGS, type Lang } from "@/i18n/langs";
 
 export function LangPicker({ lang, hrefFor, right }: { lang: Lang; hrefFor: Record<string, string>; right?: React.ReactNode }) {
   return (
-    <div className="no-print mb-0 flex items-end gap-3 border-b-2 border-rule-strong">
-      <div role="tablist" aria-label="工程表のことば" className="-mb-0.5 flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:thin]">
+    // 印刷のボタンはタブの上の行に。タブは折り返す（横にかくれて押せないタブを作らない）
+    <div className="no-print">
+      {right && <div className="flex justify-end pb-2">{right}</div>}
+      <div role="tablist" aria-label="工程表のことば" className="flex flex-wrap gap-x-1 gap-y-1 border-b-2 border-rule-strong">
         {LANGS.map((l) => {
           const on = l.code === lang;
           return (
@@ -20,7 +22,7 @@ export function LangPicker({ lang, hrefFor, right }: { lang: Lang; hrefFor: Reco
               onClick={() => {
                 document.cookie = `${LANG_COOKIE}=${l.code}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
               }}
-              className={`flex min-h-12 shrink-0 items-center rounded-t-lg border-2 border-b-0 px-3 font-bold whitespace-nowrap ${
+              className={`-mb-0.5 flex min-h-12 shrink-0 items-center rounded-t-lg border-2 border-b-0 px-3 font-bold whitespace-nowrap ${
                 on ? "border-rule-strong border-t-crust-600 border-t-4 bg-sheet text-crust-700" : "border-transparent text-ink-soft hover:bg-cream hover:text-ink"
               }`}
             >
@@ -29,7 +31,6 @@ export function LangPicker({ lang, hrefFor, right }: { lang: Lang; hrefFor: Reco
           );
         })}
       </div>
-      {right && <div className="shrink-0 pb-2">{right}</div>}
     </div>
   );
 }

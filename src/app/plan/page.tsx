@@ -628,10 +628,11 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
                       <span
                         key={`${s.key}-${i}`}
                         title={`${stepName(lang, s.key, s.name)} ${fmtTime(s.start)}–${fmtTime(s.end)}`}
-                        className={`absolute inset-y-1 overflow-hidden rounded-[3px] border px-1 text-[0.7rem] leading-8 font-bold whitespace-nowrap text-ink ${s.ccp ? "border-2 border-crust-600" : "border-rule-strong"}`}
+                        className={`@container absolute inset-y-1 overflow-hidden rounded-[3px] border px-1 text-[0.7rem] leading-8 font-bold whitespace-nowrap text-ink ${s.ccp ? "border-2 border-crust-600" : "border-rule-strong"}`}
                         style={{ left: pct(s.start), width: `calc(${pct(s.end)} - ${pct(s.start)})`, background: stepColor[s.key] }}
                       >
-                        {s.end - s.start >= 30 ? stepName(lang, s.key, s.name) : ""}
+                        {/* 帯が狭いと名前は出さない（色と下の見本・押すと出る名前で分かる）。少し狭いときは … で切る。印刷も同じ */}
+                        <span className="hidden truncate @[1.5rem]:block">{stepName(lang, s.key, s.name)}</span>
                       </span>
                     ))}
                 </div>
