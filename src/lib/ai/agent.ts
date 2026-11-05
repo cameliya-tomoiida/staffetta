@@ -35,6 +35,7 @@ const s = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const ymd = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
 const norm = (t: string) => t.normalize("NFKC").toLowerCase().replace(/[\s　・（）()]/g, "").replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 const ALL: Role[] = ["管理者", "事務", "工場", "配送"];
+const CH: Record<string, string> = { fax: "FAX", phone: "電話", driver: "ドライバー", line: "LINE", email: "メール", infomart: "インフォマート" };
 
 // ───────── 道具 ─────────
 const TOOLS: Tool[] = [
@@ -176,7 +177,7 @@ const TOOLS: Tool[] = [
     run: async (i, ctx) => {
       const input = { name: s(i.name), channel: s(i.channel) || "phone", cutoff: s(i.cutoff) || "15:00", deliveryTime: s(i.deliveryTime) || "08:00", course: s(i.course) };
       if (!input.name) return { error: "名前が要ります" };
-      const p: AgentPending = { id: `P${Date.now()}${Math.random().toString(36).slice(2, 6)}`, kind: "register_customer", input, summary: `取引先「${input.name}」を登録（注文の来かた ${input.channel}・締め ${input.cutoff}・納品 ${input.deliveryTime}${input.course ? `・${input.course}` : ""}）` };
+      const p: AgentPending = { id: `P${Date.now()}${Math.random().toString(36).slice(2, 6)}`, kind: "register_customer", input, summary: `取引先「${input.name}」を登録（注文の来かた ${CH[input.channel] ?? input.channel}・締め ${input.cutoff}・納品 ${input.deliveryTime}${input.course ? `・${input.course}` : ""}）` };
       ctx.pending.push(p);
       savePending(p);
       return { waitingForOk: true, summary: p.summary };
