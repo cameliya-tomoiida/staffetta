@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * 元のFAX(PDF)を表示する（担当者の指示 11/5：スクロールせずに全体が見えるように）。
- * - 2ページ以上は、2枚を横に並べ、枠の高さに合わせて縮小する（3枚以上は「次の2枚」で送る）。1ページは大きく1枚
+ * - 2ページ以上は、2枚を並べて枠に合わせて縮小する。縦長のページは横に2枚、横長のページは縦に2枚（1枚を横いっぱい）。
+ *   3枚以上は「次の2枚」で送る。1ページは大きく1枚
  * - ページをタップすると、その1枚を大きく表示（＋−で拡大・スクロール可）。「2枚にもどす」で戻る
  * - rotation で向きを直し、highlight(0〜100%) の高さに帯を出す（帯は1ページ目）
  */
@@ -40,6 +41,8 @@ export function PdfView({ url, rotation, highlight }: { url: string; rotation: n
     };
   }, [url]);
 
+  // ページが横長（幅 > 高さ）なら、2枚は縦に積む（1枚を横いっぱい）。縦長なら横に並べる
+  const [landscape, setLandscape] = useState(false);
   const pages = doc?.numPages ?? 0;
   const shown = pages >= 2 ? [first, first + 1].filter((p) => p <= pages) : pages === 1 ? [1] : [];
 
@@ -70,16 +73,16 @@ export function PdfView({ url, rotation, highlight }: { url: string; rotation: n
       {error && <div className="p-3 text-alert-ink">表示できませんでした: {error}</div>}
       {focus == null ? (
         // 並べて見る: 枠の高さに合わせて縮小（スクロールしない）
-        <div className="flex min-h-0 flex-1 items-center justify-center gap-2 overflow-hidden bg-off-bg p-2">
+        <div className={`flex min-h-0 flex-1 items-center justify-center gap-2 overflow-hidden bg-off-bg p-2 ${landscape && shown.length > 1 ? "flex-col" : ""}`}>
           {shown.map((p) => (
             <button
               key={`${p}-${rotation}`}
               type="button"
               title="タップで大きく表示"
-              className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center"
+              className={`flex min-h-0 min-w-0 flex-1 items-center justify-center ${landscape && shown.length > 1 ? "w-full" : "h-full"}`}
               onClick={() => { setFocus(p); setZoom(1); }}
             >
-              <PageCanvas doc={doc} page={p} rotation={rotation} fit highlight={p === 1 ? highlight : null} />
+              <PageCanvas doc={doc} page={p} rotation={rotation} fit stacked={landscape && shown.length > 1} highlight={p === 1 ? highlight : null} onSize={p === shown[0] ? (w, h) => setLandscape(w > h) : undefined} />
             </button>
           ))}
         </div>
@@ -104,7 +107,11 @@ type PdfPage = {
 type PdfDoc = { numPages: number; getPage: (n: number) => Promise<PdfPage> };
 
 /** 1ページを描く。fit なら枠に収まるよう縦横とも縮小、そうでなければ幅いっぱい */
-function PageCanvas({ doc, page, rotation, fit = false, highlight }: { doc: PdfDoc | null; page: number; rotation: number; fit?: boolean; highlight?: number | null }) {
+function PageCanvas({ doc, page, rotation, fit = false, stacked = false, highlight, onSize }: {
+  doc: PdfDoc | null; page: number; rotation: number; fit?: boolean; stacked?: boolean; highlight?: number | null;
+  /** 描いたページの大きさ（向きを直したあと）を知らせる。横長かどうかの判断に使う */
+  onSize?: (w: number, h: number) => void;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (!doc) return;
@@ -117,6 +124,7 @@ function PageCanvas({ doc, page, rotation, fit = false, highlight }: { doc: PdfD
       if (!canvas || cancelled) return;
       canvas.width = viewport.width;
       canvas.height = viewport.height;
+      onSize?.(viewport.width, viewport.height);
       // 前の描画と重ならないように、1つずつ描く（重なると白黒FAXの画像が描かれないことがある）
       const t = pg.render({ canvas, viewport });
       task = t;
@@ -128,10 +136,20 @@ function PageCanvas({ doc, page, rotation, fit = false, highlight }: { doc: PdfD
       cancelled = true;
       task?.cancel();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onSize は親が毎回作り直すので、描き直しの条件に入れない
   }, [doc, page, rotation]);
   return (
     <span className={`relative inline-block border border-rule-strong bg-sheet ${fit ? "max-h-full max-w-full" : "w-full"}`}>
-      <canvas ref={ref} className={fit ? "block h-auto max-h-[calc(100vh-15rem)] w-auto max-w-full" : "block h-auto w-full"} />
+      <canvas
+        ref={ref}
+        className={
+          !fit
+            ? "block h-auto w-full"
+            : stacked
+              ? "block h-auto max-h-[calc((100vh-16rem)/2)] w-auto max-w-full" // 縦に2枚: 1枚は高さの半分まで、幅いっぱい
+              : "block h-auto max-h-[calc(100vh-15rem)] w-auto max-w-full"
+        }
+      />
       {highlight != null && (
         <span
           className="pointer-events-none absolute inset-x-0 h-[6%] -translate-y-1/2 rounded bg-review-line/30 ring-2 ring-review-line transition-all"
