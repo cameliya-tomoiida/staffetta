@@ -3,7 +3,8 @@
 //  - FAX: 発注書の PDF
 //  - メール: 発注書 PDF を添付した下書き（.eml）
 import iconv from "iconv-lite";
-import { FACTORY, materialById, supplierById } from "@/data/master";
+import { materialById, supplierById } from "@/data/master";
+import { getCompany } from "@/lib/company";
 import { findMaterial, findSupplier } from "@/lib/catalog";
 import type { PurchaseOrder } from "@/data/types";
 import { toCsv } from "../common";
@@ -18,7 +19,15 @@ export type PoLike = PurchaseOrder & { supplierName?: unknown; deliveryName?: un
 const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
 const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
-export const HUB_SENDER = { name: FACTORY.name, email: "order@asahi-bakery.example", tel: "000-000-0001", fax: FACTORY.fax };
+/** 差出人（自社の情報 /settings/company から。使うたびに今の値を読む） */
+export const HUB_SENDER = {
+  get name() { return getCompany().name; },
+  get email() { return getCompany().email; },
+  get tel() { return getCompany().tel; },
+  get fax() { return getCompany().fax; },
+  get address() { return [getCompany().postalCode && `〒${getCompany().postalCode}`, getCompany().address].filter(Boolean).join(" "); },
+  get contact() { return getCompany().contact; },
+};
 
 const fmtDate = (d: string) => {
   const [y, m, dd] = d.split("-").map(Number);
@@ -106,7 +115,7 @@ export function purchasePdf(po: PoLike): Promise<Buffer> {
     title: "発 注 書",
     headerRight: [`発注番号 ${po.id}`, `発注日 ${fmtDate(todayJst())}`],
     to: [`${supplierLabel(po)} 御中`, ...(sup?.contact ? [sup.contact] : [])],
-    from: [HUB_SENDER.name, `TEL ${HUB_SENDER.tel}`, `FAX ${HUB_SENDER.fax}`],
+    from: [HUB_SENDER.name, ...(HUB_SENDER.address ? [HUB_SENDER.address] : []), `TEL ${HUB_SENDER.tel}`, `FAX ${HUB_SENDER.fax}`, ...(HUB_SENDER.contact ? [`担当 ${HUB_SENDER.contact}`] : [])],
     lead: [
       "いつもお世話になっております。下記のとおり発注いたします。",
       `納品希望日：${fmtDate(po.deliveryDate)}${str(po.deliveryName) ? `（${str(po.deliveryName)}）` : ""}`,

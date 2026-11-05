@@ -1,6 +1,6 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
 import Link from "next/link";
-import { FACTORY } from "@/data/master";
+import { getCompany } from "@/lib/company";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
 import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
@@ -81,7 +81,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       <PurchaseClient
         pos={pos}
         date={date}
-        factory={FACTORY.name}
+        factory={getCompany().name}
         warnings={r.warnings}
         serverNow={nowMs()}
         lateMaterials={r.materialPlan.lateItems.map((x) => x.message)}

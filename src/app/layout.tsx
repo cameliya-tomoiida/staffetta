@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import "./globals.css";
 import "./print.css";
-import { FACTORY } from "@/data/master";
+import { getCompany } from "@/lib/company";
 import { AppShell } from "@/components/ui/AppShell";
 import { canOpen, homeOf } from "@/lib/auth/roles";
 import { currentUser } from "@/lib/auth/current-user";
@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ja" className="h-full antialiased">
       <body className="min-h-full">
         {/* 左のサイドメニュー＋上の「今日やること」の帯（/liff・/driver・ログインでは出さない） */}
-        <AppShell factory={FACTORY.name} user={user ? { name: user.name, role: user.role, via: user.via } : null}>
+        <AppShell factory={getCompany().name} user={user ? { name: user.name, role: user.role, via: user.via } : null}>
           <Suspense fallback={<div className="text-ink-soft">読み込み中…</div>}>{children}</Suspense>
         </AppShell>
       </body>

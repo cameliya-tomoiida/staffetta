@@ -1,7 +1,7 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
 import Link from "next/link";
 import { splitWarnings } from "@/components/ui/wording";
-import { FACTORY } from "@/data/master";
+import { getCompany } from "@/lib/company";
 import type { Line } from "@/data/master";
 import type { ProcessKey } from "@/data/production";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
@@ -274,7 +274,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
               <dt className="text-ink-soft">報告日</dt>
               <dd className="num">{fmtDate(today)}</dd>
               <dt className="text-ink-soft">作成</dt>
-              <dd>{FACTORY.name}</dd>
+              <dd>{getCompany().name}</dd>
             </dl>
           </div>
           {/* 担当・確認の印（紙に書く・押す欄） */}
