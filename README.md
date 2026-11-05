@@ -1,5 +1,7 @@
 # STAFFETTA（スタフェッタ）
 
+<img src="public/brand/staffetta-logo.svg" alt="STAFFETTA" width="300">
+
 STAFFETTA（スタフェッタ）はイタリア語で「リレー」。ばらばらに届く注文を次の工程へ、ベテランしか知らない仕事を次の人へ、バトンのようにつなぐ食品工場の受発注アプリです。
 
 FAX・LINE・メール・スプレッドシート・受発注サイト・電話から届くパンとピザの注文を、1か所に集めます。

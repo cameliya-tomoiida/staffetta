@@ -1,13 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="STAFFETTA">
-  <title>STAFFETTA</title>
-  <!-- 椿の赤の丸の中で、2本のバトンが受け渡される（リレー） -->
-  <circle cx="32" cy="32" r="31" fill="#8B1A1A"/>
-  <!-- 走る線 -->
-  <path d="M7 44h7M5 50h9" stroke="#F3D9D2" stroke-width="2.6" stroke-linecap="round"/>
-  <!-- 渡すバトン -->
-  <rect x="13" y="31" width="19" height="9" rx="4.5" transform="rotate(-28 22.5 35.5)" fill="#FFFFFF"/>
-  <!-- 受け取るバトン（少し重なる） -->
-  <rect x="33" y="19" width="19" height="9" rx="4.5" transform="rotate(-28 42.5 23.5)" fill="#F3D9D2"/>
-  <!-- 受け取る手の点（次の人） -->
-  <path d="M34 31.5l4.5-2.4" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="STAFFETTA">
+  <rect x="4" y="4" width="120" height="120" rx="27" fill="#A33B2A"/>
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="35,91 35,32 72,32 91,51 91,65" stroke-width="8"/>
+    <polyline points="72,33 72,51 89,51" stroke-width="6"/>
+    <line x1="48" y1="65" x2="64" y2="65" stroke-width="6"/>
+    <path d="M48 81 C78 81 65 98 100 98" stroke-width="8"/>
+  </g>
+  <polygon points="94,87 106,98 94,109" fill="#FFFFFF"/>
 </svg>

@@ -110,8 +110,8 @@ function Brand({ factory }: { factory: string }) {
     <Link href="/" className="flex shrink-0 items-center gap-2.5">
       <span className="leading-tight">
         {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴなので、そのまま出す */}
-        <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={182} height={39} className="block h-[39px] w-auto" />
-        <span className="block pl-[48px] text-[16px] text-ink-soft">{factory}</span>
+        <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={146} height={39} className="block h-[39px] w-auto" />
+        <span className="block pl-[46px] text-[16px] text-ink-soft">{factory}</span>
       </span>
     </Link>
   );
@@ -274,7 +274,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 sm:px-5 sm:py-6">
           {/* 印刷物の見出し（画面では出さない） */}
           {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
-          <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={150} height={32} className="mb-2 hidden h-8 w-auto print:block" />
+          <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={120} height={32} className="mb-2 hidden h-8 w-auto print:block" />
           {children}
         </main>
       </div>
