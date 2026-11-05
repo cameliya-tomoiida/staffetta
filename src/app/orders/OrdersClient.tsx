@@ -31,7 +31,7 @@ export type LeadView = { lineId: string; status: "late" | "warn"; reason: string
 
 export function OrdersClient({
   orders, today, storedIds, linePreviews, initialStatus = "all", lead = {}, alt = {},
-}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]>; alt?: Record<string, string> }) {
+}: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]>; alt?: Record<string, string[]> }) {
   const [who, setWho] = useState(STAFF[0]);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
@@ -197,7 +197,7 @@ export function OrdersClient({
 function OrderRow({
   o, custName, dayName, all, onJump, who, canConfirm, linePreview, lead, alt,
 }: {
-  o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string; lead: LeadView[]; alt?: string;
+  o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string; lead: LeadView[]; alt?: string[];
 }) {
   const leadOf = (lineId: string) => lead.find((x) => x.lineId === lineId);
   const x = o.source.extra ?? {};
@@ -262,25 +262,39 @@ function OrderRow({
             })}
           </ul>
           {!off &&
-            // 同じ文が続くとき（曜日の問題など、どの行も同じ理由）は1回だけ
-            [...new Map(lead.map((c) => [c.reason, c])).values()].map((c) => {
-              const names = lead.filter((y) => y.reason === c.reason).map((y) => findProduct(o.lines.find((l) => l.id === y.lineId)?.productId ?? "")?.name).filter(Boolean);
-              return (
-                <div key={c.reason} className={`mt-1 flex items-start gap-1.5 text-review-ink ${c.status === "late" ? "font-bold" : ""}`}>
-                  <Icon.clock className="mt-1 h-4 w-4 shrink-0" />
-                  <span>
-                    <span className="mr-1">{c.status === "late" ? "締め：" : "締め（仮発注）："}</span>
-                    {o.lines.length > 1 && names.length > 0 && names.length < o.lines.length && <span className="mr-1 font-normal">{names.join("・")}…</span>}
-                    {c.reason}
-                  </span>
-                </div>
-              );
-            })}
-          {/* 代わりの日（③）: 受けられない行があるとき「○日なら受けられます」 */}
-          {!off && alt && (
-            <div className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-review-line bg-sheet px-2.5 py-1 font-bold text-ink">
+            // 商品名だけが違う同じ文（「○○の締め 11/5 11:00 を過ぎています…」）は、商品名を「・」でつないで1行にまとめる
+            (() => {
+              const groups = new Map<string, { status: LeadView["status"]; names: string[]; reason: string }>();
+              for (const c of lead) {
+                const name = findProduct(o.lines.find((l) => l.id === c.lineId)?.productId ?? "")?.name ?? "";
+                const key = `${c.status}|${name ? c.reason.split(name).join(" ") : c.reason}`;
+                const g = groups.get(key) ?? { status: c.status, names: [], reason: c.reason };
+                if (name && !g.names.includes(name)) g.names.push(name);
+                groups.set(key, g);
+              }
+              return [...groups.entries()].map(([key, g]) => {
+                const tpl = key.slice(key.indexOf("|") + 1);
+                const text = tpl.includes(" ") ? tpl.split(" ").join(g.names.join("・")) : g.reason;
+                return (
+                  <div key={key} className={`mt-1 flex items-start gap-1.5 text-review-ink ${g.status === "late" ? "font-bold" : ""}`}>
+                    <Icon.clock className="mt-1 h-4 w-4 shrink-0" />
+                    <span>
+                      <span className="mr-1">{g.status === "late" ? "締め：" : "締め（仮発注）："}</span>
+                      {text}
+                    </span>
+                  </div>
+                );
+              });
+            })()}
+          {/* 締めだけの注文は出さない（締めは上の「締め：」で出ている）。1つの文を1行に */}
+          {!off && alt && alt.length > 0 && (
+            <div className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-review-line bg-sheet px-2.5 py-1 text-ink">
               <Icon.clock className="mt-1 h-4 w-4 shrink-0 text-review-ink" />
-              <span>{alt}</span>
+              <ul className="space-y-0.5">
+                {alt.map((t, k) => (
+                  <li key={k} className={k === alt.length - 1 ? "font-bold" : ""}>{t}</li>
+                ))}
+              </ul>
             </div>
           )}
           {typeof x.notes === "string" && x.notes && <div className="mt-1 text-sm text-ink-soft">メモ：{x.notes}</div>}

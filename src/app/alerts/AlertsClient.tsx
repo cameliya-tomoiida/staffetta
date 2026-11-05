@@ -2,14 +2,14 @@
 // お知らせの一覧（②）。状態を変えるのは①の server action（./actions.ts）。
 // ボタン: actions（①③⑤が用意）を並べる。無いものは action と href で1つ。
 //   ask があるボタンは、押すとその場で「はい／いいえ」→ はい で実行。
-//   run（実行の口）は①の runAlertActionAction ができるまで、href があれば開くだけ。
+//   run（実行の口）は①の runAlertActionAction(key, index, who) で実行し、返ってきた文を出す。開く画面（href）があれば開く。
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button, buttonClass, Empty, fmtDateTime, Notice, Segmented } from "@/components/ui";
 import { notifyHubChanged } from "@/components/ui/refresh";
 import type { AlertAction, AlertLevel, AlertRow } from "@/lib/db/alerts-store";
-import { checkAlertsNowAction, updateAlertAction } from "./actions";
+import { checkAlertsNowAction, runAlertActionAction, updateAlertAction } from "./actions";
 
 const STAFF = ["事務 たなか", "課長 こばやし", "専務 はやし"];
 
@@ -154,9 +154,10 @@ type Run = (fn: () => Promise<unknown>, ok?: string) => void;
 function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; nowMs: number; pending: boolean; run: Run }) {
   const router = useRouter();
   const lv = LEVEL[a.level];
-  const [panel, setPanel] = useState<null | "assign" | "later" | { ask: AlertAction }>(null);
+  const [panel, setPanel] = useState<null | "assign" | "later" | { ask: AlertAction; i: number }>(null);
   const [assignee, setAssignee] = useState(a.assignee ?? "");
-  const [note, setNote] = useState<string | null>(null);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, startRun] = useTransition();
   const overdue = !!a.dueAt && Date.parse(a.dueAt) < nowMs;
   const actions: AlertAction[] = a.actions?.length ? a.actions : a.action || a.href ? [{ label: a.action ?? "開く", href: a.href, primary: true }] : [];
   // 押したら「見た」にする（ベルの数を減らす）
@@ -164,14 +165,29 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
     if (a.state === "new" && who) await updateAlertAction(a.dedupeKey, { state: "seen" }, who);
   };
 
-  const doAction = (act: AlertAction) => {
-    if (act.ask) return setPanel({ ask: act });
-    go(act);
+  const doAction = (act: AlertAction, i: number) => {
+    if (act.ask) return setPanel({ ask: act, i });
+    go(act, i);
   };
-  const go = (act: AlertAction) => {
+  // run があるボタンは①の口で実行（下書きを作る・この数でよい など）。返ってきた文を出し、開く画面があれば開く
+  const go = (act: AlertAction, i: number) => {
     void seen().catch(() => undefined);
-    if (act.href) router.push(act.href);
-    else if (act.run) setNote(`「${act.label}」は、まだここからは実行できません（準備中）。担当の画面から行ってください。`);
+    if (!act.run || !a.actions?.length) {
+      if (act.href) router.push(act.href);
+      return;
+    }
+    startRun(async () => {
+      try {
+        if (!who) throw new Error("上の「操作する人」をえらんでください");
+        const res = await runAlertActionAction(a.dedupeKey, i, who);
+        setNote({ ok: true, text: res.message });
+        notifyHubChanged();
+        if (res.href) router.push(res.href);
+        else router.refresh();
+      } catch (e) {
+        setNote({ ok: false, text: e instanceof Error ? e.message : String(e) });
+      }
+    });
   };
 
   return (
@@ -196,13 +212,13 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
         {/* スマホ: 次にすることのボタンは横いっぱい、「担当者に回す・あとで・済み」は1段に3つ */}
         <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
           {actions.map((act, i) =>
-            !act.ask && act.href ? (
+            !act.ask && !act.run && act.href ? (
               <Link key={i} href={act.href} onClick={() => void seen().catch(() => undefined)} className={buttonClass(act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost", "lg", "w-full sm:w-auto")}>
                 {act.label}
               </Link>
             ) : (
-              <Button key={i} size="lg" className="w-full sm:w-auto" variant={act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost"} disabled={pending} onClick={() => doAction(act)}>
-                {act.label}
+              <Button key={i} size="lg" className="w-full sm:w-auto" variant={act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost"} disabled={pending || busy} onClick={() => doAction(act, i)}>
+                {busy ? "実行しています…" : act.label}
               </Button>
             ),
           )}
@@ -213,14 +229,14 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
           </span>
         </div>
 
-        {note && <Notice tone="plain">{note}</Notice>}
+        {note && <Notice tone={note.ok ? "ok" : "alert"}>{note.text}</Notice>}
 
         {panel && typeof panel === "object" && (
           <div role="alertdialog" aria-live="polite" className="rounded-lg border-2 border-ink bg-paper p-3">
             <p className="font-bold">{panel.ask.ask}</p>
             <div className="mt-3 grid max-w-sm grid-cols-2 gap-2">
               <Button size="lg" onClick={() => setPanel(null)}>いいえ</Button>
-              <Button size="lg" variant="primary" onClick={() => { setPanel(null); go(panel.ask); }}>はい</Button>
+              <Button size="lg" variant="primary" disabled={busy} onClick={() => { setPanel(null); go(panel.ask, panel.i); }}>はい</Button>
             </div>
           </div>
         )}
