@@ -3,6 +3,7 @@ import { readDb } from "@/lib/store";
 import { confirmationText } from "@/lib/channels/line/orders";
 import { OrdersClient, type LeadView } from "./OrdersClient";
 import { checkLeadTime } from "@/lib/leadtime";
+import { suggestAlternatives } from "@/lib/alternatives";
 import { nowIso } from "@/lib/clock";
 import { withMasters } from "@/lib/catalog";
 import { loadMasters } from "@/lib/masters/seed-db";
@@ -25,12 +26,16 @@ export default async function OrdersPage(props: PageProps<"/orders">) {
   const masters = await loadMasters();
   const now = nowIso();
   const lead: Record<string, LeadView[]> = {};
+  // 受けられない注文の「代わりの日」（③の suggestAlternatives。ほかの注文も渡して、ラインの上限超えまで見る）
+  const alt: Record<string, string> = {};
   withMasters(masters, () => {
     for (const o of orders) {
       if (o.status === "cancelled" || o.status === "confirmed") continue;
       const xs = checkLeadTime(o, now).filter((c) => c.status === "late" || c.status === "warn");
       if (xs.length) lead[o.id] = xs.map((c) => ({ lineId: c.lineId, status: c.status as "late" | "warn", reason: c.reason }));
+      const a = suggestAlternatives(o, now, { masters, otherOrders: orders });
+      if (!a.ok && a.message) alt[o.id] = a.message;
     }
   });
-  return <OrdersClient key={st} orders={orders} today={today} storedIds={storedIds} linePreviews={linePreviews} initialStatus={st} lead={lead} />;
+  return <OrdersClient key={st} orders={orders} today={today} storedIds={storedIds} linePreviews={linePreviews} initialStatus={st} lead={lead} alt={alt} />;
 }

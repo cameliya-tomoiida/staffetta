@@ -18,12 +18,14 @@ const dow = (ymd: string) => WD[new Date(`${ymd}T00:00:00Z`).getUTCDay()];
 function Step({ n, title, done, onChange, children }: { n: number; title: string; done?: React.ReactNode; onChange?: () => void; children?: React.ReactNode }) {
   return (
     <section className={`rounded-lg border-2 bg-sheet ${children ? "border-crust-600" : "border-rule"}`}>
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-3">
         <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg font-black ${children ? "bg-crust-600 text-white" : "border-2 border-rule-strong text-ink-soft"}`}>{n}</span>
-        <h2 className="text-lg font-black">{title}</h2>
-        {done && <div className="text-lg font-black text-ink">{done}</div>}
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
+          <h2 className="text-lg font-black">{title}</h2>
+          {done && <div className="text-lg font-black text-ink">{done}</div>}
+        </div>
         {done && onChange && (
-          <button type="button" onClick={onChange} className="ml-auto min-h-11 px-2 font-bold text-crust-700 underline underline-offset-4">
+          <button type="button" onClick={onChange} className="min-h-11 shrink-0 px-2 font-bold text-crust-700 underline underline-offset-4">
             変える
           </button>
         )}
@@ -121,7 +123,7 @@ export function PhoneOrder({ customers, products }: { customers: Customer[]; pro
     );
 
   return (
-    <div className="space-y-4 pb-28">
+    <div className="space-y-4 pb-44 sm:pb-28">
       {/* 1. 取引先 */}
       {!customer ? (
         <Step n={1} title="取引先をえらぶ（よく注文がある順）">
@@ -204,8 +206,8 @@ export function PhoneOrder({ customers, products }: { customers: Customer[]; pro
               const n = qty[p.id] ?? 0;
               const late = day?.late[p.id];
               return (
-                <li key={p.id} className={`flex flex-wrap items-center gap-3 py-2 ${n > 0 && late ? "rounded bg-review-bg px-2" : ""}`}>
-                  <div className="min-w-0 flex-1">
+                <li key={p.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2 ${n > 0 && late ? "rounded bg-review-bg px-2" : ""}`}>
+                  <div className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
                     <div className={`text-lg ${n > 0 ? "font-black" : "font-bold"}`}>{p.name}</div>
                     {late && (
                       <div className={`flex items-start gap-1 text-sm text-review-ink ${n > 0 ? "font-bold" : ""}`}>
@@ -214,7 +216,7 @@ export function PhoneOrder({ customers, products }: { customers: Customer[]; pro
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="ml-auto flex items-center gap-2">
                     <button type="button" aria-label={`${p.name}を1へらす`} disabled={n === 0} onClick={() => add(p.id, -1)} className={buttonClass("ghost", "md", "h-12 w-12 text-2xl")}>
                       −
                     </button>
@@ -257,16 +259,16 @@ export function PhoneOrder({ customers, products }: { customers: Customer[]; pro
       {/* 保存（画面の下に固定。ボタンは1つ） */}
       {customer && date && ctx && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-crust-600 bg-sheet/95 px-4 py-3 backdrop-blur lg:left-60">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="font-black">
+          <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <div className="min-w-0 sm:flex-1">
+              <div className="truncate font-black">
                 {customer.name}・<span className="num">{fmtDate(date)}</span>・{items.length ? `${items.length} 品` : "商品がまだありません"}
               </div>
               {lateNow.length > 0 && <div className="text-sm font-bold text-review-ink">締めを過ぎた商品が {lateNow.length} 品あります（入れられますが、作れるか確かめてください）</div>}
-              {!channel || !who ? <div className="text-sm text-ink-soft">「どこから受けたか」と「受けた人」をえらんでください</div> : null}
+              {!channel || !who ? <div className="text-sm text-ink-soft">下の 4 で「どこから」と「受けた人」をえらんでください</div> : null}
             </div>
             {error && <Notice tone="alert">{error}</Notice>}
-            <Button variant="primary" size="lg" disabled={saving || !items.length || !channel || !who} onClick={save}>
+            <Button variant="primary" size="lg" className="w-full sm:w-auto" disabled={saving || !items.length || !channel || !who} onClick={save}>
               {saving ? "入れています…" : "要確認として入れる"}
             </Button>
           </div>
