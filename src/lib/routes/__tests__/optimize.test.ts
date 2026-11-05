@@ -119,3 +119,25 @@ describe("⑦(29) 帰る時刻・同じコース", () => {
     expect(r.routes.flatMap((x) => x.ids).sort()).toEqual(["E1", "E2", "W1", "W2"]);
   });
 });
+
+describe("⑦(29) 条件なしなら前と同じ", () => {
+  it("backBy: [] ・together: [] でも、条件なしと同じ結果で、warnings は出ない", () => {
+    const stops = [
+      s("E1", 10, 0, { deliveryWindowTo: "07:00" }), s("E2", 12, 2, { deliveryWindowTo: "07:30" }), s("E3", 14),
+      s("W1", -10, 0, { deliveryWindowFrom: "06:30", deliveryWindowTo: "08:00" }), s("W2", -12, 2, { deliveryTime: "06:00" }), s("W3", -14),
+      s("N1", 0, 30, { deliveryWindowTo: "06:10" }), s("FAR", 300, 0, { deliveryWindowTo: "05:00" }),
+    ];
+    const base = o({ earliestDepart: "05:00" });
+    const pick = (r: ReturnType<typeof optimizeRoutes>) => ({
+      routes: r.routes.map((x) => ({ ids: x.ids, depart: x.depart })), unassigned: r.unassigned, summary: r.summary,
+    });
+    const plain = optimizeRoutes(depot, stops, base);
+    const empty = optimizeRoutes(depot, stops, { ...base, backBy: [], together: [] });
+    expect(pick(empty)).toEqual(pick(plain));
+    expect(plain.warnings).toBeUndefined();
+    expect(empty.warnings).toBeUndefined();
+    expect(plain.unassigned.map((u) => u.id)).toEqual(["FAR"]);
+    // コースの数を決めたときも同じ
+    expect(pick(optimizeRoutes(depot, stops, { ...base, courses: 2, backBy: [], together: [] }))).toEqual(pick(optimizeRoutes(depot, stops, { ...base, courses: 2 })));
+  });
+});
