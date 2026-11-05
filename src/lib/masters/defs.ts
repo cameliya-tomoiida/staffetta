@@ -188,6 +188,8 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "slicesPerItem", label: "1本の枚数", type: "integer", min: 1, help: "3斤を30枚に切る → 30" },
     { key: "sourceProductId", label: "元の仕入品ID", type: "text", ref: "products", requiredWhen: (r) => kind("repack")(r) && "包み直しは「元の仕入品ID」が必須です" },
     { key: "slicesPerPack", label: "1包の枚数", type: "integer", min: 1, requiredWhen: (r) => kind("repack")(r) && "包み直しは「1包の枚数」が必須です" },
+    { key: "lastCostReviewAt", label: "原価を最後に見直した日", type: "text", example: "2026-04-01", help: "YYYY-MM-DD。11か月たつとお知らせ（期限は12か月）" },
+    { key: "costReviewer", label: "見直しの担当", type: "text", example: "" },
     ACTIVE,
   ],
   check: (p, all) => {

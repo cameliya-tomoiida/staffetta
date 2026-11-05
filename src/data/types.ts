@@ -355,6 +355,10 @@ export interface ProductMaster {
   // 包み直し
   sourceProductId?: string;
   slicesPerPack?: number;
+  /** 原価・見積りを最後に見直した日（YYYY-MM-DD）。年1回の見直しのお知らせに使う */
+  lastCostReviewAt?: string;
+  /** 見直しの担当（名前） */
+  costReviewer?: string;
   active: boolean;
 }
 
