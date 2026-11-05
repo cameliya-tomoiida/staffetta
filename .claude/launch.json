@@ -1,6 +1,29 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "design-3101", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--", "-p", "3101"], "port": 3101 }
+    {
+      "name": "design-3101",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3101"
+      ],
+      "port": 3101
+    },
+    {
+      "name": "video-3106",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3106"
+      ],
+      "port": 3106
+    }
   ]
 }
