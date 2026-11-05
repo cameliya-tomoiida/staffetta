@@ -31,7 +31,7 @@ export const ID_PREFIX: Partial<Record<ScreenName, string>> = {
 
 /** 一覧に出す列（多いと読めないので選ぶ）。前の5つがいつも出る大事な列、6つめからは「くわしく」で出す（②） */
 export const LIST_KEYS: Record<ScreenName, string[]> = {
-  products: ["name", "kind", "line", "doughId", "doughGram", "id", "packStyle", "sliceMm", "metalCheck", "leadDays", "cutoffTime", "price", "active"],
+  products: ["name", "kind", "line", "doughId", "doughGram", "id", "lastCostReviewAt", "costReviewOwner", "packStyle", "sliceMm", "metalCheck", "leadDays", "cutoffTime", "price", "active"],
   doughs: ["name", "line", "lossRate", "mixerMaxKg", "id", "note"],
   recipeItems: ["doughId", "materialId", "percent", "id"],
   steps: ["doughId", "seq", "name", "equipmentId", "people", "id", "key", "setupMinutes", "waitMinutes", "minutesPerBatch", "secondsPerPiece", "prevDay", "ccp", "note"],
@@ -45,7 +45,7 @@ export const LIST_KEYS: Record<ScreenName, string[]> = {
   customers: ["name", "channel", "cutoff", "deliveryTime", "course", "deliveryWeekdays", "replyRequired", "id", "fax", "externalCode", "note", "active"],
   courses: ["name", "departTime", "loadMinutes", "dayOffset", "weekdays", "id", "note", "active"],
   standingOrders: ["customerId", "weekday", "productId", "quantity", "unit", "id", "piecesPerUnit", "from", "to", "note", "active"],
-  suppliers: ["name", "method", "cutoff", "leadDays", "minLot", "id", "contact", "active"],
+  suppliers: ["name", "method", "cutoff", "leadDays", "minLot", "id", "contact", "email", "active"],
   supplierDeliveries: ["supplierId", "name", "cutoff", "leadDays", "arrival", "id", "customerIds"],
   materials: ["name", "stock", "safetyStock", "supplierId", "leadDays", "id", "orderUnitLabel", "minLot", "location"],
   packaging: ["name", "stock", "safetyStock", "supplierId", "leadDays", "id", "orderUnitLabel", "minLot", "location"],

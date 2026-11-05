@@ -188,6 +188,8 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "slicesPerItem", label: "1本の枚数", type: "integer", min: 1, help: "3斤を30枚に切る → 30" },
     { key: "sourceProductId", label: "元の仕入品ID", type: "text", ref: "products", requiredWhen: (r) => kind("repack")(r) && "包み直しは「元の仕入品ID」が必須です" },
     { key: "slicesPerPack", label: "1包の枚数", type: "integer", min: 1, requiredWhen: (r) => kind("repack")(r) && "包み直しは「1包の枚数」が必須です" },
+    { key: "lastCostReviewAt", label: "最後に原価を見直した日", type: "text", example: "2026-04-01", help: "YYYY-MM-DD。11か月たつとお知らせが出る（期限は12か月）" },
+    { key: "costReviewOwner", label: "見直しの担当", type: "text", example: "課長 こばやし" },
     ACTIVE,
   ],
   check: (p, all) => {
@@ -261,6 +263,7 @@ export const supplierDef: MasterDef<SupplierMaster> = {
     { key: "method", label: "発注方法", type: "enum", options: PURCHASE_METHOD_OPTIONS, required: true, example: "FAX" },
     { key: "siteName", label: "発注サイト名", type: "text" },
     { key: "contact", label: "連絡先", type: "text", default: "", example: "FAX 0000-44-4444" },
+    { key: "email", label: "メール", type: "text", example: "order@kakuu.example", help: "依頼・問い合わせのメールの下書きの宛先（あれば）" },
     { key: "cutoff", label: "締め時刻", type: "time", example: "15:00" },
     { key: "leadDays", label: "リードタイム（日）", type: "integer", min: 0, example: "1" },
     { key: "minLot", label: "最小ロット", type: "integer", min: 1, example: "1" },
