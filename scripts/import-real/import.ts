@@ -14,7 +14,12 @@ import path from "node:path";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
+// 00*_….csv（ライン・設備・班・配置人数）と 07b_steps_override.csv は手で作る上書き（実際の工程表から。無ければとばす）
 const FILES: [string, string][] = [
+  ["lines", "00_lines.csv"],
+  ["equipment", "00b_equipment.csv"],
+  ["shifts", "00c_shifts.csv"],
+  ["staffAssignments", "00d_staffAssignments.csv"],
   ["materials", "01_materials.csv"],
   ["packaging", "02_packaging.csv"],
   ["toppings", "03_toppings.csv"],
@@ -22,6 +27,7 @@ const FILES: [string, string][] = [
   ["doughs", "05_doughs.csv"],
   ["recipeItems", "06_recipeItems.csv"],
   ["steps", "07_steps.csv"],
+  ["steps", "07b_steps_override.csv"],
   ["products", "08_products.csv"],
   ["productPackaging", "09_productPackaging.csv"],
 ];

@@ -58,6 +58,8 @@ export interface CatalogLine {
   shipBufferMinutes: number;
   earliestStartMinute: number;
   prevDayStartMinute: number;
+  /** ロットごとに次の工程へ流すときのロットの大きさ（無ければ流さない） */
+  lotSize?: number;
 }
 
 /** "HH:MM" → 0:00 からの分 */
@@ -184,7 +186,7 @@ export function buildCatalog(m: Masters): Built {
   const lines = Object.fromEntries(m.lines.map((l) => [l.id, {
     line: l.id, name: l.name, unit: l.unit, ...(l.dailyCap ? { dailyCap: l.dailyCap } : {}), startMinute: hhmmToMinute(l.startTime),
     scheduleFrom: l.scheduleFrom, shipBufferMinutes: l.shipBufferMinutes, earliestStartMinute: l.earliestStartMinute,
-    prevDayStartMinute: hhmmToMinute(l.prevDayStartTime),
+    prevDayStartMinute: hhmmToMinute(l.prevDayStartTime), ...(l.lotSize ? { lotSize: l.lotSize } : {}),
   }])) as Record<ProductionLineId, CatalogLine>;
 
   return { masters: m, products, suppliers, materials, doughs, toppings, lines, binOf };

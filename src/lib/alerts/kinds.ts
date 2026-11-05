@@ -26,7 +26,7 @@ export type AlertKind =
  * ボタンの種類（⑤がボタンの先を作る）。payload は種類ごとの引数。
  * - open_fax {faxId} / open_order {orderId} / accept_quantity {orderId, lineId} / edit_order {orderId, lineId?}
  * - open_po {poId} / approve_po {poId} / create_po_draft {supplierId, materialIds, arriveDate}
- * - start_cost_review {productId} / assign {alertId, role?} / draft_request_email {supplierIds, productId, purpose}
+ * - start_cost_review {productId} / mark_cost_reviewed {productId}（商品の lastCostReviewAt を今日に） / assign {alertId, role?} / draft_request_email {supplierIds, productId, purpose}
  * - call_memo {customerId? | supplierId?} / mark_day_off {customerId, date} / open_inbox {} / draft_reply_fax {orderId}
  * - mark_received {poId} / draft_inquiry_email {supplierId, poId} / open_schedule {date} / add_staff {date, line}
  * - open_product {productId} / open_material {materialId} / approve_template {faxId} / link_item {faxId, writtenName}
@@ -35,7 +35,7 @@ export type AlertKind =
 export type AlertActionKind =
   | "open_fax" | "open_order" | "accept_quantity" | "edit_order"
   | "open_po" | "approve_po" | "create_po_draft"
-  | "start_cost_review" | "assign" | "draft_request_email"
+  | "start_cost_review" | "mark_cost_reviewed" | "assign" | "draft_request_email"
   | "call_memo" | "mark_day_off" | "open_inbox" | "draft_reply_fax"
   | "mark_received" | "draft_inquiry_email" | "open_schedule" | "add_staff"
   | "open_product" | "open_material" | "approve_template" | "link_item"

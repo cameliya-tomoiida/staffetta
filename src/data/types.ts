@@ -190,6 +190,11 @@ export interface LineMaster {
   earliestStartMinute: number;
   /** 前日の仕込みの開始 "HH:MM" */
   prevDayStartTime: string;
+  /**
+   * ロットの大きさ（個・枚）。入れると、当日の工程をロットごとに次の工程へ流す（伸ばし→焼成→包装を同時に進める）。
+   * 空なら、1つの工程が全部終わってから次の工程（今までどおり）
+   */
+  lotSize?: number;
 }
 
 /** 設備の種類 */

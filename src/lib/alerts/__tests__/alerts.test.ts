@@ -90,7 +90,7 @@ describe("アラートの判定", () => {
     expect(p1.due).toBe("2026-11-20T00:00:00+09:00");
     expect(p2.level).toBe("danger");
     expect(p2.message).toMatch(/担当: 工場長/);
-    expect(p1.actions.map((x) => x.kind)).toEqual(["start_cost_review", "assign", "draft_request_email"]);
+    expect(p1.actions.map((x) => x.kind)).toEqual(["start_cost_review", "mark_cost_reviewed", "assign", "draft_request_email"]);
     expect(a.find((x) => x.relatedIds[0] === "P03")).toBeUndefined();
     expect(a.find((x) => x.level === "info")!.title).toMatch(/見直した日が入っていない商品が \d+件/);
     // 登録日で代わりに見る
@@ -110,6 +110,8 @@ describe("アラートの判定", () => {
     expect(a[0]).toMatchObject({ level: "warn", due: "2026-11-05T15:00:00+09:00" });
     expect(a[0].actions.map((x) => x.kind)).toEqual(["call_memo", "mark_day_off"]);
     expect(evaluateAlerts(db({ orders: history }), masters, "2026-11-05T13:00:00+09:00", { isOn: only("usual_order_missing") })).toEqual([]);
+    // 「今日は休み」にした日は出さない
+    expect(evaluateAlerts(db({ orders: history }), masters, NOW, { isOn: only("usual_order_missing"), dayOffs: [{ customerId: "C01", date: "2026-11-06" }] })).toEqual([]);
     expect(evaluateAlerts(db({ orders: [...history, order("N1", "C01", "2026-11-06", [["P01", 60]])] }), masters, NOW, { isOn: only("usual_order_missing") })).toEqual([]);
   });
 
