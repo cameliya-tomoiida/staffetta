@@ -37,7 +37,7 @@ export interface MatchedRow extends ImportRow {
 }
 
 const COLS: Record<string, RegExp> = {
-  name: /^(名称|名前|得意先名?|納品先|曜日\/得意先名|お客様名|取引先名?)$/,
+  name: /^(名称|名前|得意先名?|納品先|曜日\/得意先名|曜日\/卸し先名|卸し?先名|お客様名|取引先名?)$/,
   course: /^(コース|配送コース|便)$/,
   staff: /^(担当|担当者名?)$/,
   order: /^(順番|訪問順|順|No\.?|番号)$/i,
