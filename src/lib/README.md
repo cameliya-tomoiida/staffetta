@@ -174,6 +174,18 @@ const r = runPipeline(db.orders, "2026-11-06");
 - 材料を複数の生地・トッピングで使っているときは、どれも同じ比で多く（少なく）使ったとみなす（材料ごとの使い分けは棚卸ではわからないため）。
 - 承認したロス率（`lossRates`）を保存する場所は Db にまだ無い（①に相談）。
 
+### 代わりの日の提案 `alternatives.ts`
+受けられない注文に「○日なら受けられます」を出す（⑤の確認返信の下書き・②の受注一覧）。計算するだけで、注文は変えない。
+
+| 関数 | 入力 → 出力 |
+|---|---|
+| `suggestAlternatives(order, now, { masters?, otherOrders?, maxDays?, makeEarlierDays? })` | → `{ ok, lines: [{ productId, name, problems: [{ kind, reason }], earliestDate, earliestReason, makeEarlier? }], earliestDateForAll?, message }` |
+
+- 見る問題: `deadline`（締めを過ぎた）・`weekday`（納品しない曜日）・`capacity`（この注文を入れるとラインの上限を超える。`otherOrders` にほかの注文を渡す）。
+- `earliestDate`: 締め・曜日・上限のすべてに合う、いちばん早い納品日（既定 14日先まで探す）。`earliestDateForAll`: 問題のある行をまとめて受けられる日。
+- `makeEarlier`: 上限を超えるとき、前の日（既定 3日前まで・今日より後）に作っておける日と空き。冷凍で在庫にするライン（ピザ）だけ。賞味期限・冷凍庫の容量はまだ見ない。
+- `message`: そのまま返事の下書きや一覧に出せる短い文（例「11/7(土)の納品なら、全部受けられます」）。
+
 ### 原価・利益 `cost.ts`
 | 関数 | 入力 → 出力 |
 |---|---|
