@@ -61,7 +61,7 @@ function WorkItem({ href, label, count, unit = "件", urgent = false, review = f
 
 export function TodayBar() {
   const path = usePathname() ?? "/";
-  const hidden = path.startsWith("/liff");
+  const hidden = path.startsWith("/liff") || path.startsWith("/driver");
   const [s, setS] = useState<TodaySummary | null>(null);
   const [failed, setFailed] = useState(false);
 

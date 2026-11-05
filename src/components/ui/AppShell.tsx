@@ -173,7 +173,7 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
   // 使わない機能のページはメニューから隠す（①の機能の一覧 /api/features）
   const [hidden, setHidden] = useState<string[]>([]);
   useEffect(() => {
-    if (path.startsWith("/liff")) return;
+    if (path.startsWith("/liff") || path.startsWith("/driver")) return;
     fetch("/api/features", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setHidden(d.hidden ?? []))
@@ -196,7 +196,7 @@ export function AppShell({ factory, children }: { factory: string; children: Rea
       return !f;
     });
 
-  if (path.startsWith("/liff")) return <>{children}</>;
+  if (path.startsWith("/liff") || path.startsWith("/driver")) return <>{children}</>;
 
   return (
     <div className="flex min-h-full">
