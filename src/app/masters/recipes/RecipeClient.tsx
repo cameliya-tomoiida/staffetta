@@ -65,6 +65,7 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
 
   return (
     <div className="space-y-5">
+      <h2 className="text-lg font-black">1. 直す生地をえらぶ</h2>
       <nav className="flex flex-wrap gap-2" aria-label="生地">
         {doughs.map((d) => (
           <button key={d.id} type="button" className={choiceClass(d.id === doughId, "min-h-12 px-4")} onClick={() => choose(d.id)}>
@@ -76,7 +77,7 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
       {dough && (
         <section className="space-y-4 rounded-lg border-2 border-rule-strong bg-sheet p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-black">{dough.name} の配合</h2>
+            <h2 className="text-xl font-black">2. {dough.name} の配合を直す</h2>
             <span className="text-sm text-ink-soft">ライン {dough.line === "pizza" ? "ピザ" : "パン"}・ロス率 {Math.round(dough.lossRate * 1000) / 10}%</span>
           </div>
           <table className="w-full text-base">
@@ -121,24 +122,27 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
             </label>
           </div>
           {sum.warnings.map((w) => <Notice key={w} tone="review">{w}</Notice>)}
-          <div className="flex flex-wrap items-end gap-3 border-t border-rule pt-3">
+          {msg && <Notice tone={msg.ok ? "ok" : "alert"}>{msg.text.map((t) => <div key={t}>{t}</div>)}</Notice>}
+          {/* 保存は画面の下に固定（ボタンは1つ） */}
+          <div className="sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center gap-3 border-t-2 border-crust-600 bg-sheet/95 px-4 py-3 backdrop-blur">
+            <span className={`text-sm font-bold ${changed ? "text-review-ink" : "text-ink-soft"}`}>{changed ? "直したところがあります" : "変更はありません"}</span>
             <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
               操作する人
-              <select className={inputClass} value={who} onChange={(e) => setWho(e.target.value)}>
+              <select className={`${inputClass} ${who ? "" : "border-review-line bg-review-bg"}`} value={who} onChange={(e) => setWho(e.target.value)}>
                 <option value="">えらんでください</option>
                 {STAFF.map((s) => <option key={s}>{s}</option>)}
               </select>
             </label>
-            <Button variant="primary" disabled={busy || !changed} onClick={save}>この配合で保存</Button>
+            <Button variant="primary" size="lg" disabled={busy || !changed} onClick={save}>この配合で保存</Button>
             {changed && <Button variant="quiet" disabled={busy} onClick={() => setRows(dough.items)}>元に戻す</Button>}
           </div>
-          {msg && <Notice tone={msg.ok ? "ok" : "alert"}>{msg.text.map((t) => <div key={t}>{t}</div>)}</Notice>}
         </section>
       )}
 
       {dough && (
-        <section className="space-y-2">
-          <h2 className="text-lg font-black">{dough.name} の工程</h2>
+        <details className="rounded-lg border border-rule bg-sheet px-4">
+          <summary className="flex min-h-12 cursor-pointer items-center font-bold text-crust-700 underline underline-offset-4">{dough.name} の工程を見る（{dough.steps.length}）</summary>
+          <div className="space-y-2 pb-3">
           {dough.steps.length ? (
             <ol className="space-y-1">
               {dough.steps.map((s) => (
@@ -156,7 +160,8 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
             <p className="text-ink-soft">工程がまだありません。</p>
           )}
           <p className="text-sm"><Link className="underline" href="/masters/steps">工程を足す・直す（工程マスタ）</Link></p>
-        </section>
+          </div>
+        </details>
       )}
     </div>
   );

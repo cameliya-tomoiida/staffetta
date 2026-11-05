@@ -142,26 +142,45 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
     }, () => `${label}を保存しました`);
 
   const field = "min-h-12 w-full rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base";
+  // 1画面にやることは1つ: 1件を直している間・CSV を確かめている間は、一覧と上の道具を出さない
+  const focused = !!editing || !!preview;
+  const whoSelect = (
+    <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
+      操作する人
+      <select className={`min-h-12 rounded-lg border-2 bg-sheet px-3 text-base text-ink ${who ? "border-rule-strong" : "border-review-line bg-review-bg"}`} value={who} onChange={(e) => setWho(e.target.value)}>
+        <option value="">えらんでください</option>
+        {STAFF.map((s) => <option key={s}>{s}</option>)}
+      </select>
+    </label>
+  );
+  // 画面の下に固定する「保存」の帯（ボタンは1つ）
+  const saveBar = (children: React.ReactNode) => (
+    <div className="sticky bottom-0 z-20 -mx-4 mt-4 flex flex-wrap items-center gap-3 border-t-2 border-crust-600 bg-sheet/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
+      {whoSelect}
+      {children}
+    </div>
+  );
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
-          操作する人
-          <select className="min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base text-ink" value={who} onChange={(e) => setWho(e.target.value)}>
-            <option value="">えらんでください</option>
-            {STAFF.map((s) => <option key={s}>{s}</option>)}
-          </select>
-        </label>
-        <Button variant="primary" disabled={busy} onClick={() => openEdit()}>＋ {label}を1件追加</Button>
-        <Button disabled={busy} onClick={() => fileInput.current?.click()}>CSV で一括登録</Button>
-        <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden" onChange={pick} />
-        <a className={buttonClass("ghost")} href={`/api/masters/${name}?format=csv`}>CSV に書き出す</a>
-        <a className={buttonClass("quiet")} href={`/api/masters/${name}?format=template`}>空のテンプレート</a>
-        <label className="ml-auto flex items-center gap-2 text-sm text-ink-soft">
-          <input type="checkbox" checked={showDisabled} onChange={(e) => setShowDisabled(e.target.checked)} /> 使わなくなったものも出す
-        </label>
-      </div>
+      <input ref={fileInput} type="file" accept=".csv,text/csv" className="hidden" onChange={pick} />
+      {!focused && (
+        <div className="flex flex-wrap items-center gap-3">
+          {whoSelect}
+          <Button variant="primary" disabled={busy} onClick={() => openEdit()}>＋ {label}を1件追加</Button>
+          <details className="relative">
+            <summary className={`${buttonClass("ghost")} cursor-pointer list-none`}>CSV でまとめて入れる・書き出す ▾</summary>
+            <div className="absolute z-30 mt-1 flex w-72 flex-col gap-2 rounded-lg border-2 border-rule-strong bg-sheet p-3 shadow-lg">
+              <Button disabled={busy} onClick={() => fileInput.current?.click()}>CSV を読み込む（登録の前に確認します）</Button>
+              <a className={buttonClass("ghost")} href={`/api/masters/${name}?format=csv`}>いまの中身を CSV に書き出す</a>
+              <a className={buttonClass("quiet")} href={`/api/masters/${name}?format=template`}>空のテンプレート（見出しだけ）</a>
+            </div>
+          </details>
+          <label className="ml-auto flex min-h-11 items-center gap-2 text-sm text-ink-soft">
+            <input type="checkbox" className="h-5 w-5 accent-crust-600" checked={showDisabled} onChange={(e) => setShowDisabled(e.target.checked)} /> 使わなくなったものも出す
+          </label>
+        </div>
+      )}
       {msg && <Notice tone={msg.ok ? "ok" : "alert"}>{msg.text}</Notice>}
 
       {/* CSV のプレビュー */}
@@ -201,13 +220,14 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
               </tbody>
             </table>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="ok" size="lg" disabled={busy || !preview.canApply || !who} onClick={apply}>
-              {preview.canApply ? `この内容で登録する（追加 ${preview.counts.add}・更新 ${preview.counts.update}）` : preview.counts.error || preview.fileErrors.length ? "エラーを直した CSV を読み込み直してください" : "登録する変更がありません"}
-              {preview.canApply && !who && "（操作する人をえらんでください）"}
-            </Button>
-            <Button variant="quiet" onClick={() => { setPreview(null); setFile(null); }}>やめる</Button>
-          </div>
+          {saveBar(
+            <>
+              <Button variant="ok" size="lg" disabled={busy || !preview.canApply || !who} onClick={apply}>
+                {preview.canApply ? `この内容で登録する（追加 ${preview.counts.add}・更新 ${preview.counts.update}）` : preview.counts.error || preview.fileErrors.length ? "エラーを直した CSV を読み込み直してください" : "登録する変更がありません"}
+              </Button>
+              <Button variant="quiet" onClick={() => { setPreview(null); setFile(null); }}>やめて一覧にもどる</Button>
+            </>,
+          )}
         </section>
       )}
 
@@ -216,8 +236,11 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
         <section className="space-y-3 rounded-lg border-2 border-crust-600 bg-sheet p-4">
           <h2 className="text-xl font-black">{editing.id ? `${label}を直す（${editing.id}）` : `${label}を追加`}</h2>
           {formErrors.map((e, i) => <Notice key={i} tone="alert">{e.column && `${e.column}：`}{e.message}</Notice>)}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {columns.filter((c) => !(editing.id && keyColumns.includes(c.key))).map((c) => (
+          {(() => {
+            const cols = columns.filter((c) => !(editing.id && keyColumns.includes(c.key)));
+            const main = cols.filter((c) => c.required || listKeys.slice(0, MAIN_COLS).includes(c.key));
+            const rest = cols.filter((c) => !main.includes(c));
+            const fieldOf = (c: ClientColumn) => (
               <label key={c.key} className="block text-sm font-bold text-ink-soft">
                 {c.label}{c.required && <span className="ml-1 text-crust-700">（必ず入れる）</span>}
                 {c.type === "enum" || c.type === "boolean" || c.ref ? (
@@ -238,24 +261,39 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
                 )}
                 {c.help && <span className="block text-xs font-normal">{c.help}</span>}
               </label>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ok" size="lg" disabled={busy || !who} onClick={saveEdit}>保存する{!who && "（操作する人をえらんでください）"}</Button>
-            <Button variant="quiet" onClick={() => setEditing(null)}>やめる</Button>
-          </div>
+            );
+            return (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{main.map(fieldOf)}</div>
+                {rest.length > 0 && (
+                  <details className="rounded-lg border border-rule" open={rest.some((c) => formErrors.some((e) => e.column === c.label))}>
+                    <summary className="flex min-h-12 cursor-pointer items-center px-3 font-bold text-crust-700 underline underline-offset-4">
+                      そのほかの項目（{rest.length}）を出す
+                    </summary>
+                    <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">{rest.map(fieldOf)}</div>
+                  </details>
+                )}
+              </>
+            );
+          })()}
+          {saveBar(
+            <>
+              <Button variant="ok" size="lg" disabled={busy || !who} onClick={saveEdit}>保存する</Button>
+              <Button variant="quiet" onClick={() => setEditing(null)}>やめて一覧にもどる</Button>
+            </>,
+          )}
         </section>
       )}
 
       {/* 一覧 */}
-      {allListCols.length > MAIN_COLS && (
+      {!focused && allListCols.length > MAIN_COLS && (
         <div className="mb-2 flex justify-end">
           <Button variant="quiet" onClick={() => setWide((w) => !w)} aria-expanded={wide}>
             {wide ? "大事な列だけにする" : `くわしく（ほかの ${allListCols.length - MAIN_COLS} 列も出す）`}
           </Button>
         </div>
       )}
-      <section className="overflow-x-auto rounded-lg border border-rule bg-sheet">
+      <section className={`overflow-x-auto rounded-lg border border-rule bg-sheet ${focused ? "hidden" : ""}`}>
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-rule-strong bg-cream text-left text-sm text-ink [&>th]:px-2 [&>th]:py-2 [&>th]:whitespace-nowrap">
@@ -297,7 +335,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
           </tbody>
         </table>
       </section>
-      {!who && <p className="text-sm text-ink-soft">保存・棚卸・CSV の登録には「操作する人」をえらんでください（誰が変えたかを記録します）。</p>}
+      {!who && !focused && <p className="text-sm text-ink-soft">保存・棚卸・CSV の登録には「操作する人」をえらんでください（誰が変えたかを記録します）。</p>}
     </div>
   );
 }
