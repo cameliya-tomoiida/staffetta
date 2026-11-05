@@ -2,11 +2,17 @@
 // 保存先はメモリ（memdb）に差し替え、本物の data/ には書かない。AI は使わない入口なので、そのまま通す。
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mem, resetMem } from "./memdb";
 import { expectImportedOrder } from "./rules";
 
 vi.mock("@/lib/store", () => import("./memdb"));
+
+// ここでは「取り込みそのもの」を確かめる。自動の確定（A8・A9）は automation のテストで確かめるので止めておく
+beforeAll(async () => {
+  const { saveAutomationSettings } = await import("@/lib/automation/settings");
+  saveAutomationSettings({ importAutoConfirm: false, emailAutoConfirm: false }, "テスト");
+});
 vi.mock("@/lib/channels/common", async (importOriginal) => {
   const orig = await importOriginal<typeof import("@/lib/channels/common")>();
   const { mem } = await import("./memdb");

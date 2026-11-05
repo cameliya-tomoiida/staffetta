@@ -10,6 +10,8 @@ vi.mock("@/lib/store", () => import("./memdb"));
 
 beforeAll(async () => {
   process.env.HUB_DB_PATH = ":memory:";
+  // この試験は人が確定する流れを見る（自動確定は line-auto.test.ts）
+  (await import("@/lib/channels/line/auto")).setLineAutoSettings({ autoConfirm: false }, "試験");
   process.env.DEMO_NOW = "2026-11-05T11:30:00+09:00";
   mem.db.orders = structuredClone(demoOrders);
   const st = await import("@/lib/channels/line/state");

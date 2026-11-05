@@ -10,6 +10,7 @@ import { allProducts, findProduct } from "@/lib/catalog";
 import type { Order, OrderLine, OrderSource, ReadValue } from "@/data/types";
 import { updateDb } from "@/lib/store";
 import { nowIso } from "@/lib/clock";
+import { autoConfirmImported } from "@/lib/automation/orders";
 import { aliasMapFor, normalizeAlias } from "@/lib/aliases";
 
 export const now = () => nowIso();
@@ -91,6 +92,13 @@ export function toOrder(o: ImportedOrder): Order {
  */
 export async function saveImported(list: ImportedOrder[]) {
   list = await applyAliases(list);
+  const saved = await saveImportedRaw(list);
+  // A8・A9: 迷わなかった注文は自動で確定（設定で止められる。人が確定した注文には触らない）
+  const auto = await autoConfirmImported(saved.ids);
+  return { ...saved, auto };
+}
+
+function saveImportedRaw(list: ImportedOrder[]) {
   return updateDb((db) => {
     let added = 0;
     let replaced = 0;
