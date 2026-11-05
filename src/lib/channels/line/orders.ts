@@ -404,7 +404,10 @@ export async function lineUsersForAdmin() {
 
 /** ひも付けがまだのLINEの人（初回確認待ち） */
 export async function unlinkedLineUsers() {
-  return (await lineUsersForAdmin()).filter((u) => !u.customerId);
+  // スタッフとして登録した LINE の人は、お客さんのひも付け待ちに出さない
+  const { listStaffLine } = await import("./staff-alerts");
+  const staff = new Set(listStaffLine().map((s) => s.userId));
+  return (await lineUsersForAdmin()).filter((u) => !u.customerId && !staff.has(u.userId));
 }
 
 // ───────── 確定の連絡 ─────────

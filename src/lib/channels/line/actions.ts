@@ -71,6 +71,26 @@ export async function setLineAutoAction(next: { autoConfirm?: boolean; autoNotif
   return v;
 }
 
+/** 設定画面: アラートをスタッフの LINE に送るスイッチ */
+export async function setStaffAlertAction(enabled: boolean, who: string) {
+  const { setStaffAlertSettings } = await import("./staff-alerts");
+  const v = setStaffAlertSettings({ enabled }, who);
+  revalidatePath("/settings/line");
+  return v;
+}
+
+/** 設定画面: LINE の人をスタッフとして登録する・外す */
+export async function addStaffLineAction(input: { userId: string; name: string; allDanger: boolean }, who: string) {
+  const { addStaffLine } = await import("./staff-alerts");
+  await addStaffLine(input, who);
+  revalidatePath("/", "layout");
+}
+export async function removeStaffLineAction(userId: string) {
+  const { removeStaffLine } = await import("./staff-alerts");
+  removeStaffLine(userId);
+  revalidatePath("/", "layout");
+}
+
 /** LINE受付: 自動で確定した注文を、要確認に戻す */
 export async function undoAutoConfirmAction(orderId: string, who: string) {
   const { undoAutoConfirm } = await import("./auto");
