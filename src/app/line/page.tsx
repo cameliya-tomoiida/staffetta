@@ -61,18 +61,21 @@ export default async function LinePage() {
                     {demo && <Tag tone="off">（デモ）架空のお客さん</Tag>}
                     {o.intent && intentText[o.intent] && <Tag tone="alert">{intentText[o.intent]}</Tag>}
                     <Tag>{o.source.extra?.via === "liff" ? "注文フォーム" : "トーク（Claudeが読み取り）"}</Tag>
-                    <span className="text-lg font-black">{o.customerId ? customerById(o.customerId)?.name : <span className="text-review-ink">得意先 未確認</span>}</span>
-                    <span className="font-bold">納品 <span className="num">{fmtDate(o.deliveryDate)}</span></span>
                     {flagged > 0 && <Tag tone="review">要確認 {flagged} 行</Tag>}
                     {lateCount > 0 && <Tag tone="review">締め切り後 {lateCount} 行</Tag>}
                     {o.source.extra?.isOrder === false && <Tag tone="review">注文ではないかも</Tag>}
                     {isAutoConfirmed(o) && <AutoTag by={o.confirmedBy} />}
                   </div>
+                  {/* お店の名前と納品日は、札の長さにかかわらず、いつも札の下の1行に（どの注文も同じ位置で読める） */}
+                  <div className="flex flex-wrap items-baseline gap-x-3 pt-0.5">
+                    <span className="text-xl font-black">{o.customerId ? customerById(o.customerId)?.name : <span className="text-review-ink">得意先 未確認</span>}</span>
+                    <span className="font-bold">納品 <span className="num">{fmtDate(o.deliveryDate)}</span></span>
+                  </div>
                   {o.source.rawText && <div className="inline-block max-w-full rounded-2xl rounded-tl-sm border border-rule bg-cream px-4 py-2 whitespace-pre-wrap">{o.source.rawText}</div>}
                   {o.lines.length === 0 ? (
                     <div className="text-sm">（品目なし）</div>
                   ) : (
-                    <ul className="space-y-1 text-sm">
+                    <ul className="space-y-1 text-base">
                       {o.lines.map((l) => (
                         <li key={l.id}>
                           {productById(l.productId)?.name ?? `（${l.read?.writtenName}）`} {l.quantity}
