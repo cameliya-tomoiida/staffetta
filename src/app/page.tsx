@@ -7,6 +7,7 @@ import { ReadAllButton, ReadButton } from "@/components/ReadButton";
 import { ResetButton } from "@/components/ResetButton";
 import { PdfThumb } from "@/components/PdfThumb";
 import { InboxWatcher } from "@/components/InboxWatcher";
+import { AutoConfirmBadge } from "@/components/AutoConfirmBadge";
 
 
 const statusLabel = {
@@ -46,7 +47,7 @@ export default async function Inbox(props: PageProps<"/">) {
       <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-crust-600 pb-3">
         <div>
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">FAX受信箱</h1>
-          <p className="text-ink-soft">複合機に届いたFAXは、自動でここに入ります。Claudeが読み取り、スタッフが元のFAXと見比べて確定します。</p>
+          <p className="text-ink-soft">複合機に届いたFAXは、自動でここに入ります。Claudeが読み取り、迷わなかったものは自動で確定します。スタッフは迷った所だけを確認します。</p>
         </div>
         <div className="flex gap-2">
           <ReadAllButton count={db.faxes.filter((f) => f.status === "new" || f.status === "error").length} />
@@ -92,6 +93,10 @@ export default async function Inbox(props: PageProps<"/">) {
                     {f.read.document_title}・{lines}行{flagged > 0 && <span className="ml-1 font-bold text-review-ink">（要確認 {flagged}）</span>}
                     {f.rotation ? <span className="ml-1">・{f.rotation}°回転して表示</span> : null}
                   </div>
+                )}
+                {f.autoConfirmed && f.status === "confirmed" && <AutoConfirmBadge faxId={f.id} reason={f.autoConfirmed.reason} compact />}
+                {!f.autoConfirmed && f.autoReview && f.status === "review" && f.autoReview.reasons.length > 0 && (
+                  <div className="text-xs text-review-ink">確認が要る理由: {f.autoReview.reasons[0]}{f.autoReview.reasons.length > 1 ? ` ほか${f.autoReview.reasons.length - 1}件` : ""}</div>
                 )}
                 {f.error && <div className="text-sm text-alert-ink">{f.error}</div>}
                 <div className="mt-auto flex gap-2 pt-2">
