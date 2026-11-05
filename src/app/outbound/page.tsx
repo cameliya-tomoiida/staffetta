@@ -8,15 +8,16 @@ import { entryList, supplierLabel } from "@/lib/channels/outbound/render";
 import { isSiteMethod } from "@/lib/channels/outbound/sites";
 import { listOutbound } from "@/lib/channels/outbound/workflow";
 import { getReceipt } from "@/lib/stock/store";
-import { ensureAutoReplies, listReplies } from "@/lib/replies/store";
+import { listReplies } from "@/lib/replies/store";
+import { runDueAutomations } from "@/lib/automation/tasks";
 import { OutboundClient } from "./OutboundClient";
 
 export default async function OutboundPage() {
   await connection();
-  const records = await listOutbound();
-  // 「受けたら返事が要る」先の注文は、返事の下書きを自動で作っておく（送るのは人）
-  await ensureAutoReplies();
+  // 決まった時刻の自動の仕事（定期注文・製造の実績・ふだんどおりの発注書の承認・返事の下書き）。送るのは人
+  await runDueAutomations();
   const replies = listReplies();
+  const records = await listOutbound();
   const { orders, today } = await allOrders();
   const dates = deliveryDatesOf(orders).filter((d) => d >= today);
   const views = records.map((r) => ({
