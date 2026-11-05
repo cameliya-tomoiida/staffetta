@@ -4,8 +4,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, choiceClass, Notice } from "@/components/ui";
-import { recipeSummary } from "@/lib/masters/recipe";
+import { Button, Notice } from "@/components/ui";
+import { isFlourName, recipeSummary } from "@/lib/masters/recipe";
 
 export interface RecipeDough {
   id: string;
@@ -19,14 +19,14 @@ type Material = { id: string; name: string; unit: string };
 const STAFF = ["課長 こばやし", "事務 たなか", "専務 はやし"];
 const inputClass = "min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base text-ink";
 
-export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDough[]; materials: Material[]; selected?: string }) {
+export function RecipeClient({ doughs, materials, selected, batchKg }: { doughs: RecipeDough[]; materials: Material[]; selected?: string; batchKg?: number }) {
   const router = useRouter();
   const [doughId, setDoughId] = useState(selected ?? "");
   const dough = doughs.find((d) => d.id === doughId);
   const [rows, setRows] = useState(dough?.items ?? []);
   const [who, setWho] = useState("");
   const [busy, setBusy] = useState(false);
-  const [kg, setKg] = useState("10");
+  const [kg, setKg] = useState(String(batchKg ?? 10));
   const [msg, setMsg] = useState<{ ok: boolean; text: string[] } | null>(null);
 
   const choose = (id: string) => {
@@ -35,6 +35,7 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
     setMsg(null);
     router.replace(`/masters/recipes?dough=${id}`, { scroll: false });
   };
+  const isFlour = (id: string) => isFlourName(materials.find((m) => m.id === id)?.name ?? "");
   const set = (i: number, patch: Partial<{ materialId: string; percent: string }>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const sum = recipeSummary(rows, materials);
   const changed = JSON.stringify(rows) !== JSON.stringify(dough?.items ?? []);
@@ -65,30 +66,31 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-black">1. 直す生地をえらぶ</h2>
-      <nav className="flex flex-wrap gap-2" aria-label="生地">
-        {doughs.map((d) => (
-          <button key={d.id} type="button" className={choiceClass(d.id === doughId, "min-h-12 px-4")} onClick={() => choose(d.id)}>
-            {d.name}<span className="ml-1 text-sm text-ink-soft">{d.id}</span>
-          </button>
-        ))}
-      </nav>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/masters/recipes" className="inline-flex min-h-12 items-center font-bold text-crust-700 underline underline-offset-4">‹ レシピのカードにもどる</Link>
+        <label className="ml-auto flex items-center gap-2 text-sm font-bold text-ink-soft">
+          ほかの生地
+          <select className={inputClass} value={doughId} onChange={(e) => choose(e.target.value)} disabled={changed}>
+            {doughs.map((d) => <option key={d.id} value={d.id}>{d.name}（{d.id}）</option>)}
+          </select>
+        </label>
+      </div>
 
       {dough && (
-        <section className="space-y-4 rounded-lg border-2 border-rule-strong bg-sheet p-4">
+        <section id="edit" className="space-y-4 rounded-lg border-2 border-rule-strong bg-sheet p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-black">2. {dough.name} の配合を直す</h2>
+            <h2 className="text-xl font-black">{dough.name} の配合を直す</h2>
             <span className="text-sm text-ink-soft">ライン {dough.line === "pizza" ? "ピザ" : "パン"}・ロス率 {Math.round(dough.lossRate * 1000) / 10}%</span>
           </div>
           <table className="w-full text-base">
             <thead>
               <tr className="border-b-2 border-rule-strong text-left text-sm text-ink-soft [&>th]:whitespace-nowrap">
-                <th className="py-1 pr-2">材料</th><th className="pr-2 text-right">ベーカーズ％</th><th className="pr-2 text-right">生地 {doughKg || "-"}kg なら</th><th />
+                <th className="py-1 pr-2">材料</th><th className="pr-2 text-right">ベーカーズ％</th><th className="pr-2 text-right">生地 {doughKg || "-"}kg なら（g）</th><th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={i} className="border-t border-dashed border-rule">
+                <tr key={i} className={`border-t border-dashed border-rule ${isFlour(r.materialId) ? "font-black" : ""}`}>
                   <td className="py-1.5 pr-2">
                     <select className={`${inputClass} w-full`} value={r.materialId} onChange={(e) => set(i, { materialId: e.target.value })} aria-label={`${i + 1}行目の材料`}>
                       <option value="">材料をえらぶ</option>
@@ -96,10 +98,10 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
                     </select>
                   </td>
                   <td className="pr-2 text-right">
-                    <input className={`${inputClass} num w-28 text-right`} inputMode="decimal" value={r.percent} onChange={(e) => set(i, { percent: e.target.value })} aria-label={`${i + 1}行目の％`} />
+                    <input className={`${inputClass} num w-28 text-right ${isFlour(r.materialId) ? "font-black" : ""}`} inputMode="decimal" value={r.percent} onChange={(e) => set(i, { percent: e.target.value })} aria-label={`${i + 1}行目の％`} />
                   </td>
                   <td className="num pr-2 text-right">
-                    {flourKg && Number(r.percent) ? `${Math.round(flourKg * Number(r.percent) * 10) / 1000} kg` : ""}
+                    {flourKg && Number(r.percent) ? `${Math.round(flourKg * Number(r.percent) * 10).toLocaleString("ja-JP")} g` : ""}
                   </td>
                   <td className="text-right"><Button variant="quiet" className="whitespace-nowrap" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>行を消す</Button></td>
                 </tr>
@@ -109,7 +111,7 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
               <tr className="border-t-2 border-rule-strong font-bold">
                 <td className="py-2 pr-2">合計（粉の合計 <span className="num">{sum.flour}</span>%）</td>
                 <td className="num pr-2 text-right">{sum.total}%</td>
-                <td className="num pr-2 text-right">{doughKg ? `${doughKg} kg` : ""}</td>
+                <td className="num pr-2 text-right">{doughKg ? `${(doughKg * 1000).toLocaleString("ja-JP")} g` : ""}</td>
                 <td />
               </tr>
             </tfoot>
@@ -117,8 +119,8 @@ export function RecipeClient({ doughs, materials, selected }: { doughs: RecipeDo
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={() => setRows((rs) => [...rs, { materialId: "", percent: "" }])}>＋ 材料の行を足す</Button>
             <label className="flex items-center gap-2 text-sm text-ink-soft">
-              仕込む生地
-              <input className={`${inputClass} num w-24 text-right`} inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} />kg で見る
+              g の計算は 生地
+              <input className={`${inputClass} num w-24 text-right`} inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} />kg（ミキサー1回分）で
             </label>
           </div>
           {sum.warnings.map((w) => <Notice key={w} tone="review">{w}</Notice>)}
