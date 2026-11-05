@@ -512,6 +512,17 @@ export interface CourseMaster {
   /** 走る曜日（0=日〜6=土）。空なら毎日 */
   weekdays?: number[];
   note?: string;
+  // ── 配送コースの地図（⑦ /admin/routes） ──
+  /** 回る順番（取引先ID）。この便の取引先で、ここに無いものは後ろに足す */
+  stops?: string[];
+  /** 1件あたりの納品の時間（分）。空なら 10 分 */
+  serviceMinutes?: number;
+  /** 休けい（分） */
+  breakMinutes?: number;
+  /** 休けいを何件目のあとに取るか。空なら真ん中 */
+  breakAfter?: number;
+  /** 車（軽バン・2トン・3トン など。教えるときのメモ） */
+  vehicle?: string;
   active: boolean;
 }
 
