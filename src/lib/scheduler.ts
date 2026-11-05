@@ -19,12 +19,55 @@ export interface AlertSource {
   run: (now: string) => Promise<AlertCandidate[]>;
 }
 
-/**
- * アラートの判定元。③の evaluateAlerts は、master に入ったらここに1行足す:
- *   { name: "logic", run: async (now) => (await import("./alerts")).evaluateAlertsForStore(now) },
- * （③の判定の結果を AlertCandidate の形にして返す関数）
- */
-export const ALERT_SOURCES: AlertSource[] = [{ name: "system", feature: "system_watch", run: gatherSystem }];
+/** ③の判定（src/lib/alerts の evaluateAlerts）を、保存の形（AlertCandidate）に直して返す */
+async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
+  const [{ evaluateAlerts, alertFeatureKey }, { loadDb }, { loadMasters }] = await Promise.all([import("./alerts"), import("./db/hub-store"), import("./masters/seed-db")]);
+  const on = (k: string) => {
+    try {
+      return isOn(k as FeatureKey);
+    } catch {
+      return true; // 一覧に無い種類は使う
+    }
+  };
+  const alerts = evaluateAlerts(await loadDb(), await loadMasters(), now, { isOn: (k) => on(alertFeatureKey(k)) });
+  const hrefOf = (kind: string, p: Record<string, unknown>): string | undefined => {
+    const id = (k: string) => (typeof p[k] === "string" ? encodeURIComponent(p[k] as string) : "");
+    switch (kind) {
+      case "open_fax": return p.faxId ? `/fax/${id("faxId")}` : "/";
+      case "open_inbox": return "/";
+      case "open_order": case "edit_order": return "/orders";
+      case "open_po": case "approve_po": return "/purchase";
+      case "open_schedule": return "/plan";
+      case "open_product": case "start_cost_review": return "/masters/products";
+      case "open_material": return "/masters/materials";
+      case "approve_template": return "/admin/fax-templates";
+      default: return typeof p.href === "string" ? (p.href as string) : undefined;
+    }
+  };
+  return alerts.map((a) => ({
+    dedupeKey: a.dedupeKey,
+    kind: a.kind,
+    level: a.level,
+    title: a.title,
+    detail: a.message,
+    dueAt: a.due,
+    action: a.actions[0]?.label,
+    href: a.actions.map((x) => hrefOf(x.kind, x.payload)).find(Boolean),
+    actions: a.actions.map((x, i) => ({
+      label: x.label,
+      href: hrefOf(x.kind, x.payload),
+      run: x.kind,
+      args: Object.fromEntries(Object.entries(x.payload).filter(([, v]) => ["string", "number", "boolean"].includes(typeof v))) as Record<string, string | number | boolean>,
+      primary: i === 0,
+    })),
+  }));
+}
+
+/** アラートの判定元（③の判定・①の仕組みの見張り） */
+export const ALERT_SOURCES: AlertSource[] = [
+  { name: "logic", run: evaluateLogic },
+  { name: "system", feature: "system_watch", run: gatherSystem },
+];
 
 const g = globalThis as unknown as { __hubScheduler?: { timer: ReturnType<typeof setInterval>; running: boolean; last?: TickResult }; __hubAlertSoon?: ReturnType<typeof setTimeout> };
 
