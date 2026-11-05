@@ -18,7 +18,7 @@ export const MENU: Group[] = [
     title: "毎日の仕事",
     items: [
       { href: "/", label: "FAX受信箱", match: (p) => p === "/" || p.startsWith("/fax") },
-      { href: "/orders", label: "受注一覧" },
+      { href: "/orders", label: "受注一覧", match: (p) => p === "/orders" },
       { href: "/plan", label: "製造計画・工程表" },
       { href: "/purchase", label: "発注書" },
       { href: "/outbound", label: "送り出し（FAX・サイト）" },
@@ -27,6 +27,7 @@ export const MENU: Group[] = [
   {
     title: "注文の入口",
     items: [
+      { href: "/orders/new", label: "電話・ドライバーの注文" },
       { href: "/line", label: "LINE受付" },
       { href: "/import", label: "取り込み（メール・CSV）" },
       { href: "/masters/standingOrders", label: "定期注文（今週分を作る）" },
