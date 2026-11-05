@@ -3,6 +3,7 @@
 // 返事の形は取引先の入口に合わせる: メールで来た注文 → 返信メール、それ以外で FAX 番号がある先 → 返信 FAX。LINE は④の確定の連絡があるので作らない。
 import type { Order, OrderLine } from "@/data/types";
 import { findCustomer, findProduct } from "@/lib/catalog";
+import type { AlternativeResult } from "@/lib/alternatives";
 import { checkLeadTime, type LeadTimeCheck } from "@/lib/leadtime";
 import { addDays } from "@/lib/purchase";
 
@@ -34,6 +35,8 @@ export interface ReplyContent {
   lines: ReplyLine[];
   /** 受けられない行があるときの、間に合ういちばん早い納品日（なければ undefined） */
   altDate?: string;
+  /** ③の suggestAlternatives の文（上限・前の日に作る案など。そのまま下書きに入れる） */
+  altMessage?: string;
   /** 元のメールの件名（返信の「Re:」に使う） */
   inReplyTo?: { subject?: string; messageId?: string };
 }
@@ -72,8 +75,12 @@ function alternativeDate(order: Order, lateIds: string[], now: string): string |
   return undefined;
 }
 
-/** 注文から返事の中身を作る。checks は③の checkLeadTime（省くとここで計算） */
-export function buildReply(order: Order, now: string, checks?: LeadTimeCheck[]): ReplyContent {
+/**
+ * 注文から返事の中身を作る。
+ * alt（③の suggestAlternatives）があれば、締め・納品しない曜日・上限のどれで受けられないかと代わりの日はそれを使う。
+ * 無ければ③の checkLeadTime（締め・曜日）だけで判定し、代わりの日はここで探す。
+ */
+export function buildReply(order: Order, now: string, checks?: LeadTimeCheck[], alt?: AlternativeResult): ReplyContent {
   const c = findCustomer(order.customerId);
   const k = replyKindOf(order);
   if (!k.kind) throw new Error(k.why ?? "返事を作れない注文です");
@@ -83,7 +90,11 @@ export function buildReply(order: Order, now: string, checks?: LeadTimeCheck[]):
     const p = findProduct(l.productId);
     const base = { name: p?.name ?? l.read?.writtenName ?? l.productId, quantity: l.quantity, unit: l.unit, pieces: l.pieces };
     if (l.quantity <= 0) return { ...base, status: "removed", change: changeOf(l) ?? "取り消し" };
-    const chk = lt.find((x) => x.lineId === l.id);
+    const a = alt?.lines.find((x) => x.lineId === l.id);
+    // 仮発注は締めを過ぎても受ける（確定の数を早めに聞く）。曜日・上限は仮発注でも受けられない
+    const probs = (a?.problems ?? []).filter((p) => !(order.status === "provisional" && p.kind === "deadline"));
+    if (alt && probs.length) return { ...base, status: "late", reason: probs.map((p) => p.reason).join("・") };
+    const chk = alt ? undefined : lt.find((x) => x.lineId === l.id);
     if (chk?.status === "late") return { ...base, status: "late", reason: chk.reason };
     const ch = changeOf(l);
     return ch ? { ...base, status: "changed", change: ch } : { ...base, status: "ok" };
@@ -101,7 +112,8 @@ export function buildReply(order: Order, now: string, checks?: LeadTimeCheck[]):
     subject: `ご注文の受付（${fmtJpDate(order.deliveryDate)}納品分）`,
     provisional: order.status === "provisional",
     lines,
-    altDate: alternativeDate(order, lateIds, now),
+    altDate: alt ? (lateIds.length ? alt.earliestDateForAll : undefined) : alternativeDate(order, lateIds, now),
+    ...(alt && lateIds.length && alt.message ? { altMessage: alt.message } : {}),
     ...(email ? { inReplyTo: { subject: email.subject, messageId: email.messageId } } : {}),
   };
 }
@@ -119,7 +131,9 @@ export function replyText(r: ReplyContent, sender: { name: string; tel: string; 
   ];
   const notes = [
     ...(r.lines.some((l) => l.status === "changed" || l.status === "removed") ? ["※「変更」の行は、ご連絡の内容で数や品を直しています。"] : []),
-    ...(late.length
+    ...(late.length && r.altMessage
+      ? [`※ 次の品は ${fmtJpDate(r.deliveryDate)}の納品ではお受けできません：${late.map((l) => l.name).join("・")}`, ...r.altMessage.split(/\r?\n/).filter(Boolean).map((m) => `　${m}`)]
+      : late.length
       ? [
           `※ 次の品は締めを過ぎているため、${fmtJpDate(r.deliveryDate)}の納品に間に合いません：${late.map((l) => l.name).join("・")}`,
           r.altDate ? `　${fmtJpDate(r.altDate)}の納品でしたらお受けできます。よろしければご連絡ください。` : "　お受けできる日をご相談させてください。",

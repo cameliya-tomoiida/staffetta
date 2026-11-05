@@ -8,6 +8,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Order } from "@/data/types";
 import { findCustomer, withMasters } from "@/lib/catalog";
+import { suggestAlternatives } from "@/lib/alternatives";
 import { buildEml } from "@/lib/channels/eml";
 import { HUB_SENDER } from "@/lib/channels/outbound/render";
 import { outputPath } from "@/lib/channels/outbound/workflow";
@@ -117,7 +118,10 @@ async function create(order: Order, who: string, auto: boolean, masters: Awaited
   const prev = getReply(id);
   if (prev?.status === "sent") throw new Error("この注文の返事はもう送っています");
   // 中身（品名・締めの判定）は DB のマスタで計算する
-  const content = withMasters(masters, () => buildReply(order, nowIso()));
+  // 受けられない品と代わりの日は③の suggestAlternatives（締め・納品しない曜日・ラインの上限）
+  const now = nowIso();
+  const alt = suggestAlternatives(order, now, { masters, otherOrders: (await readDb()).orders });
+  const content = withMasters(masters, () => buildReply(order, now, undefined, alt));
   const fileName = await writeFiles(id, content);
   const r: StoredReply = {
     id, orderId: order.id, customerId: order.customerId, customerName: content.customerName, kind: content.kind, to: content.to,
