@@ -38,14 +38,18 @@ describe("代わりの日の提案", () => {
     expect(r.lines[0].earliestDate).toBe("2026-11-07");
   });
 
-  it("ラインの上限を超える日: 上限に入る、いちばん早い日", () => {
-    // 11/6 はピザが 1,650枚で、27cm がある日の上限 1,200 を超えている。食品会社の OEM ピザ（3日前締め）
-    const r = suggestAlternatives(byId("DO-18"), NOW, { otherOrders: demoOrders });
-    const p = r.lines.find((l) => l.productId === "P11")!;
-    expect(p.problems.map((x) => x.kind)).toContain("capacity");
-    expect(p.problems.find((x) => x.kind === "capacity")!.reason).toMatch(/ピザラインが 11\/6\(金\) は上限 1,200枚 を 450枚 超えます/);
-    // 11/7 は締め（3日前）を過ぎている → 11/8
-    expect(p.earliestDate).toBe("2026-11-08");
+  it("ラインの上限を超える日: ラインの全部の枚数と比べる", () => {
+    // 11/6 はピザが 1,650枚（ライン 1,800）。27cm は 200枚だけなので、27cm の上限 1,200 は超えない（11/5 担当者の答えに合わせた）
+    expect(suggestAlternatives(byId("DO-18"), NOW, { otherOrders: demoOrders }).lines.find((l) => l.productId === "P11")!.problems.map((x) => x.kind)).not.toContain("capacity");
+    // ほかのピザ 200枚を足すと 1,850枚 → ラインの上限 1,800 を 50枚 超える
+    const r = suggestAlternatives(mk("X5", "C12", "2026-11-06", [["P07", 200]]), NOW, { otherOrders: demoOrders });
+    expect(r.lines[0].problems.find((x) => x.kind === "capacity")!.reason).toMatch(/ピザラインが 11\/6\(金\) は上限 1,800枚 を 50枚 超えます/);
+  });
+
+  it("商品の上限を超える日: その商品の枚数だけと比べ、商品の名前で知らせる", () => {
+    // 11/9 は 27cm が 200枚。27cm を 1,100枚足すと 1,300枚 → 27cm の上限 1,200 を 100枚 超える
+    const r = suggestAlternatives(mk("X6", "C12", "2026-11-09", [["P13", 1100]]), NOW, { otherOrders: demoOrders });
+    expect(r.lines[0].problems.find((x) => x.kind === "capacity")!.reason).toMatch(/ピザクラスト 27cmが 11\/9\(月\) は上限 1,200枚 を 100枚 超えます/);
   });
 
   it("上限を超える日は、前の日に作っておけるか（冷凍のピザ）", () => {
@@ -54,7 +58,7 @@ describe("代わりの日の提案", () => {
     const r = suggestAlternatives(big, NOW, { otherOrders: demoOrders });
     const l = r.lines[0];
     expect(l.problems.map((x) => x.kind)).toEqual(["capacity"]);
-    // 11/9 は 27cm の日で空き 400枚 → 足りない。11/8 は空き 1,800枚 → 作っておける
+    // 11/9 はすでに 800枚で空き 1,000枚 → 足りない。11/8 は空き 1,800枚 → 作っておける
     expect(l.makeEarlier).toMatchObject({ productionDate: "2026-11-08", room: 1800 });
     expect(l.makeEarlier!.reason).toMatch(/11\/8\(日\)に作っておけば、納品日は 11\/10\(火\) のままで受けられます/);
   });

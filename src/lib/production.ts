@@ -64,6 +64,14 @@ export interface RepackJob {
   packs: number;
 }
 
+export interface ProductCapCheck {
+  productId: string;
+  name: string;
+  pieces: number;
+  cap: number;
+  overBy: number;
+}
+
 export interface LinePlan {
   line: Line;
   name: string;
@@ -74,8 +82,10 @@ export interface LinePlan {
   cap?: number;
   /** 上限の理由（例: 「ピザクラスト 27cm がある日は 1,200枚」） */
   capReason?: string;
-  /** 上限を超えた数（超えていなければ 0） */
+  /** 上限を超えた数（ラインの上限・商品ごとの上限のうち、いちばん多く超えた数。超えていなければ 0） */
   overBy: number;
+  /** 1日の上限がある商品（例: ピザクラスト 27cm は 1,200枚）。その商品の枚数だけと比べる */
+  productCaps?: ProductCapCheck[];
   /** 上限に数える数（「ラインの上限に数えない」商品があるときだけ。無ければ pieces と同じ） */
   capPieces?: number;
   /** 冷凍庫（設備の種類「冷凍庫」の「入るケース数」）が登録されているとき: この日に作るケース数と上限 */
@@ -155,23 +165,31 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
       .filter((it) => currentMasters().products.find((p) => p.id === it.productId)?.excludeFromDailyCap)
       .reduce((s, it) => s + it.pieces, 0);
     const capPieces = pieces - excluded;
-    let cap = opts.lineCaps?.[line] ?? ls.dailyCap;
-    let capReason = cap !== undefined ? `${ls.name}の1日の上限` : undefined;
-    // 商品によっては、その商品がある日は上限が下がる（例: 27cm の日は 1,200枚）
+    // ラインの上限は「ラインの全部の枚数」と、商品の上限は「その商品の枚数だけ」と比べる
+    // （担当者 11/5：「27センチは1日1200枚。合計で2000枚。2000枚のうち1200枚は27センチで、800枚は他のピザ」）
+    const cap = opts.lineCaps?.[line] ?? ls.dailyCap;
+    const capReason = cap !== undefined ? `${ls.name}の1日の上限` : undefined;
+    const lineOver = cap !== undefined ? Math.max(0, capPieces - cap) : 0;
+    const byProduct = new Map<string, { name: string; pieces: number }>();
     for (const d of lineDoughs)
       for (const it of d.items) {
-        const s = findProduct(it.productId)?.spec;
-        if (s?.kind === "make" && s.dailyCap !== undefined && (cap === undefined || s.dailyCap < cap)) {
-          cap = s.dailyCap;
-          capReason = `${it.name}がある日の上限`;
-        }
+        const cur = byProduct.get(it.productId) ?? { name: it.name, pieces: 0 };
+        cur.pieces += it.pieces;
+        byProduct.set(it.productId, cur);
       }
-    const overBy = cap !== undefined ? Math.max(0, capPieces - cap) : 0;
+    const productCaps: ProductCapCheck[] = [];
+    for (const [productId, { name, pieces: n }] of byProduct) {
+      const s = findProduct(productId)?.spec;
+      if (s?.kind === "make" && s.dailyCap !== undefined) productCaps.push({ productId, name, pieces: n, cap: s.dailyCap, overBy: Math.max(0, n - s.dailyCap) });
+    }
+    const overBy = Math.max(lineOver, ...productCaps.map((p) => p.overBy));
     const lw: string[] = [];
-    if (overBy > 0) lw.push(`${ls.name} ${fmtNum(capPieces)}${ls.unit}${capPieces !== pieces ? `（上限に数えない ${fmtNum(pieces - capPieces)}${ls.unit} を除く）` : ""}: ${capReason} ${fmtNum(cap!)}${ls.unit}を ${fmtNum(overBy)}${ls.unit} 超えています`);
+    if (lineOver > 0) lw.push(`${ls.name} ${fmtNum(capPieces)}${ls.unit}${capPieces !== pieces ? `（上限に数えない ${fmtNum(pieces - capPieces)}${ls.unit} を除く）` : ""}: ${capReason} ${fmtNum(cap!)}${ls.unit}を ${fmtNum(lineOver)}${ls.unit} 超えています`);
+    for (const p of productCaps)
+      if (p.overBy > 0) lw.push(`${ls.name}: ${p.name} ${fmtNum(p.pieces)}${ls.unit}が、${p.name}の1日の上限 ${fmtNum(p.cap)}${ls.unit}を ${fmtNum(p.overBy)}${ls.unit} 超えています`);
     const fz = freezerFor(line, lineDoughs);
     if (fz && fz.need > fz.cap) lw.push(`${ls.name}: この日に作る ${fmtNum(fz.need)}ケース が、冷凍庫（${fz.names}）の ${fmtNum(fz.cap)}ケース に入りきりません`);
-    return { line, name: ls.name, unit: ls.unit, pieces, ...(capPieces !== pieces ? { capPieces } : {}), cap, capReason, overBy, ...(fz ? { freezerCases: { need: fz.need, cap: fz.cap } } : {}), doughs: lineDoughs, warnings: lw };
+    return { line, name: ls.name, unit: ls.unit, pieces, ...(capPieces !== pieces ? { capPieces } : {}), cap, capReason, overBy, ...(productCaps.length ? { productCaps } : {}), ...(fz ? { freezerCases: { need: fz.need, cap: fz.cap } } : {}), doughs: lineDoughs, warnings: lw };
   });
 
   return {

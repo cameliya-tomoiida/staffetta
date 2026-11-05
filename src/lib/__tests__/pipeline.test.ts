@@ -25,7 +25,11 @@ describe("通し: 注文 → 集計 → 発注書 → 製造計画 → 材料の
   });
 
   it("ピザの上限超えの警告が全体の注意に出る", () => {
-    expect(r.warnings.some((w) => w.includes("超えています"))).toBe(true);
+    // 11/6 はピザ 1,650枚（ライン 1,800）で上限の中。ほかのピザ 200枚を足すと 1,850枚で超える
+    expect(r.warnings.some((w) => w.includes("超えています"))).toBe(false);
+    const base = demoOrders.find((o) => o.deliveryDate === DEMO_DATE)!;
+    const extra = { ...base, id: "X-CAP", status: "confirmed" as const, intent: "new" as const, lines: [{ ...base.lines[0], id: "X-CAP-0", productId: "P07", quantity: 200, unit: "枚", piecesPerUnit: 1, pieces: 200, edits: [] }] };
+    expect(runPipeline([...demoOrders, extra], DEMO_DATE).warnings.some((w) => w.includes("ピザラインの1日の上限 1,800枚を 50枚 超えています"))).toBe(true);
   });
 
   it("同じ入力なら同じ結果", () => {

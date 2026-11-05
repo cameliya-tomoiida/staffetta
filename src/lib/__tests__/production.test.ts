@@ -67,12 +67,37 @@ describe("製造計画", () => {
     expect(planProduction(day([["P07", 1800]])).warnings).toEqual([]);
   });
 
-  it("27cm がある日は上限 1,200枚に下がる（デモの日は 1,650枚で 450枚超え）", () => {
+  // 担当者 11/5：「27センチは1日1200枚。合計で2000枚。2000枚のうち1200枚は27センチで、800枚は他のピザ」
+  // 商品の上限（P13 ピザクラスト 27cm = 1,200）は 27cm の枚数だけと、ラインの上限は全部の枚数と比べる
+  it("27cm 1,200枚＋ほかのピザ 800枚＝2,000枚（ライン 2,000）は注意なし", () => {
+    const plan = planProduction(day([["P13", 1200], ["P07", 800]]), { lineCaps: { pizza: 2000 } });
+    const pizza = plan.lines.find((l) => l.line === "pizza")!;
+    expect(pizza.overBy).toBe(0);
+    expect(pizza.productCaps).toEqual([expect.objectContaining({ productId: "P13", pieces: 1200, cap: 1200, overBy: 0 })]);
+    expect(pizza.warnings).toEqual([]);
+  });
+
+  it("27cm が 1,201枚なら、27cm の上限を超えた注意（ラインの合計は上限の中）", () => {
+    const plan = planProduction(day([["P13", 1201], ["P07", 100]]), { lineCaps: { pizza: 2000 } });
+    const pizza = plan.lines.find((l) => l.line === "pizza")!;
+    expect(pizza.overBy).toBe(1);
+    expect(pizza.warnings.join()).toMatch(/1日の上限 1,200枚を 1枚 超えています/);
+    expect(pizza.warnings.join()).not.toMatch(/ピザラインの1日の上限/);
+  });
+
+  it("合計が 2,001枚なら、ラインの上限を超えた注意（27cm は上限の中）", () => {
+    const plan = planProduction(day([["P13", 1200], ["P07", 801]]), { lineCaps: { pizza: 2000 } });
+    const pizza = plan.lines.find((l) => l.line === "pizza")!;
+    expect(pizza.overBy).toBe(1);
+    expect(pizza.warnings.join()).toMatch(/ピザラインの1日の上限 2,000枚を 1枚 超えています/);
+    expect(pizza.productCaps![0].overBy).toBe(0);
+  });
+
+  it("デモの日（11/6）は 1,650枚。27cm だけでは 1,200枚以内なので、ライン 1,800 の中で注意なし", () => {
     const plan = planProduction(totalsForDate(demoOrders, DEMO_DATE));
     const pizza = plan.lines.find((l) => l.line === "pizza")!;
-    expect(pizza.cap).toBe(1200);
-    expect(pizza.overBy).toBe(450);
-    expect(pizza.capReason).toMatch(/27cm/);
+    expect(pizza.cap).toBe(1800);
+    expect(pizza.overBy).toBe(0);
   });
 
   it("ラインの上限は呼ぶ側で上書きできる", () => {

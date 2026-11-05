@@ -143,7 +143,9 @@ describe("アラートの判定", () => {
   });
 
   it("#10 製造の注意: 明日の上限超え", () => {
-    const a = evaluateAlerts(db({ orders: demoOrders }), masters, NOW, { isOn: only("production_warning") });
+    // 11/6 はピザ 1,650枚（ライン 1,800）。ほかのピザ 200枚を足して 1,850枚 → ラインの上限を超える
+    const extra = order("X-CAP", "C12", "2026-11-06", [["P07", 200]], { status: "confirmed" });
+    const a = evaluateAlerts(db({ orders: [...demoOrders, extra] }), masters, NOW, { isOn: only("production_warning") });
     const tomorrow = a.find((x) => x.relatedIds[0] === "2026-11-06")!;
     expect(tomorrow.level).toBe("danger");
     expect(tomorrow.message).toMatch(/超え/);

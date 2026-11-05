@@ -57,20 +57,33 @@ const mdhm = (iso: string) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 
 const jstDate = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOString().slice(0, 10);
 
 /** この注文をこの日に入れたとき、商品のラインが上限を超えるか（超える数を返す。超えなければ 0） */
-function overOnDay(order: Order, date: string, others: Order[], line: ProductionLineId): { over: number; cap?: number; pieces: number } {
+function overOnDay(order: Order, date: string, others: Order[], line: ProductionLineId): { over: number; cap?: number; capName?: string; pieces: number } {
   const moved: Order = { ...order, deliveryDate: date, status: "confirmed", intent: "new" };
   const rest = others.filter((o) => o.id !== order.id && countsInTotals(o));
   const plan = planProduction(totalsForDate([...rest, moved], date));
   const lp = plan.lines.find((l) => l.line === line);
-  return { over: lp?.overBy ?? 0, cap: lp?.cap, pieces: lp?.pieces ?? 0 };
+  // いちばん多く超えた上限を出す（ラインの上限、または商品ごとの上限。例: 27cm は 27cm の枚数だけで 1,200枚）
+  const lineOver = lp?.cap !== undefined ? Math.max(0, (lp.capPieces ?? lp.pieces) - lp.cap) : 0;
+  const worst = (lp?.productCaps ?? []).reduce<{ overBy: number; cap: number; name: string } | undefined>((w, p) => (p.overBy > 0 && p.overBy >= (w?.overBy ?? lineOver) ? p : w), undefined);
+  if (worst) return { over: worst.overBy, cap: worst.cap, capName: worst.name, pieces: lp?.pieces ?? 0 };
+  return { over: lineOver, cap: lp?.cap, pieces: lp?.pieces ?? 0 };
 }
 
-/** その日のラインの空き（上限 − すでに作る数）。上限が無ければ Infinity */
-function roomOnDay(date: string, others: Order[], line: ProductionLineId, excludeId: string): number {
+/**
+ * その日に、この商品をあと何枚（個）作れるか。上限が無ければ Infinity。
+ * ラインの空き（ラインの上限 − ラインで作る数）と、商品の空き（商品の上限 − その商品を作る数）の小さいほう。
+ */
+function roomOnDay(date: string, others: Order[], line: ProductionLineId, excludeId: string, productId?: string): number {
   const plan = planProduction(totalsForDate(others.filter((o) => o.id !== excludeId && countsInTotals(o)), date));
   const lp = plan.lines.find((l) => l.line === line);
   const cap = lp?.cap ?? findLine(line).dailyCap;
-  return cap === undefined ? Infinity : Math.max(0, cap - (lp?.capPieces ?? lp?.pieces ?? 0));
+  const lineRoom = cap === undefined ? Infinity : Math.max(0, cap - (lp?.capPieces ?? lp?.pieces ?? 0));
+  if (!productId) return lineRoom;
+  const spec = findProduct(productId)?.spec;
+  const pCap = spec?.kind === "make" ? spec.dailyCap : undefined;
+  if (pCap === undefined) return lineRoom;
+  const made = lp?.productCaps?.find((p) => p.productId === productId)?.pieces ?? 0;
+  return Math.min(lineRoom, Math.max(0, pCap - made));
 }
 
 /**
@@ -100,7 +113,7 @@ function run(order: Order, now: string, opts: AlternativeOptions): AlternativeRe
       const line = planProduction(totalsForDate([{ ...order, status: "confirmed", intent: "new", lines: order.lines.filter((l) => l.productId === productId) }], date)).doughs[0]?.line;
       if (line) {
         const o = overOnDay(order, date, others, line);
-        if (o.over > 0) probs.push({ kind: "capacity", reason: `${findLine(line).name}が ${md(date)} は上限 ${o.cap?.toLocaleString("ja-JP")}${findLine(line).unit} を ${o.over.toLocaleString("ja-JP")}${findLine(line).unit} 超えます` });
+        if (o.over > 0) probs.push({ kind: "capacity", reason: `${o.capName ?? findLine(line).name}が ${md(date)} は上限 ${o.cap?.toLocaleString("ja-JP")}${findLine(line).unit} を ${o.over.toLocaleString("ja-JP")}${findLine(line).unit} 超えます` });
       }
     }
     return probs;
@@ -135,7 +148,7 @@ function run(order: Order, now: string, opts: AlternativeOptions): AlternativeRe
           for (let k = 1; k <= back; k++) {
             const pd = addDays(order.deliveryDate, -k);
             if (pd <= today) break; // 今日より前・今日は作れない
-            const room = roomOnDay(pd, others, doughLine, order.id);
+            const room = roomOnDay(pd, others, doughLine, order.id, l.productId);
             // 冷凍庫が登録されていれば、その日に作る分＋作りだめの分が冷凍庫に入るかも見る
             const fz = planProduction(totalsForDate(others.filter((o) => o.id !== order.id && countsInTotals(o)), pd)).lines.find((x) => x.line === doughLine)?.freezerCases
               ?? planProduction(totalsForDate([{ ...order, deliveryDate: pd, status: "confirmed", intent: "new", lines: [l] }], pd)).lines.find((x) => x.line === doughLine)?.freezerCases;
