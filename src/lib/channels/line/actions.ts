@@ -63,6 +63,21 @@ export async function notifyLineConfirmedAction(orderId: string, who: string) {
   return r;
 }
 
+/** 設定画面: LINE の自動確定・確定の連絡の自動送信のスイッチ */
+export async function setLineAutoAction(next: { autoConfirm?: boolean; autoNotify?: boolean }, who: string) {
+  const { setLineAutoSettings } = await import("./auto");
+  const v = setLineAutoSettings(next, who);
+  revalidatePath("/", "layout");
+  return v;
+}
+
+/** LINE受付: 自動で確定した注文を、要確認に戻す */
+export async function undoAutoConfirmAction(orderId: string, who: string) {
+  const { undoAutoConfirm } = await import("./auto");
+  await undoAutoConfirm(orderId, who);
+  revalidatePath("/", "layout");
+}
+
 /** 管理画面: ひも付けを外す（人違いだったとき） */
 export async function unlinkLineUserAction(userId: string, who: string) {
   await unlinkUser(userId, who);
