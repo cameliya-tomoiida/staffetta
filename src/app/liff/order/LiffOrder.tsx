@@ -187,7 +187,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           <p className="text-[22px] font-bold" style={serif}>
             うまく ひらけませんでした
           </p>
-          <p className="text-[15px] leading-relaxed text-ink-faint">{error}</p>
+          <p className="text-[16px] leading-relaxed text-ink-faint">{error}</p>
           <p className="text-[17px]">お手数ですが、お電話でご注文ください。</p>
           <button className="h-14 w-full rounded-2xl bg-crust-600 text-[18px] font-bold text-white" onClick={() => location.reload()}>
             もういちど ひらく
@@ -199,7 +199,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
         <div className="pb-[calc(112px+env(safe-area-inset-bottom))]">
           {/* あいさつ */}
           <div className="px-5 pt-6 pb-1">
-            <p className="flex items-center gap-2 text-[12px] font-bold tracking-[.25em] text-crust-500">
+            <p className="flex items-center gap-2 text-[16px] font-bold tracking-[.15em] text-crust-500">
               {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
               <img src="/brand/staffetta-mark.svg" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
               ORDER
@@ -214,14 +214,14 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 "パンのご注文"
               )}
             </h1>
-            <p className="mt-1 text-[14px] text-ink-faint">
+            <p className="mt-1 text-[16px] text-ink-faint">
               {pastCutoff ? `本日の締め切り（${ctx.cutoff}）をすぎました。あさって以降をお選びください。` : `ご注文の締め切りは、前日の ${ctx.cutoff} です。`}
             </p>
           </div>
 
           {/* お届け日 */}
           <section className="pt-4">
-            <h2 className="px-5 text-[15px] font-bold text-ink-faint">お届け日</h2>
+            <h2 className="px-5 text-[16px] font-bold text-ink-faint">お届け日</h2>
             <div className="mt-2 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pt-1 pb-3 [scrollbar-width:none]">
               {days.map((d, i) => {
                 const closed = dayClosed(d.ymd, i);
@@ -241,11 +241,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                           : "bg-white text-ink ring-1 ring-rule"
                     }`}
                   >
-                    <span className={`text-[12px] font-bold ${on ? "text-white/80" : late ? "" : d.dow === 6 ? "text-info-ink" : "text-ink-faint"}`}>
+                    <span className={`text-[16px] font-bold ${on ? "text-white/80" : late ? "" : d.dow === 6 ? "text-info-ink" : "text-ink-faint"}`}>
                       {i === 0 ? "あした" : i === 1 ? "あさって" : `${d.m}月`}
                     </span>
                     <span className="text-[26px] font-bold leading-none tabular-nums">{d.d}</span>
-                    <span className="text-[13px]">{late ? closed : d.wd}</span>
+                    <span className="text-[16px]">{late ? closed : d.wd}</span>
                   </button>
                 );
               })}
@@ -260,11 +260,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   <h2 className="text-[18px] font-bold" style={serif}>
                     前回と同じ内容で
                   </h2>
-                  <span className="text-[12px] text-ink-faint">前回 {fmtYmd(ctx.lastOrder.deliveryDate)}</span>
+                  <span className="text-[16px] text-ink-faint">前回 {fmtYmd(ctx.lastOrder.deliveryDate)}</span>
                 </div>
                 <ul className="flex flex-wrap gap-1.5 px-5 pt-3">
                   {ctx.lastOrder.items.map((i) => (
-                    <li key={i.productId} className="rounded-full bg-cream px-3 py-1 text-[14px]">
+                    <li key={i.productId} className="rounded-full bg-cream px-3 py-1 text-[16px]">
                       {byId[i.productId]?.name} <b className="tabular-nums">{i.quantity}</b>
                       {byId[i.productId]?.unit}
                     </li>
@@ -291,7 +291,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           {/* 商品 */}
           {groups.map((g) => (
             <section key={g.title} className="px-5 pt-6">
-              <h2 className="pb-2 text-[15px] font-bold text-ink-faint">{g.title}</h2>
+              <h2 className="pb-2 text-[16px] font-bold text-ink-faint">{g.title}</h2>
               <ul className="overflow-hidden rounded-3xl bg-white ring-1 ring-rule">
                 {g.ids.map((id) => {
                   const p = byId[id];
@@ -305,7 +305,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-[18px] font-bold leading-snug">{p.name}</div>
-                          <div className="text-[13px]">この日のお届けは締め切りました</div>
+                          <div className="text-[16px]">この日のお届けは締め切りました</div>
                         </div>
                       </li>
                     );
@@ -318,10 +318,10 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                       <div className="min-w-0 flex-1">
                         <div className="text-[18px] font-bold leading-snug">{p.name}</div>
                         {q === 0 ? (
-                          <div className="text-[13px] text-ink-faint">{p.unit}で注文</div>
+                          <div className="text-[16px] text-ink-faint">{p.unit}で注文</div>
                         ) : (
                           <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className="text-[13px] text-ink-faint">{p.unit}</span>
+                            <span className="text-[16px] text-ink-faint">{p.unit}</span>
                             <div className="flex items-center rounded-full bg-crust-600 text-white">
                               <button aria-label={`${p.name}を1へらす`} onClick={() => set(id, q - 1)} className="grid h-12 w-12 place-items-center active:scale-90">
                                 <Minus />
@@ -355,8 +355,8 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
               </ul>
             </section>
           ))}
-          <p className="px-6 pt-4 text-center text-[13px] text-ink-faint">数字を押すと、まとめて数を入れられます。</p>
-          <button onClick={() => setView("history")} className="mx-auto mt-2 block px-4 py-3 text-[15px] font-bold text-crust-600 underline underline-offset-4">
+          <p className="px-6 pt-4 text-center text-[16px] text-ink-faint">数字を押すと、まとめて数を入れられます。</p>
+          <button onClick={() => setView("history")} className="mx-auto mt-2 block px-4 py-3 text-[16px] font-bold text-crust-600 underline underline-offset-4">
             ご注文の履歴を見る
           </button>
 
@@ -369,7 +369,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 className="flex h-[60px] w-full items-center justify-between rounded-2xl bg-crust-600 px-5 text-white transition active:scale-[.98] disabled:bg-off-bg disabled:text-off-ink"
               >
                 <span className="text-left leading-tight">
-                  <span className="block text-[13px] opacity-80">{date ? `${fmtYmd(date)} お届け` : "お届け日をえらぶ"}</span>
+                  <span className="block text-[16px] opacity-80">{date ? `${fmtYmd(date)} お届け` : "お届け日をえらぶ"}</span>
                   <span key={bump} className="block text-[17px] font-bold" style={{ animation: "liffPop .25s ease-out" }}>
                     {items.length ? `${items.length}品 えらびました` : "数をえらんでください"}
                   </span>
@@ -399,7 +399,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
               ご注文の確認
             </h2>
             <div className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-rule">
-              <div className="text-[13px] font-bold text-ink-faint">お届け日</div>
+              <div className="text-[16px] font-bold text-ink-faint">お届け日</div>
               <div className="text-[26px] font-bold" style={serif}>
                 {fmtYmd(date)}
               </div>
@@ -410,27 +410,27 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                     <span className="flex-1 text-[18px]">{byId[id]?.name}</span>
                     <span className="text-[24px] font-bold tabular-nums">
                       {q}
-                      <span className="ml-0.5 text-[14px] font-normal">{byId[id]?.unit}</span>
+                      <span className="ml-0.5 text-[16px] font-normal">{byId[id]?.unit}</span>
                     </span>
                   </li>
                 ))}
               </ul>
               {dropped.length > 0 && (
-                <p className="mt-3 rounded-xl bg-off-bg px-3 py-2 text-[14px] text-off-ink">
+                <p className="mt-3 rounded-xl bg-off-bg px-3 py-2 text-[16px] text-off-ink">
                   {dropped.join("・")}は、この日のお届けの締め切りを過ぎたので外しました。
                 </p>
               )}
             </div>
             {repeat && (
               <div className="mt-4">
-                <div className="mb-2 text-[13px] font-bold text-ink-faint">お届け日を変えるとき</div>
+                <div className="mb-2 text-[16px] font-bold text-ink-faint">お届け日を変えるとき</div>
                 <div className="flex gap-2">
                   {days.slice(0, 4).map((d, i) => (
                     <button
                       key={d.ymd}
                       disabled={Boolean(dayClosed(d.ymd, i))}
                       onClick={() => setDate(d.ymd)}
-                      className={`h-12 flex-1 rounded-xl text-[15px] font-bold disabled:bg-off-bg disabled:text-off-ink ${
+                      className={`h-12 flex-1 rounded-xl text-[16px] font-bold disabled:bg-off-bg disabled:text-off-ink ${
                         date === d.ymd ? "bg-crust-600 text-white" : "bg-white ring-1 ring-rule"
                       }`}
                     >
@@ -496,7 +496,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
       {view === "history" && ctx && (
         <div className="px-5 pt-6 pb-10">
-          <p className="flex items-center gap-2 text-[12px] font-bold tracking-[.25em] text-crust-500">
+          <p className="flex items-center gap-2 text-[16px] font-bold tracking-[.15em] text-crust-500">
             {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
             <img src="/brand/staffetta-mark.svg" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
             HISTORY
@@ -513,15 +513,15 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                     {fmtYmd(h.deliveryDate)} お届け
                   </span>
                   <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-[13px] font-bold ${
+                    className={`shrink-0 rounded-full px-3 py-1 text-[16px] font-bold ${
                       h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
                     }`}
                   >
                     {h.state === "confirmed" ? "確定" : h.state === "cancelled" ? "取消" : "確認中"}
                   </span>
                 </div>
-                {h.intent !== "new" && <div className="mt-1 text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : "変更のご連絡"}</div>}
-                <div className="mt-2 text-[15px] leading-relaxed">{h.items.map((i) => `${i.name} ${i.quantity}${i.unit}`).join("、") || "（内容を確認中）"}</div>
+                {h.intent !== "new" && <div className="mt-1 text-[16px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : "変更のご連絡"}</div>}
+                <div className="mt-2 text-[16px] leading-relaxed">{h.items.map((i) => `${i.name} ${i.quantity}${i.unit}`).join("、") || "（内容を確認中）"}</div>
               </li>
             ))}
           </ul>
@@ -547,11 +547,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             このLINEでお知らせします。
           </p>
           <div className="mt-6 rounded-3xl bg-white p-5 text-left ring-1 ring-rule">
-            <div className="text-[13px] font-bold text-ink-faint">お届け日</div>
+            <div className="text-[16px] font-bold text-ink-faint">お届け日</div>
             <div className="text-[22px] font-bold" style={serif}>
               {fmtYmd(date)}
             </div>
-            <div className="mt-2 text-[15px] leading-relaxed">{items.map(([id, q]) => `${byId[id]?.name} ${q}${byId[id]?.unit}`).join("、")}</div>
+            <div className="mt-2 text-[16px] leading-relaxed">{items.map(([id, q]) => `${byId[id]?.name} ${q}${byId[id]?.unit}`).join("、")}</div>
           </div>
           <button onClick={close} className="mt-6 h-14 w-full rounded-2xl bg-crust-600 text-[18px] font-bold text-white">
             トークにもどる
