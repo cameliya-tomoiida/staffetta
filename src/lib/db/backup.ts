@@ -1,6 +1,7 @@
 // バックアップ: 全データを JSON 1ファイルに書き出す／取り込む。
 // SQLite の全テーブル（受信FAX・注文・発注書・マスタ・LINEのひも付け…ほかの担当の表も）をそのまま入れる。
-// 受信したFAXのPDF（data/fax-inbox/）も base64 で入れられる（files）。
+// 受信したFAXのPDF（data/fax-inbox/）も base64 で入れられる（files）。既定は入れない（1年で約150MBたまるため）。
+// 入れるときは月ごとに分けられる（month: "2026-11" … その月に受信した FAX の PDF だけ）。
 //
 // 取り込みは「入れ替え」: 書き出しに入っている表は、中身を全部消してから入れ直す（入っていない表はさわらない）。
 import { promises as fs } from "node:fs";
@@ -20,7 +21,19 @@ export interface Backup {
 const SKIP = new Set(["sqlite_sequence"]);
 const safeName = (n: string) => /^[A-Za-z0-9_]+$/.test(n);
 
-export async function exportAll(opts: { includeFiles?: boolean } = {}): Promise<Backup> {
+/** 受信日（日本時間）が month（YYYY-MM）の FAX の、PDF のファイル名 */
+export function pdfNamesOfMonth(month: string): Set<string> {
+  const rows = getDb().prepare("SELECT id, received_at FROM faxes").all() as { id: string; received_at: string }[];
+  const jstMonth = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOString().slice(0, 7);
+  return new Set(rows.filter((r) => jstMonth(r.received_at) === month).map((r) => `${r.id}.pdf`));
+}
+
+/**
+ * 全データを書き出す。PDF は既定で入れない（includeFiles: true で入れる）。
+ * month を付けると、その月に受信した FAX の PDF だけを入れる（表は全部入る）。
+ */
+export async function exportAll(opts: { includeFiles?: boolean; month?: string } = {}): Promise<Backup> {
+  if (opts.month !== undefined && !/^\d{4}-\d{2}$/.test(opts.month)) throw new Error("month は 2026-11 のように書いてください");
   const db = getDb();
   const tables: Backup["tables"] = {};
   for (const t of tableNames()) {
@@ -28,10 +41,11 @@ export async function exportAll(opts: { includeFiles?: boolean } = {}): Promise<
     tables[t] = db.prepare(`SELECT * FROM ${t}`).all() as Record<string, unknown>[];
   }
   const backup: Backup = { app: "juhacchu-hub", version: 1, exportedAt: new Date().toISOString(), tables };
-  if (opts.includeFiles ?? true) {
+  if (opts.includeFiles ?? false) {
     backup.files = {};
     const names = await fs.readdir(FAX_INBOX_DIR).catch(() => [] as string[]);
-    for (const n of names.filter((n) => /^[A-Za-z0-9_-]+\.pdf$/.test(n))) {
+    const inMonth = opts.month ? pdfNamesOfMonth(opts.month) : null;
+    for (const n of names.filter((n) => /^[A-Za-z0-9_-]+\.pdf$/.test(n) && (!inMonth || inMonth.has(n)))) {
       backup.files[n] = (await fs.readFile(path.join(FAX_INBOX_DIR, n))).toString("base64");
     }
   }

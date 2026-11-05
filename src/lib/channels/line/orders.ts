@@ -60,6 +60,7 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
     status: o.status === "confirmed" ? "確定済み" : "確認中",
     receivedAt: new Date(o.source.receivedAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
     summary: o.lines.map((l) => `${productById(l.productId)?.name ?? l.read?.writtenName ?? "?"} ${l.quantity}${l.unit}`).join("、") || "（品目なし）",
+    ...(typeof o.source.extra?.lineAltOffer === "string" ? { altOffer: o.source.extra.lineAltOffer } : {}),
   }));
 
   let orders: Order[];
@@ -135,6 +136,51 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
 export function lineLeadTimes(order: Order): Record<string, LeadTimeCheck> {
   return Object.fromEntries(checkLeadTime(order, nowIso()).map((c) => [c.lineId, c]));
 }
+
+/** 代わりの日の提案（確定の連絡に入れる）。③の「代わりの日の提案」が来たら、ここをそれに差し替える */
+export interface AltOffer {
+  lineId: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  /** お届けできるいちばん早い日（YYYY-MM-DD）。見つからなければ "" */
+  date: string;
+}
+
+const addDays = (ymd: string, n: number) => new Date(Date.parse(`${ymd}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
+
+/**
+ * 受けられない行と、その商品をお届けできるいちばん早い日。
+ * 受けられない行 = 受け付けた時刻で締めを過ぎていた行・納品しない曜日の行・人が数を 0 にした行（読み取りでは数があった）。
+ * 代わりの日は「いまから」見て間に合う日を、納品日の次の日から2週間さがす。
+ */
+export function alternativeOffers(order: Order, span = 14): AltOffer[] {
+  if (order.intent === "cancel") return [];
+  const atReceipt = Object.fromEntries(checkLeadTime(order, order.source.receivedAt).map((c) => [c.lineId, c]));
+  const out: AltOffer[] = [];
+  for (const l of order.lines) {
+    if (!l.productId) continue;
+    const dropped = l.quantity === 0 && (l.read?.quantity ?? 0) > 0;
+    const late = l.quantity > 0 && atReceipt[l.id]?.status === "late";
+    if (!dropped && !late) continue;
+    const quantity = dropped ? (l.read?.quantity ?? 0) : l.quantity;
+    let date = "";
+    for (let n = 1; n <= span && !date; n++) {
+      const ymd = addDays(order.deliveryDate, n);
+      if (ymd <= todayJst()) continue;
+      if (order.customerId && deliveryDayProblem(order.customerId, ymd)) continue;
+      const probe = { ...order, status: "needs_review", deliveryDate: ymd, lines: [{ ...l, quantity }] } as Order;
+      if (checkLeadTime(probe, nowIso())[0]?.status === "ok") date = ymd;
+    }
+    out.push({ lineId: l.id, productId: l.productId, name: productById(l.productId)?.name ?? l.read?.writtenName ?? "商品", quantity, unit: l.unit, date });
+  }
+  return out;
+}
+
+/** 提案を1行の文字にする（注文に残して、お客さんの返事を読むときの手がかりにする） */
+export const offerBrief = (offers: AltOffer[]) =>
+  offers.filter((o) => o.date).map((o) => `${o.name} ${o.quantity}${o.unit} → ${o.date}`).join("、");
 
 export interface LiffDay {
   ymd: string;
@@ -359,14 +405,31 @@ const fmtDate = (ymd: string) =>
   new Date(`${ymd}T00:00:00+09:00`).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo", month: "long", day: "numeric", weekday: "short" });
 
 /** 確定の連絡の文面（送る前に画面で見せる用にも使える） */
-export function confirmationText(order: Order) {
-  const lines = order.lines.filter((l) => l.quantity > 0).map((l) => `・${productById(l.productId)?.name ?? l.read?.writtenName ?? "商品"}　${l.quantity}${l.unit}`);
+export function confirmationText(order: Order, offers: AltOffer[] = alternativeOffers(order)) {
+  const late = new Set(offers.map((o) => o.lineId));
+  const lines = order.lines
+    .filter((l) => l.quantity > 0 && !late.has(l.id))
+    .map((l) => `・${productById(l.productId)?.name ?? l.read?.writtenName ?? "商品"}　${l.quantity}${l.unit}`);
   const head = order.intent === "cancel" ? "ご注文の取消を承りました。" : order.intent === "change" ? "ご注文の変更を確定しました。" : "ご注文を確定しました。";
+  // 受けられない行: 代わりの日があれば「○○は△日なら お届けできます」。決めるのはお客さん（返信は変更の注文として人が確かめる）
+  const offerLines = offers.length
+    ? [
+        "",
+        `【${fmtDate(order.deliveryDate)}には お届けできない商品】`,
+        ...offers.map((o) =>
+          o.date
+            ? `・${o.name} ${o.quantity}${o.unit}は ${fmtDate(o.date)}なら お届けできます。`
+            : `・${o.name} ${o.quantity}${o.unit}は、近い日の お届けが むずかしいです。お電話で ご相談ください。`,
+        ),
+        ...(offers.some((o) => o.date) ? ["ご希望なら、このまま返信してください。"] : []),
+      ]
+    : [];
   return [
     head,
     "",
     `納品日：${fmtDate(order.deliveryDate)}`,
-    ...lines,
+    ...(lines.length || order.intent === "cancel" ? lines : ["（この日に お届けする商品は ありません）"]),
+    ...offerLines,
     "",
     "いつもありがとうございます。",
     "変更があるときは、このトークでお知らせください。",
@@ -386,12 +449,21 @@ export async function notifyOrderConfirmed(orderId: string, who: string) {
   if (order.source.extra?.lineNotifiedAt) return { already: true as const };
   const ref = order.source.refs.find((r) => r.kind === "line_message");
   if (!ref || ref.kind !== "line_message") throw new Error("送り先のLINEが分かりません");
-  const sent = await pushText(ref.userId, confirmationText(order), order.id);
+  const offers = alternativeOffers(order);
+  const sent = await pushText(ref.userId, confirmationText(order, offers), order.id);
   if (!sent.ok) throw new Error(`LINEの送信に失敗しました: ${sent.error}`);
   await updateDb((d) => {
     const o = d.orders.find((o) => o.id === orderId);
     if (!o) return;
-    o.source.extra = { ...o.source.extra, lineNotifiedAt: sent.at, lineNotifiedBy: who, lineNotifyMode: sent.mode };
+    const offered = offerBrief(offers);
+    o.source.extra = {
+      ...o.source.extra,
+      lineNotifiedAt: sent.at,
+      lineNotifiedBy: who,
+      lineNotifyMode: sent.mode,
+      // 代わりの日の提案（お客さんの返事を読むときの手がかり）
+      ...(offered ? { lineAltOffer: offered } : {}),
+    };
   });
   return { already: false as const, mode: sent.mode };
 }
