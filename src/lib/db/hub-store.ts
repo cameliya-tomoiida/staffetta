@@ -207,7 +207,27 @@ export async function replaceAll(db: Db, who: string) {
 export async function resetToDemo() {
   await replaceAll(demoDb(emptyDb()), "デモを最初から");
   await seedAllMasters();
+  await resetStockToDemo();
   kvSet("store_initialized", { at: new Date().toISOString(), from: "demo" });
+}
+
+/**
+ * 在庫もデモの最初に戻す（撮り直しで在庫がずれていかないように）。
+ * ⑤の入荷・製造・棚卸の記録を消し、材料・包材マスタの stock をサンプルの値に戻す（サンプルに無い行・stock 以外の列はそのまま）。
+ */
+export async function resetStockToDemo() {
+  // 在庫の口（⑤）は発注書や計算を読むので、読み込みの輪にならないよう使うときに読む
+  const { resetStockRecords } = await import("../stock/store");
+  const { sampleMasters } = await import("../masters/seed");
+  resetStockRecords();
+  const sample = sampleMasters();
+  for (const name of ["materials", "packaging"] as const) {
+    const initial = new Map((sample[name] as { id: string; stock: number }[]).map((r) => [r.id, r.stock]));
+    const rows = (await listMaster<{ id: string; stock?: number }>(name))
+      .filter((r) => initial.has(r.id) && r.stock !== initial.get(r.id))
+      .map((r) => ({ ...r, stock: initial.get(r.id)! }));
+    if (rows.length) await upsertMasters(name, rows, "デモを最初から（在庫を初期値に）");
+  }
 }
 
 /** マスタの初期値（③の商品・生地・材料など、④の取引先）。どれも「空のときだけ」入れる＝人が直したマスタは消さない */
