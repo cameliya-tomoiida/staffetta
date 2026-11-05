@@ -1,6 +1,6 @@
 import "server-only";
 import type { Order } from "@/data/types";
-import { readDb } from "@/lib/store";
+import { readRecentDb } from "@/lib/store";
 import { addDays, todayJst } from "@/components/ui";
 import { DEMO_DATE } from "@/data/demo-orders";
 import { demoOrders } from "./orders";
@@ -8,7 +8,7 @@ import { demoOrders } from "./orders";
 /** 画面に出す全部の注文 = 保存してある注文（FAXなど）＋見本の注文 */
 // TODO(④⑤): 各入口の取り込みが store に入るようになったら readDb().orders だけにする
 export async function allOrders(): Promise<{ orders: Order[]; today: string }> {
-  const db = await readDb();
+  const db = await readRecentDb(); // 画面用: 最近の分＋要確認・仮発注（古い注文は検索で見る）
   const today = todayJst();
   const saved = db.orders;
   const ids = new Set(saved.map((o) => o.id));

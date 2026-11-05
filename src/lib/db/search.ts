@@ -13,7 +13,7 @@ import type { Order, OrderChannel, OrderStatus, PurchaseOrder } from "@/data/typ
 import type { FaxDoc, FaxStatus } from "../types";
 import { todayJst } from "../clock";
 import { getDb } from "./sqlite";
-import { loadDb } from "./hub-store";
+import { ensureStore } from "./hub-store";
 
 export type Period = "today" | "week" | "month" | "recent" | "all" | "custom";
 
@@ -83,7 +83,7 @@ export interface OrderSearch extends SearchBase {
 }
 
 export async function searchOrders(s: OrderSearch = {}): Promise<SearchResult<Order>> {
-  await loadDb(); // 初回の移行・表の作成をすませる
+  await ensureStore(); // 初回の移行・表の作成だけ（全部は読まない）
   const range = periodRange(s.period, s.from, s.to);
   const where: string[] = ["1=1"];
   const args: (string | number)[] = [];
@@ -110,7 +110,7 @@ export interface FaxSearch extends SearchBase {
 }
 
 export async function searchFaxes(s: FaxSearch = {}): Promise<SearchResult<FaxDoc>> {
-  await loadDb();
+  await ensureStore();
   const range = periodRange(s.period, s.from, s.to);
   const where: string[] = ["1=1"];
   const args: (string | number)[] = [];
@@ -130,7 +130,7 @@ export interface PurchaseSearch extends SearchBase {
 }
 
 export async function searchPurchaseOrders(s: PurchaseSearch = {}): Promise<SearchResult<PurchaseOrder>> {
-  await loadDb();
+  await ensureStore();
   const range = periodRange(s.period, s.from, s.to);
   const where: string[] = ["1=1"];
   const args: (string | number)[] = [];
