@@ -1,6 +1,7 @@
 "use client";
 // AI とのチャットで衛生チェックシートを作る（⑦の(24)）。左＝会話（文章・声）、右＝いまの下書きの印刷の見本。
 // 「登録する」で衛生管理のシートとして保存する（同じ ID なら置きかえ）。
+import { MIcon } from "@/components/ui/MobileNav";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { buttonClass } from "@/components/ui";
@@ -124,7 +125,7 @@ export function SheetChat({ initial }: { initial?: SheetDef }) {
             </button>
             {hasSpeech && (
               <button type="button" className={buttonClass(listening ? "primary" : "ghost", "lg")} onClick={listen} aria-pressed={listening}>
-                {listening ? "● 聞いています（押すと止める）" : "🎤 声で話す"}
+                {listening ? "● 聞いています（押すと止める）" : <span className="inline-flex items-center gap-1"><MIcon name="mic" className="h-5 w-5" />声で話す</span>}
               </button>
             )}
           </div>

@@ -1,5 +1,6 @@
 "use client";
 // コースの見直しの AI（⑦の(29)）: 条件の一覧（メモを AI に読ませる・on/off・消す）と、AI と話して計算し直すチャット。
+import { MIcon } from "@/components/ui/MobileNav";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { buttonClass } from "@/components/ui";
 import { ruleText, type RouteRule } from "@/lib/routes/ai-rules";
@@ -137,7 +138,7 @@ export function RouteChat({ turns, pending, onSend }: { turns: Turn[]; pending: 
         </button>
         {hasSpeech && (
           <button type="button" className={buttonClass(listening ? "primary" : "ghost", "md")} onClick={listen} aria-pressed={listening}>
-            {listening ? "● 聞いています" : "🎤 声で話す"}
+            {listening ? "● 聞いています" : <span className="inline-flex items-center gap-1"><MIcon name="mic" className="h-5 w-5" />声で話す</span>}
           </button>
         )}
       </div>

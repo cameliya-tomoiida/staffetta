@@ -34,6 +34,8 @@ export function OrdersClient({
 }: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]>; alt?: Record<string, string[]> }) {
   const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const [who, setWho] = useState(STAFF[0]);
+  // スマホ: はじめは8件まで（⑧）
+  const [mAll, setMAll] = useState(false);
   const stored = useMemo(() => new Set(storedIds), [storedIds]);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
   // 納品日の期間: すべて／今日／明日／今週／今月／指定（から〜まで）
@@ -185,11 +187,18 @@ export function OrdersClient({
       {list.length === 0 ? (
         <Empty>この条件の注文はありません。</Empty>
       ) : (
-        <ul className="space-y-2.5">
+        <>
+        <ul className={`m-limit space-y-2.5 ${mAll ? "m-all" : ""}`}>
           {list.map((o) => (
             <OrderRow key={o.id} o={o} custName={custName(o.customerId)} dayName={dayName(o.deliveryDate)} all={orders} onJump={jump} who={who} canConfirm={stored.has(o.id)} linePreview={linePreviews[o.id]} lead={lead[o.id] ?? []} alt={alt[o.id]} />
           ))}
         </ul>
+          {list.length > 8 && (
+            <button type="button" className="mt-2 flex min-h-12 w-full items-center justify-center rounded-xl border-2 border-rule-strong bg-sheet text-[17px] font-bold md:hidden" aria-expanded={mAll} onClick={() => setMAll((x) => !x)}>
+              {mAll ? "8件だけにする" : `すべて見る（${list.length}件）`}
+            </button>
+          )}
+        </>
       )}
     </div>
   );

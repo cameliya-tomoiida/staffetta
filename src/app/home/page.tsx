@@ -56,7 +56,7 @@ function Stat({ label, value, unit, href, tone = "plain", sub }: { label: string
   const body = (
     <>
       <div className="text-[18px] font-bold">{label}</div>
-      <div className="leading-none"><b className="text-[40px] font-extrabold tabular-nums">{value}</b>{unit && <span className="ml-1 text-[18px]">{unit}</span>}</div>
+      <div className="leading-none"><b className="text-[30px] font-extrabold tabular-nums [overflow-wrap:anywhere] sm:text-[40px]">{value}</b>{unit && <span className="ml-1 text-[18px]">{unit}</span>}</div>
       {sub && <div className="mt-1 text-[16px] text-ink-soft">{sub}</div>}
     </>
   );
@@ -119,14 +119,14 @@ function Admin({ d }: { d: HomeData }) {
   const s = d.summary;
   return (
     <Section title="全体のようす">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <Stat label={`${md(d.date)} 納品の受注`} value={num(d.orders.count)} unit="件" sub={`売上 ${yen(d.money.sales)}`} href={`/orders`} />
         <Stat label="粗利のめやす" value={num(Math.round(d.money.grossRate * 1000) / 10)} unit="%" sub={`粗利 ${yen(d.money.gross)}`} tone={d.money.grossRate < 0.25 ? "warn" : "plain"} />
         <Stat label="要確認の注文" value={s.ordersToReview} unit="件" tone={s.ordersToReview ? "warn" : "ok"} href="/orders?status=needs_review" />
         <Stat label="発注書の承認待ち" value={s.purchaseDraft} unit="枚" tone={s.overdue ? "urgent" : s.purchaseDraft ? "warn" : "ok"} sub={s.overdue ? `締めを過ぎた ${s.overdue} 枚` : undefined} href={`/purchase?date=${s.purchaseDate}`} />
       </div>
       <h3 className="mt-4 mb-2 text-[20px] font-bold">製造の上限の余裕（{md(d.date)}）</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {d.lines.map((l) => (
           <Stat key={l.name} label={l.name} value={l.room != null ? num(l.room) : "—"} unit={l.room != null ? `${l.unit} 余裕` : ""}
             sub={`作る数 ${num(l.pieces)}${l.unit}${l.cap != null ? `／上限 ${num(l.cap)}${l.unit}` : ""}`} tone={l.room != null && l.room < 0 ? "urgent" : "plain"} href={`/plan?date=${d.date}`} />
@@ -142,7 +142,7 @@ function Office({ d, compact = false }: { d: HomeData; compact?: boolean }) {
   const s = d.summary;
   const ch = (k: string) => d.orders.byChannel[k] ?? 0;
   const body = (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
       <Stat label="FAX の確認待ち" value={s.faxToReview + s.faxUnread} unit="枚" tone={s.faxToReview + s.faxUnread ? "warn" : "ok"} sub={s.faxUnread ? `未読 ${s.faxUnread} 枚` : undefined} href="/" />
       <Stat label="LINE・電話の確認待ち" value={ch("line") + ch("phone") + ch("driver")} unit="件" tone={ch("line") + ch("phone") + ch("driver") ? "warn" : "ok"} sub={`LINE ${ch("line")}・電話 ${ch("phone")}・ドライバー ${ch("driver")}`} href="/orders?status=needs_review" />
       <Stat label="返事の送信待ち" value={d.replies} unit="件" tone={d.replies ? "warn" : "ok"} href="/orders" />
@@ -155,7 +155,7 @@ function Office({ d, compact = false }: { d: HomeData; compact?: boolean }) {
 function Factory({ d, compact = false }: { d: HomeData; compact?: boolean }) {
   const body = (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {d.lines.map((l) => <Stat key={l.name} label={`${l.name}で作る数`} value={num(l.pieces)} unit={l.unit} href={`/plan?date=${d.date}`} />)}
         <Stat label="材料の不足" value={d.summary.lowStock} unit="件" tone={d.summary.lowStock ? "urgent" : "ok"} href={d.summary.lowStockHref} />
       </div>

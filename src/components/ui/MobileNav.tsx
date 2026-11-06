@@ -51,6 +51,7 @@ const ICONS = {
   fax: <><path d="M7 9V3.5h8l2 2V9" /><rect x="3.5" y="9" width="17" height="9" rx="1.5" /><path d="M7 18v2.5h10V18M7 13h4" /></>,
   truck: <><path d="M3 6.5h11v9H3zM14 9.5h4l3 3.5v2.5h-7" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /></>,
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  mic: <><rect x="9" y="3.5" width="6" height="11" rx="3" /><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5" /></>,
   back: <path d="m14.5 5-7 7 7 7" />,
   search: <><circle cx="11" cy="11" r="6" /><path d="m20 20-4.5-4.5" /></>,
   close: <path d="m6 6 12 12M18 6 6 18" />,

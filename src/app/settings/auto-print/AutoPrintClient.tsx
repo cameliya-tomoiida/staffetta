@@ -223,7 +223,7 @@ export function AutoPrintClient({
         <ul className="mt-2 space-y-2">
           {log.map((l, i) => (
             <li key={i} className={`text-lg ${l.ok ? "" : "font-bold text-alert-ink"}`}>
-              {fmt(l.at)}　{l.ok ? "✓" : "✕"} {l.label}：{l.message}（{l.who}）
+              {fmt(l.at)}　{l.ok ? "✓" : "×"} {l.label}：{l.message}（{l.who}）
             </li>
           ))}
         </ul>
