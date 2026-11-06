@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";
 import { TodayBar } from "@/components/ui/TodayBar";
+import { FirstGuide } from "@/components/ui/FirstGuide";
 import type { Role } from "@/lib/auth/roles";
 import { accountsExist } from "@/lib/staff";
 import { homeData, type HomeData } from "@/lib/home";
@@ -39,7 +40,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
       {/* ⑧ スマホ: 上の帯に「ホーム」が出ているので、大きな見出しは出さない。役割の小さな切りかえ → 1行 → 今日やること */}
       <div className="space-y-3 md:hidden">
         {!loginOn && (
-          <nav aria-label="見る人" className="grid grid-cols-3 gap-1 rounded-full border border-rule bg-paper p-1">
+          <nav aria-label="見る人" data-guide="role" className="grid grid-cols-3 gap-1 rounded-full border border-rule bg-paper p-1">
             {(["管理者", "事務", "工場"] as Role[]).map((r) => (
               <Link key={r} href={`/home?as=${encodeURIComponent(r)}`} aria-current={r === role ? "page" : undefined}
                 className={`flex min-h-9 items-center justify-center rounded-full text-[14px] font-bold transition-colors duration-150 ${r === role ? "bg-sheet text-ink shadow-[0_1px_3px_rgb(0_0_0/0.15)]" : "text-ink-soft"}`}>
@@ -48,8 +49,13 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
             ))}
           </nav>
         )}
-        <p className="px-1 text-[13px] text-ink-soft">{user ? `${user.name} さん・` : ""}{md(d.date)} 納品の準備</p>
         <TodayBar role={role} variant="cards" />
+        <FirstGuide id="home" steps={[
+          ...(!loginOn ? [{ target: '[data-guide="role"]', text: "見る人を切りかえます" }] : []),
+          { target: '[data-guide="cards"]', text: "押すと、その仕事の画面へ" },
+          { target: '[data-guide="menu"]', text: "≡ で、全部の画面" },
+          { target: '[data-guide="tabs"]', text: "よく使う画面は下から" },
+        ]} />
       </div>
       <div className="flex flex-wrap items-end gap-3 max-md:hidden">
         <div>

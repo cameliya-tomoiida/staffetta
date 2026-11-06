@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { canOpen, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";
 import { ThemeToggle } from "./ThemeToggle";
+import { resetGuides } from "./FirstGuide";
+import { FontToggle } from "./FontToggle";
 
 type MenuItem = { href: string; label: string; match?: (p: string) => boolean };
 type MenuGroup = { title: string; items: MenuItem[]; fold?: boolean };
@@ -94,30 +96,25 @@ export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: st
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
   return (
-    // ⑧ 上の帯（担当者のアプリの形）: 左＝戻る（入口の画面では印）・まん中＝画面の名前・右＝AI・≡ メニュー・背景の色の切りかえ（小さな丸）
+    // ⑧ 上の帯（文字を減らす・11/6 夜）: 左＝「‹」（入口の画面では出さない）と「≡」（字なし）・まん中＝画面の名前・右＝色（丸）と AI（字だけ）
     <div className="fx-line no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule bg-sheet/85 px-1.5 backdrop-blur-xl md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <div className="flex shrink-0 items-center gap-0.5">
-        {root ? (
-          // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
-          <img src="/brand/staffetta-mark.svg" alt="" width={30} height={30} className="mx-1.5 h-[30px] w-[30px] shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
-        ) : (
-          <button type="button" onClick={back} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-crust-700 active:bg-crust-50" aria-label="1つ前の画面へ戻る">
+      <div className="flex shrink-0 items-center">
+        {!root && (
+          <button type="button" onClick={back} className="flex h-11 w-10 shrink-0 items-center justify-center rounded-full text-crust-700 active:bg-crust-50" aria-label="1つ前の画面へ戻る">
             <MIcon name="back" className="h-7 w-7" />
           </button>
         )}
-      </div>
-      {/* 画面の名前は、左右のボタンの残りの幅のまん中（かぶらない） */}
-      <h1 className="min-w-0 flex-1 truncate text-center text-[17px] font-black">{title || "STAFFETTA"}</h1>
-      <div className="flex shrink-0 items-center justify-end gap-1">
-        <div className="shrink-0">{ai}</div>
         {onMenu && (
-          <button type="button" onClick={onMenu} aria-label={user ? `メニュー（${user.name}）` : "メニュー"}
-            className="flex h-11 min-w-11 shrink-0 flex-col items-center justify-center rounded-xl px-1 text-ink active:scale-95 active:bg-paper">
-            <MIcon name="menu" className="h-5 w-5" />
-            <span className="text-[10px] leading-none font-bold">メニュー</span>
+          <button type="button" data-guide="menu" onClick={onMenu} aria-label={user ? `メニュー（${user.name}）` : "メニュー"}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink active:scale-95 active:bg-paper">
+            <MIcon name="menu" className="h-6 w-6" />
           </button>
         )}
+      </div>
+      <h1 className="m-display min-w-0 flex-1 truncate text-center text-[18px] font-black">{title || "STAFFETTA"}</h1>
+      <div className="flex shrink-0 items-center justify-end gap-1.5">
         <ThemeToggle compact className="h-9 w-9" />
+        <div className="shrink-0">{ai}</div>
       </div>
     </div>
   );
@@ -132,7 +129,7 @@ export function BottomTabs({ path, tabs, onMenu, menuOpen }: { path: string; tab
   const cell = "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[12px] leading-tight font-bold transition-colors duration-150";
   if (tabs.length <= 1 && !onMenu) return null;
   return (
-    <nav aria-label="下のタブ" className="no-print fixed inset-x-3 z-30 flex gap-1 rounded-2xl border border-rule bg-sheet/85 p-1 shadow-[0_8px_24px_rgb(0_0_0/0.18)] backdrop-blur-xl md:hidden"
+    <nav aria-label="下のタブ" data-guide="tabs" className="no-print fixed inset-x-3 z-30 flex gap-1 rounded-2xl border border-rule bg-sheet/85 p-1 shadow-[0_8px_24px_rgb(0_0_0/0.18)] backdrop-blur-xl md:hidden"
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
       {tabs.map((t) => {
         const on = !menuOpen && isOn(t, path);
@@ -228,6 +225,10 @@ export function MenuSheet({
             );
           })}
           {!groups.length && <p className="py-6 text-center text-[17px]">「{q}」の画面はありません</p>}
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button type="button" onClick={() => { resetGuides(); onClose(); window.location.reload(); }} className="min-h-11 rounded-full border border-rule-strong px-4 text-[15px] font-bold">使い方をもう一度</button>
+            <FontToggle />
+          </div>
           {user?.via === "password" && (
             <form action={logoutAction} className="pt-2">
               <button className="min-h-12 w-full rounded-xl border-2 border-rule-strong text-[17px] font-bold text-crust-700">ログアウト</button>

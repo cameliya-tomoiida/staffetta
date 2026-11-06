@@ -586,3 +586,11 @@ html[data-theme="light"] img[src="/brand/staffetta-logo-dark.svg"] {
 .m-skel { animation: m-skel 1.2s ease-in-out infinite; }
 @keyframes m-skel { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .m-skel { animation: none; } }
+
+/* ⑧ 字体の試し（担当者「フォントがダサい。題や数字は明朝体では」）: 画面の名前と大きな数字だけ明朝に。本文はゴシックのまま。
+   端末に入っている明朝を使う（iPhone: ヒラギノ明朝・Windows: 游明朝・Android: Noto Serif CJK）。読み込む字体のファイルは無し */
+[data-font="mincho"] .m-display {
+  font-family: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho", "YuMincho", "Noto Serif JP", "Noto Serif CJK JP", serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
