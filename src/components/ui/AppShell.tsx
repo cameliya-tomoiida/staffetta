@@ -220,11 +220,13 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
     });
 
   if (path.startsWith("/liff") || path.startsWith("/driver") || path.startsWith("/login") || path.startsWith("/setup")) return <>{children}</>;
+  // FAX の確認（左に FAX の1ページ全体・右に表）は、パソコンで1画面に収めたいので、上の帯（今日の仕事の数字）を出さず・横幅も広く
+  const wide = /^\/fax\/[^/]+$/.test(path);
 
   return (
     <div className="flex min-h-full">
       {/* 左のメニュー（タブレット横以上） */}
-      {!folded && (
+      {!folded && !wide && (
         // 白い帯はページの下まで。中身は画面の高さで止めて、はみ出す分はメニューの中でスクロール
         <aside className="no-print hidden w-[208px] shrink-0 border-r border-rule-strong bg-sheet min-[1201px]:block">
           <div className="sticky top-0 h-screen overflow-y-auto py-4">
@@ -241,7 +243,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
 
       {/* せまい画面: 上に重ねて出すメニュー */}
       {open && (
-        <div className="no-print fixed inset-0 z-40 flex min-[1201px]:hidden" onClick={() => setOpen(false)}>
+        <div className={`no-print fixed inset-0 z-40 flex ${wide ? "" : "min-[1201px]:hidden"}`} onClick={() => setOpen(false)}>
           <aside className="h-full w-72 max-w-[85vw] overflow-y-auto border-r border-rule-strong bg-sheet py-4" onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between px-3">
               <Brand factory={factory} />
@@ -267,13 +269,13 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
           <div className="flex items-center gap-3 pb-2">
             <button
               type="button"
-              onClick={() => (window.matchMedia("(min-width: 1201px)").matches ? toggleFold() : setOpen(true))}
-              className={`btn-ghost min-h-11 px-3 ${folded ? "" : "min-[1201px]:hidden"}`}
+              onClick={() => (!wide && window.matchMedia("(min-width: 1201px)").matches ? toggleFold() : setOpen(true))}
+              className={`btn-ghost min-h-11 px-3 ${folded || wide ? "" : "min-[1201px]:hidden"}`}
               aria-label="メニューを開く"
             >
               <MIcon name="menu" className="h-5 w-5" /> メニュー
             </button>
-            <span className={folded ? "" : "min-[1201px]:hidden"}>
+            <span className={folded || wide ? "" : "min-[1201px]:hidden"}>
               <Brand factory={factory} />
             </span>
             <span className="text-[18px] font-bold">今日の仕事</span>
@@ -287,9 +289,9 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
               </form>
             )}
           </div>
-          <TodayBar role={user?.role} />
+          {!wide && <TodayBar role={user?.role} />}
         </header>
-        <main key={path} className="m-enter mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 pt-4 pb-[calc(84px+env(safe-area-inset-bottom))] sm:px-5 md:py-6">
+        <main key={path} className={`m-enter mx-auto w-full min-w-0 flex-1 px-4 pt-4 pb-[calc(84px+env(safe-area-inset-bottom))] sm:px-5 ${wide ? "max-w-none md:py-2" : "max-w-7xl md:py-6"}`}>
           {/* 印刷物の見出し（画面では出さない） */}
           {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
           <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={120} height={32} className="mb-2 hidden h-8 w-auto print:block" />
