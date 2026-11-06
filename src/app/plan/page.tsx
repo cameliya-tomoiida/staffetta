@@ -1,5 +1,6 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
 import Link from "next/link";
+import { DateNav } from "@/components/ui/DateNav";
 import { splitWarnings } from "@/components/ui/wording";
 import { getCompany } from "@/lib/company";
 import type { Line } from "@/data/master";
@@ -186,7 +187,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">製造計画・工程表</h1>
           <p className="mt-1 text-ink-soft">納品日を選び、下のタブでことばを選んで印刷し、現場に渡します。</p>
         </div>
-        <div className="no-print flex flex-wrap items-center gap-2">
+        <DateNav date={date} today={today} pattern={href({ date: "__DATE__" })} marks={dates} />
+        <div className="no-print flex flex-wrap items-center gap-2 max-md:hidden">
           <span className="text-sm font-bold text-ink-soft">納品日</span>
           {dates.map((d) => (
             <Link key={d} href={href({ date: d })} className={choiceClass(d === date, "num inline-flex min-h-12 items-center px-4")}>

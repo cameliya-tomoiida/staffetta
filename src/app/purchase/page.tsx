@@ -1,5 +1,6 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
 import Link from "next/link";
+import { DateNav } from "@/components/ui/DateNav";
 import { getCompany } from "@/lib/company";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
 import { dayCostSummary } from "@/lib/cost";
@@ -89,7 +90,9 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
         costBox={<CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} />}
       dateNav={
         dates.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <>
+          <DateNav date={date} today={today} pattern="/purchase?date=__DATE__" marks={dates} />
+          <div className="flex flex-wrap items-center gap-2 max-md:hidden">
             <span className="text-sm font-bold text-ink-soft">納品日</span>
             {dates.map((d) => (
               <Link
@@ -102,6 +105,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
               </Link>
             ))}
           </div>
+          </>
         )
       }
     />

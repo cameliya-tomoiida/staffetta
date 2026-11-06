@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DateNav } from "@/components/ui/DateNav";
 import { addDays, choiceClass, fmtDate } from "@/components/ui";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
 import { deliveryDatesOf } from "@/lib/aggregate";
@@ -34,7 +35,8 @@ export default async function CardsPage(props: PageProps<"/cards">) {
           生地ごとに1枚。日付・天気・製品名・注文数・仕込数・担当はアプリが入れます。現場で測ったところ（室温・水温・捏上温度・時間・製品数・検査）だけ入れてください。
         </p>
       </header>
-      <nav aria-label="日付" className="flex flex-wrap gap-3">
+      <DateNav date={date} today={today} pattern="/cards?date=__DATE__" marks={dates} />
+      <nav aria-label="日付" className="flex flex-wrap gap-3 max-md:hidden">
         {dates.slice(0, 10).map((d) => (
           <Link key={d} href={`/cards?date=${d}`} className={choiceClass(d === date, "flex min-h-14 items-center px-4 text-lg")}>
             {fmtDate(d)}
