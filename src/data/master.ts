@@ -96,7 +96,7 @@ export const FACTORY = {
 
 export const customers: Customer[] = [
   { id: "C01", name: "ひまわり保育園", channel: "fax", fax: "0000-11-1111", cutoff: "15:00", note: "週間の定番表で届く。空欄は注文なし" },
-  { id: "C02", name: "さくら総合病院 栄養科（みどり給食サービス・デモ）", channel: "fax", fax: "0000-22-2222", cutoff: "12:00", note: "逆さまで届くことがある。袋の入数指定あり" },
+  { id: "C02", name: "さくら総合病院 栄養科（そらいろメディカルフード・デモ）", channel: "fax", fax: "0000-22-2222", cutoff: "12:00", note: "逆さまで届くことがある。袋の入数指定あり" },
   { id: "C03", name: "みなと給食センター", channel: "fax", fax: "0000-33-3333", cutoff: "14:00", note: "1枚に納品日が複数。仕入品も混ざる" },
   { id: "C04", name: "喫茶こもれび", channel: "phone", cutoff: "17:00", note: "ドライバーが電話・LINEで聞き取り" },
   { id: "C05", name: "グループホームあおば", channel: "driver", cutoff: "16:00" },
@@ -119,7 +119,7 @@ export const customers: Customer[] = [
 
 export const suppliers: Supplier[] = [
   { id: "S01", name: "米田製粉（デモ）", method: "fax", cutoff: "15:00", leadDays: 1, contact: "FAX 0000-44-4444" },
-  { id: "S02", name: "東海乳業（デモ）", method: "email", cutoff: "11:00", leadDays: 1, contact: "order@example.com" },
+  { id: "S02", name: "そらいろ乳業（デモ）", method: "email", cutoff: "11:00", leadDays: 1, contact: "order@example.com" },
   { id: "S03", name: "ひので製パン（デモ）", method: "hinode_site", cutoff: "13:00", leadDays: 1, contact: "メーカーの発注サイト" },
   { id: "S04", name: "まるやま食材（デモ）", method: "infomart", cutoff: "16:00", leadDays: 2, contact: "インフォマート" },
   { id: "S05", name: "みどり包材（デモ）", method: "aspit", cutoff: "15:00", leadDays: 3, contact: "アスピット" },

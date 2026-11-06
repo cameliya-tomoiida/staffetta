@@ -328,7 +328,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
               return (
                 <tr key={r.id} className={`border-t border-dashed border-rule align-top [&>td]:px-2 [&>td]:py-2 ${r.disabled ? "text-ink-faint line-through" : ""}`} data-m-hide={!all && i >= 8 && counting?.id !== r.id ? "" : undefined}>
                   {listCols.map((c) => (
-                    <td key={c.key} className={`${c.type === "number" || c.type === "integer" ? "num text-right whitespace-nowrap" : c.type === "time" ? "num whitespace-nowrap" : "min-w-[6em]"} ${c.key === "name" ? "font-bold" : ""}`}>
+                    <td key={c.key} data-label={c.key === "name" ? undefined : c.label} className={`${c.type === "number" || c.type === "integer" ? "num text-right whitespace-nowrap" : c.type === "time" ? "num whitespace-nowrap" : "min-w-[6em]"} ${c.key === "name" ? "font-bold" : ""}`}>
                       {c.key === "stock" && low && !r.disabled ? <Tag tone="review">{show(c, get(r, c.key), refs)}</Tag> : show(c, get(r, c.key), refs)}
                       {c.key === "stock" && typeof r.stockCountedAt === "string" && <div className="text-xs text-ink-soft no-underline">棚卸 {fmtDateTime(r.stockCountedAt)}</div>}
                     </td>
