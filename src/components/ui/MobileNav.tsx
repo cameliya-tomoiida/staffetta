@@ -247,9 +247,21 @@ export function useTableCards() {
   useEffect(() => {
     // カードにするのはスマホの幅だけ（パソコンでは見出しを付けない）
     const mq = window.matchMedia("(max-width: 767px)");
+    // React がまだつながっていない（ハイドレーション前の）表には触らない。触るとサーバーの HTML と食いちがう（開発の画面の「1 Issue」）
+    const hydrated = (el: Element) => Object.keys(el).some((k) => k.startsWith("__reactFiber"));
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let tries = 0;
     const label = () => {
       if (!mq.matches) return;
+      let waiting = false;
       for (const table of document.querySelectorAll<HTMLTableElement>("main table:not(.m-keep)")) {
+        // 表の中のいちばん最後のマスまで React がつながってから（上からつながるので、最後がつながっていれば全部）
+        const cells = table.querySelectorAll("td, th");
+        const last = cells[cells.length - 1];
+        if (!hydrated(table) || (last && !hydrated(last))) {
+          waiting = true;
+          continue;
+        }
         const rows = table.tHead ? Array.from(table.tHead.rows) : [];
         if (!rows.length) continue;
         // 見出しが2段（まとまり＋項目）でも、列ごとに「いちばん下の見出し」を取る（rowSpan・colSpan を数える）
@@ -281,6 +293,9 @@ export function useTableCards() {
           }
         }
       }
+      // つながっていない表があれば、少しあとでもう一度（30回まで）
+      clearTimeout(retry);
+      if (waiting && tries++ < 30) retry = setTimeout(label, 500);
     };
     // 最初は、ページの読み込み（ハイドレーション）が終わってから入れる（先に入れると、サーバーの HTML と食いちがうため）
     let t: ReturnType<typeof setTimeout> | undefined;
@@ -303,6 +318,7 @@ export function useTableCards() {
     mq.addEventListener("change", soon);
     return () => {
       clearTimeout(t);
+      clearTimeout(retry);
       window.removeEventListener("load", start);
       mq.removeEventListener("change", soon);
       mo.disconnect();
