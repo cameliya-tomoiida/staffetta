@@ -416,3 +416,162 @@ a, button, input, select, textarea, label, summary, [role="button"] {
   .an-edge { animation: none; }
   .an-draw, .an-fade, .an-pop, .an-bar, .an-col, .an-arc { transition: none; }
 }
+
+/* 近未来の動き④（⑧）: 全体の未来感（やりすぎない）。細い光の線・ガラスのような半透明・画面のふわっとした入り方 */
+.fx-line { position: relative; }
+.fx-line::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(143, 29, 29, 0.85), rgba(255, 138, 122, 0.9), transparent) no-repeat;
+  background-size: 35% 100%;
+  animation: fx-sweep 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes fx-sweep { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+@media (hover: hover) {
+  .card { transition: box-shadow 0.2s, border-color 0.2s; }
+  .card:hover { box-shadow: 0 0 0 1px rgba(143, 29, 29, 0.18), 0 10px 28px -14px rgba(143, 29, 29, 0.45); }
+}
+@media (min-width: 768px) {
+  .m-enter { animation: fx-fade 0.25s ease-out; }
+}
+@keyframes fx-fade { from { opacity: 0.35; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fx-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.45));
+  backdrop-filter: blur(10px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-line::after, .m-enter { animation: none; }
+}
+
+/* ═════════ 全体の色（⑧ 11/6 担当者「上と左だけ白で中だけ色が違うのは違和感。色味を全体で統一して。ガラッと変えてよい」）═════════
+ * 画面は、アプリ全体を同じ暗い「司令室」の色にそろえる（上の帯・左のメニュー・中・カード・入力欄すべて）。
+ * 印刷（@media print）と、紙の見本を見せる所（.theme-paper）は、今までどおり白い紙と墨。
+ * 色の決まり（--color-*）を入れかえるので、各画面の作りはそのまま。直接書いた明るい色も、下で読みかえる。
+ */
+@media screen {
+  :root {
+    color-scheme: dark;
+    --color-paper: #0e1016;
+    --color-sheet: #171a23;
+    --color-cream: #20242f;
+    --color-ink: #eef0f6;
+    --color-ink-soft: #bcc2cf;
+    --color-ink-faint: #a2a9b7;
+    --color-rule: #2a2f3c;
+    --color-rule-strong: #3d4456;
+
+    --color-tsubaki: #e0574b;
+    --color-crust-50: #2a1a1d;
+    --color-crust-100: #3a2024;
+    --color-crust-200: #6a3a38;
+    --color-crust-500: #ff7a6b;
+    --color-crust-600: #d2463a;
+    --color-crust-700: #ff9a8c;
+
+    --color-review-bg: #2a2410;
+    --color-review-line: #9a7a1c;
+    --color-review-ink: #f5d77f;
+    --color-ok-bg: #0f2619;
+    --color-ok-line: #2f7049;
+    --color-ok-ink: #93e0b0;
+    --color-off-bg: #232630;
+    --color-off-line: #444b5c;
+    --color-off-ink: #b0b6c3;
+    --color-alert-bg: #2e1615;
+    --color-alert-line: #9a443a;
+    --color-alert-ink: #ffa395;
+    --color-info-bg: #13203a;
+    --color-info-line: #3c5f8c;
+    --color-info-ink: #b1cdf3;
+    --color-prov-bg: #142036;
+    --color-prov-line: #45679a;
+    --color-prov-ink: #b3cbf2;
+
+    --color-bread: #e0b07d;
+    --color-pizza: #ff7a6b;
+  }
+  body {
+    background:
+      radial-gradient(80% 50% at 0% 0%, rgba(210, 70, 58, 0.10), transparent 60%),
+      radial-gradient(60% 40% at 100% 0%, rgba(90, 110, 190, 0.10), transparent 60%),
+      var(--color-paper);
+    background-attachment: fixed;
+  }
+  /* 直接書いた明るい色を、暗い色の決まりに読みかえる（紙の見本 .theme-paper の中はそのまま） */
+  :where(.bg-white):not(.theme-paper *) { background-color: var(--color-sheet); }
+  :where(.bg-\[\#fff3c4\]):not(.theme-paper *) { background-color: var(--color-review-bg); }
+  :where(.bg-\[\#fff0f1\], .bg-\[\#faf1f1\]):not(.theme-paper *) { background-color: var(--color-alert-bg); }
+  :where(.bg-\[\#e6f0fb\]):not(.theme-paper *) { background-color: var(--color-info-bg); }
+  :where(.bg-\[\#eaf5ed\]):not(.theme-paper *) { background-color: var(--color-ok-bg); }
+  :where(.bg-\[\#ece6dc\], .bg-\[\#f4f4f4\], .bg-\[\#e3e3e3\]):not(.theme-paper *) { background-color: var(--color-cream); }
+  :where(.bg-\[\#c5cac5\]):not(.theme-paper *) { background-color: #4a5060; }
+  :where(.text-\[\#565c57\], .text-\[\#555\], .text-\[\#444\], .text-\[\#242724\]):not(.theme-paper *) { color: var(--color-ink-soft); }
+  :where(.text-\[\#654700\]):not(.theme-paper *) { color: var(--color-review-ink); }
+  :where(.text-\[\#a51e28\], .text-\[\#a00\], .text-\[\#8b1a1a\]):not(.theme-paper *) { color: var(--color-alert-ink); }
+  :where(.text-\[\#1f3f66\], .text-\[\#1d4b8f\]):not(.theme-paper *) { color: var(--color-info-ink); }
+  :where(.text-\[\#24633d\]):not(.theme-paper *) { color: var(--color-ok-ink); }
+  :where(.text-black):not(.theme-paper *) { color: var(--color-ink); }
+  :where(.border-\[\#c5cac5\], .border-\[\#838b83\]):not(.theme-paper *) { border-color: var(--color-rule-strong); }
+  :where(.border-\[\#b08210\]):not(.theme-paper *) { border-color: var(--color-review-line); }
+  :where(.hover\:bg-crust-700:hover):not(.theme-paper *) { background-color: #a8332a; }
+  /* 入力欄・選ぶ欄も暗く（文字は明るく） */
+  :where(input, select, textarea):not(.theme-paper *) { background-color: var(--color-sheet); color: var(--color-ink); }
+  :where(input, textarea):not(.theme-paper *)::placeholder { color: #7f8798; }
+  /* 地図の上の白い札・ふきだしは、地図が明るいのでそのまま（Leaflet） */
+}
+
+/* 紙の見本（印刷のページ・カードの形など）は、画面でも白い紙と墨のまま */
+.theme-paper {
+  color-scheme: light;
+  --color-paper: #faf8f5;
+  --color-sheet: #ffffff;
+  --color-cream: #f7f3ec;
+  --color-ink: #2b2420;
+  --color-ink-soft: #5f5650;
+  --color-ink-faint: #7b7067;
+  --color-rule: #e6e0d8;
+  --color-rule-strong: #c9c0b4;
+  --color-tsubaki: #8f1d1d;
+  --color-crust-50: #fbf4f3;
+  --color-crust-100: #f4e3e1;
+  --color-crust-200: #e3bdb8;
+  --color-crust-500: #a53a36;
+  --color-crust-600: #8f1d1d;
+  --color-crust-700: #741414;
+  --color-review-bg: #fbf3d8;
+  --color-review-line: #d8bb5c;
+  --color-review-ink: #66500f;
+  --color-ok-bg: #e8f1e6;
+  --color-ok-line: #93b38d;
+  --color-ok-ink: #2f5a33;
+  --color-off-bg: #efece8;
+  --color-off-line: #c3bcb3;
+  --color-off-ink: #6b645d;
+  --color-alert-bg: #f7e6e2;
+  --color-alert-line: #c98b7c;
+  --color-alert-ink: #7a2a1c;
+  --color-info-bg: #e9eef3;
+  --color-info-line: #9fb1c2;
+  --color-info-ink: #34506a;
+  --color-prov-bg: #eaf0f6;
+  --color-prov-line: #9db3cc;
+  --color-prov-ink: #34507a;
+  --color-bread: #6b4a2e;
+  --color-pizza: #8f1d1d;
+  background: #ffffff;
+  color: var(--color-ink);
+}
+.theme-paper :where(input, select, textarea) { background-color: #fff; color: var(--color-ink); }
+@media screen {
+  /* 墨の地に白い字（番号の丸など）は、暗い画面では濃い灰色の地に */
+  :where(.bg-ink):not(.theme-paper *) { background-color: #3d4456; }
+  /* 地図も暗く（地図の絵だけ色を反転。ピン・線・札の色はそのまま） */
+  .leaflet-container { background: #0e1016; }
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.6); }
+  .leaflet-control-attribution { background: rgba(14, 16, 22, 0.8) !important; color: #bcc2cf; }
+  .leaflet-bar a { background: #171a23 !important; color: #eef0f6 !important; border-color: #3d4456 !important; }
+}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CountUp } from "@/components/ui/CountUp";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";
@@ -85,7 +86,7 @@ function Stat({ label, value, unit, href, tone = "plain", sub }: { label: string
   const body = (
     <>
       <div className="text-[18px] font-bold">{label}</div>
-      <div className="leading-none"><b className="text-[30px] font-extrabold tabular-nums [overflow-wrap:anywhere] sm:text-[40px]">{value}</b>{unit && <span className="ml-1 text-[18px]">{unit}</span>}</div>
+      <div className="leading-none"><b className="text-[30px] font-extrabold tabular-nums [overflow-wrap:anywhere] sm:text-[40px]"><CountUp value={value} /></b>{unit && <span className="ml-1 text-[18px]">{unit}</span>}</div>
       {sub && <div className="mt-1 text-[16px] text-ink-soft">{sub}</div>}
     </>
   );
@@ -148,6 +149,15 @@ function Admin({ d }: { d: HomeData }) {
   const s = d.summary;
   return (
     <Section title="全体のようす">
+      {/* 司令室（⑧ 近未来）: 動くグラフの分析画面へ */}
+      <Link href="/analytics" className="an-room mb-3 flex min-h-16 items-center gap-3 rounded-xl px-4 py-3 text-white">
+        <span className="cs-orb inline-block h-4 w-4 shrink-0 rounded-full" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-bold tracking-widest text-[#ff8a7a]">ANALYTICS</span>
+          <span className="block text-[19px] font-black">売上・粗利・取引先・商品・ロスを、動くグラフで見る</span>
+        </span>
+        <span aria-hidden className="text-3xl">›</span>
+      </Link>
       <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <Stat label={`${md(d.date)} 納品の受注`} value={num(d.orders.count)} unit="件" sub={`売上 ${yen(d.money.sales)}`} href={`/orders`} />
         <Stat label="粗利のめやす" value={num(Math.round(d.money.grossRate * 1000) / 10)} unit="%" sub={`粗利 ${yen(d.money.gross)}`} tone={d.money.grossRate < 0.25 ? "warn" : "plain"} />

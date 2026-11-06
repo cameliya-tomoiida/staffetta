@@ -74,7 +74,7 @@ function Sheet({ base, v, first }: { base: CardBase; v: CardInput; first: boolea
   const it = (i: number) => items[i];
   const x = (i: number) => (it(i) ? (v.items[it(i)!.productId] ?? {}) : {});
   return (
-    <section className={`mx-auto w-[281mm] bg-white text-black ${first ? "" : "break-before-page"}`}>
+    <section className={`theme-paper mx-auto w-[281mm] bg-white text-black ${first ? "" : "break-before-page"}`}>
       <div className="flex items-end justify-between border-b-[0.6mm] border-black pb-[0.8mm]">
         <h2 className="text-[18pt] font-bold">製品カード</h2>
         <p className="text-[8.5pt]">

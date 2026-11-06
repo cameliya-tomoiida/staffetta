@@ -117,7 +117,7 @@ function Brand({ factory }: { factory: string }) {
     <Link href="/" className="flex shrink-0 items-center gap-2.5">
       <span className="leading-tight">
         {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴなので、そのまま出す */}
-        <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={146} height={39} className="block h-[39px] w-auto" />
+        <img src="/brand/staffetta-logo-dark.svg" alt="STAFFETTA" width={146} height={39} className="block h-[39px] w-auto" />
         <span className="block pl-[46px] text-[16px] text-ink-soft">{factory}</span>
       </span>
     </Link>
@@ -263,7 +263,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
             <TodayBar role={user?.role} />
           </div>
         )}
-        <header className="no-print z-20 hidden border-b border-rule-strong bg-sheet px-4 pt-2 sm:px-5 md:block">
+        <header className="fx-line no-print z-20 hidden border-b border-rule-strong bg-sheet px-4 pt-2 sm:px-5 md:block">
           <div className="flex items-center gap-3 pb-2">
             <button
               type="button"

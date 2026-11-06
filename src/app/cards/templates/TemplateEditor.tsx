@@ -126,7 +126,7 @@ export function TemplateEditor({ templates, selected, doughs, hasAi }: { templat
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]">
         {/* カードの見た目のまま */}
-        <section className="min-w-0 space-y-3 rounded-lg border-2 border-rule-strong bg-white p-4 text-ink shadow-sm">
+        <section className="theme-paper min-w-0 space-y-3 rounded-lg border-2 border-rule-strong bg-white p-4 text-ink shadow-sm">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b-2 border-ink pb-1">
             <input className="min-w-0 text-2xl font-bold outline-none focus:bg-crust-50" value={t.name} onChange={(e) => setT({ ...t, name: e.target.value })} aria-label="形の名前" />
             <span className="text-base text-ink-soft">製品カード・A4 横（押すと直せます）</span>

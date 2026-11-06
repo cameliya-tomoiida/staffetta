@@ -40,7 +40,7 @@ function Sheet({ def, rec, month, holidays, first }: { def: SheetDef; rec: Sheet
   const run = runDays(def, month, holidays);
   const [y, m] = month.split("-").map(Number);
   return (
-    <section className={`mx-auto w-[281mm] bg-white text-[9pt] leading-tight text-black ${first ? "" : "break-before-page"}`}>
+    <section className={`theme-paper mx-auto w-[281mm] bg-white text-[9pt] leading-tight text-black ${first ? "" : "break-before-page"}`}>
       <div className="flex items-end justify-between gap-4 border-b-[0.6mm] border-black pb-[1mm]">
         <h2 className="text-[15pt] font-bold">{def.title}</h2>
         <div className="flex items-end gap-[3mm]">

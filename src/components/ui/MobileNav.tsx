@@ -93,7 +93,7 @@ export function MobileTopBar({ path, title, ai, user, tabs }: { path: string; ti
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
   return (
-    <div className="no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule-strong bg-sheet pr-2 pl-1 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="fx-line no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule-strong bg-sheet pr-2 pl-1 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {root ? (
         // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
         <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="ml-2 h-8 w-8 shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
