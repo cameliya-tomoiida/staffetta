@@ -11,6 +11,7 @@ import { apiKey } from "@/lib/ai/settings";
 import { nowIso } from "@/lib/clock";
 import { getCompany } from "@/lib/company";
 import { kvGet, kvSet } from "@/lib/db/sqlite";
+import { isOn } from "@/lib/settings/features";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { channelFor, checkNotice, itemLine, NOTICE_KIND_LABEL, pickRecipients, templateDraft, type NoticeChannel, type NoticeDraft, type NoticeInput, type RecipientPick } from "./plan";
 
@@ -23,7 +24,8 @@ export interface NoticeRecipient {
   channel: NoticeChannel;
   /** LINE の userId・FAX 番号 */
   to: string[];
-  status: "waiting" | "sent" | "fax_ready" | "failed" | "hand";
+  /** held = 送信の鍵が OFF のため送っていない（下書きと印刷だけ） */
+  status: "waiting" | "sent" | "fax_ready" | "failed" | "hand" | "held";
   at?: string;
   by?: string;
   /** LINE が本番でなく、記録だけのとき */
@@ -140,6 +142,11 @@ export async function saveNoticeDraft(input: NoticeInput, draft: NoticeDraft, dr
 }
 
 /** 人が OK を押したら送る（LINE は送る、FAX は「印刷して送る」待ち、手段が無い所は手渡し） */
+/** 送信の鍵（機能の ON/OFF の notice_send。はじめは OFF。管理者が設定で ON にする） */
+export const sendUnlocked = () => isOn("notice_send");
+/** 試しの送信: 鍵が OFF でも、見本の取引先（名前に「（デモ）」）にだけは送る */
+export const isDemoCustomerName = (name: string) => /[（(]デモ[）)]|デモ・/.test(name);
+
 export async function sendNotice(id: string, who: string): Promise<CustomerNotice> {
   if (!who.trim()) throw new Error("OK を押す人を選んでください");
   const n = getNotice(id);
@@ -151,7 +158,13 @@ export async function sendNotice(id: string, who: string): Promise<CustomerNotic
   const { pushText } = await import("@/lib/channels/line/client");
   const now = nowIso();
   const recipients: NoticeRecipient[] = [];
+  const unlocked = sendUnlocked();
   for (const r of n.recipients) {
+    // 鍵が OFF: 本物のお客さんには送らない（見本の取引先の LINE だけ、試しに送る）
+    if (!unlocked && !(r.channel === "line" && isDemoCustomerName(r.name))) {
+      recipients.push({ ...r, status: "held", at: now, by: who });
+      continue;
+    }
     if (r.channel === "line") {
       let ok = true;
       let demo = false;
@@ -177,6 +190,7 @@ export async function sendNotice(id: string, who: string): Promise<CustomerNotic
 /** FAX を複合機で送った・手渡しした、を記録（customerId が空なら FAX 待ちの全部） */
 export function markDelivered(id: string, customerId: string, who: string): CustomerNotice {
   if (!who.trim()) throw new Error("送った人を選んでください");
+  if (!sendUnlocked()) throw new Error("いまは送信の鍵が OFF です（試しの状態）。FAX・手渡しは、鍵を ON にしてから記録してください");
   const n = getNotice(id);
   if (!n) throw new Error("お知らせが見つかりません");
   const now = nowIso();

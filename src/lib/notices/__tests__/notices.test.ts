@@ -39,11 +39,30 @@ describe("お知らせの決まり", () => {
 
 describe("下書き → OK → 送る（LINE は本番でなければ記録だけ）", () => {
   beforeEach(() => {
-    getDb().exec("DELETE FROM kv WHERE key IN ('customer_notices', 'ai_settings')");
+    getDb().exec("DELETE FROM kv WHERE key IN ('customer_notices', 'ai_settings') OR key LIKE 'feature_flags%'");
   });
 
-  it("下書きでは送らない。OK で LINE は送り、FAX は印刷待ち。FAX を送ったら記録", async () => {
+  it("送信の鍵が OFF（はじめ）なら、OK を押しても本物のお客さんには送らず「送っていない」。FAX の「送った」も止める", async () => {
     const s = await import("../store");
+    const { setFlag } = await import("@/lib/settings/features");
+    setFlag("notice_send", false, "はやし");
+    const env = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    const { draft, by } = await s.draftNotice(input);
+    const n = await s.saveNoticeDraft(input, draft, by, { mode: "all" }, "うえの");
+    const sent = await s.sendNotice(n.id, "はやし");
+    const real = sent.recipients.filter((r) => !(r.channel === "line" && s.isDemoCustomerName(r.name)));
+    expect(real.length).toBeGreaterThan(0);
+    expect(real.every((r) => r.status === "held")).toBe(true);
+    expect(() => s.markDelivered(n.id, "", "うえの")).toThrow(/送信の鍵が OFF/);
+    expect(s.isDemoCustomerName("こすもす保育園（デモ）")).toBe(true);
+    expect(s.isDemoCustomerName("ひまわり保育園")).toBe(false);
+    if (env) process.env.ANTHROPIC_API_KEY = env;
+  });
+
+  it("下書きでは送らない。鍵が ON なら OK で LINE は送り、FAX は印刷待ち。FAX を送ったら記録", async () => {
+    const s = await import("../store");
+    (await import("@/lib/settings/features")).setFlag("notice_send", true, "はやし");
     const env = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     const { draft, by } = await s.draftNotice(input);
