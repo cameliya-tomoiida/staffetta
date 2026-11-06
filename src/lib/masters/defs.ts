@@ -34,6 +34,7 @@ export const CHANNEL_OPTIONS = opts({
 });
 export const DELIVERY_METHOD_OPTIONS = opts({ own: "自社便", frozen: "冷凍便", parcel: "宅配・路線便", pickup: "引き取り", oc: "設置先の便（別のアプリ）" });
 export const PER_OPTIONS = opts({ piece: "1個", pack: "1包・1袋", case: "1ケース" });
+export const SLIP_FORMAT_OPTIONS = opts({ split: "共通・1枚に納品書と受領書（2つ切り）", two: "共通・納品書と受領書を別の紙に", delivery: "共通・納品書だけ" });
 export const SCHEDULE_FROM_OPTIONS = opts({ delivery: "納品時刻から逆算", start: "開始時刻から順に" });
 
 const ID = (label: string, example: string, help?: string): ColumnDef => ({ key: "id", label, type: "text", required: true, example, help });
@@ -177,6 +178,7 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "kind", label: "種類", type: "enum", options: PRODUCT_KIND_OPTIONS, required: true, example: "自社製造" },
     { key: "unit", label: "単位", type: "text", required: true, example: "個" },
     { key: "price", label: "売価（円）", type: "number", min: 0, required: true, example: "38" },
+    { key: "taxRate", label: "消費税率（%）", type: "integer", min: 8, max: 10, example: "8", help: "食品は 8（軽減税率）。容器・雑貨など食品でないものは 10。空なら 8（納品書・請求書に使う）" },
     { key: "line", label: "ライン", type: "enum", options: LINE_OPTIONS, example: "パン", requiredWhen: (r) => kind("make")(r) && "自社製造は「ライン」が必須です" },
     { key: "bagSize", label: "袋の入数", type: "integer", min: 1, example: "10" },
     { key: "caseSize", label: "ケースの入数", type: "integer", min: 1, example: "100" },
@@ -310,6 +312,8 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "deliveryTime", label: "納品時刻", type: "time", example: "08:30", help: "工程表の逆算に使う。空なら 08:00" },
     { key: "course", label: "配送コース", type: "text", example: "東コース（朝便）", help: "便のマスタの便ID。便のマスタに無いコースは、納品時刻から工程を逆算する" },
     { key: "deliveryWeekdays", label: "納品する曜日", type: "weekdays", example: "月;水;金", help: "空なら便の曜日（それも空なら毎日）" },
+    { key: "slipFormat", label: "伝票の様式", type: "enum", options: SLIP_FORMAT_OPTIONS, example: "共通・1枚に納品書と受領書（2つ切り）", help: "納品書・受領書の形。空なら 1枚に2つ。取引先ごとの様式（発注書の原本に合わせた形）は、作ったらここに足す" },
+    { key: "closingDay", label: "請求の締め日", type: "integer", min: 1, max: 31, example: "31", help: "毎月この日で締めて請求書を作る。月末は 31（空も月末）" },
     { key: "replyRequired", label: "受けたら返事が要る", type: "boolean", default: false, example: "いいえ", help: "はい なら、仮発注・注文を受けたときに受付の返事（FAX・メール）の下書きを自動で作る（送るのは人）" },
     { key: "note", label: "メモ", type: "text" },
     // 配送の情報（⑦。配送コースの地図が使う）

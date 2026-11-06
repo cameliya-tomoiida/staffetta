@@ -33,6 +33,7 @@ export const MENU: Group[] = [
       { href: "/hygiene", label: "衛生管理" },
       { href: "/purchase", label: "発注書" },
       { href: "/outbound", label: "送り出し（FAX・サイト）" },
+      { href: "/slips", label: "伝票（納品書・請求書）", match: (p) => p.startsWith("/slips") },
       { href: "/analytics", label: "分析（グラフ）" },
     ],
   },

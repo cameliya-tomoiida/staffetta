@@ -339,6 +339,8 @@ export interface ProductMaster {
   unit: string;
   /** 売価（円/個） */
   price: number;
+  /** 消費税率（%）。食品は 8（軽減税率）、食品でないもの（容器・雑貨）は 10。空なら 8（(37) 伝票） */
+  taxRate?: number;
   kind: "make" | "buy" | "repack";
   line?: ProductionLineId;
   /** 1袋（P）・1ケース（c/s）の入数 */
@@ -480,6 +482,10 @@ export interface CustomerMaster {
   deliveryWeekdays?: number[];
   /** 仮発注・注文を受けたら、受付の返事（FAX・メール）を出す先（⑤が下書きを自動で作る。送るのは人） */
   replyRequired?: boolean;
+  /** 請求の締め日（毎月この日で締める。空・31 は月末。(37) 請求書） */
+  closingDay?: number;
+  /** 伝票の様式（src/lib/slips/formats.ts。空なら 1枚に納品書と受領書） */
+  slipFormat?: string;
   note?: string;
   // ── 配送の情報（⑦。配送コースの地図 /admin/routes が使う） ──
   /** 郵便番号 "000-0000" */

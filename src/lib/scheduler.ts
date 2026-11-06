@@ -86,6 +86,8 @@ export const ALERT_SOURCES: AlertSource[] = [
   // AI の案 D: いつもと違う注文の見張り（理由は AI。同じ注文は2回聞かない）
   { name: "ai_watch", feature: "ai_watch", run: async (now) => (await import("./ai/watch")).watchAlerts(now) },
   // ⑧ A 記録の漏れ・時間のアラーム（衛生のシート・製品カードの金属検査）。締めを期限に（過ぎたら段が上がって責任者へ・スタッフの LINE）
+  // (37) 締め日の請求書ができたお知らせ（送るのは人）
+  { name: "slips", feature: "invoice_notice", run: async (now) => (await import("./slips/notice")).invoiceNotices(now) },
   { name: "records", feature: "record_alarms", run: async (now) => (await import("./records/store")).recordAlerts(now) },
 ];
 

@@ -38,6 +38,8 @@ export default async function CustomersAdmin() {
     lat: c.lat ?? "",
     lng: c.lng ?? "",
     serviceMinutes: c.serviceMinutes ?? "",
+    closingDay: c.closingDay ?? "",
+    slipFormat: c.slipFormat ?? "",
     active: c.active !== false,
     lineUserIds: c.lineUserIds?.length ? `${c.lineUserIds.length}人` : "",
   }));
@@ -56,7 +58,7 @@ export default async function CustomersAdmin() {
       exportHref="/api/masters/customers?format=csv"
       top={<LineLinkPanel />}
       formExtra={formExtra}
-      note={<>今の内容は見本（架空のデータ）です。直した内容は保存され、だれが・いつ直したかが残ります。</>}
+      note={<>今の内容は見本（架空のデータ）です。直した内容は保存され、だれが・いつ直したかが残ります。納品書・請求書は <a href="/slips" className="link">伝票</a> から（締め日は「請求の締め日」）。</>}
     />
   );
 }

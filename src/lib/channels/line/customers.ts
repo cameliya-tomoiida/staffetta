@@ -109,6 +109,15 @@ export async function upsertCustomerRow(
     if (wd.error) return { ok: false, error: wd.error, field: "closedWeekdays" };
     next.closedWeekdays = (wd.value as number[] | undefined)?.length ? (wd.value as number[]) : undefined;
   }
+  // 伝票の様式（(37)）。空なら 1枚に2つ
+  if ("slipFormat" in row) next.slipFormat = s("slipFormat") || undefined;
+  // 請求の締め日（(37) 請求書）。空なら月末
+  if ("closingDay" in row) {
+    const v = s("closingDay");
+    const d = v === "" ? undefined : Number(v);
+    if (d != null && !(Number.isInteger(d) && d >= 1 && d <= 31)) return { ok: false, error: "請求の締め日は 1〜31 の数で（月末は 31・空でも月末）", field: "closingDay" };
+    next.closingDay = d;
+  }
   for (const k of ["lat", "lng", "serviceMinutes"] as const) {
     if (!(k in row)) continue;
     const v = s(k);

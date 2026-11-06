@@ -12,6 +12,8 @@ const FIELDS: { key: keyof Company; label: string; placeholder: string; wide?: b
   { key: "fax", label: "FAX", placeholder: "000-000-0000" },
   { key: "email", label: "メール（発注・返事の差出人）", placeholder: "order@example.com", wide: true },
   { key: "contact", label: "発注書に載せる担当（空なら載せない）", placeholder: "例: 購買 うえの" },
+  { key: "invoiceNo", label: "インボイスの登録番号（請求書・納品書に載せる）", placeholder: "T0000000000000" },
+  { key: "bank", label: "請求書に載せる振込先", placeholder: "例: 〇〇銀行 〇〇支店 普通 0000000 〇〇製パン（カ", wide: true },
 ];
 
 export function CompanyClient({ initial }: { initial: Company }) {

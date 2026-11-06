@@ -13,6 +13,10 @@ export interface Company {
   email: string;
   /** 発注書に載せる担当（空なら載せない） */
   contact: string;
+  /** 適格請求書発行事業者の登録番号（T＋13桁。請求書・納品書に載せる。(37)） */
+  invoiceNo: string;
+  /** 請求書に載せる振込先（銀行・支店・種類・番号・名義） */
+  bank: string;
 }
 
 const KEY = "company_info";
@@ -24,6 +28,8 @@ export const DEFAULT_COMPANY: Company = {
   fax: FACTORY.fax,
   email: "order@asahi-bakery.example",
   contact: "",
+  invoiceNo: "",
+  bank: "",
 };
 
 export const getCompany = (): Company => ({ ...DEFAULT_COMPANY, ...(kvGet<Partial<Company>>(KEY) ?? {}) });
@@ -34,6 +40,8 @@ export function setCompany(input: Partial<Company>, who: string): Company {
   for (const k of Object.keys(DEFAULT_COMPANY) as (keyof Company)[]) if (typeof input[k] === "string") next[k] = (input[k] as string).trim();
   if (!next.name) throw new Error("会社名を入れてください");
   if (next.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next.email)) throw new Error("メールの形が違います");
+  if (next.invoiceNo) next.invoiceNo = next.invoiceNo.replace(/[\s-]/g, "").toUpperCase();
+  if (next.invoiceNo && !/^T\d{13}$/.test(next.invoiceNo)) throw new Error("登録番号は T と 13 桁の数字で入れてください（例 T1234567890123）");
   if (next.postalCode && !/^\d{3}-?\d{4}$/.test(next.postalCode)) throw new Error("郵便番号は 000-0000 の形で入れてください");
   for (const k of ["tel", "fax"] as const) if (next[k] && !/^[\d()+\-\s]{6,20}$/.test(next[k])) throw new Error(`${k === "tel" ? "電話" : "FAX"}番号の形が違います`);
   kvSet(KEY, next);

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { analytics } from "@/lib/analytics";
 import { Bars, Channels, DayChart, Kpis, Losses, Weekdays } from "./Charts";
 
@@ -13,6 +14,7 @@ export default async function AnalyticsPage() {
         <p className="text-[15px] font-bold tracking-widest text-[#ff8a7a]">ANALYTICS</p>
         <h1 className="text-[30px] leading-tight font-black">分析</h1>
         <p className="text-[17px] text-white/80">注文と、商品ごとの売値・原価から。棒や点を押すと、くわしい数字が出ます。</p>
+        <p className="mt-2"><Link href="/slips/sales" className="inline-flex min-h-12 items-center rounded-xl border-2 border-white/60 px-4 text-[17px] font-bold text-white">売上管理表（月・取引先・商品・コース・CSV）›</Link></p>
       </header>
       <Kpis a={a} />
       <DayChart days={a.days} today={a.today} />

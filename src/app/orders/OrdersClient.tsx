@@ -99,6 +99,9 @@ export function OrdersClient({
         <LinkButton href="/orders/new" variant="primary" size="lg">
           ＋ 電話・ドライバーの注文を入れる
         </LinkButton>
+        <LinkButton href="/slips" size="lg">
+          伝票（納品書・請求書）
+        </LinkButton>
       </PageHeader>
 
       {reviewAll > 0 && status !== "needs_review" && (
