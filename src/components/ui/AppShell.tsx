@@ -11,7 +11,7 @@ import { TodayBar } from "./TodayBar";
 import { canOpen, homeOf, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";
 import { AiChat } from "@/components/AiChat";
-import { BottomTabs, MenuSheet, MobileTopBar, SelectSheet, tabsFor, titleOf, useTableCards } from "./MobileNav";
+import { BottomTabs, MenuSheet, MIcon, MobileTopBar, SelectSheet, tabsFor, titleOf, useTableCards } from "./MobileNav";
 
 /** ログインしている人（ログインを使っていないときは null） */
 export type ShellUser = { name: string; role: Role; via: "password" | "line" } | null;
@@ -270,7 +270,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
               className={`btn-ghost min-h-11 px-3 ${folded ? "" : "min-[1201px]:hidden"}`}
               aria-label="メニューを開く"
             >
-              ☰ メニュー
+              <MIcon name="menu" className="h-5 w-5" /> メニュー
             </button>
             <span className={folded ? "" : "min-[1201px]:hidden"}>
               <Brand factory={factory} />

@@ -93,6 +93,8 @@ export function PurchaseClient({
   const urgent = now == null ? [] : pos.filter((p) => st(p.id).status !== "sent" && (minutesLeft(p.cutoffAt, now) ?? Infinity) <= WARN_MIN);
   // まだ送っていないものを上に、その中は締めの早い順（締め未設定は下）
   const rank = { draft: 0, approved: 0, sent: 1 } as const;
+  // スマホ: はじめは8枚まで（⑧）
+  const [mAll, setMAll] = useState(false);
   const shown = pos
     .filter((p) => filter === "all" || st(p.id).status === filter)
     .sort((a, b) => rank[st(a.id).status] - rank[st(b.id).status] || (a.cutoffAt || "9").localeCompare(b.cutoffAt || "9"));
@@ -208,7 +210,8 @@ export function PurchaseClient({
       {shown.length === 0 ? (
         <Empty>{pos.length === 0 ? "今は発注するものがありません。" : "この状態の発注書はありません。"}</Empty>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-2">
+        <>
+        <div className={`m-limit grid gap-5 xl:grid-cols-2 ${mAll ? "m-all" : ""}`}>
           {shown.map((po) => (
             <PoSheet
               key={po.id}
@@ -222,6 +225,12 @@ export function PurchaseClient({
             />
           ))}
         </div>
+        {shown.length > 8 && (
+          <button type="button" className="mt-2 flex min-h-12 w-full items-center justify-center rounded-xl border-2 border-rule-strong bg-sheet text-[17px] font-bold md:hidden" aria-expanded={mAll} onClick={() => setMAll((x) => !x)}>
+            {mAll ? "8枚だけにする" : `すべて見る（${shown.length}枚）`}
+          </button>
+        )}
+        </>
       )}
     </div>
   );

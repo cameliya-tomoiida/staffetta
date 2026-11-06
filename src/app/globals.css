@@ -275,7 +275,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
 }
 /* スマホ: data-m-hide の行は出さない（「ほかの日も出す」などで出す） */
 @media screen and (max-width: 767px) {
-  main tr[data-m-hide] {
+  main [data-m-hide] {
     display: none !important;
   }
 }
@@ -314,5 +314,11 @@ a, button, input, select, textarea, label, summary, [role="button"] {
   }
   .text-ink-faint {
     color: var(--color-ink-soft, #5f5650) !important;
+  }
+}
+/* スマホ: class="m-limit" の一覧は、はじめ8件まで（「すべて見る」で m-all を付けて全部）（⑧） */
+@media screen and (max-width: 767px) {
+  main .m-limit:not(.m-all) > :nth-child(n + 9) {
+    display: none !important;
   }
 }

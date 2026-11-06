@@ -4,6 +4,7 @@
 //     欄（はじめ・おわり／担当者／確認）を押すと 書く・書かない、確認の欄は 温度・数・○×・なし を選ぶ。製品の表のロスの列も「＋」「−」。
 //   - 横に AI のチャット（声・文章）: 「焼成のあとに冷却を足して」のように話すと、AI が形を直して見た目に出す。何度でも。
 //   - 「保存」で形を保存（まだ責任者が確認していないカードにすぐ出る）。A4 横1枚に収まらなくなったら知らせる。
+import { MIcon } from "@/components/ui/MobileNav";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { buttonClass, choiceClass } from "@/components/ui";
@@ -487,7 +488,7 @@ function TemplateChat({ template, hasAi, onTemplate }: { template: CardTemplate;
         </button>
         {hasSpeech && (
           <button type="button" className={buttonClass(listening ? "primary" : "ghost", "md")} onClick={listen} aria-pressed={listening}>
-            {listening ? "● 聞いています" : "🎤 声で話す"}
+            {listening ? "● 聞いています" : <span className="inline-flex items-center gap-1"><MIcon name="mic" className="h-5 w-5" />声で話す</span>}
           </button>
         )}
       </div>
