@@ -58,7 +58,7 @@ export interface MapLine {
 }
 
 export function RouteMap({
-  depot, pins, line, lines, selected, onSelect, height = "h-[520px]", animate = false,
+  depot, pins, line, lines, selected, onSelect, height = "h-[520px]", animate = false, now,
 }: {
   depot: { lat: number; lng: number; name: string };
   pins: MapPin[];
@@ -72,6 +72,8 @@ export function RouteMap({
   height?: string;
   /** ルートが決まっていく動き（⑧）: ピンが順に落ちる → 線が順に伸びる → 着く時刻が順に出る。印が変わったときだけ動かす */
   animate?: boolean;
+  /** 今の位置（⑧ ルート表）: 線の上の動く印。無ければ出さない */
+  now?: { lat: number; lng: number; label?: string };
 }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
@@ -108,6 +110,26 @@ export function RouteMap({
     },
     [],
   );
+
+  // 今の位置の印（ほかの印とは別に、位置だけ動かす）
+  const nowMk = useRef<any>(null);
+  useEffect(() => {
+    const L = lib;
+    const m = map.current;
+    if (!L || !m) return;
+    if (!now) {
+      nowMk.current?.remove();
+      nowMk.current = null;
+      return;
+    }
+    if (!nowMk.current) {
+      nowMk.current = L.marker([now.lat, now.lng], {
+        icon: L.divIcon({ className: "", html: `<div class="rm-now"><span></span></div>`, iconSize: [28, 28], iconAnchor: [14, 14] }),
+        zIndexOffset: 2000,
+        interactive: false,
+      }).addTo(m);
+    } else nowMk.current.setLatLng([now.lat, now.lng]);
+  }, [lib, now]);
 
   // 印と線を描き直す
   const pinKey = JSON.stringify(pins.map((p) => [p.id, p.no, p.lat, p.lng, p.late, p.lines]));
@@ -190,6 +212,7 @@ export function RouteMap({
       }
     }
     if (pins.length) m.fitBounds(L.latLngBounds(pts), { padding: [36, 36], maxZoom: 15 });
+    else if (lines?.length) m.fitBounds(L.latLngBounds([[depot.lat, depot.lng], ...lines.flatMap((l) => (l.road?.length ? l.road : l.points))]), { padding: [24, 24], maxZoom: 15 }); // ⑧ 線だけのとき（ルート表の「全部」）
     else m.setView([depot.lat, depot.lng], 12);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pinKey・lineKey で中身の変化を見る
   }, [lib, pinKey, lineKey, selected, depot.lat, depot.lng, depot.name, animate]);

@@ -594,3 +594,10 @@ html[data-theme="light"] img[src="/brand/staffetta-logo-dark.svg"] {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
+
+/* ⑧ ルート表: 今の位置（光る点がゆっくり広がる） */
+.rm-now { position: relative; width: 28px; height: 28px; }
+.rm-now::before { content: ""; position: absolute; inset: 0; border-radius: 9999px; background: rgb(56 189 248 / 0.35); animation: rm-now 1.6s ease-out infinite; }
+.rm-now span { position: absolute; inset: 7px; border-radius: 9999px; background: #38bdf8; border: 3px solid #fff; box-shadow: 0 0 10px #38bdf8; }
+@keyframes rm-now { from { transform: scale(0.6); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rm-now::before { animation: none; } }
