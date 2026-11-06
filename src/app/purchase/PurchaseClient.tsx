@@ -113,9 +113,10 @@ export function PurchaseClient({
   return (
     <div>
       <PageHeader title="発注書" lead="注文と在庫から、仕入先ごとの発注書の下書きを作りました。中身を見て承認してから送ります。">
-        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
-          承認する人
-          <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink">
+        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft" title="承認する人">
+          <span className="max-md:hidden">承認する人</span>
+          <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 md:hidden" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+          <select aria-label="承認する人" value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink max-md:min-h-10 max-md:px-2 max-md:text-[14px]">
             {STAFF.map((s) => (
               <option key={s}>{s}</option>
             ))}

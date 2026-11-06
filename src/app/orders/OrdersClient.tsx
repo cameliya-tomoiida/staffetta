@@ -87,9 +87,10 @@ export function OrdersClient({
   return (
     <div>
       <PageHeader title="受注一覧" lead="FAX・LINE・メール・サイト・電話の注文を、ここでまとめて見ます。">
-        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
-          確定する人
-          <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink">
+        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft" title="確定する人">
+          <span className="max-md:hidden">確定する人</span>
+          <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 md:hidden" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+          <select value={who} onChange={(e) => setWho(e.target.value)} aria-label="確定する人" className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink max-md:min-h-10 max-md:px-2 max-md:text-[14px]">
             {STAFF.map((s) => (
               <option key={s}>{s}</option>
             ))}
@@ -339,7 +340,7 @@ function OrderRow({
                 const tpl = key.slice(key.indexOf("|") + 1);
                 const text = tpl.includes(" ") ? tpl.split(" ").join(g.names.join("・")) : g.reason;
                 return (
-                  <div key={key} className={`mt-1 flex items-start gap-1.5 text-review-ink ${g.status === "late" ? "font-bold" : ""}`}>
+                  <div key={key} className={`mt-1 flex items-start gap-1.5 text-review-ink max-md:hidden ${g.status === "late" ? "font-bold" : ""}`}>
                     <Icon.clock className="mt-1 h-4 w-4 shrink-0" />
                     <span>
                       <span className="mr-1">{g.status === "late" ? "締め：" : "締め（仮発注）："}</span>
@@ -351,7 +352,7 @@ function OrderRow({
             })()}
           {/* 締めだけの注文は出さない（締めは上の「締め：」で出ている）。1つの文を1行に */}
           {!off && alt && alt.length > 0 && (
-            <div className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-review-line bg-sheet px-2.5 py-1 text-ink">
+            <div className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-review-line bg-sheet px-2.5 py-1 text-ink max-md:hidden">
               <Icon.clock className="mt-1 h-4 w-4 shrink-0 text-review-ink" />
               <ul className="space-y-0.5">
                 {alt.map((t, k) => (

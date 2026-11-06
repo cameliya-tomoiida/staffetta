@@ -53,7 +53,8 @@ export default async function Inbox(props: PageProps<"/">) {
         </div>
         <div className="flex gap-2">
           <ReadAllButton count={db.faxes.filter((f) => f.status === "new" || f.status === "error").length} />
-          <ResetButton />
+          {/* 「デモを最初から」は見本の DB のときだけ（開発の画面か、HUB_DEMO=1 で起動したとき。本番 3100 では出さない） */}
+          {(process.env.NODE_ENV !== "production" || process.env.HUB_DEMO === "1") && <ResetButton />}
         </div>
       </div>
       {waiting > 0 && (
@@ -93,11 +94,11 @@ export default async function Inbox(props: PageProps<"/">) {
           const lines = f.read?.orders.reduce((n, o) => n + o.lines.length, 0) ?? 0;
           const flagged = f.read?.orders.flatMap((o) => o.lines).filter((l) => l.attention || l.confidence < 0.8).length ?? 0;
           return (
-            <div key={f.id} className="card flex flex-col overflow-hidden">
-              <div className="relative h-48 overflow-hidden bg-off-bg">
+            <div key={f.id} className="card flex flex-col overflow-hidden max-md:flex-row">
+              <div className="relative h-48 overflow-hidden bg-off-bg max-md:h-auto max-md:min-h-28 max-md:w-24 max-md:shrink-0">
                 <PdfThumb url={f.file} rotation={f.rotation ?? 0} />
               </div>
-              <div className="flex flex-1 flex-col gap-2 p-4">
+              <div className="flex flex-1 flex-col gap-2 p-4 max-md:min-w-0 max-md:p-3">
                 <div className="flex items-center justify-between">
                   <span className={`pill ${s.cls}`}>{s.text}</span>
                   <span className="text-xs text-ink-faint">{f.via === "gmail" || f.via === "simulate" ? "Gmail経由・" : ""}{new Date(f.receivedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 受信</span>
