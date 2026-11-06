@@ -116,7 +116,7 @@ export function printPath(job: Pick<PrintJob, "what" | "sheetId" | "month">, now
 }
 
 /** スマホ・タブレットから「工場のプリンターで印刷」できる画面（⑧）。この中で、その役割で開ける画面だけ印刷できる */
-export const PRINTABLE = ["/cards", "/hygiene", "/plan", "/purchase", "/orders", "/admin/routes", "/masters/recipes", "/masters/courses", "/slips/delivery", "/slips/invoice"];
+export const PRINTABLE = ["/cards", "/hygiene", "/plan", "/purchase", "/orders", "/admin/routes", "/masters/recipes", "/masters/courses", "/slips/delivery", "/slips/invoice", "/notices"];
 
 /** この役割で、この画面（path は ? 付きでもよい）を印刷できるか。ログインを使っていない（role なし）なら印刷できる画面は全部 */
 export function canPrint(role: Role | undefined, path: string): boolean {
