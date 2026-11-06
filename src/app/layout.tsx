@@ -9,6 +9,7 @@ import { AppShell } from "@/components/ui/AppShell";
 import { canOpen, homeOf } from "@/lib/auth/roles";
 import { currentUser } from "@/lib/auth/current-user";
 import { accountsExist } from "@/lib/staff";
+import { THEME_BOOT } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "STAFFETTA",
@@ -31,7 +32,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     if (!canOpen(user.role, pathname)) redirect(homeOf(user.role));
   }
   return (
-    <html lang="ja" className="h-full antialiased">
+    <html lang="ja" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        {/* 画面の色（暗い・明るい）を、描く前に決める（ThemeToggle）。ちらつかないように */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+      </head>
       <body className="min-h-full">
         {/* 左のサイドメニュー＋上の「今日やること」の帯（/liff・/driver・ログインでは出さない） */}
         <AppShell factory={getCompany().name} user={user ? { name: user.name, role: user.role, via: user.via } : null}>

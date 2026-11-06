@@ -451,9 +451,10 @@ a, button, input, select, textarea, label, summary, [role="button"] {
  * 画面は、アプリ全体を同じ暗い「司令室」の色にそろえる（上の帯・左のメニュー・中・カード・入力欄すべて）。
  * 印刷（@media print）と、紙の見本を見せる所（.theme-paper）は、今までどおり白い紙と墨。
  * 色の決まり（--color-*）を入れかえるので、各画面の作りはそのまま。直接書いた明るい色も、下で読みかえる。
+ * 右上の「明るく／暗く」で切りかえる（html の data-theme="light" なら、ここは使わず明るい色のまま。①）。
  */
 @media screen {
-  :root {
+  :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
     --color-paper: #0e1016;
     --color-sheet: #171a23;
@@ -494,7 +495,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     --color-bread: #e0b07d;
     --color-pizza: #ff7a6b;
   }
-  body {
+  :where(html:not([data-theme="light"])) body {
     background:
       radial-gradient(80% 50% at 0% 0%, rgba(210, 70, 58, 0.10), transparent 60%),
       radial-gradient(60% 40% at 100% 0%, rgba(90, 110, 190, 0.10), transparent 60%),
@@ -502,25 +503,25 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     background-attachment: fixed;
   }
   /* 直接書いた明るい色を、暗い色の決まりに読みかえる（紙の見本 .theme-paper の中はそのまま） */
-  :where(.bg-white):not(.theme-paper *) { background-color: var(--color-sheet); }
-  :where(.bg-\[\#fff3c4\]):not(.theme-paper *) { background-color: #4a3d0c; color: #fff4c2; } /* 確認する行（黄）は、暗い画面でもはっきり黄色に */
-  :where(.bg-\[\#fff0f1\], .bg-\[\#faf1f1\]):not(.theme-paper *) { background-color: var(--color-alert-bg); }
-  :where(.bg-\[\#e6f0fb\]):not(.theme-paper *) { background-color: var(--color-info-bg); }
-  :where(.bg-\[\#eaf5ed\]):not(.theme-paper *) { background-color: var(--color-ok-bg); }
-  :where(.bg-\[\#ece6dc\], .bg-\[\#f4f4f4\], .bg-\[\#e3e3e3\]):not(.theme-paper *) { background-color: var(--color-cream); }
-  :where(.bg-\[\#c5cac5\]):not(.theme-paper *) { background-color: #4a5060; }
-  :where(.text-\[\#565c57\], .text-\[\#555\], .text-\[\#444\], .text-\[\#242724\]):not(.theme-paper *) { color: var(--color-ink-soft); }
-  :where(.text-\[\#654700\]):not(.theme-paper *) { color: var(--color-review-ink); }
-  :where(.text-\[\#a51e28\], .text-\[\#a00\], .text-\[\#8b1a1a\]):not(.theme-paper *) { color: var(--color-alert-ink); }
-  :where(.text-\[\#1f3f66\], .text-\[\#1d4b8f\]):not(.theme-paper *) { color: var(--color-info-ink); }
-  :where(.text-\[\#24633d\]):not(.theme-paper *) { color: var(--color-ok-ink); }
-  :where(.text-black):not(.theme-paper *) { color: var(--color-ink); }
-  :where(.border-\[\#c5cac5\], .border-\[\#838b83\]):not(.theme-paper *) { border-color: var(--color-rule-strong); }
-  :where(.border-\[\#b08210\]):not(.theme-paper *) { border-color: var(--color-review-line); }
-  :where(.hover\:bg-crust-700:hover):not(.theme-paper *) { background-color: #a8332a; }
+  :where(html:not([data-theme="light"])) :where(.bg-white):not(.theme-paper *) { background-color: var(--color-sheet); }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#fff3c4\]):not(.theme-paper *) { background-color: #4a3d0c; color: #fff4c2; } /* 確認する行（黄）は、暗い画面でもはっきり黄色に */
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#fff0f1\], .bg-\[\#faf1f1\]):not(.theme-paper *) { background-color: var(--color-alert-bg); }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#e6f0fb\]):not(.theme-paper *) { background-color: var(--color-info-bg); }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#eaf5ed\]):not(.theme-paper *) { background-color: var(--color-ok-bg); }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#ece6dc\], .bg-\[\#f4f4f4\], .bg-\[\#e3e3e3\]):not(.theme-paper *) { background-color: var(--color-cream); }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#c5cac5\]):not(.theme-paper *) { background-color: #4a5060; }
+  :where(html:not([data-theme="light"])) :where(.text-\[\#565c57\], .text-\[\#555\], .text-\[\#444\], .text-\[\#242724\]):not(.theme-paper *) { color: var(--color-ink-soft); }
+  :where(html:not([data-theme="light"])) :where(.text-\[\#654700\]):not(.theme-paper *) { color: var(--color-review-ink); }
+  :where(html:not([data-theme="light"])) :where(.text-\[\#a51e28\], .text-\[\#a00\], .text-\[\#8b1a1a\]):not(.theme-paper *) { color: var(--color-alert-ink); }
+  :where(html:not([data-theme="light"])) :where(.text-\[\#1f3f66\], .text-\[\#1d4b8f\]):not(.theme-paper *) { color: var(--color-info-ink); }
+  :where(html:not([data-theme="light"])) :where(.text-\[\#24633d\]):not(.theme-paper *) { color: var(--color-ok-ink); }
+  :where(html:not([data-theme="light"])) :where(.text-black):not(.theme-paper *) { color: var(--color-ink); }
+  :where(html:not([data-theme="light"])) :where(.border-\[\#c5cac5\], .border-\[\#838b83\]):not(.theme-paper *) { border-color: var(--color-rule-strong); }
+  :where(html:not([data-theme="light"])) :where(.border-\[\#b08210\]):not(.theme-paper *) { border-color: var(--color-review-line); }
+  :where(html:not([data-theme="light"])) :where(.hover\:bg-crust-700:hover):not(.theme-paper *) { background-color: #a8332a; }
   /* 入力欄・選ぶ欄も暗く（文字は明るく） */
-  :where(input, select, textarea):not(.theme-paper *) { background-color: var(--color-sheet); color: var(--color-ink); }
-  :where(input, textarea):not(.theme-paper *)::placeholder { color: #7f8798; }
+  :where(html:not([data-theme="light"])) :where(input, select, textarea):not(.theme-paper *) { background-color: var(--color-sheet); color: var(--color-ink); }
+  :where(html:not([data-theme="light"])) :where(input, textarea):not(.theme-paper *)::placeholder { color: #7f8798; }
   /* 地図の上の白い札・ふきだしは、地図が明るいのでそのまま（Leaflet） */
 }
 
@@ -568,10 +569,15 @@ a, button, input, select, textarea, label, summary, [role="button"] {
 .theme-paper :where(input, select, textarea) { background-color: #fff; color: var(--color-ink); }
 @media screen {
   /* 墨の地に白い字（番号の丸など）は、暗い画面では濃い灰色の地に */
-  :where(.bg-ink):not(.theme-paper *) { background-color: #3d4456; }
+  :where(html:not([data-theme="light"])) :where(.bg-ink):not(.theme-paper *) { background-color: #3d4456; }
   /* 地図も暗く（地図の絵だけ色を反転。ピン・線・札の色はそのまま） */
-  .leaflet-container { background: #0e1016; }
-  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.6); }
-  .leaflet-control-attribution { background: rgba(14, 16, 22, 0.8) !important; color: #bcc2cf; }
-  .leaflet-bar a { background: #171a23 !important; color: #eef0f6 !important; border-color: #3d4456 !important; }
+  :where(html:not([data-theme="light"])) .leaflet-container { background: #0e1016; }
+  :where(html:not([data-theme="light"])) .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.6); }
+  :where(html:not([data-theme="light"])) .leaflet-control-attribution { background: rgba(14, 16, 22, 0.8) !important; color: #bcc2cf; }
+  :where(html:not([data-theme="light"])) .leaflet-bar a { background: #171a23 !important; color: #eef0f6 !important; border-color: #3d4456 !important; }
+}
+
+/* 画面の色の切りかえ（①）: 暗い画面のロゴ（白い字）は、明るい画面では普通のロゴに */
+html[data-theme="light"] img[src="/brand/staffetta-logo-dark.svg"] {
+  content: url("/brand/staffetta-logo.svg");
 }

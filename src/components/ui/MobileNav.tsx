@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { canOpen, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";
+import { ThemeToggle } from "./ThemeToggle";
 
 type MenuItem = { href: string; label: string; match?: (p: string) => boolean };
 type MenuGroup = { title: string; items: MenuItem[]; fold?: boolean };
@@ -158,6 +159,7 @@ export function MenuSheet({
             <p className="text-[19px] font-black">メニュー</p>
             <p className="truncate text-[15px] text-ink-soft">{factory}{user ? `・${user.name} さん（${user.role}）` : ""}</p>
           </div>
+          <ThemeToggle />
           <button type="button" onClick={onClose} className="flex min-h-12 min-w-12 items-center justify-center rounded-lg border-2 border-rule-strong" aria-label="メニューを閉じる">
             <MIcon name="close" />
           </button>

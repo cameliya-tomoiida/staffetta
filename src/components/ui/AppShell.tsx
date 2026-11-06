@@ -11,6 +11,7 @@ import { TodayBar } from "./TodayBar";
 import { canOpen, homeOf, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";
 import { AiChat } from "@/components/AiChat";
+import { ThemeToggle } from "./ThemeToggle";
 import { BottomTabs, MenuSheet, MIcon, MobileTopBar, SelectSheet, tabsFor, titleOf, useTableCards } from "./MobileNav";
 
 /** ログインしている人（ログインを使っていないときは null） */
@@ -282,6 +283,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
             </span>
             <span className="text-[18px] font-bold">今日の仕事</span>
             <span className="ml-auto" />
+            <ThemeToggle />
             <AiChat />
             <span className="text-[17px] text-ink-soft tabular-nums">{today}</span>
             {user && (
