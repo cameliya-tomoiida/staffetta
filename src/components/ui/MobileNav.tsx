@@ -94,27 +94,30 @@ export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: st
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
   return (
-    <div className="fx-line no-print sticky top-0 z-40 flex min-h-14 items-center gap-1.5 border-b border-rule bg-sheet/85 pr-2 pl-1 backdrop-blur-xl md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      {root ? (
-        // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
-        <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="ml-2 h-8 w-8 shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
-      ) : (
-        <button type="button" onClick={back} className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-lg text-crust-700 active:bg-crust-50" aria-label="1つ前の画面へ戻る">
-          <MIcon name="back" className="h-7 w-7" />
-        </button>
-      )}
-      <h1 className="min-w-0 flex-1 truncate px-1 text-[19px] font-black">{title || "STAFFETTA"}</h1>
-      <div className="shrink-0">{ai}</div>
-      {/* ⑧ メニューは上の右に、文字つきで（前は下のタブの右下で、気づきにくかった） */}
-      {onMenu ? (
-        <button type="button" onClick={onMenu} aria-label={user ? `メニュー（${user.name}）` : "メニュー"}
-          className="flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-rule-strong px-3 text-[15px] font-bold text-ink active:scale-95 active:bg-paper">
-          <MIcon name="menu" className="h-5 w-5" />
-          メニュー
-        </button>
-      ) : (
-        user && <span className="max-w-[5.5em] shrink-0 truncate pl-1 text-[15px] font-bold text-ink-soft">{user.name}</span>
-      )}
+    // ⑧ 上の帯（担当者のアプリの形）: 左＝戻る（入口の画面では印）とメニュー・まん中＝画面の名前・右＝背景の色の切りかえと AI
+    <div className="fx-line no-print sticky top-0 z-40 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-rule bg-sheet/85 px-1.5 backdrop-blur-xl md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <div className="flex min-w-0 items-center gap-0.5">
+        {root ? (
+          // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
+          <img src="/brand/staffetta-mark.svg" alt="" width={30} height={30} className="mx-1.5 h-[30px] w-[30px] shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
+        ) : (
+          <button type="button" onClick={back} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-crust-700 active:bg-crust-50" aria-label="1つ前の画面へ戻る">
+            <MIcon name="back" className="h-7 w-7" />
+          </button>
+        )}
+        {onMenu && (
+          <button type="button" onClick={onMenu} aria-label={user ? `メニュー（${user.name}）` : "メニュー"}
+            className="flex h-11 min-w-11 shrink-0 flex-col items-center justify-center rounded-xl px-1 text-ink active:scale-95 active:bg-paper">
+            <MIcon name="menu" className="h-5 w-5" />
+            <span className="text-[10px] leading-none font-bold">メニュー</span>
+          </button>
+        )}
+      </div>
+      <h1 className="max-w-[44vw] truncate text-center text-[17px] font-black">{title || "STAFFETTA"}</h1>
+      <div className="flex min-w-0 items-center justify-end gap-1">
+        <ThemeToggle compact />
+        <div className="shrink-0">{ai}</div>
+      </div>
     </div>
   );
 }
@@ -172,7 +175,6 @@ export function MenuSheet({
             <p className="text-[19px] font-black">メニュー</p>
             <p className="truncate text-[15px] text-ink-soft">{factory}{user ? `・${user.name} さん（${user.role}）` : ""}</p>
           </div>
-          <ThemeToggle />
           <button type="button" onClick={onClose} className="flex min-h-12 min-w-12 items-center justify-center rounded-lg border-2 border-rule-strong" aria-label="メニューを閉じる">
             <MIcon name="close" />
           </button>
