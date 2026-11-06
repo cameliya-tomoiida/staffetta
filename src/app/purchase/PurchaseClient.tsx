@@ -146,7 +146,7 @@ export function PurchaseClient({
         </Notice>
       )}
       {lateMaterials.length > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3 max-md:mb-2 max-md:py-2">
           <details>
             <summary className="cursor-pointer max-md:after:!hidden">
               <span className="md:hidden">間に合わない材料 <span className="num text-xl">{lateMaterials.length}</span> ›</span>
@@ -195,7 +195,7 @@ export function PurchaseClient({
         </Notice>
       )}
       {unconfirmed > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3 max-md:mb-2 max-md:py-2">
           <span className="max-md:hidden">この日の注文で、まだ確定していないものが <span className="num text-xl">{unconfirmed}</span> 件あります。確定すると発注書の数が変わります。</span>
           <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4 max-md:ml-0 max-md:no-underline"><span className="md:hidden">まだ確定していない注文 <span className="num text-xl">{unconfirmed}</span> ›</span><span className="max-md:hidden">受注一覧で見る</span></Link>
         </Notice>
@@ -216,7 +216,16 @@ export function PurchaseClient({
         </Notice>
       )}
 
-      <div className="no-print mb-4 flex flex-wrap items-center gap-3">
+      {/* ⑧ スマホ: 状態は上のタブ（件数つき） */}
+      <nav aria-label="状態" className="no-print -mx-4 mb-3 flex border-b border-rule px-2 md:hidden">
+        {([["all", "すべて", pos.length], ["draft", "下書き", counts.draft], ["approved", "承認済み", counts.approved], ["sent", "送信済み", counts.sent]] as const).map(([v, l, n]) => (
+          <button key={v} type="button" onClick={() => setFilter(v)} aria-current={filter === v ? "page" : undefined}
+            className={`flex min-h-12 flex-1 items-center justify-center gap-1 border-b-[3px] text-[14px] font-bold whitespace-nowrap ${filter === v ? "border-crust-600 text-ink" : "border-transparent text-ink-soft"}`}>
+            {l}<span className="rounded-full bg-paper px-1.5 text-[12px] tabular-nums">{n}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="no-print mb-4 flex flex-wrap items-center gap-3 max-md:hidden">
         <Segmented
           label="状態"
           value={filter}

@@ -19,7 +19,7 @@ export function DateNav({ date, today, pattern, label = "納品日", marks = [] 
   const [, m, dd] = date.split("-").map(Number);
   const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
   const rel = date === today ? "今日" : date === add(today, 1) ? "明日" : date === add(today, -1) ? "きのう" : "";
-  const btn = "flex min-h-14 min-w-14 shrink-0 items-center justify-center rounded-xl border-2 border-rule-strong bg-sheet text-crust-700 active:bg-crust-50";
+  const btn = "flex min-h-12 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-rule-strong bg-sheet text-crust-700 active:bg-crust-50";
   const icon = (d: string) => (
     <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d={d} />
@@ -27,14 +27,14 @@ export function DateNav({ date, today, pattern, label = "納品日", marks = [] 
   );
   return (
     <div className="no-print mb-3 md:hidden">
-      <p className="mb-1 text-[15px] font-bold text-ink-soft">{label}</p>
+      {/* ⑧ 1行に（11/7）: 名前と「この日は注文があります」の文は出さない。注文のある日は日付の横の点、今日でなければ右に小さな「今日」 */}
       <div className="flex items-stretch gap-2">
         <button type="button" className={btn} onClick={() => go(add(date, -1))} aria-label="前の日">
           {icon("m14.5 5-7 7 7 7")}
         </button>
         <button
           type="button"
-          className="relative flex min-h-14 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-crust-600 bg-crust-50 px-2 active:bg-crust-100"
+          className="relative flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-2 border-crust-600 bg-crust-50 px-2 active:bg-crust-100"
           onClick={() => {
             const el = pick.current;
             if (!el) return;
@@ -46,10 +46,11 @@ export function DateNav({ date, today, pattern, label = "納品日", marks = [] 
           }}
           aria-label={`${label}を選ぶ（カレンダー）`}
         >
-          <span className="num text-[24px] font-black whitespace-nowrap">
+          <span className="num text-[21px] font-black whitespace-nowrap">
             {m}/{dd}
             <span className="ml-1 text-[18px]">({WD[wd]})</span>
           </span>
+          {marks.includes(date) && <span aria-label="注文あり" className="h-2 w-2 shrink-0 rounded-full bg-crust-600" />}
           {rel && <span className="shrink-0 rounded-full bg-crust-600 px-2 py-0.5 text-[14px] font-bold whitespace-nowrap text-white">{rel}</span>}
           <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0 text-crust-700" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <rect x="3.5" y="5" width="17" height="15" rx="2" />
@@ -60,13 +61,12 @@ export function DateNav({ date, today, pattern, label = "納品日", marks = [] 
         <button type="button" className={btn} onClick={() => go(add(date, 1))} aria-label="次の日">
           {icon("m9.5 5 7 7-7 7")}
         </button>
+        {date !== today && (
+          <button type="button" className="shrink-0 rounded-xl border border-rule-strong px-3 text-[14px] font-bold" onClick={() => go(today)} aria-label="今日にもどる">
+            今日
+          </button>
+        )}
       </div>
-      <p className="mt-1 text-[15px] font-bold text-ink-soft">{marks.includes(date) ? "この日は注文があります" : "この日の注文はありません"}</p>
-      {date !== today && (
-        <button type="button" className="mt-2 min-h-12 w-full rounded-xl border-2 border-rule-strong bg-sheet text-[17px] font-bold" onClick={() => go(today)}>
-          今日にもどる
-        </button>
-      )}
     </div>
   );
 }
