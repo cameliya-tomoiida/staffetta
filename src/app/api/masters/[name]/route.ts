@@ -4,6 +4,7 @@
 //   GET  ?format=history&id=..  … 変更の記録
 //   POST multipart（file, action=preview）          … CSV を読んでプレビュー（保存しない）
 //   POST multipart（file, action=apply, who, hash） … 確定（もう一度検証してから保存。エラーがあれば保存しない）
+//   POST multipart（file, action=ai_suggest|ai_reshape|ai_try|ai_apply, mapping?, who?） … ⑧ AI で取り込む（どんな形のファイルでも、列を振り分けて整える）
 //   POST JSON { action: "save", id?, input, who }   … 1件の追加・修正
 //   POST JSON { action: "delete" | "restore", id, who }
 //   POST JSON { action: "stocktake", id, counted, who, note? } … 棚卸（材料・包材）
@@ -18,6 +19,7 @@ import {
 } from "@/lib/masters/service";
 import { warmMasterTranslations } from "@/i18n/translate";
 import { loadMasters } from "@/lib/masters/seed-db";
+import type { Mapping } from "@/lib/masters/ai-mapping";
 
 const csvResponse = (buf: Buffer, fileName: string) =>
   new NextResponse(new Uint8Array(buf), {
@@ -59,7 +61,17 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
       if (!(file instanceof File)) throw new Error("CSV ファイルを選んでください");
       const buf = new Uint8Array(await file.arrayBuffer());
       const action = String(form.get("action") ?? "preview");
-      if (action === "apply") result = await applyUpload(name, buf, file.name, String(form.get("who") ?? ""), String(form.get("hash") ?? "") || undefined);
+      // ⑧ AI で取り込む（どんな形の CSV・Excel でも。mapping は画面で人が直した対応）
+      const mapping = form.get("mapping") ? (JSON.parse(String(form.get("mapping"))) as Mapping) : undefined;
+      if (action.startsWith("ai_")) {
+        const ai = await import("@/lib/masters/ai-import");
+        if (action === "ai_suggest") result = await ai.suggest(name, buf, file.name);
+        else if (!mapping) throw new Error("列の対応がありません");
+        else if (action === "ai_reshape") result = await ai.reshape(name, buf, file.name, mapping);
+        else if (action === "ai_try") result = await ai.tryMapped(name, buf, file.name, mapping);
+        else if (action === "ai_apply") result = await ai.applyMapped(name, buf, file.name, mapping, String(form.get("who") ?? ""));
+        else throw new Error(`知らない操作です: ${action}`);
+      } else if (action === "apply") result = await applyUpload(name, buf, file.name, String(form.get("who") ?? ""), String(form.get("hash") ?? "") || undefined);
       else result = await previewUpload(name, buf, file.name);
     } else {
       const b = (await req.json()) as { action: string; id?: string; input?: Record<string, string>; who?: string; counted?: number; note?: string; doughId?: string; lines?: RecipeLineInput[]; customerId?: string; weekOf?: string };
