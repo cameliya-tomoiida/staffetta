@@ -70,10 +70,21 @@ function putOrder(o: Order) {
           id, name: `${area.replace(/市|町|区$/, "")}${["みどり", "ひかり", "さくら", "あおば", "つばさ", "こもれび", "ひまわり"][k % 7]}${kind}（見本）`,
           channel: "fax", cutoff: "15:00", course: cn, deliveryWeekdays: [1, 2, 3, 4, 5, 6],
           address: `愛知県${area}（見本）${k + 1}`, lat: Math.round((lat + (rnd() - 0.5) * 0.06) * 1e6) / 1e6, lng: Math.round((lng + (rnd() - 0.5) * 0.07) * 1e6) / 1e6,
-          deliveryMethod: "own", deliveryWindowFrom: ["07:00", "07:30", "08:00", "08:30"][k % 4], deliveryWindowTo: ["09:00", "09:30", "10:00", "10:30"][k % 4], active: true,
+          deliveryMethod: "own", deliveryWindowFrom: ["06:00", "06:30", "07:00", "07:00"][k % 4], deliveryWindowTo: ["11:00", "11:30", "12:00", "12:00"][k % 4], active: true,
         });
       }
-      courses.push({ id: cn, name: cn, departTime: ["05:30", "06:00", "06:30"][ci % 3], loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], stops: [], serviceMinutes: 8, vehicle: "軽バン", active: true, note: "見本（動画の撮影用）" });
+      // 回る順: 工場から近い順にたどる（AI の見直し案のような、線が行ったり来たりしない順。ルート表で見せる）
+      const mine = customers.filter((c) => stops.includes(c.id as string)) as { id: string; lat: number; lng: number }[];
+      const order: string[] = [];
+      let at = { lat: 35.155, lng: 136.83 };
+      const left = [...mine];
+      while (left.length) {
+        left.sort((x, y) => (x.lat - at.lat) ** 2 + (x.lng - at.lng) ** 2 - ((y.lat - at.lat) ** 2 + (y.lng - at.lng) ** 2));
+        const nx = left.shift()!;
+        order.push(nx.id);
+        at = nx;
+      }
+      courses.push({ id: cn, name: cn, departTime: ["05:30", "06:00", "06:30"][ci % 3], loadMinutes: 30, dayOffset: 0, weekdays: [1, 2, 3, 4, 5, 6], stops: order, serviceMinutes: 8, vehicle: "軽バン", active: true, note: "見本（動画の撮影用）" });
     });
     await upsertMasters("courses", courses as never[], WHO);
     await upsertMasters("customers", customers as never[], WHO);

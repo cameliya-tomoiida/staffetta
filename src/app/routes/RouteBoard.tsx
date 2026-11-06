@@ -70,7 +70,7 @@ function whereNow(c: BoardCourse, depot: Depot, t: number): { pos: [number, numb
   return undefined;
 }
 
-export function RouteBoard({ courses, depot, weekday, initial, demoNow }: { courses: BoardCourse[]; depot: Depot; weekday: string; initial: string; demoNow?: string }) {
+export function RouteBoard({ courses, depot, weekday, initial, demoNow, play = false }: { courses: BoardCourse[]; depot: Depot; weekday: string; initial: string; demoNow?: string; play?: boolean }) {
   const [sel, setSel] = useState(initial === "all" || courses.some((c) => c.id === initial) ? initial : courses[0]?.id ?? "all");
   const [view, setView] = useState<"map" | "list">("map");
   const [picked, setPicked] = useState<string | undefined>();
@@ -150,6 +150,7 @@ export function RouteBoard({ courses, depot, weekday, initial, demoNow }: { cour
             selected={picked}
             onSelect={setPicked}
             height="h-[62vh] md:h-[calc(100vh-190px)] md:min-h-[520px]"
+            animate={play} // 動画用（?play=1）: 線が伸び、ピンが順に立つ
             now={here ? { lat: here.pos[0], lng: here.pos[1] } : undefined}
           />
         </div>

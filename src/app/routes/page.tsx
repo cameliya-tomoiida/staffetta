@@ -47,5 +47,5 @@ export default async function RoutesPage(props: { searchParams: Promise<Record<s
       }),
     });
   }
-  return <RouteBoard courses={courses} depot={depot} weekday={WD[wd]} initial={typeof q.c === "string" ? q.c : courses[0]?.id ?? "all"} demoNow={typeof q.t === "string" && /^\d{2}:\d{2}$/.test(q.t) ? q.t : undefined} />;
+  return <RouteBoard courses={courses} depot={depot} weekday={WD[wd]} initial={typeof q.c === "string" ? q.c : courses[0]?.id ?? "all"} demoNow={typeof q.t === "string" && /^\d{2}:\d{2}$/.test(q.t) ? q.t : undefined} play={q.play === "1"} />;
 }

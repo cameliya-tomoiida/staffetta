@@ -245,6 +245,13 @@ def e4(pg):
     tbl = pg.get_by_text("見直し案").first
     center(tbl)
     pg.wait_for_timeout(3500)  # コースの数・回る先・時間・距離
+    # 新しいルート表: 全部（コースの色の線が伸びる）→ 1コース（ピンが順に立つ・今の位置・着く時刻）
+    pg.goto(f"{BASE}/routes?c=all&play=1&t=07:40", wait_until="load")
+    pg.wait_for_timeout(6500)
+    pg.get_by_role("button", name="Bコース").first.click()
+    pg.wait_for_timeout(6500)
+    pg.get_by_role("button", name="Dコース").first.click()
+    pg.wait_for_timeout(5500)
 
 
 def e5(pg):
@@ -294,7 +301,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(channel="chrome")
     warm = b.new_page()
     warm.set_default_timeout(240000)
-    for path in (["/orders"] if ONLY == {"D10"} else [f"/purchase?date={PO_DAY}", "/admin/routes?yobi=1", "/hygiene/missing", "/alerts", "/analytics"] if ONLY and all(x.startswith("E") for x in ONLY) else ["/", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]):
+    for path in (["/orders"] if ONLY == {"D10"} else [f"/purchase?date={PO_DAY}", "/admin/routes?yobi=1", "/routes?c=all", "/hygiene/missing", "/alerts", "/analytics"] if ONLY and all(x.startswith("E") for x in ONLY) else ["/", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]):
         try:
             warm.goto(BASE + path, wait_until="domcontentloaded")
             warm.wait_for_timeout(1500)
