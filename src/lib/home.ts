@@ -19,6 +19,7 @@ const ALERT_ROLES: Record<string, Role[]> = {
   review_backlog: ["事務"], usual_order_missing: ["事務"], not_received: ["事務"], provisional_pending: ["事務"], po_not_sent: ["事務"],
   new_things: ["事務"], unusual_quantity: ["事務", "工場"], review_docs_missing: ["事務"],
   production_warning: ["工場", "事務"], stock_shortage: ["工場", "事務"], stocktake_due: ["工場"], plan_prepared: ["工場", "事務"],
+  record_due: ["工場"], record_submit: ["工場"],
 };
 export const alertForRole = (kind: string, role: Role) => role === "管理者" || (ALERT_ROLES[kind] ?? []).includes(role);
 

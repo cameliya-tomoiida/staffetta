@@ -108,6 +108,8 @@ export interface CardItemInput {
   loss?: number;
   stock?: number;
   metal?: Check;
+  /** 金属検査を流すたび（ミキサーの回ごと）。あれば metal はこのまとめ（× が1つでもあれば ×） */
+  metalRuns?: Check[];
   sensory?: Check;
   /** 工程ごとのロス数（キー＝工程。第3版）。前の版の loss は包装のロスとして読む */
   losses?: Record<string, number>;

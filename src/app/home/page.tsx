@@ -107,6 +107,12 @@ function Todo({ role, d }: { role: Role; d: HomeData }) {
   const items: { text: string; href: string; urgent?: boolean }[] = [];
   const office = role === "事務" || role === "管理者";
   const factory = role === "工場" || role === "管理者";
+  // (36) 記録のアラーム: 時刻が来たのに書いていない記録を、いちばん上に（締めを過ぎたら赤）
+  if (factory) {
+    const rec = d.alerts.filter((a) => a.kind === "record_due" || a.kind === "record_submit").sort((a, b) => (a.level === "danger" ? 0 : 1) - (b.level === "danger" ? 0 : 1));
+    for (const a of rec.slice(0, 5)) items.push({ text: a.title, href: a.href ?? "/hygiene", urgent: a.level === "danger" });
+    if (rec.length > 5) items.push({ text: `ほかにも記録のまだが ${rec.length - 5}件あります`, href: "/alerts", urgent: rec.some((a) => a.level === "danger") });
+  }
   if (office && fax) items.push({ text: `FAX を ${fax} 枚、見比べて確定する`, href: "/" });
   if (office && s.ordersToReview) items.push({ text: `要確認の注文 ${s.ordersToReview} 件を確定する（LINE・電話・ドライバーなど）`, href: "/orders?status=needs_review" });
   if (office && d.replies) items.push({ text: `受付の返事 ${d.replies} 件を確かめて送る`, href: "/orders" });

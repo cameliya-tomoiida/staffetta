@@ -18,6 +18,7 @@ import { isReviewed, tr, trUnit, type Key } from "@/i18n/dict";
 import { lookupTerms } from "@/i18n/translate";
 import { RefreshSoon } from "./RefreshSoon";
 import { PrintButton } from "./PrintButton";
+import { FactoryPrint } from "@/components/FactoryPrint";
 import { ProductionDone } from "./ProductionDone";
 import { madeOf } from "./made";
 import { getProductionActual } from "@/lib/stock/store";
@@ -260,6 +261,10 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))}
         right={<PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />}
       />
+      {/* (36) B: スマホ・タブレットから工場の複合機へ（工程表。ことばは選んだもの） */}
+      <div className="my-3">
+        <FactoryPrint path={href({})} label={`工程表 ${date}${lang === "ja" ? "" : `（${jaLabel}）`}`} />
+      </div>
 
       {/* ここから下が印刷する紙（選んだことば） */}
       <div lang={langInfo(lang).htmlLang} className="rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fmtDate } from "@/components/ui";
 import { PrintButton } from "@/app/plan/PrintButton";
+import { FactoryPrint } from "@/components/FactoryPrint";
 import { bakeRule, fieldsOf, kneadRule, lossColumns, lossOf, mixesOf, processesOf, stepsOf, totalLoss, type CardBase, type CardInput, type Check } from "@/lib/cards/card";
 import { loadCards } from "@/lib/cards/store";
 
@@ -40,6 +41,7 @@ export default async function CardPrint(props: PageProps<"/cards/print">) {
         <PrintButton label={`印刷する（${list.length}枚・A4 横）`} primary />
         <span className="text-lg text-ink-soft">PDF にするときは、印刷の画面で「PDF に保存」を選びます。</span>
       </div>
+      <FactoryPrint path={`/cards/print?date=${date}${key ? `&key=${encodeURIComponent(key)}` : ""}`} label={`製品カード ${date}（${list.length}枚・A4 横）`} />
       {list.map((c, i) => (
         <Sheet key={c.base.key} base={c.base} v={c.input ?? { items: {} }} first={i === 0} />
       ))}

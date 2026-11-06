@@ -9,6 +9,7 @@ import { AppShell } from "@/components/ui/AppShell";
 import { canOpen, homeOf } from "@/lib/auth/roles";
 import { currentUser } from "@/lib/auth/current-user";
 import { accountsExist } from "@/lib/staff";
+import { printKeyOk } from "@/lib/printing/print-key";
 
 export const metadata: Metadata = {
   title: "STAFFETTA",
@@ -24,7 +25,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // 役割ごとのログイン（作者 11/6 (22)）。管理者がまだいない間は、今までどおりログインなしで全部開ける
   const path = (await headers()).get("x-hub-path") ?? "/";
   const pathname = path.split("?")[0];
-  const open = OPEN.some((b) => pathname === b || pathname.startsWith(`${b}/`));
+  // 工場の PC が自分の印刷の画面を PDF にするとき（印刷の合いかぎ付き・印刷の画面だけ）も開ける（(36) B）
+  const open = OPEN.some((b) => pathname === b || pathname.startsWith(`${b}/`)) || (path.includes("printKey=") && printKeyOk(path));
   const user = open ? undefined : await currentUser();
   if (!open && accountsExist()) {
     if (!user) redirect(`/login?next=${encodeURIComponent(path)}`);

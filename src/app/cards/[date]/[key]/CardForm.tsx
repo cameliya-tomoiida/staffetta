@@ -46,6 +46,8 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
   const kr = kneadRule(base);
   const processes = processesOf(base);
   const lossCols = lossColumns(base);
+  /** 金属検査の回数（流す回数＝ミキサーの回数。(36)） */
+  const runs = Math.max(1, Math.round(base.batches || 1));
 
   const set = <K extends keyof CardInput>(k: K, val: CardInput[K]) => {
     setV((x) => ({ ...x, [k]: val }));
@@ -369,7 +371,30 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                     <td className={TD}>{num(x.bakeMinutes, (n) => setItem(it.productId, "bakeMinutes", n), `${it.name} の焼成時間`, undefined, br?.minutes != null ? String(br.minutes) : "")}</td>
                     <td className={TD}>{num(x.packed, (n) => setItem(it.productId, "packed", n), `${it.name} の製品数（包装）`, f("packed"))}</td>
                     <td className={TD}>{num(x.stock, (n) => setItem(it.productId, "stock", n), `${it.name} の在庫`)}</td>
-                    <td className={TD}><OkNg label={`${it.name} の金属検査`} disabled={approved} value={x.metal} onChange={(c) => setItem(it.productId, "metal", c)} /></td>
+                    <td className={TD}>
+                      {runs > 1 ? (
+                        // 金属検査は流すたび（ミキサーの回ごと）。まとめ（metal）は × が1つでもあれば ×、全部 ○ なら ○
+                        <div className="space-y-1">
+                          {Array.from({ length: runs }, (_, ri) => (
+                            <div key={ri} className="flex items-center gap-1">
+                              <span className="w-8 shrink-0 text-sm font-bold">{ri + 1}回</span>
+                              <OkNg
+                                label={`${it.name} の金属検査 ${ri + 1}回目`}
+                                disabled={approved}
+                                value={x.metalRuns?.[ri] ?? (ri === 0 ? x.metal : undefined)}
+                                onChange={(c) => {
+                                  const next = Array.from({ length: runs }, (_, j) => (j === ri ? c : (x.metalRuns?.[j] ?? (j === 0 ? x.metal ?? "" : ""))));
+                                  setItem(it.productId, "metalRuns", next);
+                                  setItem(it.productId, "metal", next.includes("ng") ? "ng" : next.every((y) => y === "ok") ? "ok" : "");
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <OkNg label={`${it.name} の金属検査`} disabled={approved} value={x.metal} onChange={(c) => setItem(it.productId, "metal", c)} />
+                      )}
+                    </td>
                     <td className={TD}><OkNg label={`${it.name} の官能検査`} disabled={approved} value={x.sensory} onChange={(c) => setItem(it.productId, "sensory", c)} /></td>
                     {lossCols.map((c) => (
                       <td key={c.key} className={TD}>{num(lossOf(x, c.key), (n) => setLoss(c.key, n), `${it.name} の${c.label}のロス数`)}</td>
