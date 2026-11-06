@@ -66,8 +66,10 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
             if (o.deliveryDate !== date || !countsInTotals(o) || !l.customers.some((c) => c.customerId === o.customerId)) continue;
             for (const ol of o.lines) if (ol.productId === l.itemId) packs.set(ol.unit || "個", (packs.get(ol.unit || "個") ?? 0) + ol.quantity);
           }
-          const flow = packs.size > 1 ? `${[...packs].map(([u, q]) => `${u} ${q}`).join(" ＋ ")} ＝ ${l.needQuantity}個 → ${l.unitLabel} ${l.units}袋　` : "";
-          detail = `${flow}注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}${l.notes?.length ? `　${l.notes.join("・")}` : ""}`;
+          // 包装が2つ以上なら、その式だけ（ほかの文は出さない。担当者「意味が分からない」）
+          detail = packs.size > 1
+            ? `${[...packs].map(([u, q]) => `${u} ${q}`).join(" ＋ ")} ＝ ${l.needQuantity}個 → ${l.unitLabel} ${l.units}袋`
+            : `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}${l.notes?.length ? `　${l.notes.join("・")}` : ""}`;
         } else if (l.notes?.length) {
           detail = l.notes.join("・");
         } else if (l.itemType === "material") {
