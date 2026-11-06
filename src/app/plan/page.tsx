@@ -1,4 +1,5 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
+import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import Link from "next/link";
 import { DateNav } from "@/components/ui/DateNav";
 import { splitWarnings } from "@/components/ui/wording";
@@ -258,11 +259,16 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       <LangPicker
         lang={lang}
         hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))}
-        right={<PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />}
+        right={
+          <div className="flex flex-wrap gap-2">
+            <PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />
+            <FactoryPrint label={`製造計画・工程表（${date}）`} />
+          </div>
+        }
       />
 
       {/* ここから下が印刷する紙（選んだことば） */}
-      <div lang={langInfo(lang).htmlLang} className="rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">
+      <div lang={langInfo(lang).htmlLang} className="theme-paper rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">
         {/* 紙の頭（現場の製造計画書と同じ並び: 題・報告日・製造日・作った所・担当・確認の印） */}
         <div className="mb-4 hidden gap-3 border-b-2 border-ink pb-3 print:grid print:grid-cols-[1fr_auto]">
           <div>

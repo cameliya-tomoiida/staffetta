@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CountUp } from "@/components/ui/CountUp";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";
@@ -9,6 +10,8 @@ import { briefFacts } from "@/lib/home-brief";
 import { briefingFor, type Briefing } from "@/lib/ai/briefing";
 import { todayJst } from "@/lib/clock";
 import { RefreshBriefing } from "./RefreshBriefing";
+import { currentGaps } from "@/lib/records/store";
+import type { Gap } from "@/lib/records/alarms";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
 
@@ -27,6 +30,8 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
   const d = await homeData(role);
   // 管理者には朝の「今日の要点」（その日の最初に1回作って覚える）
   const brief = role === "管理者" ? await briefingFor(briefFacts(d), todayJst()) : null;
+  // 記録の時間・漏れ（⑧ A）。工場と管理者に「今日やること」の上で
+  const gaps = role === "工場" || role === "管理者" ? await currentGaps().catch(() => [] as Gap[]) : [];
 
   return (
     <div className="space-y-6">
@@ -48,6 +53,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
       </div>
 
       {brief && <Brief b={brief} />}
+      <RecordGaps gaps={gaps} />
       <Todo role={role} d={d} />
       {role === "管理者" && <Admin d={d} />}
       {role === "事務" && <Office d={d} />}
@@ -80,7 +86,7 @@ function Stat({ label, value, unit, href, tone = "plain", sub }: { label: string
   const body = (
     <>
       <div className="text-[18px] font-bold">{label}</div>
-      <div className="leading-none"><b className="text-[30px] font-extrabold tabular-nums [overflow-wrap:anywhere] sm:text-[40px]">{value}</b>{unit && <span className="ml-1 text-[18px]">{unit}</span>}</div>
+      <div className="leading-none"><b className="text-[30px] font-extrabold tabular-nums [overflow-wrap:anywhere] sm:text-[40px]"><CountUp value={value} /></b>{unit && <span className="ml-1 text-[18px]">{unit}</span>}</div>
       {sub && <div className="mt-1 text-[16px] text-ink-soft">{sub}</div>}
     </>
   );
@@ -143,6 +149,15 @@ function Admin({ d }: { d: HomeData }) {
   const s = d.summary;
   return (
     <Section title="全体のようす">
+      {/* 司令室（⑧ 近未来）: 動くグラフの分析画面へ */}
+      <Link href="/analytics" className="an-room mb-3 flex min-h-16 items-center gap-3 rounded-xl px-4 py-3 text-white">
+        <span className="cs-orb inline-block h-4 w-4 shrink-0 rounded-full" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-bold tracking-widest text-[#ff8a7a]">ANALYTICS</span>
+          <span className="block text-[19px] font-black">売上・粗利・取引先・商品・ロスを、動くグラフで見る</span>
+        </span>
+        <span aria-hidden className="text-3xl">›</span>
+      </Link>
       <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <Stat label={`${md(d.date)} 納品の受注`} value={num(d.orders.count)} unit="件" sub={`売上 ${yen(d.money.sales)}`} href={`/orders`} />
         <Stat label="粗利のめやす" value={num(Math.round(d.money.grossRate * 1000) / 10)} unit="%" sub={`粗利 ${yen(d.money.gross)}`} tone={d.money.grossRate < 0.25 ? "warn" : "plain"} />
@@ -232,5 +247,32 @@ function Alerts({ d }: { d: HomeData }) {
       )}
       {d.alerts.length > list.length && <Link href="/alerts" className="mt-2 inline-block text-[18px] font-bold text-crust-700 underline">ほか {d.alerts.length - list.length} 件を見る</Link>}
     </Section>
+  );
+}
+
+/** 記録の時間・漏れ（⑧ A）。今日の分を上に3件まで＋漏れの一覧へ */
+function RecordGaps({ gaps }: { gaps: Gap[] }) {
+  if (!gaps.length) return null;
+  const late = gaps.filter((g) => g.state === "late");
+  const top = [...gaps.filter((g) => g.date === todayJst()), ...late.filter((g) => g.date !== todayJst())].slice(0, 3);
+  return (
+    <section aria-label="記録の時間と漏れ" className={`rounded-xl border-2 p-4 ${late.length ? "border-alert-line bg-alert-bg" : "border-review-line bg-review-bg"}`}>
+      <p className={`text-[20px] font-black ${late.length ? "text-alert-ink" : "text-review-ink"}`}>
+        {late.length ? `記録の漏れが ${late.length}件あります` : "記録の時間です"}
+      </p>
+      <ul className="mt-2 space-y-2">
+        {top.map((g) => (
+          <li key={g.key}>
+            <Link href={g.href} className="flex min-h-12 items-center gap-2 rounded-lg border-2 border-rule-strong bg-sheet px-3 py-2 text-[17px] font-bold">
+              <span className="min-w-0 flex-1">{g.title}: {g.text}{g.date !== todayJst() ? `（${Number(g.date.slice(8))}日）` : ""}</span>
+              <span aria-hidden className="text-2xl">›</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link href="/hygiene/missing" className="mt-2 inline-flex min-h-12 items-center text-[17px] font-bold underline underline-offset-4">
+        漏れの一覧を見る（{gaps.length}件）
+      </Link>
+    </section>
   );
 }

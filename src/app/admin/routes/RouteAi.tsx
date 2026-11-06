@@ -1,5 +1,6 @@
 "use client";
 // コースの見直しの AI（⑦の(29)）: 条件の一覧（メモを AI に読ませる・on/off・消す）と、AI と話して計算し直すチャット。
+import { AiThinking } from "@/components/ui/ComputeShow";
 import { MIcon } from "@/components/ui/MobileNav";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { buttonClass } from "@/components/ui";
@@ -122,7 +123,7 @@ export function RouteChat({ turns, pending, onSend }: { turns: Turn[]; pending: 
             {x.text}
           </li>
         ))}
-        {pending && <li className="mr-8 rounded-lg bg-info-bg p-2 text-lg text-info-ink">AI が考えています…</li>}
+        {pending && <li><AiThinking title="AI がコースの条件を考えています" /></li>}
       </ol>
       <textarea
         rows={2}

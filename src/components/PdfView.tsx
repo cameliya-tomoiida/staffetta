@@ -97,11 +97,11 @@ export function PdfView({ url, rotation, highlight, onPick, onRotate }: {
     if (pointers.current.size < 2) pinchFrom.current = null;
   };
 
-  const btn = "inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-rule-strong bg-sheet px-3 text-[18px] font-bold hover:border-crust-500 disabled:opacity-40";
+  const btn = "inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-rule-strong bg-sheet px-3 text-[18px] font-bold hover:border-crust-500 disabled:opacity-40 lg:min-h-9 lg:px-2 lg:text-[16px]";
 
   return (
     <div className={full ? "fixed inset-0 z-50 flex flex-col bg-sheet" : "flex h-full flex-col"}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-rule px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-rule px-3 py-2 lg:gap-1.5 lg:py-1">
         <button type="button" className={`${btn} w-12`} aria-label="小さくする" onClick={() => zoomBy(-0.25)} disabled={focus == null}>−</button>
         <span className="w-16 text-center text-[18px] font-bold tabular-nums">{Math.round((focus == null ? 1 : zoom) * 100)}%</span>
         <button type="button" className={`${btn} w-12`} aria-label="大きくする" onClick={() => zoomBy(0.25)}>＋</button>

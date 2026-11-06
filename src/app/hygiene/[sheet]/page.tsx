@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { alarmOf } from "@/lib/records/alarms";
+import { getAlarmSettings } from "@/lib/records/store";
 import { notFound } from "next/navigation";
 import { todayJst } from "@/lib/clock";
 import { KIND_LABEL, monthDays, runDays } from "@/lib/hygiene/sheets";
@@ -33,7 +35,7 @@ export default async function HygieneSheetPage(props: PageProps<"/hygiene/[sheet
       <h1 className="text-3xl font-bold">
         {def.title}　<span className="text-2xl font-normal">{Number(month.slice(0, 4))}年{Number(month.slice(5))}月・{KIND_LABEL[def.kind]}</span>
       </h1>
-      <SheetInput def={def} month={month} run={runDays(def, month, holidays)} days={monthDays(month)} today={today} initial={rec} />
+      <SheetInput def={def} month={month} run={runDays(def, month, holidays)} days={monthDays(month)} today={today} initial={rec} slots={alarmOf(def, getAlarmSettings()).times} />
     </main>
   );
 }

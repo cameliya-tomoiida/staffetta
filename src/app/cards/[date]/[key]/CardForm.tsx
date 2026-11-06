@@ -369,7 +369,25 @@ export function CardForm({ date, base, initial, updated }: { date: string; base:
                     <td className={TD}>{num(x.bakeMinutes, (n) => setItem(it.productId, "bakeMinutes", n), `${it.name} の焼成時間`, undefined, br?.minutes != null ? String(br.minutes) : "")}</td>
                     <td className={TD}>{num(x.packed, (n) => setItem(it.productId, "packed", n), `${it.name} の製品数（包装）`, f("packed"))}</td>
                     <td className={TD}>{num(x.stock, (n) => setItem(it.productId, "stock", n), `${it.name} の在庫`)}</td>
-                    <td className={TD}><OkNg label={`${it.name} の金属検査`} disabled={approved} value={x.metal} onChange={(c) => setItem(it.productId, "metal", c)} /></td>
+                    <td className={TD}>
+                      {/* 金属検査は流すたびに（ミキサーの回数ぶん。⑧） */}
+                      {Array.from({ length: Math.max(1, base.batches || 1) }, (_, r) => (
+                        <div key={r} className={r ? "mt-1" : ""}>
+                          {(base.batches || 1) > 1 && <span className="block text-sm font-bold text-ink-soft">{r + 1}回目</span>}
+                          <OkNg
+                            label={`${it.name} の金属検査 ${r + 1}回目`}
+                            disabled={approved}
+                            value={r === 0 ? x.metal : x.metalRuns?.[r - 1]}
+                            onChange={(c) => {
+                              if (r === 0) return setItem(it.productId, "metal", c);
+                              const runs = [...(x.metalRuns ?? [])];
+                              runs[r - 1] = c;
+                              setItem(it.productId, "metalRuns", runs);
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </td>
                     <td className={TD}><OkNg label={`${it.name} の官能検査`} disabled={approved} value={x.sensory} onChange={(c) => setItem(it.productId, "sensory", c)} /></td>
                     {lossCols.map((c) => (
                       <td key={c.key} className={TD}>{num(lossOf(x, c.key), (n) => setLoss(c.key, n), `${it.name} の${c.label}のロス数`)}</td>

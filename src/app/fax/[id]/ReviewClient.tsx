@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState, useTransition } from "react";
+import { FaxReadShow } from "@/components/ui/FaxReadShow";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Customer } from "@/data/master";
@@ -109,6 +110,10 @@ export function ReviewClient({
   const [who, setWho] = useState(STAFF[0]);
   const [checked, setChecked] = useState<Record<string, boolean>>({}); // 迷った行に「FAXと見比べました」の印
   const [font, setFont] = useState(20); // 右の表の文字の大きさ（px）
+  // 高さの低いパソコン（ノート 1366×768 など）は、はじめを少し小さく（右の表が何行も見えるように。A＋で大きくできる）
+  useEffect(() => {
+    if (window.innerWidth >= 1024 && window.innerHeight < 900) setFont(17); // eslint-disable-line react-hooks/set-state-in-effect -- 画面の高さはブラウザでしか分からない
+  }, []);
 
   const update = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? "（商品を選んでください）";
@@ -249,7 +254,7 @@ export function ReviewClient({
             onFocus={() => setSelected(i)}
             onChange={(e) => setQty(i, e.target.value === "" ? NaN : Number(e.target.value))}
             aria-label={`${r.writtenName} の数量`}
-            className={`${compact ? "h-12 w-[3.4em] px-2 text-[1.15em]" : "h-14 w-[5.5em] px-3 text-[1.3em]"} rounded-lg border-2 text-right font-black tabular-nums ${
+            className={`${compact ? "h-12 w-[3.4em] px-2 text-[1.15em] lg:h-10" : "h-14 w-[5.5em] px-3 text-[1.3em] lg:h-11"} rounded-lg border-2 text-right font-black tabular-nums ${
               edited ? "border-[#a51e28] bg-[#fff0f1] text-[#a51e28]" : "border-rule-strong bg-sheet"
             } ${!Number.isInteger(r.quantity) || r.quantity < 0 ? "outline outline-2 outline-[#a51e28]" : ""}`}
           />
@@ -267,9 +272,11 @@ export function ReviewClient({
     if (!mustCheck(r)) return null;
     const on = !!checked[keyOf(r)];
     return (
-      <label className={`mt-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 font-bold ${on ? "bg-ok-bg text-ok-ink" : "bg-sheet text-review-ink ring-2 ring-review-line"}`}>
-        <input type="checkbox" className="h-6 w-6 accent-[#24633d]" checked={on} onChange={(e) => setChecked((c) => ({ ...c, [keyOf(r)]: e.target.checked }))} />
-        {on ? `✓ ${label}をFAXと見比べました` : `${label}をFAXと見比べました`}
+      <label className={`mt-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 font-bold lg:mt-1 lg:min-h-10 lg:gap-2 lg:px-2 lg:py-1 lg:whitespace-nowrap ${on ? "bg-ok-bg text-ok-ink" : "bg-sheet text-review-ink ring-2 ring-review-line"}`}>
+        <input type="checkbox" className="h-6 w-6 accent-[#24633d]" aria-label={`${label}をFAXと見比べました`} checked={on} onChange={(e) => setChecked((c) => ({ ...c, [keyOf(r)]: e.target.checked }))} />
+        {/* パソコンは細い枠に収まるよう短く（読み上げの名前は長いまま） */}
+        <span className="lg:hidden">{on ? `✓ ${label}をFAXと見比べました` : `${label}をFAXと見比べました`}</span>
+        <span className="hidden lg:inline">{on ? "✓ 見比べた" : "見比べた"}</span>
       </label>
     );
   };
@@ -299,7 +306,7 @@ export function ReviewClient({
       <div className={compact ? "mt-1" : "mt-1.5"}>
         <select disabled={done || r.removed} value={r.productId} onChange={(e) => setProduct(i, e.target.value)}
           aria-label={`${r.writtenName} の商品`}
-          className={`min-h-12 w-full rounded-lg border-2 px-2 text-[0.9em] ${
+          className={`min-h-12 w-full rounded-lg border-2 px-2 text-[0.9em] lg:min-h-9 lg:text-[0.82em] ${
             !r.productId ? "border-review-line bg-review-bg" : r.productId !== r.aiProductId ? "border-[#a51e28] bg-[#fff0f1] text-[#a51e28]" : "border-rule-strong bg-sheet"
           }`}>
           <option value="">（商品を選ぶ）</option>
@@ -308,12 +315,12 @@ export function ReviewClient({
         {r.productId !== r.aiProductId && <div className="text-[0.85em] font-bold text-[#a51e28]">{r.aiProductId ? productName(r.aiProductId) : "なし"} → {productName(r.productId)} 変更</div>}
         {!done && customerId && r.productId && !r.removed && (
           inDict(r) ? (
-            <div className="mt-1 text-[0.85em] text-ok-ink">「{r.writtenName}」は辞書に登録ずみ</div>
+            <div className="mt-1 text-[0.85em] text-ok-ink lg:hidden">「{r.writtenName}」は辞書に登録ずみ</div>
           ) : (
             <button type="button" disabled={pending}
               onClick={(e) => { e.stopPropagation(); learn(r); }}
               title={`「${r.writtenName}」を「${productName(r.productId)}」として覚えます`}
-              className="mt-1 min-h-11 rounded-md border-2 border-crust-600 bg-sheet px-3 text-[0.85em] font-bold text-crust-700 hover:bg-crust-50">
+              className="mt-1 min-h-11 rounded-md border-2 border-crust-600 bg-sheet px-3 text-[0.85em] font-bold text-crust-700 hover:bg-crust-50 lg:min-h-8 lg:py-0">
               辞書に登録
             </button>
           )
@@ -331,14 +338,34 @@ export function ReviewClient({
 
   return (
     // 広い画面（lg）は1画面に収めて左右で見比べる。スマホ・タブレット縦は上下に並べて、ページごと下へ読む
-    <div className="flex flex-col gap-4 lg:h-[calc(100vh-7rem)]">
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <Link href="/" className="text-[16px] text-ink-soft underline underline-offset-2 hover:text-ink">← FAX受信箱に戻る</Link>
-          <h1 className="mt-1 text-[28px] font-black leading-tight">FAXを見比べて確認</h1>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[18px] text-ink-soft">
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-5.6rem)] lg:gap-2">
+      {/* AI が読んだところを見せる（⑧ 近未来）。最初の1回だけ再生して、迷った行のまとめを残す */}
+      <FaxReadShow
+        faxId={fax.id}
+        lines={read.orders.flatMap((o, oi) =>
+          o.lines.map((l, li) => ({
+            key: `${oi}-${li}`,
+            text: `${l.written_name}　${l.quantity}${l.unit_written ?? ""}`,
+            level: levels[`${oi}-${li}`] ?? "high",
+            ...(l.attention ? { note: l.attention } : {}),
+          })),
+        )}
+        customers={customers.length}
+        products={products.length}
+        formats={Object.keys(templates).length}
+      />
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2 lg:flex-nowrap lg:items-center">
+        <div className="min-w-0 lg:flex lg:flex-wrap lg:items-center lg:gap-x-3">
+          <Link href="/" className="text-[16px] text-ink-soft underline underline-offset-2 hover:text-ink lg:mr-3">← FAX受信箱に戻る</Link>
+          <h1 className="mt-1 text-[28px] font-black leading-tight lg:mt-0 lg:inline lg:text-[22px]">FAXを見比べて確認</h1>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[18px] text-ink-soft lg:text-[16px]">
             <span className="font-bold text-ink">{customerName}</span>
-            {isOrderish && allDates.length > 0 && <span>／ {allDates.map(md).join("・")} 納品</span>}
+            {isOrderish && allDates.length > 0 && (
+              <span>
+                ／ <span className="lg:hidden">{allDates.map(md).join("・")}</span>
+                <span className="hidden lg:inline">{allDates.length > 2 ? `${md(allDates[0])}〜${md(allDates[allDates.length - 1])}（${allDates.length}日）` : allDates.map(md).join("・")}</span> 納品
+              </span>
+            )}
             <span className={`pill ${kindInfo[kind].cls}`}>{kindInfo[kind].text}</span>
             {statusPill}
           </div>
@@ -346,17 +373,17 @@ export function ReviewClient({
         <span className="ml-auto" />
         {!done && isOrderish && !needsTemplate && (
           remaining > 0
-            ? <span className="rounded-lg bg-[#fff3c4] px-4 py-2 text-[18px] font-black text-[#654700]">！ あと {remaining} 行を確認</span>
-            : <span className="rounded-lg bg-ok-bg px-4 py-2 text-[18px] font-black text-ok-ink">✓ 見比べが終わりました</span>
+            ? <span className="rounded-lg bg-[#fff3c4] px-4 py-2 text-[18px] font-black whitespace-nowrap text-[#654700] lg:py-1 lg:text-[16px]">！ あと {remaining} 行を確認</span>
+            : <span className="rounded-lg bg-ok-bg px-4 py-2 text-[18px] font-black text-ok-ink lg:py-1 lg:text-[16px]">✓ 見比べが終わりました</span>
         )}
         {!done && <ReadButton faxId={fax.id} again />}
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-3">
         {/* 左: 届いた FAX */}
         <div className="card flex h-[70vh] min-h-0 flex-col overflow-hidden lg:h-auto">
-          <div className="flex items-center border-b border-rule px-4 py-2.5">
-            <h2 className="text-[22px] font-black">① 届いたFAX</h2>
+          <div className="flex items-center border-b border-rule px-4 py-2.5 lg:py-1">
+            <h2 className="text-[22px] font-black lg:text-[17px]">① 届いたFAX</h2>
           </div>
           <PdfView url={fax.file} rotation={rotation} highlight={selected != null ? rows[selected]?.y : null} onPick={pick}
             onRotate={done ? undefined : (d) => setRotation((r) => (r + d) % 360)} />
@@ -364,21 +391,21 @@ export function ReviewClient({
 
         {/* 右: 読み取った内容（FAX と同じ並び・同じ表の形で） */}
         <div className="card flex min-h-0 flex-col overflow-hidden">
-          <div className="flex flex-wrap items-center gap-2 border-b border-rule px-4 py-2.5">
-            <h2 className="text-[22px] font-black">② 読み取った内容</h2>
+          <div className="flex flex-wrap items-center gap-2 border-b border-rule px-4 py-2.5 lg:py-1">
+            <h2 className="text-[22px] font-black lg:text-[17px]">② 読み取った内容</h2>
             <span className="ml-auto hidden text-[16px] text-ink-soft xl:inline">文字の大きさ</span>
-            <button type="button" className="min-h-11 min-w-11 rounded-lg border-2 border-rule-strong bg-sheet px-2 text-[16px] font-bold" aria-label="文字を小さく" onClick={() => setFont((f) => Math.max(16, f - 2))}>A−</button>
-            <button type="button" className="min-h-11 min-w-11 rounded-lg border-2 border-rule-strong bg-sheet px-2 text-[20px] font-bold" aria-label="文字を大きく" onClick={() => setFont((f) => Math.min(30, f + 2))}>A＋</button>
+            <button type="button" className="min-h-11 min-w-11 rounded-lg border-2 border-rule-strong bg-sheet px-2 text-[16px] font-bold lg:min-h-9" aria-label="文字を小さく" onClick={() => setFont((f) => Math.max(16, f - 2))}>A−</button>
+            <button type="button" className="min-h-11 min-w-11 rounded-lg border-2 border-rule-strong bg-sheet px-2 text-[20px] font-bold lg:min-h-9" aria-label="文字を大きく" onClick={() => setFont((f) => Math.min(30, f + 2))}>A＋</button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto p-4" style={{ fontSize: font }}>
+          <div className="min-h-0 flex-1 overflow-auto p-4 lg:px-3 lg:py-2" style={{ fontSize: font }}>
             {/* 取引先・納品日 */}
-            <div className="mb-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
-              <label className="block">
-                <span className="mb-1 block text-[0.9em] font-bold">取引先</span>
+            <div className="mb-3 grid gap-3 lg:mb-2 lg:gap-2 xl:grid-cols-[minmax(0,1fr)_auto]">
+              <label className="block lg:flex lg:items-center lg:gap-3">
+                <span className="mb-1 block shrink-0 text-[0.9em] font-bold lg:mb-0">取引先</span>
                 {isOrderish ? (
                   <select disabled={done} value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-                    className={`min-h-14 w-full rounded-lg border-2 px-3 font-bold ${customerId ? "border-rule-strong bg-sheet" : "border-review-line bg-[#fff3c4]"}`}>
+                    className={`min-h-14 w-full rounded-lg border-2 px-3 font-bold lg:min-h-10 ${customerId ? "border-rule-strong bg-sheet" : "border-review-line bg-[#fff3c4]"}`}>
                     <option value="">（選んでください）</option>
                     {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -500,7 +527,7 @@ export function ReviewClient({
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-off-bg text-left">
-                        <th className="w-10 px-2 py-2 text-[0.9em]">行</th>
+                        <th className="w-10 px-2 py-2 text-[0.9em] lg:py-1">行</th>
                         <th className="sticky left-0 z-10 min-w-[9em] bg-off-bg px-2 py-2 text-[0.9em]">品名</th>
                         {allDates.map((d) => <th key={d} className="px-2 py-2 text-right text-[0.9em] whitespace-nowrap">{md(d)}</th>)}
                       </tr>
@@ -511,16 +538,16 @@ export function ReviewClient({
                         const look = rows.some((r) => r.writtenName === name && mustCheck(r));
                         return (
                           <tr key={name} id={`fax-row-${first}`} className={`border-t border-rule align-top ${look ? "bg-[#fff3c4]" : ""}`} onMouseEnter={() => setSelected(first)}>
-                            <td className="px-2 py-3 tabular-nums">{n + 1}</td>
-                            <td className={`sticky left-0 z-10 min-w-[9em] px-2 py-3 ${look ? "bg-[#fff3c4]" : "bg-sheet"}`}>
+                            <td className="px-2 py-3 tabular-nums lg:py-1.5">{n + 1}</td>
+                            <td className={`sticky left-0 z-10 min-w-[9em] px-2 py-3 lg:py-1.5 ${look ? "bg-[#fff3c4]" : "bg-sheet"}`}>
                               <div className="font-bold">{name}</div>
                               {productPicker(first, true)}
                             </td>
                             {allDates.map((d) => {
                               const i = cellOf(name, d);
-                              if (i < 0) return <td key={d} className="px-2 py-3 text-right text-ink-faint">—</td>;
+                              if (i < 0) return <td key={d} className="px-2 py-3 text-right text-ink-faint lg:py-1.5">—</td>;
                               return (
-                                <td key={d} className={`px-2 py-3 ${rowCls(i)}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}>
+                                <td key={d} className={`px-2 py-3 lg:py-1.5 ${rowCls(i)}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}>
                                   {qtyCell(i, true)}
                                   {why(rows[i])}
                                   {checkBox(i, `${n + 1}行目の${md(d)}`)}
@@ -565,7 +592,7 @@ export function ReviewClient({
                     const no = all ? n + 1 : r.lineIndex + 1;
                     return (
                       <div key={i} id={`fax-row-${i}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}
-                        className={`grid grid-cols-[2.2em_minmax(0,1fr)] gap-x-3 border-t border-rule px-2 py-3 ${rowCls(i)}`}>
+                        className={`grid grid-cols-[2.2em_minmax(0,1fr)] gap-x-3 border-t border-rule px-2 py-3 lg:py-1.5 ${rowCls(i)}`}>
                         <span className="pt-1 tabular-nums">{no}</span>
                         {/* 品名と数量: 幅が足りなければ数量は品名の下に回る */}
                         <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
@@ -666,10 +693,10 @@ export function ReviewClient({
           </div>
 
           {!done && (
-            <div className="flex flex-wrap items-center gap-3 border-t border-rule px-4 py-3">
-              <label className="flex items-center gap-2 text-[18px]">
-                <span>確認した人</span>
-                <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border-2 border-rule-strong px-2 font-bold">
+            <div className="flex flex-wrap items-center gap-3 border-t border-rule px-4 py-3 lg:flex-nowrap lg:gap-2 lg:px-3 lg:py-1.5">
+              <label className="flex shrink-0 items-center gap-2 text-[18px] lg:text-[16px]">
+                <span className="whitespace-nowrap">確認した人</span>
+                <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border-2 border-rule-strong px-2 font-bold lg:min-h-10">
                   {STAFF.map((s) => <option key={s}>{s}</option>)}
                 </select>
               </label>
@@ -677,11 +704,11 @@ export function ReviewClient({
               {error && <span className="font-bold text-alert-ink">{error}</span>}
               {isOrderish ? (
                 <>
-                  <button className="min-h-12 px-2 text-[16px] text-ink-soft underline" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: "not_order", who }))}>注文ではない</button>
-                  <div className="flex flex-col items-end">
-                    {remaining > 0 && <span className="mb-1 text-[16px] font-bold text-[#654700]">黄色の行の「見比べました」に印を付けてください</span>}
+                  <button className="min-h-12 shrink-0 px-2 text-[16px] whitespace-nowrap text-ink-soft underline lg:min-h-10" disabled={pending} onClick={() => run(() => sortFaxAction({ faxId: fax.id, as: "not_order", who }))}>注文ではない</button>
+                  <div className="flex flex-col items-end lg:flex-row lg:items-center lg:gap-2">
+                    {remaining > 0 && <span className="mb-1 text-[16px] font-bold text-[#654700] lg:mb-0 lg:max-w-[12em] lg:text-[14px] lg:leading-tight">黄色の行の「見比べました」に印を付けてください</span>}
                     {badQty && <span className="mb-1 text-[16px] font-bold text-[#a51e28]">数量は 0 以上の整数で入れてください</span>}
-                    <button className="btn-primary min-h-16 px-8 text-[22px] font-bold" disabled={pending || !customerId || needsTemplate || waitingFaxes.length > 0 || remaining > 0 || badQty} onClick={submit}>
+                    <button className="btn-primary min-h-16 px-8 text-[22px] font-bold whitespace-nowrap lg:min-h-11 lg:px-5 lg:text-[18px]" disabled={pending || !customerId || needsTemplate || waitingFaxes.length > 0 || remaining > 0 || badQty} onClick={submit}>
                       {pending ? "確定中…" : kind === "change" ? "この変更を反映する" : kind === "provisional_order" ? "仮発注として登録" : "この内容で確定する"}
                     </button>
                   </div>

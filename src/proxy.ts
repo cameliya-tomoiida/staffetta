@@ -14,6 +14,11 @@ export function proxy(request: NextRequest) {
   // 画面の枠（layout）が、どの画面を開こうとしているか分かるように（役割で見られる画面を分けるため）
   const headers = new Headers(request.headers);
   headers.set("x-hub-path", request.nextUrl.pathname + request.nextUrl.search);
+  // 印刷の PDF を作るブラウザ（⑧ src/lib/printing/pass.ts）: URL の __pt を、ログインの cookie として読む。社内からのときだけ
+  const printPass = request.nextUrl.searchParams.get("__pt");
+  if (printPass && !request.headers.has("cf-connecting-ip") && !request.headers.has("cf-ray")) {
+    headers.set("cookie", [request.headers.get("cookie"), `hub_user=${printPass}`].filter(Boolean).join("; "));
+  }
   const pass = () => NextResponse.next({ request: { headers } });
   // ボタンの処理（Server Actions）と API は、サーバー側でも役割で止める（ログインを使っているときだけ）
   const isServerAction = request.method === "POST" && request.headers.has("next-action");

@@ -4,6 +4,7 @@
 //     欄（はじめ・おわり／担当者／確認）を押すと 書く・書かない、確認の欄は 温度・数・○×・なし を選ぶ。製品の表のロスの列も「＋」「−」。
 //   - 横に AI のチャット（声・文章）: 「焼成のあとに冷却を足して」のように話すと、AI が形を直して見た目に出す。何度でも。
 //   - 「保存」で形を保存（まだ責任者が確認していないカードにすぐ出る）。A4 横1枚に収まらなくなったら知らせる。
+import { AiThinking } from "@/components/ui/ComputeShow";
 import { MIcon } from "@/components/ui/MobileNav";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
@@ -125,7 +126,7 @@ export function TemplateEditor({ templates, selected, doughs, hasAi }: { templat
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]">
         {/* カードの見た目のまま */}
-        <section className="min-w-0 space-y-3 rounded-lg border-2 border-rule-strong bg-white p-4 text-ink shadow-sm">
+        <section className="theme-paper min-w-0 space-y-3 rounded-lg border-2 border-rule-strong bg-white p-4 text-ink shadow-sm">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b-2 border-ink pb-1">
             <input className="min-w-0 text-2xl font-bold outline-none focus:bg-crust-50" value={t.name} onChange={(e) => setT({ ...t, name: e.target.value })} aria-label="形の名前" />
             <span className="text-base text-ink-soft">製品カード・A4 横（押すと直せます）</span>
@@ -476,7 +477,7 @@ function TemplateChat({ template, hasAi, onTemplate }: { template: CardTemplate;
             {x.text}
           </li>
         ))}
-        {pending && <li className="mr-6 rounded-lg bg-info-bg p-2 text-lg text-info-ink">AI が考えています…</li>}
+        {pending && <li><AiThinking title="AI がカードの形を考えています" /></li>}
       </ol>
       {warn.map((w) => (
         <p key={w} className="rounded-md border-2 border-review-line bg-review-bg p-2 text-base text-review-ink">！ {w}</p>

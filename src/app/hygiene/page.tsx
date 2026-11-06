@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { alarmOf } from "@/lib/records/alarms";
+import { getAlarmSettings } from "@/lib/records/store";
+import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import { choiceClass } from "@/components/ui";
 import { todayJst } from "@/lib/clock";
-import { KIND_LABEL, runDays, sheetProblems, type SheetDef, type SheetRecord } from "@/lib/hygiene/sheets";
+import { allVals, KIND_LABEL, runDays, sheetProblems, tempSlots, type SheetDef, type SheetRecord } from "@/lib/hygiene/sheets";
 import { holidaysOf, listManuals, listSheets, recordsOf } from "@/lib/hygiene/store";
 import { getMonthSummary } from "@/lib/printing/auto";
 import { SummaryBox } from "./SummaryBox";
@@ -48,12 +51,19 @@ export default async function HygienePage(props: PageProps<"/hygiene">) {
             </Link>
           );
         })}
+        <Link href="/hygiene/missing" className="btn-ghost text-xl">
+          記録の漏れ
+        </Link>
+        <Link href="/hygiene/alarms" className="btn-ghost text-xl">
+          記録の時刻・締め
+        </Link>
         <Link href="/hygiene/ai" className="btn-ghost ml-auto text-xl">
           AI と話してシートを作る
         </Link>
         <Link href={`/hygiene/print?month=${month}`} className="btn-primary text-xl">
           {Number(month.slice(5))}月の全部のシートを印刷
         </Link>
+        <FactoryPrint path={`/hygiene/print?month=${month}`} label={`衛生管理 ${Number(month.slice(5))}月の全部のシート`} />
       </nav>
 
       <ul className="grid gap-4 lg:grid-cols-2">
@@ -121,6 +131,7 @@ function SheetCard({ def, rec, month, today, holidays }: { def: SheetDef; rec?: 
         <Link href={`/hygiene/print?month=${month}&sheet=${def.id}`} className="btn-ghost text-xl">
           印刷する
         </Link>
+        <FactoryPrint path={`/hygiene/print?month=${month}&sheet=${def.id}`} label={`${def.title} ${Number(month.slice(5))}月`} />
       </div>
     </li>
   );
@@ -130,7 +141,8 @@ function todayFilled(def: SheetDef, rec: SheetRecord | undefined, today: string)
   if (!rec) return false;
   if (def.kind === "temp") {
     const t = rec.temps?.[today];
-    return t?.am != null && (def.temp?.perDay !== 2 || t?.pm != null);
+    // 記録する時刻の数だけ書いてあれば（⑧）
+    return allVals(t).length >= tempSlots(def.temp, alarmOf(def, getAlarmSettings()).times).length;
   }
   if (def.kind === "clean" || def.kind === "check") return Object.keys(rec.done ?? {}).some((k) => k.endsWith(`|${today}`));
   return false;

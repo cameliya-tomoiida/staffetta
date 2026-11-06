@@ -45,6 +45,8 @@ export interface MapPin {
   late: boolean;
   /** 色（見直し案でコースごとに色を分けるとき） */
   color?: string;
+  /** 着く時刻（動かすとき、ピンの横に順に出す） */
+  eta?: string;
 }
 
 /** 線（見直し案のように、コースが何本もあるとき） */
@@ -56,7 +58,7 @@ export interface MapLine {
 }
 
 export function RouteMap({
-  depot, pins, line, lines, selected, onSelect, height = "h-[520px]",
+  depot, pins, line, lines, selected, onSelect, height = "h-[520px]", animate = false,
 }: {
   depot: { lat: number; lng: number; name: string };
   pins: MapPin[];
@@ -68,12 +70,16 @@ export function RouteMap({
   onSelect?: (id: string) => void;
   /** 地図の高さ（Tailwind のクラス）。配送スタッフのスマホ画面（/driver）は低くする */
   height?: string;
+  /** ルートが決まっていく動き（⑧）: ピンが順に落ちる → 線が順に伸びる → 着く時刻が順に出る。印が変わったときだけ動かす */
+  animate?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
   const layer = useRef<any>(null);
   const [lib, setLib] = useState<L | null>(null);
   const [error, setError] = useState("");
+  const timers = useRef<number[]>([]);
+  const animated = useRef("");
 
   useEffect(() => {
     let alive = true;
@@ -111,15 +117,43 @@ export function RouteMap({
     const m = map.current;
     const g = layer.current;
     if (!L || !m || !g) return;
+    timers.current.forEach((t) => clearTimeout(t));
+    timers.current = [];
     g.clearLayers();
+    // 動かすのは、印（ピン）が変わったときだけ（道の線があとから届いたときは、もう一度は動かさない）
+    const move = animate && animated.current !== pinKey && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    animated.current = pinKey;
+    // コース（色）ごとの順番。コース i は i×350ms 遅れて始まり、1.2 秒で線を伸ばす。ピンは線が届くころに落ちる
+    const groups = [...new Set(pins.map((p) => p.color ?? ""))];
+    const delayOf = (p: MapPin) => {
+      const gi = groups.indexOf(p.color ?? "");
+      const same = pins.filter((x) => (x.color ?? "") === (p.color ?? ""));
+      return gi * 350 + (same.indexOf(p) + 1) * (1200 / (same.length + 1));
+    };
+    const grow = (pl: any, all: [number, number][], start: number) => {
+      pl.setLatLngs(all.slice(0, 1));
+      const t0 = performance.now() + start;
+      const step = () => {
+        const p = Math.min(1, Math.max(0, (performance.now() - t0) / 1200));
+        pl.setLatLngs(all.slice(0, Math.max(1, Math.ceil(all.length * p))));
+        if (p < 1) timers.current.push(window.setTimeout(step, 16));
+      };
+      timers.current.push(window.setTimeout(step, start));
+    };
     const pts: [number, number][] = [[depot.lat, depot.lng], ...pins.map((p) => [p.lat, p.lng] as [number, number]), [depot.lat, depot.lng]];
     if (lines) {
-      for (const l of lines) {
-        if (l.road?.length) L.polyline(l.road, { color: l.color, weight: 5, opacity: 0.8 }).addTo(g);
-        else L.polyline(l.points, { color: l.color, weight: 4, opacity: 0.7, dashArray: "8 8" }).addTo(g);
-      }
-    } else if (line?.length) L.polyline(line, { color: "#8f1d1d", weight: 5, opacity: 0.75 }).addTo(g);
-    else if (pins.length) L.polyline(pts, { color: "#8f1d1d", weight: 4, opacity: 0.6, dashArray: "8 8" }).addTo(g);
+      lines.forEach((l, i) => {
+        const pl = l.road?.length ? L.polyline(l.road, { color: l.color, weight: 5, opacity: 0.8, className: move ? "rm-line" : "" }) : L.polyline(l.points, { color: l.color, weight: 4, opacity: 0.7, dashArray: "8 8" });
+        pl.addTo(g);
+        if (move) grow(pl, (l.road?.length ? l.road : l.points) as [number, number][], i * 350);
+      });
+    } else if (line?.length) {
+      const pl = L.polyline(line, { color: "#d2463a", weight: 5, opacity: 0.85, className: move ? "rm-line" : "" }).addTo(g);
+      if (move) grow(pl, line, 0);
+    } else if (pins.length) {
+      const pl = L.polyline(pts, { color: "#d2463a", weight: 4, opacity: 0.75, dashArray: "8 8" }).addTo(g);
+      if (move) grow(pl, pts, 0);
+    }
     L.marker([depot.lat, depot.lng], {
       icon: L.divIcon({
         className: "",
@@ -137,7 +171,7 @@ export function RouteMap({
       const mk = L.marker([p.lat, p.lng], {
         icon: L.divIcon({
           className: "",
-          html: `<div style="display:flex;align-items:center;justify-content:center;width:${on ? 46 : 38}px;height:${on ? 46 : 38}px;border-radius:50%;background:${bg};color:#fff;font:700 ${on ? 22 : 19}px/1 'BIZ UDPGothic',sans-serif;border:3px solid ${on ? "#f5c400" : "#fff"};box-shadow:0 1px 4px rgba(0,0,0,.45)">${p.no}</div>`,
+          html: `<div class="${move ? "rm-drop" : ""}" style="animation-delay:${move ? Math.round(delayOf(p)) : 0}ms;display:flex;align-items:center;justify-content:center;width:${on ? 46 : 38}px;height:${on ? 46 : 38}px;border-radius:50%;background:${bg};color:#fff;font:700 ${on ? 22 : 19}px/1 'BIZ UDPGothic',sans-serif;border:3px solid ${on ? "#f5c400" : "#fff"};box-shadow:0 1px 4px rgba(0,0,0,.45)">${p.no}</div>`,
           iconSize: [on ? 46 : 38, on ? 46 : 38],
           iconAnchor: [on ? 23 : 19, on ? 23 : 19],
         }),
@@ -148,11 +182,17 @@ export function RouteMap({
         .on("click", () => onSelect?.(p.id))
         .addTo(g);
       if (on) mk.openPopup();
+      // 着く時刻（動かすときは、ピンが落ちたあとに順に出す）
+      if (p.eta && animate) {
+        const tip = () => L.tooltip({ permanent: true, direction: "right", offset: [16, 0], className: "rm-eta" }).setLatLng([p.lat, p.lng]).setContent(esc(p.eta!)).addTo(g);
+        if (move) timers.current.push(window.setTimeout(tip, delayOf(p) + 250));
+        else tip();
+      }
     }
     if (pins.length) m.fitBounds(L.latLngBounds(pts), { padding: [36, 36], maxZoom: 15 });
     else m.setView([depot.lat, depot.lng], 12);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pinKey・lineKey で中身の変化を見る
-  }, [lib, pinKey, lineKey, selected, depot.lat, depot.lng, depot.name]);
+  }, [lib, pinKey, lineKey, selected, depot.lat, depot.lng, depot.name, animate]);
 
   return (
     <div className="relative">

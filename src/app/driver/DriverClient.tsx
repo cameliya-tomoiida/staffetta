@@ -238,6 +238,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
   const pins = (plan?.stops ?? []).filter((s) => !s.off && s.lat != null && s.lng != null).map((s) => ({
     id: s.id, no: s.no, lat: s.lat!, lng: s.lng!, name: s.name, late: s.late > 0,
     lines: [s.arrive ? `${s.arrive} ごろ着` : "", s.items.length ? `${s.items.length}品` : "渡すものなし"].filter(Boolean),
+    ...(s.arrive ? { eta: s.arrive } : {}),
   }));
   const big = "min-h-14 rounded-xl text-[20px] font-bold";
   const chip = (on: boolean) => `${big} border-2 px-3 ${on ? "border-[#8b1a1a] bg-[#8b1a1a] text-white" : "border-[#838b83] bg-white"}`;
@@ -311,7 +312,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                 </div>
                 {pins.length > 0 && (
                   <div className="mt-2 overflow-hidden rounded-xl border-2 border-[#c5cac5] bg-white">
-                    <RouteMap height="h-[260px]" depot={depot} pins={pins} selected={open?.id} onSelect={(id) => setOpen(plan.stops.find((s) => s.id === id) ?? null)} />
+                    <RouteMap height="h-[260px]" depot={depot} pins={pins} selected={open?.id} onSelect={(id) => setOpen(plan.stops.find((s) => s.id === id) ?? null)} animate />
                   </div>
                 )}
                 <ol className="mt-3 space-y-2">

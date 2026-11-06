@@ -2,6 +2,7 @@
 // 全画面の上の「AI に頼む」（作者 11/6 (25)(33)）。押すと右下に窓が開く。
 // 使い方を聞くだけでなく、注文を入れる・探す・製造計画や粗利を答える・取引先を登録する（OK を押してから）などを頼める。
 // いま見ている画面の中身（文字）も一緒に送るので、「この注文が要確認になった理由は？」のような頼み方もできる。
+import { AiThinking } from "@/components/ui/ComputeShow";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -118,7 +119,7 @@ export function AiChat() {
                 )}
               </div>
             ))}
-            {pending && <div className="mr-4 rounded-xl border border-rule bg-cream px-3 py-2 text-ink-soft">やっています…</div>}
+            {pending && <AiThinking title="AI が調べています" />}
             {error && <div role="alert" className="rounded-xl bg-[#fff0f1] px-3 py-2 font-bold text-[#a51e28]">{error}</div>}
             <div ref={end} />
           </div>

@@ -93,7 +93,7 @@ export function MobileTopBar({ path, title, ai, user, tabs }: { path: string; ti
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
   return (
-    <div className="no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule-strong bg-sheet pr-2 pl-1 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="fx-line no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule-strong bg-sheet pr-2 pl-1 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {root ? (
         // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
         <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="ml-2 h-8 w-8 shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
@@ -224,7 +224,10 @@ export function MenuSheet({
 /** スマホで表をカードにするとき、各セルの左に出す見出し（thead の字）を data-label に入れる。表が変わるたびに入れ直す */
 export function useTableCards() {
   useEffect(() => {
+    // カードにするのはスマホの幅だけ（パソコンでは見出しを付けない）
+    const mq = window.matchMedia("(max-width: 767px)");
     const label = () => {
+      if (!mq.matches) return;
       for (const table of document.querySelectorAll<HTMLTableElement>("main table:not(.m-keep)")) {
         const rows = table.tHead ? Array.from(table.tHead.rows) : [];
         if (!rows.length) continue;
@@ -270,15 +273,17 @@ export function useTableCards() {
       t = setTimeout(() => {
         ready = true;
         label();
-      }, 400);
+      }, 1000);
     };
     if (document.readyState === "complete") start();
     else window.addEventListener("load", start, { once: true });
     const mo = new MutationObserver(soon);
     mo.observe(document.body, { childList: true, subtree: true });
+    mq.addEventListener("change", soon);
     return () => {
       clearTimeout(t);
       window.removeEventListener("load", start);
+      mq.removeEventListener("change", soon);
       mo.disconnect();
     };
   }, []);
