@@ -263,7 +263,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
 
       <div className="flex min-w-0 flex-1 flex-col max-md:overflow-x-clip">
         {/* スマホ（768px 未満）: 上の細い帯・下のタブ・メニューのシート（⑧ docs/mobile-rules.md） */}
-        <MobileTopBar path={path} title={titleOf(path, MENU)} ai={<AiChat />} user={user} tabs={tabsFor(user?.role)} onMenu={() => setSheet(true)} />
+        <MobileTopBar path={path} title={titleOf(path, MENU)} user={user} tabs={tabsFor(user?.role)} onMenu={() => setSheet(true)} />
         <header className="fx-line no-print z-20 hidden border-b border-rule-strong bg-sheet px-4 pt-2 sm:px-5 md:block">
           <div className="flex items-center gap-3 pb-2">
             <button
@@ -291,7 +291,7 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
           </div>
           {!wide && <TodayBar role={user?.role} />}
         </header>
-        <main key={path} className={`m-enter mx-auto w-full min-w-0 flex-1 px-4 pt-4 pb-[calc(96px+env(safe-area-inset-bottom))] sm:px-5 ${wide ? "max-w-none md:py-2" : "max-w-7xl md:py-6"}`}>
+        <main key={path} className={`m-enter mx-auto w-full min-w-0 flex-1 px-4 pt-4 pb-[calc(150px+env(safe-area-inset-bottom))] md:pb-6 sm:px-5 ${wide ? "max-w-none md:py-2" : "max-w-7xl md:py-6"}`}>
           {/* 印刷物の見出し（画面では出さない） */}
           {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
           <img src="/brand/staffetta-logo.svg" alt="STAFFETTA" width={120} height={32} className="mb-2 hidden h-8 w-auto print:block" />
@@ -299,6 +299,8 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
         </main>
       </div>
       <BottomTabs path={path} tabs={tabsFor(user?.role)} menuOpen={sheet} />
+      {/* ⑧ スマホの AI は、右下の丸いボタン（親指で届く所・下のタブの上） */}
+      <div className="md:hidden"><AiChat floating /></div>
       <SelectSheet />
       {sheet && <MenuSheet menu={MENU} path={path} role={user?.role} hidden={hidden} onClose={() => setSheet(false)} user={user} factory={factory} />}
     </div>

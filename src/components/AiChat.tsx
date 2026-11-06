@@ -11,7 +11,7 @@ import type { AgentMessage } from "@/lib/ai/agent";
 
 const EXAMPLES = ["来週月曜、C03 にバターロール50個追加", "今月の粗利が下がった取引先は？", "明日の製造の数は？", "この画面は何をするところ？"];
 
-export function AiChat() {
+export function AiChat({ floating = false }: { floating?: boolean } = {}) {
   const path = usePathname() ?? "/";
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -55,6 +55,13 @@ export function AiChat() {
     <div className="no-print">
       {!open && (
         // 上の行（日付の横）に置く。画面の右下に浮かせると、保存などのボタンに重なるため
+        floating ? (
+          <button type="button" onClick={() => setOpen(true)} aria-label="AI に頼む"
+            className="fixed right-4 z-30 grid h-14 w-14 place-items-center rounded-full bg-[#8b1a1a] text-[17px] font-black text-white shadow-[0_6px_18px_rgb(0_0_0/0.35)] active:scale-95"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}>
+            AI
+          </button>
+        ) : (
         <button type="button" onClick={() => setOpen(true)}
           className="flex min-h-11 items-center gap-1.5 rounded-full bg-[#8b1a1a] px-4 text-[17px] font-bold whitespace-nowrap text-white hover:bg-[#701414] max-md:min-h-9 max-md:gap-1 max-md:px-2.5 max-md:text-[14px]">
           <svg viewBox="0 0 24 24" className="h-6 w-6 max-md:hidden" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -63,6 +70,7 @@ export function AiChat() {
           </svg>
           AI<span className="max-md:hidden"> に頼む</span>
         </button>
+        )
       )}
       {open && (
         <div role="dialog" aria-label="AI に頼む" className="m-sheet fixed right-4 bottom-4 z-50 flex h-[min(680px,calc(100dvh-2rem))] w-[min(460px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border-2 border-rule-strong bg-sheet shadow-2xl max-md:inset-0 max-md:h-dvh max-md:w-full max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]">
