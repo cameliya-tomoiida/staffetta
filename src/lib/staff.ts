@@ -10,7 +10,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/user-session";
 import type { Role } from "@/lib/auth/roles";
 
 export type StaffRole = Role;
-export const STAFF_ROLES: StaffRole[] = ["管理者", "事務", "工場", "配送"];
+export const STAFF_ROLES: StaffRole[] = ["管理者", "事務", "工場", "配送", "営業"];
 
 export interface StaffMember {
   id: string;

@@ -34,7 +34,7 @@ type Tool = {
 const s = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const ymd = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
 const norm = (t: string) => t.normalize("NFKC").toLowerCase().replace(/[\s　・（）()]/g, "").replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
-const ALL: Role[] = ["管理者", "事務", "工場", "配送"];
+const ALL: Role[] = ["管理者", "事務", "工場", "配送", "営業"];
 const CH: Record<string, string> = { fax: "FAX", phone: "電話", driver: "ドライバー", line: "LINE", email: "メール", infomart: "インフォマート" };
 
 // ───────── 道具 ─────────
