@@ -51,7 +51,7 @@ async function aiBriefing(f: BriefFacts): Promise<string[] | null> {
       model: BRIEF_MODEL,
       max_tokens: 1000,
       output_config: { format: betaZodOutputFormat(BriefSchema) },
-      system: "パン工場の専務に、朝いちばんに今日の要点を3行で伝える係です。数字は渡されたものだけを使い、作らない。やさしい日本語で、短く、具体的に。アプリの画面の言葉（要確認の注文・FAX・発注書の承認・締め・材料の不足）を使う。英語やカタカナの言いかえ（レビュー・購買）は使わない。",
+      system: "パン工場の管理者に、朝いちばんに今日の要点を3行で伝える係です。数字は渡されたものだけを使い、作らない。やさしい日本語で、短く、具体的に。アプリの画面の言葉（要確認の注文・FAX・発注書の承認・締め・材料の不足）を使う。英語やカタカナの言いかえ（レビュー・購買）は使わない。",
       messages: [{ role: "user", content: JSON.stringify({
         納品日: f.date, 注文の数: f.orders, 売上の円: Math.round(f.sales), 粗利率: `${Math.round(f.grossRate * 1000) / 10}%`,
         要確認の注文: f.review, 確認待ちのFAX: f.fax, 承認待ちの発注書: f.purchaseDraft, 締めを過ぎた発注書: f.overdue, 足りなくなる材料: f.lowStock, 急ぎのお知らせ: f.urgent,
