@@ -619,6 +619,38 @@ export interface CustomerProductMaster {
   active: boolean;
 }
 
+/** 仕入先の商品台帳（⑧。例: パンメーカーの商品台帳）。仕入先ごとの品番・製品コード・定価・卸価格・自社の原価・JAN・消費期限・工場・便 */
+export interface SupplierItemMaster {
+  /** 仕入先（suppliers の id） */
+  supplierId: string;
+  /** 品番（仕入先の発注に使う番号。弥生の商品コードと同じことがある） */
+  itemNo: string;
+  /** 製品コード（仕入先の社内のコード） */
+  productCode?: string;
+  name: string;
+  /** 分類（台帳の見出し） */
+  category?: string;
+  /** 定価（円） */
+  retailPrice?: number;
+  /** 標準の卸価格（円） */
+  wholesalePrice?: number;
+  /** 自社の原価（円）。取引先の商品の原価に使う */
+  cost?: number;
+  /** JAN（13けた） */
+  jan?: string;
+  /** 消費期限（製造日＋日数。夏・冬） */
+  shelfDaysSummer?: number;
+  shelfDaysWinter?: number;
+  /** 製造工場（記号） */
+  factory?: string;
+  /** 2便で頼めるか */
+  secondDelivery?: boolean;
+  /** 台帳の月（例 2026-11） */
+  ledgerMonth?: string;
+  note?: string;
+  active: boolean;
+}
+
 export interface Masters {
   lines: LineMaster[];
   equipment: Equipment[];
@@ -637,6 +669,7 @@ export interface Masters {
   courses: CourseMaster[];
   standingOrders: StandingOrderMaster[];
   customerProducts: CustomerProductMaster[];
+  supplierItems: SupplierItemMaster[];
   shifts: ShiftMaster[];
   staffAssignments: StaffAssignmentMaster[];
 }
