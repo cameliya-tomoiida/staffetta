@@ -41,6 +41,22 @@ function Totals({ t }: { t: TaxTotals }) {
   );
 }
 
+/** 割戻しのある請求の合計（請求金額 → 割戻し → 消費税 → 差引請求額） */
+function RebateTotals({ t, r }: { t: TaxTotals; r: { percent: number; gross: number; amount: number } }) {
+  return (
+    <table className="ml-auto w-[100mm] shrink-0 border-collapse text-[9.5pt] [&_td]:whitespace-nowrap">
+      <tbody>
+        <tr><td className={TD}>ご請求金額（税抜）</td><td className={`${TD} num text-right`}>{n(r.gross)} 円</td></tr>
+        <tr><td className={TD}>割戻し（{r.percent}%）</td><td className={`${TD} num text-right`}>−{n(r.amount)} 円</td></tr>
+        {t.byRate.map((x) => (
+          <tr key={x.rate}><td className={TD}>{x.rate}%対象（割戻し後）・消費税</td><td className={`${TD} num text-right`}>{n(x.net)} 円・{n(x.tax)} 円</td></tr>
+        ))}
+        <tr><td className={`${TD} font-bold`}>差引ご請求額（税込）</td><td className={`${TD} num text-right text-[11pt] font-bold`}>{n(t.total)} 円</td></tr>
+      </tbody>
+    </table>
+  );
+}
+
 function Lines({ lines, minRows = 8 }: { lines: SlipLine[]; minRows?: number }) {
   const blanks = Math.max(0, minRows - lines.length);
   return (
@@ -165,7 +181,7 @@ export function InvoiceDoc({ inv, company, issued, first }: { inv: Invoice; comp
             d.lines.map((l, i) => (
               <tr key={`${d.no}-${i}`}>
                 <td className={`${TD} text-center`}>{i === 0 ? md(d.date) : ""}</td>
-                <td className={`${TD} text-[8pt]`}>{i === 0 ? d.no : ""}</td>
+                <td className={`${TD} text-[8pt]`}>{i === 0 ? <>{d.no}{d.place ? <div className="font-bold">{d.place}</div> : null}</> : ""}</td>
                 <td className={TD}>{l.name}</td>
                 <td className={`${TD} num text-right`}>{n(l.quantity)}</td>
                 <td className={`${TD} text-center`}>{l.unit}</td>
@@ -181,9 +197,18 @@ export function InvoiceDoc({ inv, company, issued, first }: { inv: Invoice; comp
         <div className="space-y-1 text-[8.5pt]">
           <div>※は軽減税率（8%）の対象です。</div>
           <div>納品 {inv.deliveries.length}回</div>
+          {inv.places && (
+            <table className="mt-1 border-collapse text-[9pt]">
+              <tbody>
+                {inv.places.map((p) => (
+                  <tr key={p.place}><td className={TD}>{p.place}</td><td className={`${TD} num text-right`}>{n(p.net)} 円（税抜）</td></tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           {company.bank && <div className="mt-2 border border-black px-2 py-1 text-[9pt]">お振込先：{company.bank}</div>}
         </div>
-        <Totals t={inv.totals} />
+        {inv.rebate ? <RebateTotals t={inv.totals} r={inv.rebate} /> : <Totals t={inv.totals} />}
       </div>
     </section>
   );

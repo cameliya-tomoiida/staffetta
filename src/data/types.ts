@@ -510,6 +510,10 @@ export interface CustomerMaster {
   closingDay?: number;
   /** 伝票の様式（src/lib/slips/formats.ts。空なら 1枚に納品書と受領書） */
   slipFormat?: string;
+  /** 割戻しの率（%）。請求金額から引いてから消費税（給食会社など） */
+  rebateRate?: number;
+  /** 請求書を事業所（納品場所）ごとに分けて小計を出す */
+  invoiceByPlace?: boolean;
   note?: string;
   // ── 配送の情報（⑦。配送コースの地図 /admin/routes が使う） ──
   /** 郵便番号 "000-0000" */

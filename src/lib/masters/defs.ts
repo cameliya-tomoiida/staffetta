@@ -331,6 +331,8 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "course", label: "配送コース", type: "text", example: "東コース（朝便）", help: "便のマスタの便ID。便のマスタに無いコースは、納品時刻から工程を逆算する" },
     { key: "deliveryWeekdays", label: "納品する曜日", type: "weekdays", example: "月;水;金", help: "空なら便の曜日（それも空なら毎日）" },
     { key: "slipFormat", label: "伝票の様式", type: "enum", options: SLIP_FORMAT_OPTIONS, example: "共通・1枚に納品書と受領書（2つ切り）", help: "納品書・受領書の形。空なら 1枚に2つ。取引先ごとの様式（発注書の原本に合わせた形）は、作ったらここに足す" },
+    { key: "rebateRate", label: "割戻しの率（%）", type: "number", min: 0, max: 50, example: "5", help: "請求金額から引く割戻し（給食会社など）。引いたあとの額に消費税。空なら割戻しなし" },
+    { key: "invoiceByPlace", label: "請求書を事業所ごとに分ける", type: "boolean", default: false, example: "いいえ", help: "はい なら、請求書の明細を納品場所（事業所）ごとに分けて小計を出す" },
     { key: "closingDay", label: "請求の締め日", type: "integer", min: 1, max: 31, example: "31", help: "毎月この日で締めて請求書を作る。月末は 31（空も月末）" },
     { key: "replyRequired", label: "受けたら返事が要る", type: "boolean", default: false, example: "いいえ", help: "はい なら、仮発注・注文を受けたときに受付の返事（FAX・メール）の下書きを自動で作る（送るのは人）" },
     { key: "note", label: "メモ", type: "text" },

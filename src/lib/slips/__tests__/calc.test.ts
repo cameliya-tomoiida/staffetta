@@ -120,3 +120,24 @@ describe("弥生販売に取り込む CSV", () => {
     ]);
   });
 });
+
+describe("割戻しのある請求書・事業所ごと", () => {
+  it("税率ごとに割戻しを引いて（切り捨て）、引いたあとに消費税を1回。差引請求額", async () => {
+    const { taxTotalsWithRebate } = await import("../calc");
+    const t = taxTotalsWithRebate([{ amount: 60014, taxRate: 8 }], 5);
+    // 60,014 × 5% = 3,000.7 → 3,000。57,014 × 8% = 4,561.12 → 4,561。差引 61,575
+    expect(t).toMatchObject({ gross: 60014, rebate: 3000, net: 57014, tax: 4561, total: 61575 });
+  });
+  it("取引先の割戻しの率・事業所ごとの設定で、請求書に割戻しと事業所の小計が出る", () => {
+    const cs = [{ id: "C01", name: "みどり給食（デモ）", rebateRate: 5, invoiceByPlace: true }];
+    const orders = [
+      { ...o("A", "C01", "2026-11-02", [line("P01", 10)]), deliveryPlace: "第1事業所" },
+      { ...o("B", "C01", "2026-11-02", [line("P01", 20)]), deliveryPlace: "第2事業所" },
+    ];
+    const [inv] = invoices(orders, "2026-11", cs, book);
+    expect(inv.deliveries.map((d) => [d.no, d.place, d.net])).toEqual([["D261102-C01-1", "第1事業所", 330], ["D261102-C01-2", "第2事業所", 660]]);
+    expect(inv.places).toEqual([{ place: "第1事業所", net: 330 }, { place: "第2事業所", net: 660 }]);
+    expect(inv.rebate).toEqual({ percent: 5, gross: 990, amount: 49 });
+    expect(inv.totals).toMatchObject({ net: 941, tax: 75, total: 1016 });
+  });
+});

@@ -26,7 +26,8 @@ export interface SlipLine {
 }
 
 export interface TaxTotals {
-  byRate: { rate: TaxRate; net: number; tax: number }[];
+  /** net＝税抜（割戻しがあれば割戻しを引いたあと）。rebate＝その税率の割戻しの額 */
+  byRate: { rate: TaxRate; net: number; tax: number; rebate?: number }[];
   /** 税抜の合計 */
   net: number;
   tax: number;
@@ -96,6 +97,23 @@ export function taxTotals(lines: Pick<SlipLine, "amount" | "taxRate">[]): TaxTot
   return { byRate, net, tax, total: net + tax };
 }
 
+/**
+ * 割戻しのある請求（給食会社など。請求金額 → 割戻し ◯% を引く → 消費税 → 差引請求額）。
+ * 税率ごとに税抜の合計から割戻しを引き（円未満切り捨て）、引いたあとの額に消費税を1回だけ（切り捨て）
+ */
+export function taxTotalsWithRebate(lines: Pick<SlipLine, "amount" | "taxRate">[], rebatePercent: number): TaxTotals & { gross: number; rebate: number } {
+  const base = taxTotals(lines);
+  const p = Math.max(0, Math.min(100, rebatePercent));
+  const byRate = base.byRate.map((r) => {
+    const rebate = Math.floor((r.net * p) / 100);
+    const net = r.net - rebate;
+    return { rate: r.rate, net, rebate, tax: Math.floor((net * r.rate) / 100) };
+  });
+  const net = byRate.reduce((s, x) => s + x.net, 0);
+  const tax = byRate.reduce((s, x) => s + x.tax, 0);
+  return { byRate, net, tax, total: net + tax, gross: base.net, rebate: byRate.reduce((s, x) => s + (x.rebate ?? 0), 0) };
+}
+
 /** 伝票にする注文: 確定した・新しい注文（変更・取消の FAX は、人が確定したら元の注文に入っている） */
 export const billable = (o: Order) => o.status === "confirmed" && (o.intent ?? "new") === "new" && !!o.customerId;
 
@@ -155,12 +173,16 @@ export interface Invoice {
   closingDay?: number;
   period: { from: string; to: string };
   /** 納品ごと（日付・伝票番号・行・税抜の合計） */
-  deliveries: { date: string; no: string; lines: SlipLine[]; net: number }[];
+  deliveries: { date: string; no: string; lines: SlipLine[]; net: number; place?: string }[];
   totals: TaxTotals;
+  /** 割戻し（取引先の設定 rebateRate。税抜の合計・割戻しの率と額） */
+  rebate?: { percent: number; gross: number; amount: number };
+  /** 事業所（納品場所）ごとの小計（取引先の設定 invoiceByPlace） */
+  places?: { place: string; net: number }[];
 }
 
 /** 締めの月 month の請求書（取引先ごと。期間の納品をまとめる。前回の請求・入金・繰り越しは扱わない＝今回の分だけ） */
-export function invoices(orders: Order[], month: string, customers: Pick<CustomerMaster, "id" | "name" | "course" | "closingDay">[], book: PriceBook, opts: { closingDay?: number; customerId?: string } = {}): Invoice[] {
+export function invoices(orders: Order[], month: string, customers: Pick<CustomerMaster, "id" | "name" | "course" | "closingDay" | "rebateRate" | "invoiceByPlace">[], book: PriceBook, opts: { closingDay?: number; customerId?: string } = {}): Invoice[] {
   const out: Invoice[] = [];
   for (const c of customers) {
     if (opts.customerId && c.id !== opts.customerId) continue;
@@ -168,11 +190,26 @@ export function invoices(orders: Order[], month: string, customers: Pick<Custome
     const period = billingPeriod(month, c.closingDay);
     const dates = [...new Set(orders.filter((o) => billable(o) && o.customerId === c.id && o.deliveryDate >= period.from && o.deliveryDate <= period.to).map((o) => o.deliveryDate))].sort();
     if (!dates.length) continue;
-    const deliveries = dates.flatMap((d) => deliverySlips(orders.filter((o) => o.customerId === c.id), d, [c], book)).map((s) => ({ date: s.date, no: s.no, lines: s.lines, net: s.totals.net }));
+    const mine = orders.filter((o) => o.customerId === c.id);
+    // 事業所（納品場所）ごとに分ける取引先は、日 × 事業所で1つの納品
+    const deliveries = dates.flatMap((d): Invoice["deliveries"] => {
+      if (!c.invoiceByPlace) return deliverySlips(mine, d, [c], book).map((s) => ({ date: s.date, no: s.no, lines: s.lines, net: s.totals.net }));
+      const places = [...new Set(mine.filter((o) => billable(o) && o.deliveryDate === d).map((o) => o.deliveryPlace?.trim() || "（事業所なし）"))].sort();
+      return places.flatMap((place, pi) =>
+        deliverySlips(mine.filter((o) => (o.deliveryPlace?.trim() || "（事業所なし）") === place), d, [c], book).map((s) => ({ date: s.date, no: `${s.no}-${pi + 1}`, lines: s.lines, net: s.totals.net, place })),
+      );
+    });
     const all = deliveries.flatMap((d) => d.lines);
+    const rate = c.rebateRate && c.rebateRate > 0 ? c.rebateRate : 0;
+    const rb = rate ? taxTotalsWithRebate(all, rate) : undefined;
+    const t = rb ?? taxTotals(all);
+    const placeNets = c.invoiceByPlace ? [...new Set(deliveries.map((d) => d.place ?? ""))].map((place) => ({ place, net: deliveries.filter((d) => d.place === place).reduce((s, d) => s + d.net, 0) })) : undefined;
     out.push({
       no: `I${period.to.replace(/-/g, "").slice(2)}-${c.id}`,
-      customerId: c.id, customerName: c.name, ...(c.closingDay ? { closingDay: c.closingDay } : {}), period, deliveries, totals: taxTotals(all),
+      customerId: c.id, customerName: c.name, ...(c.closingDay ? { closingDay: c.closingDay } : {}), period, deliveries,
+      totals: { byRate: t.byRate, net: t.net, tax: t.tax, total: t.total },
+      ...(rb ? { rebate: { percent: rate, gross: rb.gross, amount: rb.rebate } } : {}),
+      ...(placeNets ? { places: placeNets } : {}),
     });
   }
   return out;

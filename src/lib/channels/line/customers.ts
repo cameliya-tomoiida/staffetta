@@ -109,6 +109,14 @@ export async function upsertCustomerRow(
     if (wd.error) return { ok: false, error: wd.error, field: "closedWeekdays" };
     next.closedWeekdays = (wd.value as number[] | undefined)?.length ? (wd.value as number[]) : undefined;
   }
+  // 割戻しの率・事業所ごとの請求（(37) 請求書）
+  if ("rebateRate" in row) {
+    const v = s("rebateRate");
+    const r = v === "" ? undefined : Number(v);
+    if (r != null && !(Number.isFinite(r) && r >= 0 && r <= 50)) return { ok: false, error: "割戻しの率は 0〜50 の数で", field: "rebateRate" };
+    next.rebateRate = r || undefined;
+  }
+  if ("invoiceByPlace" in row) next.invoiceByPlace = row.invoiceByPlace === true || s("invoiceByPlace") === "true" || undefined;
   // 伝票の様式（(37)）。空なら 1枚に2つ
   if ("slipFormat" in row) next.slipFormat = s("slipFormat") || undefined;
   // 請求の締め日（(37) 請求書）。空なら月末

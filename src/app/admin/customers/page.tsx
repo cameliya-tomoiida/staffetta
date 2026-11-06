@@ -40,6 +40,8 @@ export default async function CustomersAdmin() {
     serviceMinutes: c.serviceMinutes ?? "",
     closingDay: c.closingDay ?? "",
     slipFormat: c.slipFormat ?? "",
+    rebateRate: c.rebateRate ?? "",
+    invoiceByPlace: c.invoiceByPlace === true,
     active: c.active !== false,
     lineUserIds: c.lineUserIds?.length ? `${c.lineUserIds.length}人` : "",
   }));
