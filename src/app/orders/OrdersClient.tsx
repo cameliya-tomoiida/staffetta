@@ -95,6 +95,10 @@ export function OrdersClient({
         <span className="text-ink-soft">
           全 <b className="num text-ink">{orders.length}</b> 件
         </span>
+        {/* ⑧ B センター・事業所ごとの仕分け札（印刷） */}
+        <LinkButton href="/orders/slips" variant="ghost" size="lg">
+          仕分け札を印刷
+        </LinkButton>
         {/* 電話・ドライバーの聞き取りは、ここから手で入れる */}
         <LinkButton href="/orders/new" variant="primary" size="lg">
           ＋ 電話・ドライバーの注文を入れる
