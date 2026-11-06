@@ -247,7 +247,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
       : s === "provisional" ? <span className="ml-2 rounded bg-[#e8f0fb] px-1.5 py-0.5 text-[15px] font-black text-[#1d4b8f]">仮</span> : null;
 
   return (
-    <div ref={top} className="mx-auto flex min-h-dvh max-w-[560px] flex-col bg-[#f5f5f2] text-[#242724]" style={{ fontSize: 18 }}>
+    <div ref={top} className="mx-auto flex min-h-dvh max-w-[560px] flex-col bg-paper text-ink" style={{ fontSize: 18 }}>
       {/* 上: ロゴ・自分の名前・未送信 */}
       <header className="sticky top-0 z-[1000] flex items-center gap-2 border-b border-[#c5cac5] bg-white px-4 py-2">
         {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
