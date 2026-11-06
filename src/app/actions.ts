@@ -37,9 +37,11 @@ export async function readFaxAction(faxId: string) {
       .slice(0, 15)
       .map(({ o, l, e }) => `${o.customerId} の「${l.read!.writtenName}」: ${e.field === "quantity" ? "数量" : e.field === "productId" ? "商品" : e.field} を AI ${e.from} → スタッフ ${e.to} に直した`);
     const { read, model } = await readFax(fax.file, fax.receivedAt, await aliasMapFor(), recentFixes);
+    // 取引先はマスタ（DB）から。見本の固定の一覧だと、本当の取引先が「不明」になる
+    const custList = (await (await import("@/lib/masters/seed-db")).loadMasters()).customers;
     await updateDb((d) => {
       const f = d.faxes.find((f) => f.id === faxId)!;
-      const customerId = customers.some((c) => c.id === read.sender.matched_customer_id) ? read.sender.matched_customer_id : "";
+      const customerId = custList.some((c) => c.id === read.sender.matched_customer_id) ? read.sender.matched_customer_id : "";
       f.read = read;
       f.readAt = now();
       f.readModel = model;
@@ -55,7 +57,7 @@ export async function readFaxAction(faxId: string) {
         // 行が無い納品日（「発注なし」の連絡など）は注文を作らない。FAX は確定で「受け取った」記録だけ残る
         if (!ro.lines.length) return;
         // 使用日で来る取引先は、こちらの納品日＝センター納めの日に直す（⑧）
-        const dates = orderDates(findCustomer(customerId), ro.delivery_date);
+        const dates = orderDates(custList.find((c) => c.id === customerId) ?? findCustomer(customerId), ro.delivery_date);
         // 変更FAX: 同じ取引先・納品日の元の注文を探して changeOf に入れる（元の注文には触らない）
         const original = isChange
           ? d.orders.find((o) => o.customerId === customerId && o.deliveryDate === dates.deliveryDate && (o.status === "confirmed" || o.status === "provisional") && (o.intent ?? "new") === "new")

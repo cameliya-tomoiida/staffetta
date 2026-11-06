@@ -8,7 +8,7 @@ import { customers } from "@/data/master";
 // 商品は③の catalog から引く（master.ts の商品＋③が足した商品 P11〜 の両方）
 import { allProducts, findCustomer, findProduct } from "@/lib/catalog";
 import { orderDates } from "@/lib/center-dates";
-import type { Order, OrderLine, OrderSource, ReadValue } from "@/data/types";
+import type { CustomerMaster, Order, OrderLine, OrderSource, ReadValue } from "@/data/types";
 import { updateDb } from "@/lib/store";
 import { nowIso } from "@/lib/clock";
 import { autoConfirmImported } from "@/lib/automation/orders";
@@ -70,12 +70,14 @@ export function toOrderLine(orderId: string, l: ImportedLine, i: number): OrderL
   };
 }
 
-export function toOrder(o: ImportedOrder): Order {
+/** custList: 取引先のマスタ（DB）。渡さなければ見本の一覧（テスト用） */
+export function toOrder(o: ImportedOrder, custList?: CustomerMaster[]): Order {
   // 使用日で来る取引先は、こちらの納品日＝センター納めの日に直す（⑧）
-  const dates = orderDates(findCustomer(o.customerId), o.deliveryDate);
+  const known = custList?.find((c) => c.id === o.customerId);
+  const dates = orderDates(known ?? findCustomer(o.customerId), o.deliveryDate);
   return {
     id: o.id,
-    customerId: customers.some((c) => c.id === o.customerId) ? o.customerId : "",
+    customerId: (custList ?? customers).some((c) => c.id === o.customerId) ? o.customerId : "",
     ...dates,
     deliveryPlace: o.deliveryPlace,
     lines: o.lines.map((l, i) => toOrderLine(o.id, l, i)),
@@ -101,7 +103,9 @@ export async function saveImported(list: ImportedOrder[]) {
   return { ...saved, auto };
 }
 
-function saveImportedRaw(list: ImportedOrder[]) {
+async function saveImportedRaw(list: ImportedOrder[]) {
+  // 取引先はマスタ（DB）から（見本の固定の一覧だと、本当の取引先が「不明」になる）
+  const custList = (await (await import("@/lib/masters/seed-db")).loadMasters()).customers;
   return updateDb((db) => {
     let added = 0;
     let replaced = 0;
@@ -113,10 +117,10 @@ function saveImportedRaw(list: ImportedOrder[]) {
           kept++;
           continue;
         }
-        db.orders[idx] = toOrder(io);
+        db.orders[idx] = toOrder(io, custList);
         replaced++;
       } else {
-        db.orders.push(toOrder(io));
+        db.orders.push(toOrder(io, custList));
         added++;
       }
     }

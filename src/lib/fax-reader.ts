@@ -3,8 +3,8 @@ import { aiClient } from "@/lib/ai/client";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { promises as fs } from "node:fs";
 import { faxFilePath } from "./store";
-import { customers, suppliers } from "@/data/master";
-import { allProducts } from "./catalog";
+import { allProducts, withMasters } from "./catalog";
+import type { Masters } from "@/data/types";
 import { FaxReadSchema, type FaxRead } from "./types";
 import { kvGet } from "./db/sqlite";
 
@@ -59,12 +59,13 @@ FAXの種類（kind）の見分け方:
 - handwritten_note: 決まった様式のない手書きのメモ。字の形がまぎらわしい（1と7、0と6 など）ときだけ confidence を下げ、どちらに読めるかを attention に書く。
 - 単位（個・袋・P（パック）・c/s（ケース）・枚切り・食・本）は書いてあるまま unit_written に入れる。「3枚入4袋」のような入数は pieces_per_unit に入れる。`;
 
-function masterText(knownMappings: Record<string, Record<string, string>>) {
-  const cust = customers.map((c) => `${c.id}: ${c.name}${c.fax ? `（FAX ${c.fax}）` : ""}`).join("\n");
-  const prod = allProducts()
+// 得意先・商品・仕入先は、マスタ（DB。画面で直した値）から。見本の固定の一覧ではない（3100 の本当の取引先を読めるように）
+function masterText(knownMappings: Record<string, Record<string, string>>, m: Masters) {
+  const cust = m.customers.filter((c) => c.active !== false).map((c) => `${c.id}: ${c.name}${c.fax ? `（FAX ${c.fax}）` : ""}`).join("\n");
+  const prod = withMasters(m, () => allProducts())
     .map((p) => `${p.id}: ${p.name}（単位 ${p.unit}${p.spec ? `・${p.spec.kind === "buy" ? "仕入品" : "自社製造"}` : ""}）`)
     .join("\n");
-  const sup = suppliers.map((x) => `${x.id}: ${x.name}`).join("\n");
+  const sup = m.suppliers.map((x) => `${x.id}: ${x.name}`).join("\n");
   const maps = Object.entries(knownMappings)
     .map(([cid, m]) => Object.entries(m).map(([w, pid]) => `${cid} の「${w}」→ ${pid}`).join("\n"))
     .filter(Boolean)
@@ -93,6 +94,7 @@ export async function readFaxBytes(
   recentFixes: string[] = [],
 ): Promise<{ read: FaxRead; model: string }> {
   const client = aiClient("FAX の読み取り");
+  const masters = await (await import("./masters/seed-db")).loadMasters();
 
   const response = await client.beta.messages.parse({
     model: READER_MODEL,
@@ -109,7 +111,7 @@ export async function readFaxBytes(
           { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.toString("base64") } },
           {
             type: "text",
-            text: `${masterText(knownMappings)}\n\n## スタッフが最近直した例（同じ間違いをしないための参考。値をそのまま使わず、読み方の参考にする）\n${recentFixes.join("\n") || "（まだなし）"}\n\n受信日時: ${receivedAt}\n\nこのFAXを読み取ってください。`,
+            text: `${masterText(knownMappings, masters)}\n\n## スタッフが最近直した例（同じ間違いをしないための参考。値をそのまま使わず、読み方の参考にする）\n${recentFixes.join("\n") || "（まだなし）"}\n\n受信日時: ${receivedAt}\n\nこのFAXを読み取ってください。`,
           },
         ],
       },
