@@ -67,6 +67,13 @@ export async function currentGaps(nowIso = new Date().toISOString(), opts: { onl
 
 /** スケジューラーの判定元（アラーム）。今日の分は1件ずつ（締めを期限に、過ぎたら段が上がって責任者へ）・過ぎた日はシートごと */
 export async function recordAlerts(nowIso: string) {
-  const gaps = await currentGaps(nowIso);
-  return gapAlerts(gaps, jstNow(nowIso).slice(0, 10)).map((a) => ({ ...a, kind: a.dedupeKey.startsWith("record-past") ? "record_missing" : "record_due", action: "記録する" }));
+  const today = jstNow(nowIso).slice(0, 10);
+  // 使いはじめた日より前の漏れは、お知らせ（と LINE）にしない（入れた日に、今月の分が一度に届かないように）。漏れの一覧には出す
+  let since = kvGet<string>("record_alarms_since");
+  if (!since) {
+    since = today;
+    kvSet("record_alarms_since", since);
+  }
+  const gaps = (await currentGaps(nowIso)).filter((g) => g.date >= since);
+  return gapAlerts(gaps, today).map((a) => ({ ...a, kind: a.dedupeKey.startsWith("record-past") ? "record_missing" : "record_due", action: "記録する" }));
 }
