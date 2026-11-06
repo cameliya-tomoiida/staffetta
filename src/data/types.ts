@@ -521,6 +521,12 @@ export interface CustomerMaster {
   deliveryHowTo?: string;
   /** 注意事項（駐車・時間・気をつけること） */
   deliveryCaution?: string;
+  /** 納品の決まり（⑧）: 必ず検品してもらう */
+  inspectRequired?: boolean;
+  /** 納品の決まり（⑧）: 受け取りのサインをもらう */
+  signRequired?: boolean;
+  /** サインをもらう人・所（例「必ず受付でもらう」の 受付） */
+  signBy?: string;
   /** この先の納品にかかる時間（分）。空なら便の「1件の納品の時間」（それも空なら 10 分） */
   serviceMinutes?: number;
   /**

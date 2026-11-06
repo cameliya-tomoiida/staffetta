@@ -6,6 +6,7 @@ import type { CourseMaster, CustomerMaster, CustomerProductMaster, Order } from 
 import { deliversOn } from "@/lib/routes/optimize";
 import { buildTimeline, orderedStops, toHHMM, type LatLng, type RouteSettings } from "@/lib/routes/plan";
 
+import { deliveryRules, type DeliveryRule } from "./rules";
 export interface DriverDayItem {
   productId: string;
   name: string;
@@ -29,6 +30,8 @@ export interface DriverDayStop {
   address?: string;
   howTo?: string;
   caution?: string;
+  /** 納品の決まり（時間・検品・サイン・置き場所・注意）。着く前に大きく出す（⑧） */
+  rules: DeliveryRule[];
   closedDays?: string;
   fax?: string;
   lat?: number;
@@ -109,6 +112,7 @@ export function driverDay(input: {
       ...(c.address ? { address: c.address } : {}),
       ...(c.deliveryHowTo ? { howTo: c.deliveryHowTo } : {}),
       ...(c.deliveryCaution ? { caution: c.deliveryCaution } : {}),
+      rules: deliveryRules(c),
       ...(c.closedWeekdays?.length ? { closedDays: c.closedWeekdays.map((d) => W[d]).join("・") } : {}),
       ...(c.fax ? { fax: c.fax } : {}),
       ...(c.lat != null && c.lng != null ? { lat: c.lat, lng: c.lng } : {}),

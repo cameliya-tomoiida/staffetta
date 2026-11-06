@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RouteMap } from "@/app/admin/routes/RouteMap";
 import type { DriverDay, DriverDayStop } from "@/lib/driver/day";
+import { badgeRules } from "@/lib/driver/rules";
 import { driverContextAction, driverDayAction, driverNewsAction, driverSendAction, type DriverContext, type DriverItem, type DriverNews } from "./actions";
 
 type Pending = { clientId: string; customerId: string; customerName: string; deliveryDate: string; items: { productId: string; quantity: number }[]; who: string; savedAt: string };
@@ -327,6 +328,14 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                             <span className="block text-[16px] text-[#565c57]">この日はお休み</span>
                           ) : (
                             <>
+                              {/* 納品の決まり（⑧）: 時間・検品・サインを大きな印で */}
+                              {badgeRules(s.rules).length > 0 && (
+                                <span className="mt-1 flex flex-wrap gap-1.5">
+                                  {badgeRules(s.rules).map((r) => (
+                                    <span key={r.kind} className={`rounded-lg px-2 py-0.5 text-[17px] font-black ${r.kind === "time" ? "bg-[#fff3c4] text-[#654700]" : "bg-[#8b1a1a] text-white"}`}>{r.text}</span>
+                                  ))}
+                                </span>
+                              )}
                               <span className="block text-[17px]">
                                 {s.arrive ? <><b>{s.arrive}</b> ごろ着</> : "着く時刻は未計算（位置なし）"}
                                 {s.window && <span className="text-[#565c57]">（希望 {s.window}）</span>}
@@ -497,6 +506,23 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
               </div>
               <button type="button" onClick={() => setOpen(null)} className="min-h-11 shrink-0 px-2 text-[17px] font-bold text-[#565c57] underline">閉じる</button>
             </div>
+
+            {/* 納品の決まり（⑧）: 着く前に、いちばん上に大きく。代わりの人でも回れるように */}
+            {!open.off && open.rules.length > 0 && (
+              <div className="mt-3 rounded-xl border-[3px] border-[#8b1a1a] bg-[#faf1f1] px-3 py-2.5">
+                <div className="text-[16px] font-black text-[#8b1a1a]">この先の納品の決まり</div>
+                {badgeRules(open.rules).length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {badgeRules(open.rules).map((r) => (
+                      <span key={r.kind} className={`rounded-lg px-3 py-1 text-[24px] leading-tight font-black ${r.kind === "time" ? "bg-[#fff3c4] text-[#654700]" : "bg-[#8b1a1a] text-white"}`}>{r.text}</span>
+                    ))}
+                  </div>
+                )}
+                {open.rules.filter((r) => r.detail).map((r) => (
+                  <p key={r.kind} className="mt-1.5 text-[19px] leading-snug"><b>{r.text}：</b>{r.detail}</p>
+                ))}
+              </div>
+            )}
 
             <h2 className="mt-4 text-[18px] font-black">渡すもの</h2>
             {open.off ? <p className="text-[18px]">この日はお休みです</p> : open.items.length === 0 ? <p className="text-[18px] text-[#565c57]">この日の注文はありません</p> : (
