@@ -366,6 +366,9 @@ export interface ProductMaster {
   toppingId?: string;
   /** この商品がある日のライン上限（個・枚/日） */
   dailyCap?: number;
+  /** 多めに作る（取れなかった分・ロス。担当者 11/6 深夜）: 注文の何％を足すか・何個を足すか。作る数 = 注文 + 切り上げ(注文 × 率) + 数 */
+  overRate?: number;
+  overPieces?: number;
   /** 包装: 1枚／2枚／大袋、機械／手 */
   packStyle?: PackStyle;
   packMethod?: PackMethod;

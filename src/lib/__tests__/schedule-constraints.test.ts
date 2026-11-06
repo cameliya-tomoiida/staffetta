@@ -221,3 +221,17 @@ describe("仕込みの回数（P1・粉の量でミキサーを決める）", ()
     expect(r2.production.doughs.find((x) => x.doughId === dg.doughId)!.batches).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe("多めに作る（商品の率・数）", () => {
+  it("商品に 3% を入れると、作る数が増えて注文の数も残る。生地の量も増える", () => {
+    const before = runPipeline(demoOrders, DEMO_DATE, { masters: base }).production.doughs.find((d) => d.doughId === "DG01")!;
+    const m = patch((m) => (m.products.find((p) => p.id === "P01")!.overRate = 3));
+    const after = runPipeline(demoOrders, DEMO_DATE, { masters: m }).production.doughs.find((d) => d.doughId === "DG01")!;
+    const b = before.items.find((i) => i.productId === "P01")!;
+    const a = after.items.find((i) => i.productId === "P01")!;
+    expect(b.ordered).toBeUndefined();
+    expect(a.ordered).toBe(b.pieces);
+    expect(a.pieces).toBe(b.pieces + Math.ceil(b.pieces * 0.03));
+    expect(after.doughKg).toBeGreaterThan(before.doughKg);
+  });
+});

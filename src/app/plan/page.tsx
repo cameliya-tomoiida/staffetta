@@ -593,8 +593,17 @@ function MakeTable({ bs, lang, t, name, unitOf, cards }: { bs: DoughBatchPlan[];
                     <span className="num text-xs text-ink-faint">{i.doughGram}g</span>
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
+                    {/* 多めに作る分を足したとき: 注文 909 → 937（+3%） */}
+                    {i.ordered != null && i.ordered < i.pieces && (
+                      <span className="num mr-2 text-sm text-ink-soft">
+                        {fmtNum(i.ordered)} →
+                      </span>
+                    )}
                     <span className="num text-[1.7rem] leading-none font-black">{fmtNum(i.pieces)}</span>
                     <span className="ml-1 text-sm">{trUnit(lang, unitOf(i.productId))}</span>
+                    {i.ordered != null && i.ordered < i.pieces && (
+                      <span className="num ml-1.5 rounded bg-prov-bg px-1.5 py-0.5 text-xs font-bold text-prov-ink">+{fmtNum(i.pieces - i.ordered)}（{Math.round(((i.pieces - i.ordered) / i.ordered) * 100)}%）</span>
+                    )}
                   </td>
                 </tr>
               ))}
