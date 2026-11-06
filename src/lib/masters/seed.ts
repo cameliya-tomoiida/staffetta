@@ -229,11 +229,18 @@ export function sampleMasters(): Masters {
     ...(m.kgPerUnit !== 1 ? { kgPerUnit: m.kgPerUnit } : {}), active: true,
   }));
 
+  // 仕入先の品番（⑧の見本・架空）
+  const ITEM_NO: Record<string, string> = { P08: "552", P09: "143", P10: "1201", P17: "1202", P18: "1203" };
+  for (const p of products) if (ITEM_NO[p.id]) p.supplierItemNo = ITEM_NO[p.id];
+
   const suppliers: SupplierMaster[] = allSuppliers().map((s) => ({
     id: s.id, name: s.name, method: s.method, ...(s.siteName ? { siteName: s.siteName } : {}), contact: s.contact,
     ...(s.deliveries[0]?.cutoff ? { cutoff: s.deliveries[0].cutoff } : {}),
     ...(s.deliveries[0]?.leadDays !== undefined ? { leadDays: s.deliveries[0].leadDays } : {}),
-    ...(s.minLot > 1 ? { minLot: s.minLot } : {}), active: true,
+    ...(s.minLot > 1 ? { minLot: s.minLot } : {}),
+    // 発注表の形（⑧の見本）: ひので製パン（デモ）は届け先ごとに1枚、ふじみ製パン（デモ）は1枚に届け先ごとの列
+    ...(s.id === "S03" ? { orderForm: "per_store" as const } : s.id === "S07" ? { orderForm: "matrix" as const, ownStoreNo: "7000001" } : {}),
+    active: true,
   }));
   const supplierDeliveries: SupplierDeliveryMaster[] = allSuppliers()
     .filter((s) => s.deliveries.length > 1 || s.deliveries.some((d) => d.arrival))
@@ -270,6 +277,15 @@ export function sampleMasters(): Masters {
     standingOrders: SAMPLE_STANDING_ORDERS,
     customerProducts: sampleCustomerProducts(products, customers),
     // 仕入先の商品台帳（⑧）の見本（架空）。ひので製パン（デモ）の台帳の2品
+    // 仕入先の届け先と店番（⑧の見本・架空）
+    supplierStores: [
+      { supplierId: "S03", storeNo: "10001", name: "あさひ製パン工場（デモ）", isDefault: true, order: 1, active: true },
+      { supplierId: "S03", storeNo: "10002", name: "みなと給食センター 店", customerIds: ["C03"], order: 2, active: true },
+      { supplierId: "S03", storeNo: "10003", name: "さくら総合病院 店", customerIds: ["C02"], order: 3, active: true },
+      { supplierId: "S07", storeNo: "C02", name: "さくら総合病院", customerIds: ["C02"], order: 1, active: true },
+      { supplierId: "S07", storeNo: "C07", name: "やまびこ給食", customerIds: ["C07"], order: 2, active: true },
+      { supplierId: "S07", storeNo: "OWN", name: "工場", isDefault: true, order: 9, active: true },
+    ],
     supplierItems: [
       { supplierId: "S03", itemNo: "17", productCode: "1", name: "見本 食パン6枚スライス", category: "食パン", retailPrice: 282, wholesalePrice: 211, cost: 170, jan: "4900000000017", shelfDaysSummer: 4, shelfDaysWinter: 4, factory: "A", secondDelivery: true, ledgerMonth: "2026-11", active: true },
       { supplierId: "S03", itemNo: "143", productCode: "143", name: "見本 ロール6個入", category: "ロール", retailPrice: 215, wholesalePrice: 161, cost: 130, jan: "4900000000143", shelfDaysSummer: 4, shelfDaysWinter: 4, factory: "B", secondDelivery: false, ledgerMonth: "2026-11", active: true },

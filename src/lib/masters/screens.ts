@@ -18,7 +18,7 @@ export { CHANNEL_SEEDS };
 export const MASTER_GROUPS: { label: string; names: ScreenName[] }[] = [
   { label: "商品と製造", names: ["products", "doughs", "recipeItems", "steps", "toppings", "toppingItems", "productPackaging"] },
   { label: "設備と人員", names: ["lines", "equipment", "shifts", "staffAssignments"] },
-  { label: "仕入と在庫", names: ["suppliers", "supplierDeliveries", "supplierItems", "materials", "packaging"] },
+  { label: "仕入と在庫", names: ["suppliers", "supplierDeliveries", "supplierItems", "supplierStores", "materials", "packaging"] },
   { label: "取引先と配送", names: ["customers", "customerProducts", "courses", "standingOrders"] },
   { label: "取り込みの設定", names: ["sheet_sources", "sheet_columns", "kirara_items", "infomart_headers"] },
 ];
@@ -45,6 +45,7 @@ export const LIST_KEYS: Record<ScreenName, string[]> = {
   customers: ["name", "channel", "cutoff", "deliveryTime", "course", "deliveryWeekdays", "replyRequired", "id", "fax", "externalCode", "note", "active"],
   courses: ["name", "departTime", "loadMinutes", "dayOffset", "weekdays", "id", "note", "active"],
   customerProducts: ["customerId", "name", "price", "cost", "unit", "code", "productId", "quantity", "weekdays", "priceNote", "source", "lastDate", "id", "note", "active"],
+  supplierStores: ["supplierId", "storeNo", "name", "customerIds", "isDefault", "order", "note", "active"],
   supplierItems: ["supplierId", "itemNo", "name", "category", "cost", "wholesalePrice", "retailPrice", "secondDelivery", "shelfDaysSummer", "shelfDaysWinter", "factory", "jan", "productCode", "ledgerMonth", "note", "active"],
   standingOrders: ["customerId", "weekday", "productId", "quantity", "unit", "id", "piecesPerUnit", "from", "to", "note", "active"],
   suppliers: ["name", "method", "cutoff", "leadDays", "minLot", "id", "contact", "email", "active"],
