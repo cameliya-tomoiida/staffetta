@@ -102,7 +102,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
         costBox={
           <>
             <TotalsCheck rows={check} />
-            <CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} />
+            <div className="max-md:hidden"><CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} /></div>
           </>
         }
       dateNav={

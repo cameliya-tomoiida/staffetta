@@ -87,32 +87,70 @@ export function OrdersClient({
   return (
     <div>
       <PageHeader title="受注一覧" lead="FAX・LINE・メール・サイト・電話の注文を、ここでまとめて見ます。">
-        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
-          確定する人
-          <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink">
+        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft" title="確定する人">
+          <span className="max-md:hidden">確定する人</span>
+          <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 md:hidden" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+          <select value={who} onChange={(e) => setWho(e.target.value)} aria-label="確定する人" className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink max-md:min-h-10 max-md:px-2 max-md:text-[14px]">
             {STAFF.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
         </label>
-        <span className="text-ink-soft">
+        <span className="text-ink-soft max-md:hidden">
           全 <b className="num text-ink">{orders.length}</b> 件
         </span>
         {/* ⑧ B センター・事業所ごとの仕分け札（印刷） */}
-        <LinkButton href="/orders/slips" variant="ghost" size="lg">
+        <LinkButton href="/orders/slips" variant="ghost" size="lg" className="max-md:hidden">
           仕分け札を印刷
         </LinkButton>
         {/* 電話・ドライバーの聞き取りは、ここから手で入れる */}
-        <LinkButton href="/orders/new" variant="primary" size="lg">
+        <LinkButton href="/orders/new" variant="primary" size="lg" className="max-md:hidden">
           ＋ 電話・ドライバーの注文を入れる
         </LinkButton>
-        <LinkButton href="/slips" size="lg">
+        <LinkButton href="/slips" size="lg" className="max-md:hidden">
           伝票（納品書・請求書）
         </LinkButton>
+        {/* ⑧ スマホ: 「＋ 注文」だけ大きく。ほかは「⋯」の中 */}
+        <span className="flex items-center gap-2 md:hidden">
+          <LinkButton href="/orders/new" variant="primary">＋ 注文</LinkButton>
+          <details className="relative">
+            <summary className="flex h-12 w-12 cursor-pointer list-none items-center justify-center rounded-lg border border-rule-strong text-xl font-black after:!hidden [&::-webkit-details-marker]:hidden" aria-label="ほかの操作">⋯</summary>
+            <div className="absolute right-0 z-30 mt-1 flex w-52 flex-col gap-1 rounded-xl border border-rule-strong bg-sheet p-2 shadow-xl">
+              <Link href="/orders/slips" className="flex min-h-11 items-center rounded-lg px-3 font-bold active:bg-paper">仕分け札を印刷</Link>
+              <Link href="/slips" className="flex min-h-11 items-center rounded-lg px-3 font-bold active:bg-paper">伝票（納品書・請求書）</Link>
+            </div>
+          </details>
+        </span>
       </PageHeader>
 
+      {/* ⑧ スマホ: 上のタブ（状態）と、納品日の小さな切りかえ。説明の文は出さない */}
+      <div className="no-print -mx-4 mb-3 md:hidden">
+        <nav aria-label="状態" className="flex gap-1 overflow-x-auto border-b border-rule px-4">
+          {([
+            ["all", "すべて", base.length],
+            ["needs_review", "要確認", count("needs_review")],
+            ...(orders.some((o) => o.status === "provisional") ? [["provisional", "仮発注", count("provisional")] as const] : []),
+            ["confirmed", "確定", count("confirmed")],
+            ["cancelled", "取消", count("cancelled")],
+          ] as const).map(([v, l, n]) => (
+            <button key={v} type="button" onClick={() => setStatus(v as StatusFilter)} aria-current={status === v ? "page" : undefined}
+              className={`flex min-h-12 shrink-0 items-center gap-1 border-b-[3px] px-3 text-[15px] font-bold whitespace-nowrap ${status === v ? "border-crust-600 text-ink" : "border-transparent text-ink-soft"}`}>
+              {l}<span className={`rounded-full px-1.5 text-[12px] tabular-nums ${v === "needs_review" && n > 0 ? "bg-review-bg text-review-ink" : "bg-paper"}`}>{n}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="flex gap-1.5 overflow-x-auto px-4 pt-2">
+          {([["all", "すべて"], ["today", "今日"], ["tomorrow", "明日"], ["week", "今週"], ["month", "今月"]] as const).map(([v, l]) => (
+            <button key={v} type="button" onClick={() => setPeriod(v)} aria-pressed={period === v}
+              className={`min-h-9 shrink-0 rounded-full border px-3 text-[13px] font-bold ${period === v ? "border-ink bg-ink text-sheet" : "border-rule-strong text-ink-soft"}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {reviewAll > 0 && status !== "needs_review" && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3 max-md:hidden">
           <button type="button" onClick={() => setStatus("needs_review")} className="text-left underline-offset-4 hover:underline">
             要確認の注文が <span className="num text-xl">{reviewAll}</span> 件あります。押すと、要確認だけを出します。
           </button>
@@ -120,7 +158,7 @@ export function OrdersClient({
       )}
 
       {/* 絞り込み */}
-      <div className="no-print mb-4 space-y-2.5 rounded-lg border border-rule bg-sheet p-3">
+      <div className="no-print mb-4 space-y-2.5 rounded-lg border border-rule bg-sheet p-3 max-md:hidden">
         <FilterRow label="状態">
           <Segmented
             label="状態"
@@ -302,7 +340,7 @@ function OrderRow({
                 const tpl = key.slice(key.indexOf("|") + 1);
                 const text = tpl.includes(" ") ? tpl.split(" ").join(g.names.join("・")) : g.reason;
                 return (
-                  <div key={key} className={`mt-1 flex items-start gap-1.5 text-review-ink ${g.status === "late" ? "font-bold" : ""}`}>
+                  <div key={key} className={`mt-1 flex items-start gap-1.5 text-review-ink max-md:hidden ${g.status === "late" ? "font-bold" : ""}`}>
                     <Icon.clock className="mt-1 h-4 w-4 shrink-0" />
                     <span>
                       <span className="mr-1">{g.status === "late" ? "締め：" : "締め（仮発注）："}</span>
@@ -314,7 +352,7 @@ function OrderRow({
             })()}
           {/* 締めだけの注文は出さない（締めは上の「締め：」で出ている）。1つの文を1行に */}
           {!off && alt && alt.length > 0 && (
-            <div className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-review-line bg-sheet px-2.5 py-1 text-ink">
+            <div className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-review-line bg-sheet px-2.5 py-1 text-ink max-md:hidden">
               <Icon.clock className="mt-1 h-4 w-4 shrink-0 text-review-ink" />
               <ul className="space-y-0.5">
                 {alt.map((t, k) => (

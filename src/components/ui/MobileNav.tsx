@@ -91,7 +91,7 @@ function useTyping() {
 }
 
 /** 上の細い帯: ‹ 戻る・画面の名前・AI・名前 */
-export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: string; title: string; ai: React.ReactNode; user: { name: string; role: Role } | null; tabs: Tab[]; onMenu?: () => void }) {
+export function MobileTopBar({ path, title, user, tabs, onMenu }: { path: string; title: string; ai?: React.ReactNode; user: { name: string; role: Role } | null; tabs: Tab[]; onMenu?: () => void }) {
   const router = useRouter();
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
@@ -114,7 +114,6 @@ export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: st
       <h1 className="m-display min-w-0 flex-1 truncate text-center text-[18px] font-black">{title || "STAFFETTA"}</h1>
       <div className="flex shrink-0 items-center justify-end gap-1.5">
         <ThemeToggle compact className="h-9 w-9" />
-        <div className="shrink-0">{ai}</div>
       </div>
     </div>
   );
@@ -123,29 +122,32 @@ export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: st
 /** 下のタブ（役割ごと）＋「メニュー」 */
 export function BottomTabs({ path, tabs, onMenu, menuOpen }: { path: string; tabs: Tab[]; onMenu?: () => void; menuOpen: boolean }) {
   const typing = useTyping();
+  const router = useRouter();
   if (typing) return null;
-  // ⑧ 浮いた下のタブ: iPhone のホームのバー（safe-area-inset-bottom）の上に、左右と下に少しすき間を空けて置く。
-  //   今いる所は、アイコンの後ろの丸い面と太字で。全部の画面は上の「メニュー」から
+  // ⑧ 下のタブ（台ヨミの形・11/6 深夜）: 地は不透明（下に字が入り込まない）・画面の下いっぱい・ホームのバーの分（safe-area-inset-bottom）は下にすき間。
+  //   今いる所は、絵の後ろの丸い面と太字。今いるタブをもう一度押したら、その画面の始め（上・絞り込みなし）に戻る
   const cell = "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[12px] leading-tight font-bold transition-colors duration-150";
   if (tabs.length <= 1 && !onMenu) return null;
   return (
-    <nav aria-label="下のタブ" data-guide="tabs" className="no-print fixed inset-x-3 z-30 flex gap-1 rounded-2xl border border-rule bg-sheet/85 p-1 shadow-[0_8px_24px_rgb(0_0_0/0.18)] backdrop-blur-xl md:hidden"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
+    <nav aria-label="下のタブ" data-guide="tabs" className="no-print fixed inset-x-0 bottom-0 z-30 flex gap-1 border-t border-rule bg-sheet px-2 pt-1 md:hidden"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 4px)" }}>
       {tabs.map((t) => {
         const on = !menuOpen && isOn(t, path);
         return (
-          <Link key={t.href} href={t.href} aria-current={on ? "page" : undefined} className={`${cell} ${on ? "bg-crust-600/15 text-crust-700" : "text-ink-soft"} active:scale-95`}>
+          <Link key={t.href} href={t.href} aria-current={on ? "page" : undefined}
+            onClick={(e) => {
+              if (!on) return;
+              // 今いるタブ: 始めに戻す（URL の絞り込みも外す）
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: "instant" });
+              if (window.location.pathname + window.location.search !== t.href) router.push(t.href);
+            }}
+            className={`${cell} ${on ? "bg-crust-600/15 text-crust-700" : "text-ink-soft"} active:scale-95`}>
             <MIcon name={t.icon} className={`h-6 w-6 ${on ? "stroke-[2.4]" : ""}`} />
             <span className={on ? "font-black" : ""}>{t.label}</span>
           </Link>
         );
       })}
-      {onMenu && (
-        <button type="button" onClick={onMenu} aria-expanded={menuOpen} className={`${cell} ${menuOpen ? "text-crust-700" : "text-ink"} active:bg-crust-50`}>
-          <MIcon name="menu" className="h-7 w-7" />
-          <span>メニュー</span>
-        </button>
-      )}
     </nav>
   );
 }

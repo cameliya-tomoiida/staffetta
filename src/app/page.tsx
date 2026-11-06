@@ -45,25 +45,43 @@ export default async function Inbox(props: PageProps<"/">) {
   return (
     <div className="space-y-6">
       <InboxWatcher />
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-crust-600 pb-3">
-        <div>
+      {/* ⑧ スマホ: 題と説明は出さない（上の帯に名前）。絞り込みはたたむ */}
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-crust-600 pb-3 max-md:border-b-0 max-md:pb-0">
+        <div className="max-md:hidden">
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">FAX受信箱</h1>
           <p className="text-ink-soft">複合機に届いたFAXは、自動でここに入ります。Claudeが読み取り、迷わなかったものは自動で確定します。スタッフは迷った所だけを確認します。</p>
         </div>
         <div className="flex gap-2">
           <ReadAllButton count={db.faxes.filter((f) => f.status === "new" || f.status === "error").length} />
-          <ResetButton />
+          {/* 「デモを最初から」は見本の DB のときだけ（開発の画面か、HUB_DEMO=1 で起動したとき。本番 3100 では出さない） */}
+          {(process.env.NODE_ENV !== "production" || process.env.HUB_DEMO === "1") && <ResetButton />}
         </div>
       </div>
       {waiting > 0 && (
         <div className="rounded-lg bg-review-bg px-4 py-3 font-bold text-review-ink">確認待ちのFAXが {waiting} 件あります</div>
       )}
-      <InboxSearch
-        init={init}
-        customers={custAll.filter((c) => c.active !== false).map((c) => ({ id: c.id, name: c.name }))}
-        statuses={Object.entries(statusLabel).map(([value, v]) => ({ value, label: v.text }))}
-        total={found.total}
-      />
+      <div className="max-md:hidden">
+        <InboxSearch
+          init={init}
+          customers={custAll.filter((c) => c.active !== false).map((c) => ({ id: c.id, name: c.name }))}
+          statuses={Object.entries(statusLabel).map(([value, v]) => ({ value, label: v.text }))}
+          total={found.total}
+        />
+      </div>
+      <details className="rounded-xl border border-rule bg-sheet md:hidden">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-[15px] font-bold after:!hidden [&::-webkit-details-marker]:hidden">
+          絞り込む <span className="text-[13px] font-normal text-ink-soft">{found.total}件</span>
+          <span aria-hidden className="ml-auto text-ink-faint">▾</span>
+        </summary>
+        <div className="border-t border-rule p-3">
+          <InboxSearch
+            init={init}
+            customers={custAll.filter((c) => c.active !== false).map((c) => ({ id: c.id, name: c.name }))}
+            statuses={Object.entries(statusLabel).map(([value, v]) => ({ value, label: v.text }))}
+            total={found.total}
+          />
+        </div>
+      </details>
       {found.items.length === 0 && (
         <p className="rounded-lg border border-dashed border-rule-strong bg-sheet px-4 py-6 text-center text-ink-soft">
           この条件のFAXはありません。期間を「すべて」にすると、前のFAXも探せます。
@@ -76,11 +94,11 @@ export default async function Inbox(props: PageProps<"/">) {
           const lines = f.read?.orders.reduce((n, o) => n + o.lines.length, 0) ?? 0;
           const flagged = f.read?.orders.flatMap((o) => o.lines).filter((l) => l.attention || l.confidence < 0.8).length ?? 0;
           return (
-            <div key={f.id} className="card flex flex-col overflow-hidden">
-              <div className="relative h-48 overflow-hidden bg-off-bg">
+            <div key={f.id} className="card flex flex-col overflow-hidden max-md:flex-row">
+              <div className="relative h-48 overflow-hidden bg-off-bg max-md:h-auto max-md:min-h-28 max-md:w-24 max-md:shrink-0">
                 <PdfThumb url={f.file} rotation={f.rotation ?? 0} />
               </div>
-              <div className="flex flex-1 flex-col gap-2 p-4">
+              <div className="flex flex-1 flex-col gap-2 p-4 max-md:min-w-0 max-md:p-3">
                 <div className="flex items-center justify-between">
                   <span className={`pill ${s.cls}`}>{s.text}</span>
                   <span className="text-xs text-ink-faint">{f.via === "gmail" || f.via === "simulate" ? "Gmail経由・" : ""}{new Date(f.receivedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 受信</span>

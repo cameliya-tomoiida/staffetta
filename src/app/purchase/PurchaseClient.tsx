@@ -113,9 +113,10 @@ export function PurchaseClient({
   return (
     <div>
       <PageHeader title="発注書" lead="注文と在庫から、仕入先ごとの発注書の下書きを作りました。中身を見て承認してから送ります。">
-        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
-          承認する人
-          <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink">
+        <label className="flex items-center gap-2 text-sm font-bold text-ink-soft" title="承認する人">
+          <span className="max-md:hidden">承認する人</span>
+          <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 md:hidden" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+          <select aria-label="承認する人" value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink max-md:min-h-10 max-md:px-2 max-md:text-[14px]">
             {STAFF.map((s) => (
               <option key={s}>{s}</option>
             ))}
@@ -124,11 +125,20 @@ export function PurchaseClient({
       </PageHeader>
 
       {dateNav && <div className="no-print mb-4">{dateNav}</div>}
-      <div className="no-print mb-4 flex flex-wrap items-center gap-3">
+      <div className="no-print mb-4 flex flex-wrap items-center gap-3 max-md:hidden">
         <FactoryPrint label={`発注書（${date}）`} />
         <Link href={`/purchase/stores?date=${date}`} className="link text-lg font-bold">店番ごとの発注表（FAX の形）→</Link>
         <Link href={`/plan/courses?date=${date}&kind=buy`} className="link text-lg font-bold">コース別の仕入表 →</Link>
       </div>
+      {/* ⑧ スマホ: 印刷・ほかの表は「⋯」の中に */}
+      <details className="no-print relative mb-3 md:hidden">
+        <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg border border-rule-strong px-3 text-[14px] font-bold after:!hidden [&::-webkit-details-marker]:hidden">⋯ 印刷・ほかの表</summary>
+        <div className="absolute z-30 mt-1 flex w-64 flex-col gap-1 rounded-xl border border-rule-strong bg-sheet p-2 shadow-xl">
+          <FactoryPrint label={`発注書（${date}）`} />
+          <Link href={`/purchase/stores?date=${date}`} className="flex min-h-11 items-center rounded-lg px-3 font-bold active:bg-paper">店番ごとの発注表</Link>
+          <Link href={`/plan/courses?date=${date}&kind=buy`} className="flex min-h-11 items-center rounded-lg px-3 font-bold active:bg-paper">コース別の仕入表</Link>
+        </div>
+      </details>
       {costBox}
       {error && (
         <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
@@ -138,9 +148,10 @@ export function PurchaseClient({
       {lateMaterials.length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
           <details>
-            <summary className="cursor-pointer">
-              間に合わない材料が <span className="num text-xl">{lateMaterials.length}</span> 件あります（発注書には入っていません）。仕入先に電話で相談してください。
-              <span className="ml-1 text-sm font-normal underline underline-offset-4">押すと出します</span>
+            <summary className="cursor-pointer max-md:after:!hidden">
+              <span className="md:hidden">間に合わない材料 <span className="num text-xl">{lateMaterials.length}</span> ›</span>
+              <span className="max-md:hidden">間に合わない材料が <span className="num text-xl">{lateMaterials.length}</span> 件あります（発注書には入っていません）。仕入先に電話で相談してください。
+              <span className="ml-1 text-sm font-normal underline underline-offset-4">押すと出します</span></span>
             </summary>
             <ul className="mt-1 list-disc pl-5 font-normal">
               {lateMaterials.map((w, i) => (
@@ -185,8 +196,8 @@ export function PurchaseClient({
       )}
       {unconfirmed > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
-          この日の注文で、まだ確定していないものが <span className="num text-xl">{unconfirmed}</span> 件あります。確定すると発注書の数が変わります。
-          <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で見る</Link>
+          <span className="max-md:hidden">この日の注文で、まだ確定していないものが <span className="num text-xl">{unconfirmed}</span> 件あります。確定すると発注書の数が変わります。</span>
+          <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4 max-md:ml-0 max-md:no-underline"><span className="md:hidden">まだ確定していない注文 <span className="num text-xl">{unconfirmed}</span> ›</span><span className="max-md:hidden">受注一覧で見る</span></Link>
         </Notice>
       )}
       {soon.length > 0 && (

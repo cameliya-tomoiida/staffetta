@@ -61,8 +61,9 @@ export function PurchaseStatusTag({ status }: { status: PurchaseStatus }) {
 /* ───── 画面の見出し ───── */
 export function PageHeader({ title, lead, children }: { title: React.ReactNode; lead?: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
-      <div className="min-w-0">
+    // ⑧ スマホ（11/7）: 題と説明は出さない（上の帯に画面の名前が出ている・説明の文は読まれない）。ボタンなど children だけ
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3 max-md:mb-3 max-md:border-b-0 max-md:pb-0">
+      <div className="min-w-0 max-md:hidden">
         <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">{title}</h1>
         {lead && <p className="mt-1 text-ink-soft">{lead}</p>}
       </div>
