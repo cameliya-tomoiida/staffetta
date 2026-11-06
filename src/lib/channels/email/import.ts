@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { scanSupplierNotice, type SupplierNotice } from "@/lib/supplier-notices";
 import ExcelJS from "exceljs";
 import { simpleParser } from "mailparser";
-import { customers } from "@/data/master";
+import { isKnownCustomer } from "@/lib/customers-live";
 import type { Order, SourceRef } from "@/data/types";
 import { readDb } from "@/lib/store";
 import { saveImported, type ImportedOrder } from "../common";
@@ -112,7 +112,7 @@ export async function importEml(eml: Buffer, fileName = "mail.eml"): Promise<Ema
   const notice = await scanSupplierNotice({ messageId: mail.messageId, subject: mail.subject, from: mail.from, text: body, receivedAt: mail.date });
   if (notice) return { messageId: mail.messageId, subject: mail.subject, intent: "not_order", orderIds: [], model: "", notice };
   const { read, model } = await readEmail(mail);
-  const customerId = customers.some((c) => c.id === read.sender.matched_customer_id) ? read.sender.matched_customer_id : "";
+  const customerId = (await isKnownCustomer(read.sender.matched_customer_id)) ? read.sender.matched_customer_id : "";
   const base = `E${safeId(mail.messageId)}`;
 
   if (read.intent === "not_order") {

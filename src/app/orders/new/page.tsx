@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui";
-import { customers } from "@/data/master";
+import { liveCustomers } from "@/lib/customers-live";
 import { allProducts } from "@/lib/catalog";
 import { readDb } from "@/lib/store";
 import { PhoneOrder } from "./PhoneOrder";
@@ -13,7 +13,7 @@ export default async function NewPhoneOrderPage() {
   for (const o of db.orders) if (o.customerId) count.set(o.customerId, (count.get(o.customerId) ?? 0) + 1);
   // よく使う順: 電話・ドライバーの取引先を先に、その中は注文の多い順
   const isVoice = (ch: string) => ch === "phone" || ch === "driver";
-  const list = customers
+  const list = (await liveCustomers())
     .map((c) => ({ id: c.id, name: c.name, channel: String(c.channel ?? ""), count: count.get(c.id) ?? 0 }))
     .sort((a, b) => Number(isVoice(b.channel)) - Number(isVoice(a.channel)) || b.count - a.count || a.id.localeCompare(b.id));
   const products = allProducts().map((p) => ({ id: p.id, name: p.name, unit: p.unit }));

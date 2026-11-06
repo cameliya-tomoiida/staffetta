@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { customerById, customers } from "@/data/master";
+import { liveCustomers } from "@/lib/customers-live";
 import { searchFaxes, type FaxSearch, type Period } from "@/lib/db/search";
 import { InboxSearch } from "@/components/ui/InboxSearch";
 import { readDb } from "@/lib/store";
@@ -28,6 +28,7 @@ export default async function Inbox(props: PageProps<"/">) {
   const period = (PERIODS as readonly string[]).includes(one(sp.period)) ? (one(sp.period) as Period) : "recent";
   const init = { period, from: one(sp.from), to: one(sp.to), customer: one(sp.customer), status: one(sp.status), q: one(sp.q) };
   const db = await readDb();
+  const custAll = await liveCustomers({ all: true });
   const waiting = db.faxes.filter((f) => f.status === "review" || f.status === "template").length;
   // 一覧は①の検索（受信日の期間・取引先・状態・ことば）。既定は「この1週間」
   const found = await searchFaxes({
@@ -59,7 +60,7 @@ export default async function Inbox(props: PageProps<"/">) {
       )}
       <InboxSearch
         init={init}
-        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        customers={custAll.filter((c) => c.active !== false).map((c) => ({ id: c.id, name: c.name }))}
         statuses={Object.entries(statusLabel).map(([value, v]) => ({ value, label: v.text }))}
         total={found.total}
       />
@@ -71,7 +72,7 @@ export default async function Inbox(props: PageProps<"/">) {
       <div className="grid gap-4 md:grid-cols-3">
         {main.map((f) => {
           const s = statusLabel[f.status];
-          const cust = f.customerId ? customerById(f.customerId)?.name : f.read?.sender.name;
+          const cust = f.customerId ? custAll.find((c) => c.id === f.customerId)?.name : f.read?.sender.name;
           const lines = f.read?.orders.reduce((n, o) => n + o.lines.length, 0) ?? 0;
           const flagged = f.read?.orders.flatMap((o) => o.lines).filter((l) => l.attention || l.confidence < 0.8).length ?? 0;
           return (

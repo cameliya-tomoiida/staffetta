@@ -5,7 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { aiClient } from "@/lib/ai/client";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import { customers } from "@/data/master";
+import { liveCustomers } from "@/lib/customers-live";
 import { allProducts } from "@/lib/catalog";
 
 export const EMAIL_READER_MODEL = "claude-opus-5-5";
@@ -59,8 +59,9 @@ const SYSTEM = `あなたは中小のパン・ピザ工場で、取引先から�
 - 商品一覧との対応に少しでも推測が入るときは confidence を下げ、attention に理由を書く。
 - 注文と関係のない署名・定型文・広告は無視する。`;
 
-function masterText() {
-  const cust = customers.map((c) => `${c.id}: ${c.name}${c.note ? `（${c.note}）` : ""}`).join("\n");
+async function masterText() {
+  // 得意先はマスタ（DB）から（見本の固定の一覧だと、本当の取引先を読めない）
+  const cust = (await liveCustomers()).map((c) => `${c.id}: ${c.name}${c.note ? `（${c.note}）` : ""}`).join("\n");
   const prod = allProducts().map((p) => `${p.id}: ${p.name}（単位 ${p.unit}）`).join("\n");
   return `## 得意先一覧\n${cust}\n\n## 商品一覧\n${prod}`;
 }
@@ -87,7 +88,7 @@ export async function readEmail(input: {
   }
   content.push({
     type: "text",
-    text: `${masterText()}\n\n件名: ${input.subject}\n差出人: ${input.from}\n受信日時: ${input.date}\n\nこのメールを読み取ってください。`,
+    text: `${await masterText()}\n\n件名: ${input.subject}\n差出人: ${input.from}\n受信日時: ${input.date}\n\nこのメールを読み取ってください。`,
   });
 
   const response = await client.beta.messages.parse({

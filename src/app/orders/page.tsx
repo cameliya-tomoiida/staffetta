@@ -2,6 +2,8 @@ import { allOrders } from "@/demo/all-orders";
 import { readDb } from "@/lib/store";
 import { confirmationText } from "@/lib/channels/line/orders";
 import { OrdersClient, type LeadView } from "./OrdersClient";
+import { CustomersProvider } from "@/components/CustomersContext";
+import { liveCustomerLite } from "@/lib/customers-live";
 import { checkLeadTime } from "@/lib/leadtime";
 import { suggestAlternatives } from "@/lib/alternatives";
 import { nowIso } from "@/lib/clock";
@@ -49,5 +51,9 @@ export default async function OrdersPage(props: PageProps<"/orders">) {
       ];
     }
   });
-  return <OrdersClient key={st} orders={orders} today={today} storedIds={storedIds} linePreviews={linePreviews} initialStatus={st} lead={lead} alt={alt} />;
+  return (
+    <CustomersProvider list={await liveCustomerLite({ all: true })}>
+      <OrdersClient key={st} orders={orders} today={today} storedIds={storedIds} linePreviews={linePreviews} initialStatus={st} lead={lead} alt={alt} />
+    </CustomersProvider>
+  );
 }

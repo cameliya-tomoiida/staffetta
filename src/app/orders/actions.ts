@@ -4,7 +4,7 @@
 // 変更・取消の連絡（intent が change / cancel）は元の注文の書き換えが要るので、ここでは確定しない。
 import { revalidatePath } from "next/cache";
 import { findProduct } from "@/lib/catalog";
-import { customerById } from "@/data/master";
+import { isKnownCustomer } from "@/lib/customers-live";
 import { updateDb } from "@/lib/store";
 import { addAlias, normalizeAlias, type AliasRow } from "@/lib/aliases";
 import { CONFIRM_BLOCKED_MESSAGE, confirmBlocker } from "@/lib/confirm-guard";
@@ -15,6 +15,8 @@ export async function confirmOrderAction(input: { orderId: string; who: string; 
   try {
     if (!input.who.trim()) throw new Error("確定する人を選んでください");
     const learned: { customerId: string; alias: string; productId: string; source: AliasRow["source"] }[] = [];
+    // 取引先はマスタ（DB）から（見本の固定の一覧では本当の取引先が見つからない）
+    const known = input.customerId ? await isKnownCustomer(input.customerId) : false;
     const channel = await updateDb((db) => {
       const o = db.orders.find((x) => x.id === input.orderId);
       if (!o) throw new Error("注文が見つかりません（見本の注文は確定できません）");
@@ -23,7 +25,7 @@ export async function confirmOrderAction(input: { orderId: string; who: string; 
       const at = new Date().toISOString();
       // 取引先が分からない注文は、人が候補から選んだ取引先にする（記録を残す）
       if (input.customerId && input.customerId !== o.customerId) {
-        if (!customerById(input.customerId)) throw new Error("取引先が見つかりません");
+        if (!known) throw new Error("取引先が見つかりません");
         o.edits.push({ at, who: input.who, field: "customerId", from: o.customerId || "（不明）", to: input.customerId });
         o.customerId = input.customerId;
       }

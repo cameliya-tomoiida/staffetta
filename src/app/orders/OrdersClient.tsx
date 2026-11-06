@@ -2,7 +2,7 @@
 import { AutoTag, isAutoConfirmed, UndoAutoButton } from "@/components/ui/AutoConfirmed";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { customerById, customers } from "@/data/master";
+import { useCustomers } from "@/components/CustomersContext";
 import { findProduct } from "@/lib/catalog";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
@@ -48,7 +48,10 @@ export function OrdersClient({
   const [sort, setSort] = useState<SortKey>("date");
 
   const channels = useMemo(() => [...new Set(orders.map((o) => o.source.channel))], [orders]);
-  const custName = (id: string) => customerById(id)?.name ?? "（お店が 分かりません）";
+  // 取引先はマスタ（DB）から（orders/page.tsx の CustomersProvider）
+  const customers = useCustomers();
+  const custMap = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers]);
+  const custName = (id: string) => custMap.get(id) ?? "（お店が 分かりません）";
 
   const base = orders.filter(
     (o) => (!range || (o.deliveryDate >= range[0] && o.deliveryDate <= range[1])) && (customer === "all" || o.customerId === customer) && (channel === "all" || o.source.channel === channel),
@@ -167,7 +170,7 @@ export function OrdersClient({
             くわしく絞り込む（取引先・入口・並べ方）
           </summary>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
-          <SelectBox label="取引先" value={customer} onChange={setCustomer} options={[{ value: "all", label: "すべての取引先" }, ...customers.map((c) => ({ value: c.id, label: c.name }))]} />
+          <SelectBox label="取引先" value={customer} onChange={setCustomer} options={[{ value: "all", label: "すべての取引先" }, ...customers.filter((c) => orders.some((o) => o.customerId === c.id)).map((c) => ({ value: c.id, label: c.name }))]} />
           <SelectBox
             label="入口"
             value={channel}

@@ -2,7 +2,7 @@ import "server-only";
 // インフォマート（受注）の明細 CSV を取り込む。
 // 列の名前は見出し行で探すので、実物の CSV で列の順番や数が違っても、見出しの言い方をマスタ「インフォマートの列名」に足せば読める（初期値は config.ts）。
 // 実物の形は、作者がログインした画面で確認してから合わせる（docs/infomart-notes.md）。いまは架空の CSV で作っている。
-import { customers } from "@/data/master";
+import { liveCustomers } from "@/lib/customers-live";
 import { findProduct } from "@/lib/catalog";
 import { infomartHeaders } from "@/lib/masters/channel-settings";
 import { INFOMART_HEADERS, type InfomartField } from "./config";
@@ -41,6 +41,8 @@ export async function importInfomartCsv(buf: Uint8Array, fileName: string): Prom
   const unknownItems = new Set<string>();
   const unknownBuyers = new Set<string>();
   const list: ImportedOrder[] = [];
+  // 得意先はマスタ（DB）から（外部サイトの取引先コードで探す）
+  const customers = await liveCustomers({ all: true });
   for (const [slip, rs] of bySlip) {
     const first = rs[0].r;
     const buyerCode = get(first, "buyerCode");

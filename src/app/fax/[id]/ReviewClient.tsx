@@ -3,7 +3,6 @@ import { FaxReadShow } from "@/components/ui/FaxReadShow";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Customer } from "@/data/master";
 import type { Order } from "@/data/types";
 import type { FaxDoc, FaxTemplate } from "@/lib/types";
 import { AutoConfirmBadge } from "@/components/AutoConfirmBadge";
@@ -52,7 +51,7 @@ export function ReviewClient({
   orders: Order[]; // このFAXから作った注文
   others: Order[]; // ほかの注文（変更FAXの元の注文・仮発注を探すため）
   templates: Record<string, FaxTemplate>;
-  customers: Customer[];
+  customers: { id: string; name: string }[];
   products: { id: string; name: string }[];
   /** 行（"注文の番号-行の番号"）ごとの自信度の段階 */
   levels: Record<string, Level>;

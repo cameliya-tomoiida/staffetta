@@ -1,7 +1,7 @@
 "use server";
 import { nowIso, nowMs } from "@/lib/clock";
 import { revalidatePath } from "next/cache";
-import { customers } from "@/data/master";
+import { isKnownCustomer } from "@/lib/customers-live";
 import { findCustomer, findProduct as productById } from "@/lib/catalog";
 import { orderDates } from "@/lib/center-dates";
 import type { EditRecord, Order, OrderChannel } from "@/data/types";
@@ -117,7 +117,7 @@ export async function readAllNewAction() {
 
 /** 新しい様式を承認する（AIが下書きした様式＋人が確かめた品名の対応）。承認するまで受注には入らない */
 export async function approveTemplateAction(input: { faxId: string; customerId: string; items: Record<string, string>; who: string }) {
-  if (!customers.some((c) => c.id === input.customerId)) throw new Error("送り主（取引先）を選んでください");
+  if (!(await isKnownCustomer(input.customerId))) throw new Error("送り主（取引先）を選んでください");
   await updateDb((db) => {
     const fax = db.faxes.find((f) => f.id === input.faxId);
     if (!fax?.read) throw new Error("FAXが見つかりません");
@@ -167,7 +167,7 @@ export async function sortFaxAction(input: { faxId: string; as: "supplier_reply"
  * 同じ取引先・同じ納品日の仮発注があれば、本発注で置き換える（古い方は取り消し・リンクを残す）。
  */
 export async function confirmFaxAction(input: { faxId: string; customerId: string; rotation: number; lines: ConfirmedLine[]; who: string }) {
-  if (!customers.some((c) => c.id === input.customerId)) throw new Error("送り主（取引先）を選んでください");
+  if (!(await isKnownCustomer(input.customerId))) throw new Error("送り主（取引先）を選んでください");
   const learned: { alias: string; productId: string }[] = [];
   await updateDb((db) => {
     const fax = db.faxes.find((f) => f.id === input.faxId);
@@ -244,7 +244,7 @@ export async function confirmChangeAction(input: {
   /** 元の注文が見つからなかった行（新しい注文として入れる） */
   additions: { deliveryDate: string; productId: string; quantity: number; piecesPerUnit: number; writtenName: string }[];
 }) {
-  if (!customers.some((c) => c.id === input.customerId)) throw new Error("お店（得意先）と商品を決めてから確定してください");
+  if (!(await isKnownCustomer(input.customerId))) throw new Error("お店（得意先）と商品を決めてから確定してください");
   await updateDb((db) => {
     const fax = db.faxes.find((f) => f.id === input.faxId);
     if (!fax?.read) throw new Error("FAXが見つかりません");
@@ -320,7 +320,7 @@ export async function addManualOrderAction(input: {
   who: string;
 }) {
   const p = productById(input.productId);
-  if (!p || input.quantity <= 0 || !input.deliveryDate || !customers.some((c) => c.id === input.customerId)) throw new Error("入力を確認してください");
+  if (!p || input.quantity <= 0 || !input.deliveryDate || !(await isKnownCustomer(input.customerId))) throw new Error("入力を確認してください");
   const at = now();
   const order: Order = {
     id: `M${nowMs()}`,

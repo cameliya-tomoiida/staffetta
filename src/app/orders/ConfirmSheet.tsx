@@ -4,7 +4,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Order } from "@/data/types";
-import { customers } from "@/data/master";
+import { useCustomers } from "@/components/CustomersContext";
 import { findProduct } from "@/lib/catalog";
 import { NumPad } from "@/components/NumPad";
 import { Button, Icon, Notice, choiceClass } from "@/components/ui";
@@ -40,6 +40,7 @@ export function ConfirmButton({ order, who, custName }: { order: Order; who: str
   const [cust, setCust] = useState(order.customerId);
   const q = (id: string, d: number) => qty[id] ?? d;
   // 候補: この入口でよく注文する取引先を先に
+  const customers = useCustomers();
   const candidates = [...customers].sort((a, b) => Number(b.channel === order.source.channel) - Number(a.channel === order.source.channel));
   const padLine = order.lines.find((l) => l.id === pad);
 

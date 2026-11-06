@@ -199,7 +199,19 @@ export function buildCatalog(m: Masters): Built {
 
 let sample: Built | undefined;
 let current: Built | undefined;
-const cat = (): Built => current ?? (sample ??= buildCatalog(sampleMasters()));
+// 最後に DB から読んだマスタ（loadMasters が呼ぶ setLiveMasters）。withMasters の外でも、見本ではなく DB の値で引く（作者 11/6）。
+// 前は withMasters の外だと見本の固定のマスタになり、3100 の本当の取引先・商品が「不明」になっていた
+let liveMasters: Masters | undefined;
+let liveBuilt: Built | undefined;
+export function setLiveMasters(m: Masters) {
+  liveMasters = m;
+}
+const live = (): Built | undefined => {
+  if (!liveMasters) return undefined;
+  if (liveBuilt?.masters !== liveMasters) liveBuilt = buildCatalog(liveMasters);
+  return liveBuilt;
+};
+const cat = (): Built => current ?? live() ?? (sample ??= buildCatalog(sampleMasters()));
 
 /** 今のマスタ一式 */
 export const currentMasters = (): Masters => cat().masters;

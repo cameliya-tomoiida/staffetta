@@ -1,7 +1,7 @@
 import "server-only";
 // FAX の様式の管理（管理画面の中身。画面の枠は②）。
 // 様式は masters(name = "fax_formats", id = 取引先ID)。無効にすると、その取引先の次の FAX は「新しい様式」として承認待ちに戻る。
-import { customers } from "@/data/master";
+import { liveCustomers } from "@/lib/customers-live";
 import { FAX_FORMATS } from "./db/hub-store";
 import { deleteMaster, getMaster, getMasterHistory, listMaster, restoreMaster, upsertMasters, type HistoryRow } from "./db/masters";
 import { readDb } from "./store";
@@ -40,11 +40,17 @@ export interface FormatDraft {
   items: { writtenName: string; productId: string }[];
 }
 
-const nameOf = (id: string) => customers.find((c) => c.id === id)?.name ?? id;
+
+/** 取引先の名前（マスタ・DB から） */
+async function namer() {
+  const list = await liveCustomers({ all: true });
+  return (id: string) => list.find((c) => c.id === id)?.name ?? id;
+}
 
 /** 登録済みの様式（無効も含む）。取引先ごとの受信枚数・最後に届いた日も付ける */
 export async function listFormats(): Promise<FormatRow[]> {
   const db = await readDb();
+  const nameOf = await namer();
   const rows = await listMaster<FaxTemplate & { id: string; disabled?: boolean }>(FAX_FORMATS, { includeDisabled: true });
   return rows.map((r) => {
     const faxes = db.faxes.filter((f) => f.customerId === r.customerId);
@@ -61,6 +67,7 @@ export async function listFormats(): Promise<FormatRow[]> {
 /** 承認待ちの下書き（初めての様式で届いた FAX） */
 export async function listFormatDrafts(): Promise<FormatDraft[]> {
   const db = await readDb();
+  const nameOf = await namer();
   return db.faxes
     .filter((f) => f.status === "template" && f.read)
     .map((f) => ({

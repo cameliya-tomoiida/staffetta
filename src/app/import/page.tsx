@@ -1,7 +1,7 @@
 // 外部の入口（メール・スプレッドシート・専用サイトCSV・インフォマートCSV）の取り込み。確認用の最小限の画面。
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { customerById } from "@/data/master";
+import { liveCustomers } from "@/lib/customers-live";
 import { findProduct } from "@/lib/catalog";
 import { readDb } from "@/lib/store";
 import { ImportPanel } from "./ImportPanel";
@@ -20,6 +20,7 @@ async function list(dir: string, ext: string) {
 
 export default async function ImportPage() {
   const db = await readDb();
+  const custNames = new Map((await liveCustomers({ all: true })).map((c) => [c.id, c.name]));
   const orders = db.orders.filter((o) => o.source.channel in channelLabel).slice().reverse();
   const samples = { email: await list("email", ".eml"), kirara: await list("kirara", ".csv"), infomart: await list("infomart", ".csv") };
   return (
@@ -46,7 +47,7 @@ export default async function ImportPage() {
                   </td>
                   <td className="whitespace-nowrap"><OrderStatusTag status={o.status} /></td>
                   <td>
-                    {customerById(o.customerId)?.name ?? <span className="font-bold text-alert-ink">（お店が 分かりません）</span>}
+                    {custNames.get(o.customerId) ?? <span className="font-bold text-alert-ink">（お店が 分かりません）</span>}
                     {o.deliveryPlace && <div className="text-sm text-ink-soft">{o.deliveryPlace}</div>}
                     {o.changeOf && <div className="text-xs text-ink-faint">元の注文 {o.changeOf}</div>}
                   </td>

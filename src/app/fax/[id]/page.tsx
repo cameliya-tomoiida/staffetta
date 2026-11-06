@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { customers } from "@/data/master";
+import { liveCustomerLite } from "@/lib/customers-live";
 import { allProducts } from "@/lib/catalog";
 import { readDb } from "@/lib/store";
 import { aliasMapFor, confidenceLevel } from "@/lib/aliases";
@@ -48,7 +48,7 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
       orders={orders}
       others={others}
       templates={db.templates}
-      customers={customers}
+      customers={await liveCustomerLite()}
       products={allProducts().map((p) => ({ id: p.id, name: p.name }))}
       levels={levels}
       aliases={aliases}

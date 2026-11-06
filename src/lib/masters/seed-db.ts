@@ -36,5 +36,8 @@ export async function loadMasters(): Promise<Masters> {
     const rows = await listMaster<{ id: string }>(name);
     out[name] = rows.length ? rows.filter((r) => (r as { active?: boolean }).active !== false) : (sample[name] as unknown[]);
   }
-  return out as unknown as Masters;
+  const m = out as unknown as Masters;
+  // withMasters の外の引き当て（findProduct・findCustomer など）も、この DB の値で（catalog.ts）
+  (await import("@/lib/catalog")).setLiveMasters(m);
+  return m;
 }
