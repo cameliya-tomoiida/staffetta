@@ -1,6 +1,7 @@
 "use client";
 // AI とのチャットで衛生チェックシートを作る（⑦の(24)）。左＝会話（文章・声）、右＝いまの下書きの印刷の見本。
 // 「登録する」で衛生管理のシートとして保存する（同じ ID なら置きかえ）。
+import { AiThinking } from "@/components/ui/ComputeShow";
 import { MIcon } from "@/components/ui/MobileNav";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
@@ -105,7 +106,7 @@ export function SheetChat({ initial }: { initial?: SheetDef }) {
               ) : null}
             </li>
           ))}
-          {pending && <li className="mr-10 rounded-lg bg-info-bg p-3 text-xl text-info-ink">AI が考えています…</li>}
+          {pending && <li><AiThinking title="AI がシートを考えています" /></li>}
         </ol>
         <div className="flex flex-col gap-2">
           <textarea

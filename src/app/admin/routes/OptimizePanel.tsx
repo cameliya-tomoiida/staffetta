@@ -1,6 +1,7 @@
 "use client";
 // コースの見直し（⑦の(17)）。曜日を選んで「見直し案を出す」→ 何コースに分けて・どの順で・何時に出ればよいか、今のコースとの差を表と地図で。
 // 計算はこのブラウザの中（src/lib/routes/optimize.ts）。保存はしない（案を見て、人がコースを直す）。
+import { AiThinking, ComputeShow } from "@/components/ui/ComputeShow";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { CourseMaster } from "@/data/types";
 import { buttonClass, choiceClass } from "@/components/ui";
@@ -105,10 +106,15 @@ export function OptimizePanel({
   };
   const run = () => {
     setBusy(true);
-    // 画面に「計算しています」を出してから計算する
+    // 画面に「計算しています」（数字が回る見せ方）を出してから計算する。早く終わっても 1 秒は見せる（動きを減らす設定なら待たない）
+    const t0 = performance.now();
     setTimeout(() => {
-      show(runWith(form, rules));
-      setBusy(false);
+      const r = runWith(form, rules);
+      const wait = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : Math.max(0, 1100 - (performance.now() - t0));
+      setTimeout(() => {
+        show(r);
+        setBusy(false);
+      }, wait);
     }, 30);
   };
   const askExplain = (r: Result, rs: RouteRule[]) =>
@@ -238,6 +244,18 @@ export function OptimizePanel({
       <button type="button" className={buttonClass("primary", "lg")} disabled={busy || !placed.length} onClick={run}>
         {busy ? "計算しています…" : `${WD[weekday]}曜の見直し案を出す`}
       </button>
+      {busy && (
+        <ComputeShow
+          title={`${WD[weekday]}曜のコースを計算しています`}
+          stats={[
+            { label: "回る先", value: placed.length, unit: "件" },
+            { label: "先と先の道のり", value: (placed.length + 1) * (placed.length + 1), unit: "通り" },
+            { label: "時間の希望・条件", value: placed.filter((x) => x.deliveryWindowTo || x.deliveryTime).length + rules.filter((r) => r.on && r.kind !== "info").length, unit: "件" },
+            { label: "今のコース", value: courses.filter((c) => c.dayOffset === 0).length, unit: "便" },
+          ]}
+          words={placed.map((x) => x.name)}
+        />
+      )}
 
       {result && result.key !== key && <p className="text-lg font-bold text-review-ink">！ 条件を変えました。もう一度「見直し案を出す」を押してください</p>}
 
@@ -258,6 +276,7 @@ export function OptimizePanel({
                   </button>
                 )}
               </div>
+              {aiPending && <AiThinking title="AI が結果を読んでいます" compact />}
               {explain && explain.key === result.key && <p className="text-lg whitespace-pre-wrap">{explain.text}</p>}
             </div>
           )}
