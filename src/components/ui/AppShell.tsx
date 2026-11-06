@@ -27,7 +27,7 @@ export const MENU: Group[] = [
     title: "毎日の仕事",
     items: [
       { href: "/home", label: "ホーム" },
-      { href: "/", label: "FAX受信箱", match: (p) => p === "/" || p.startsWith("/fax") },
+      { href: "/fax", label: "FAX受信箱", match: (p) => p.startsWith("/fax") },
       { href: "/orders", label: "受注一覧", match: (p) => p === "/orders" },
       { href: "/plan", label: "製造計画・工程表" },
       { href: "/cards", label: "製品カード" },

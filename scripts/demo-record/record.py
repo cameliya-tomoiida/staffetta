@@ -78,7 +78,7 @@ def scene(name, fn, b, mobile=False, seen_fax=False):
 
 
 def d1(pg):
-    pg.goto(f"{BASE}/", wait_until="domcontentloaded")
+    pg.goto(f"{BASE}/fax", wait_until="domcontentloaded")
     pg.wait_for_timeout(3000)
     prep("arrive")  # 複合機に FAX が届く（見本）。受信箱は数秒おきに見て、知らせて並べ直す
     pg.wait_for_function("() => document.body.innerText.includes('ﾋﾏﾜﾘ')", timeout=60000)
@@ -301,7 +301,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(channel="chrome")
     warm = b.new_page()
     warm.set_default_timeout(240000)
-    for path in (["/orders"] if ONLY == {"D10"} else [f"/purchase?date={PO_DAY}", "/admin/routes?yobi=1", "/routes?c=all", "/hygiene/missing", "/alerts", "/analytics"] if ONLY and all(x.startswith("E") for x in ONLY) else ["/", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]):
+    for path in (["/orders"] if ONLY == {"D10"} else [f"/purchase?date={PO_DAY}", "/admin/routes?yobi=1", "/routes?c=all", "/hygiene/missing", "/alerts", "/analytics"] if ONLY and all(x.startswith("E") for x in ONLY) else ["/fax", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]):
         try:
             warm.goto(BASE + path, wait_until="domcontentloaded")
             warm.wait_for_timeout(1500)

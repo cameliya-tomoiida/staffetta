@@ -157,7 +157,7 @@ function Todo({ role, d }: { role: Role; d: HomeData }) {
   const items: { text: string; href: string; urgent?: boolean }[] = [];
   const office = role === "事務" || role === "管理者";
   const factory = role === "工場" || role === "管理者";
-  if (office && fax) items.push({ text: `FAX を ${fax} 枚、見比べて確定する`, href: "/" });
+  if (office && fax) items.push({ text: `FAX を ${fax} 枚、見比べて確定する`, href: "/fax" });
   if (office && s.ordersToReview) items.push({ text: `要確認の注文 ${s.ordersToReview} 件を確定する（LINE・電話・ドライバーなど）`, href: "/orders?status=needs_review" });
   if (office && d.replies) items.push({ text: `受付の返事 ${d.replies} 件を確かめて送る`, href: "/orders" });
   if (office && s.purchaseDraft) items.push({ text: `発注書 ${s.purchaseDraft} 枚を承認する`, href: `/purchase?date=${s.purchaseDate}`, urgent: s.overdue > 0 });
@@ -226,7 +226,7 @@ function Office({ d, compact = false }: { d: HomeData; compact?: boolean }) {
   const ch = (k: string) => d.orders.byChannel[k] ?? 0;
   const body = (
     <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-      <Stat label="FAX の確認待ち" value={s.faxToReview + s.faxUnread} unit="枚" tone={s.faxToReview + s.faxUnread ? "warn" : "ok"} sub={s.faxUnread ? `未読 ${s.faxUnread} 枚` : undefined} href="/" />
+      <Stat label="FAX の確認待ち" value={s.faxToReview + s.faxUnread} unit="枚" tone={s.faxToReview + s.faxUnread ? "warn" : "ok"} sub={s.faxUnread ? `未読 ${s.faxUnread} 枚` : undefined} href="/fax" />
       <Stat label="LINE・電話の確認待ち" value={ch("line") + ch("phone") + ch("driver")} unit="件" tone={ch("line") + ch("phone") + ch("driver") ? "warn" : "ok"} sub={`LINE ${ch("line")}・電話 ${ch("phone")}・ドライバー ${ch("driver")}`} href="/orders?status=needs_review" />
       <Stat label="返事の送信待ち" value={d.replies} unit="件" tone={d.replies ? "warn" : "ok"} href="/orders" />
       <Stat label="発注書（承認・送信）" value={s.purchaseDraft + s.purchaseApproved} unit="枚" tone={s.overdue ? "urgent" : "plain"} sub={`承認待ち ${s.purchaseDraft}・送信待ち ${s.purchaseApproved}`} href={`/purchase?date=${s.purchaseDate}`} />

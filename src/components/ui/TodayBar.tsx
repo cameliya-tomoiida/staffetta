@@ -148,7 +148,7 @@ export function TodayBar({ role, variant = "grid" }: { role?: Role; variant?: "g
   const items: Parameters<typeof WorkItem>[0][] = [
     { href: "/alerts", label: "急ぎ", count: s ? (s.alerts ? s.alerts.danger : null) : null, urgent: true, icon: "urgent", active: path.startsWith("/alerts") },
     { href: "/orders?status=needs_review", label: "要確認", count: n(s?.ordersToReview), review: true, icon: "review", active: path === "/orders" },
-    { href: "/", label: "FAX", count: s ? s.faxToReview + s.faxUnread : null, unit: "枚", review: true, icon: "fax", active: path === "/" || path.startsWith("/fax") },
+    { href: "/fax", label: "FAX", count: s ? s.faxToReview + s.faxUnread : null, unit: "枚", review: true, icon: "fax", active: path.startsWith("/fax") },
     { href: purchaseHref, label: "発注書", count: s ? s.purchaseDraft + s.purchaseApproved : null, unit: "枚", icon: "purchase", active: path.startsWith("/purchase") },
     { href: s?.lowStockHref || "/masters/materials", label: "材料不足", count: n(s?.lowStock), icon: "stock", active: false },
     { href: s ? `/plan?date=${s.purchaseDate}` : "/plan", label: "注意", count: n(s?.warnings), icon: "warn", active: path.startsWith("/plan") },
