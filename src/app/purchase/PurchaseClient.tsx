@@ -1,4 +1,5 @@
 "use client";
+import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { splitWarnings } from "@/components/ui/wording";
@@ -116,6 +117,9 @@ export function PurchaseClient({
       </PageHeader>
 
       {dateNav && <div className="no-print mb-4">{dateNav}</div>}
+      <div className="no-print mb-4">
+        <FactoryPrint label={`発注書（${date}）`} />
+      </div>
       {costBox}
       {error && (
         <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">

@@ -22,8 +22,9 @@ function secret(): string {
 }
 const sign = (body: string, key: string) => createHmac("sha256", key).update(body).digest("base64url");
 
-export function createUserSession(user: { id: string; name: string; role: Role }, nowMs: number, key = secret()): string {
-  const body = Buffer.from(JSON.stringify({ id: user.id, n: user.name, r: user.role, exp: nowMs + USER_SESSION_HOURS * 3600_000 } satisfies UserSession)).toString("base64url");
+/** hours: 何時間で切れるか（ふつうは 12 時間。印刷の PDF を作るときは短く。⑧） */
+export function createUserSession(user: { id: string; name: string; role: Role }, nowMs: number, key = secret(), hours = USER_SESSION_HOURS): string {
+  const body = Buffer.from(JSON.stringify({ id: user.id, n: user.name, r: user.role, exp: nowMs + hours * 3600_000 } satisfies UserSession)).toString("base64url");
   return `${body}.${sign(body, key)}`;
 }
 

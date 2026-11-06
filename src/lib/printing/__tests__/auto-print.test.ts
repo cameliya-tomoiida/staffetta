@@ -120,3 +120,34 @@ describe("印刷の前の見直しと月末のまとめ", () => {
     expect(a.getMonthSummary("2026-11")?.facts.length).toBe(s.facts.length);
   });
 });
+
+describe("⑧ スマホ・タブレットから工場のプリンターで印刷", () => {
+  it("印刷できる画面だけ・その役割で開ける画面だけ", async () => {
+    const { canPrint } = await import("../jobs");
+    expect(canPrint(undefined, "/cards/print?date=2026-11-07")).toBe(true);
+    expect(canPrint("工場", "/hygiene/print?month=2026-11")).toBe(true);
+    expect(canPrint("工場", "/purchase?date=2026-11-07")).toBe(false);
+    expect(canPrint("事務", "/purchase?date=2026-11-07")).toBe(true);
+    expect(canPrint("配送", "/plan")).toBe(false);
+    expect(canPrint("管理者", "/settings/staff")).toBe(false);
+    expect(canPrint("管理者", "https://example.com/")).toBe(false);
+    expect(canPrint("管理者", "//example.com/cards")).toBe(false);
+  });
+
+  it("印刷すると、画面を PDF にしてプリンターへ送り、だれが印刷したかを残す（本物のプリンターは使わない）", async () => {
+    const { printNow, printLog, savePrintSettings, getPrintSettings } = await import("../auto");
+    const sent: string[] = [];
+    const deps = { renderPdf: async (url: string) => (sent.push(`pdf ${url}`), "C:/x/now.pdf"), sendToPrinter: async (pdf: string, printer: string, copies: number) => void sent.push(`print ${printer} ${copies}`) };
+    savePrintSettings({ ...getPrintSettings(), method: "pdf-only" });
+    const a = await printNow({ path: "/cards/print?date=2026-11-07", label: "製品カード", copies: 2, who: "見本 はなこ" }, "2026-11-06T01:00:00.000Z", deps);
+    expect(a).toMatchObject({ ok: true, printed: false, who: "見本 はなこ", label: "製品カード" });
+    expect(sent).toEqual(["pdf http://localhost:3100/cards/print?date=2026-11-07"]);
+    savePrintSettings({ ...getPrintSettings(), method: "acrobat", printer: "見本プリンター" });
+    const b = await printNow({ path: "/plan", label: "製造計画", copies: 99, who: "見本 たろう", printer: "別のプリンター" }, "2026-11-06T01:05:00.000Z", deps);
+    expect(b).toMatchObject({ ok: true, printed: true });
+    expect(sent.at(-1)).toBe("print 別のプリンター 20");
+    expect(printLog()[0].label).toBe("製造計画");
+    const c = await printNow({ path: "/plan", label: "製造計画", copies: 1, who: "x" }, "2026-11-06T01:06:00.000Z", { ...deps, renderPdf: async () => { throw new Error("Chrome が見つかりません"); } });
+    expect(c).toMatchObject({ ok: false, message: "Chrome が見つかりません" });
+  });
+});

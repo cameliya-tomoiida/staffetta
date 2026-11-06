@@ -11,6 +11,8 @@ import { kvGet, kvSet } from "@/lib/db/sqlite";
 import { runDays, sheetProblems, type SheetRecord } from "@/lib/hygiene/sheets";
 import { holidaysOf, listSheets, recordsOf } from "@/lib/hygiene/store";
 import { DEFAULT_PRINT_SETTINGS, dueJobs, monthFor, printPath, type PrintJob, type PrintSettings } from "./jobs";
+import { printUrl } from "./pass";
+import type { Role } from "@/lib/auth/roles";
 
 export function getPrintSettings(): PrintSettings {
   const s = kvGet<PrintSettings>("auto_print");
@@ -50,7 +52,7 @@ export async function runPrintJob(job: PrintJob, now: string, who: string, opts:
   const s = getPrintSettings();
   const deps = opts.deps ?? (await realDeps());
   const toPaper = (opts.mode ?? "settings") === "settings" && s.method === "acrobat";
-  const url = `${s.baseUrl.replace(/\/$/, "")}${printPath(job, now)}`;
+  const url = printUrl(s.baseUrl, printPath(job, now));
   let log: PrintLog;
   try {
     if (job.what !== "cards") await precheckHygiene(job.what === "hygiene-sheet" ? job.sheetId : undefined, monthFor(job, now), now);
@@ -64,6 +66,33 @@ export async function runPrintJob(job: PrintJob, now: string, who: string, opts:
   if (!log.ok) {
     syncAlerts("auto_print", [{ dedupeKey: `print:${job.id}`, kind: "print_failed", level: "warn", title: `自動印刷できませんでした: ${job.label}`, detail: log.message, href: "/settings/auto-print", action: "自動印刷の設定を見る" }], now);
   }
+  return log;
+}
+
+/**
+ * いま開いている画面を、工場のプリンターで印刷する（スマホ・タブレットの「工場のプリンターで印刷」⑧）。
+ * 3100 の PC の Chrome で画面を PDF にして、設定 → 自動印刷のプリンターへ（「PDF だけ作る」の設定なら紙には出さない）。
+ * だれが・いつ・何を印刷したかを、自動印刷と同じ記録に残す。
+ */
+export async function printNow(
+  x: { path: string; label: string; copies: number; printer?: string; who: string; user?: { id: string; name: string; role: Role } },
+  now: string,
+  deps?: PrintDeps,
+): Promise<PrintLog> {
+  const s = getPrintSettings();
+  const d = deps ?? (await realDeps());
+  const toPaper = s.method === "acrobat";
+  const printer = x.printer?.trim() || s.printer;
+  const copies = Math.min(20, Math.max(1, Math.round(x.copies) || 1));
+  let log: PrintLog;
+  try {
+    const pdf = await d.renderPdf(printUrl(s.baseUrl, x.path, x.user), `now-${now.slice(0, 19).replace(/[:T-]/g, "")}`);
+    if (toPaper) await d.sendToPrinter(pdf, printer, copies);
+    log = { at: now, jobId: "now", label: x.label, ok: true, printed: toPaper, pdf, message: toPaper ? `${printer} に ${copies}部 送りました` : "PDF を作りました（設定が「PDF だけ作る」なので、紙には出していません）", who: x.who };
+  } catch (e) {
+    log = { at: now, jobId: "now", label: x.label, ok: false, printed: false, message: e instanceof Error ? e.message : String(e), who: x.who };
+  }
+  addLog(log);
   return log;
 }
 

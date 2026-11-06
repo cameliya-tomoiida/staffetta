@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import { DateNav } from "@/components/ui/DateNav";
 import { addDays, choiceClass, fmtDate } from "@/components/ui";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";
@@ -57,6 +58,9 @@ export default async function CardsPage(props: PageProps<"/cards">) {
           <Link href={`/cards/print?date=${date}`} className="link text-lg">
             この日のカードを全部印刷する
           </Link>
+        )}
+        {cards.length > 0 && (
+          <FactoryPrint path={`/cards/print?date=${date}`} label={`製品カード（${date} の全部）`} />
         )}
         <Link href="/cards/templates" className="link text-lg">
           製品カードの形（工程を足す・並べかえる）

@@ -1,4 +1,5 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
+import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import Link from "next/link";
 import { DateNav } from "@/components/ui/DateNav";
 import { splitWarnings } from "@/components/ui/wording";
@@ -258,7 +259,12 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       <LangPicker
         lang={lang}
         hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))}
-        right={<PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />}
+        right={
+          <div className="flex flex-wrap gap-2">
+            <PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />
+            <FactoryPrint label={`製造計画・工程表（${date}）`} />
+          </div>
+        }
       />
 
       {/* ここから下が印刷する紙（選んだことば） */}

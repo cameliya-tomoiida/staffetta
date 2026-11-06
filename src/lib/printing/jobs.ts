@@ -3,6 +3,8 @@
 //   いつ: 毎月 何日 何時 ／ 毎週 何曜 何時 ／ 毎日 何時
 // 次に印刷する日時（nextRunAt）と、いま印刷すべきもの（dueJobs）を出す。時刻は日本時間（JST）。
 
+import { canOpen, type Role } from "@/lib/auth/roles";
+
 export type PrintWhat = "hygiene-all" | "hygiene-sheet" | "cards";
 export type PrintSchedule = { type: "monthly"; day: number; time: string } | { type: "weekly"; weekday: number; time: string } | { type: "daily"; time: string };
 
@@ -111,4 +113,15 @@ export function printPath(job: Pick<PrintJob, "what" | "sheetId" | "month">, now
   const month = monthFor(job, now);
   if (job.what === "hygiene-sheet" && job.sheetId) return `/hygiene/print?month=${month}&sheet=${encodeURIComponent(job.sheetId)}`;
   return `/hygiene/print?month=${month}`;
+}
+
+/** スマホ・タブレットから「工場のプリンターで印刷」できる画面（⑧）。この中で、その役割で開ける画面だけ印刷できる */
+export const PRINTABLE = ["/cards", "/hygiene", "/plan", "/purchase", "/orders", "/admin/routes", "/masters/recipes", "/masters/courses"];
+
+/** この役割で、この画面（path は ? 付きでもよい）を印刷できるか。ログインを使っていない（role なし）なら印刷できる画面は全部 */
+export function canPrint(role: Role | undefined, path: string): boolean {
+  if (!path.startsWith("/") || path.startsWith("//") || /\s/.test(path) || path.includes("\\")) return false;
+  const p = path.split(/[?#]/)[0];
+  if (!PRINTABLE.some((b) => p === b || p.startsWith(`${b}/`))) return false;
+  return role ? canOpen(role, p) : true;
 }

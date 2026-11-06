@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import { choiceClass } from "@/components/ui";
 import { todayJst } from "@/lib/clock";
 import { KIND_LABEL, runDays, sheetProblems, type SheetDef, type SheetRecord } from "@/lib/hygiene/sheets";
@@ -54,6 +55,7 @@ export default async function HygienePage(props: PageProps<"/hygiene">) {
         <Link href={`/hygiene/print?month=${month}`} className="btn-primary text-xl">
           {Number(month.slice(5))}月の全部のシートを印刷
         </Link>
+        <FactoryPrint path={`/hygiene/print?month=${month}`} label={`衛生管理 ${Number(month.slice(5))}月の全部のシート`} />
       </nav>
 
       <ul className="grid gap-4 lg:grid-cols-2">
@@ -121,6 +123,7 @@ function SheetCard({ def, rec, month, today, holidays }: { def: SheetDef; rec?: 
         <Link href={`/hygiene/print?month=${month}&sheet=${def.id}`} className="btn-ghost text-xl">
           印刷する
         </Link>
+        <FactoryPrint path={`/hygiene/print?month=${month}&sheet=${def.id}`} label={`${def.title} ${Number(month.slice(5))}月`} />
       </div>
     </li>
   );
