@@ -1,4 +1,5 @@
 "use client";
+import { FaxReadShow } from "@/components/ui/FaxReadShow";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -332,6 +333,21 @@ export function ReviewClient({
   return (
     // 広い画面（lg）は1画面に収めて左右で見比べる。スマホ・タブレット縦は上下に並べて、ページごと下へ読む
     <div className="flex flex-col gap-4 lg:h-[calc(100vh-7rem)]">
+      {/* AI が読んだところを見せる（⑧ 近未来）。最初の1回だけ再生して、迷った行のまとめを残す */}
+      <FaxReadShow
+        faxId={fax.id}
+        lines={read.orders.flatMap((o, oi) =>
+          o.lines.map((l, li) => ({
+            key: `${oi}-${li}`,
+            text: `${l.written_name}　${l.quantity}${l.unit_written ?? ""}`,
+            level: levels[`${oi}-${li}`] ?? "high",
+            ...(l.attention ? { note: l.attention } : {}),
+          })),
+        )}
+        customers={customers.length}
+        products={products.length}
+        formats={Object.keys(templates).length}
+      />
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <div className="min-w-0">
           <Link href="/" className="text-[16px] text-ink-soft underline underline-offset-2 hover:text-ink">← FAX受信箱に戻る</Link>

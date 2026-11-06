@@ -147,8 +147,13 @@ export function RouteMap({
         pl.addTo(g);
         if (move) grow(pl, (l.road?.length ? l.road : l.points) as [number, number][], i * 350);
       });
-    } else if (line?.length) L.polyline(line, { color: "#8f1d1d", weight: 5, opacity: 0.75 }).addTo(g);
-    else if (pins.length) L.polyline(pts, { color: "#8f1d1d", weight: 4, opacity: 0.6, dashArray: "8 8" }).addTo(g);
+    } else if (line?.length) {
+      const pl = L.polyline(line, { color: "#d2463a", weight: 5, opacity: 0.85, className: move ? "rm-line" : "" }).addTo(g);
+      if (move) grow(pl, line, 0);
+    } else if (pins.length) {
+      const pl = L.polyline(pts, { color: "#d2463a", weight: 4, opacity: 0.75, dashArray: "8 8" }).addTo(g);
+      if (move) grow(pl, pts, 0);
+    }
     L.marker([depot.lat, depot.lng], {
       icon: L.divIcon({
         className: "",

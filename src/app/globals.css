@@ -472,7 +472,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     --color-crust-600: #d2463a;
     --color-crust-700: #ff9a8c;
 
-    --color-review-bg: #2a2410;
+    --color-review-bg: #3a300c;
     --color-review-line: #9a7a1c;
     --color-review-ink: #f5d77f;
     --color-ok-bg: #0f2619;
@@ -503,7 +503,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
   }
   /* 直接書いた明るい色を、暗い色の決まりに読みかえる（紙の見本 .theme-paper の中はそのまま） */
   :where(.bg-white):not(.theme-paper *) { background-color: var(--color-sheet); }
-  :where(.bg-\[\#fff3c4\]):not(.theme-paper *) { background-color: var(--color-review-bg); }
+  :where(.bg-\[\#fff3c4\]):not(.theme-paper *) { background-color: #4a3d0c; color: #fff4c2; } /* 確認する行（黄）は、暗い画面でもはっきり黄色に */
   :where(.bg-\[\#fff0f1\], .bg-\[\#faf1f1\]):not(.theme-paper *) { background-color: var(--color-alert-bg); }
   :where(.bg-\[\#e6f0fb\]):not(.theme-paper *) { background-color: var(--color-info-bg); }
   :where(.bg-\[\#eaf5ed\]):not(.theme-paper *) { background-color: var(--color-ok-bg); }
