@@ -89,6 +89,13 @@ export function provisionalForDate(orders: Order[], date: string): DayTotals {
 
 function aggregateBy(orders: Order[], include: (o: Order) => boolean, opts: AggregateOptions): DayTotals[] {
   const days = new Map<string, { products: Map<string, ProductTotal>; warnings: string[] }>();
+  // 速くするための索引（⑧ 100万行で測って直した）: 商品ごとの「取引先 → 行」と「その取引先の注文ID」、商品のマスタ
+  const custIndex = new Map<ProductTotal, Map<string, { c: CustomerQty; ids: Set<string> }>>();
+  const productCache = new Map<string, ReturnType<typeof findProduct>>();
+  const productOf = (id: string) => {
+    if (!productCache.has(id)) productCache.set(id, findProduct(id));
+    return productCache.get(id);
+  };
   for (const o of orders) {
     if (!include(o)) continue;
     const d = o.deliveryDate;
@@ -106,17 +113,26 @@ function aggregateBy(orders: Order[], include: (o: Order) => boolean, opts: Aggr
       const { pieces, warning } = linePieces(l);
       if (warning) day.warnings.push(`注文 ${o.id} 行 ${l.id}: ${warning}`);
       if (pieces === 0) continue;
-      const p = findProduct(l.productId);
+      const p = productOf(l.productId);
       if (!p) day.warnings.push(`注文 ${o.id}: 商品 ${l.productId} がマスターにありません`);
       const t = day.products.get(l.productId) ?? {
         productId: l.productId, name: p?.name ?? l.productId, unit: p?.unit ?? "個", pieces: 0, customers: [],
       };
       t.pieces += pieces;
-      const c = t.customers.find((c) => c.customerId === o.customerId);
-      if (c) {
-        c.pieces += pieces;
-        if (!c.orderIds.includes(o.id)) c.orderIds.push(o.id);
-      } else t.customers.push({ customerId: o.customerId, pieces, orderIds: [o.id] });
+      let idx = custIndex.get(t);
+      if (!idx) custIndex.set(t, (idx = new Map()));
+      const hit = idx.get(o.customerId);
+      if (hit) {
+        hit.c.pieces += pieces;
+        if (!hit.ids.has(o.id)) {
+          hit.ids.add(o.id);
+          hit.c.orderIds.push(o.id);
+        }
+      } else {
+        const c: CustomerQty = { customerId: o.customerId, pieces, orderIds: [o.id] };
+        t.customers.push(c);
+        idx.set(o.customerId, { c, ids: new Set([o.id]) });
+      }
       day.products.set(l.productId, t);
     }
   }
