@@ -50,7 +50,7 @@ const remember = (k: string, v: string) => {
 };
 
 export function DriverClient({ courses, myCourses, customers, today, staffName, staffNames, depot }: {
-  courses: { id: string; name: string; departTime: string }[];
+  courses: { id: string; name: string; departTime: string; weekdays?: number[] }[];
   /** スタッフの登録の担当コース（ログインした人の） */
   myCourses: string[];
   customers: Cust[];
@@ -61,7 +61,11 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
   depot: { lat: number; lng: number; name: string };
 }) {
   const [tab, setTab] = useState<Tab>("route");
-  const [courseId, setCourseId] = useState(myCourses[0] ?? courses[0]?.id ?? "");
+  // ⑧ はじめのコース: 自分の担当 → 今日走るコース → 先頭（前は先頭で、今日走らないコースが出ていた）
+  const [courseId, setCourseId] = useState(() => {
+    const wd = new Date(`${today}T00:00:00Z`).getUTCDay();
+    return myCourses[0] ?? courses.find((c) => !c.weekdays?.length || c.weekdays.includes(wd))?.id ?? courses[0]?.id ?? "";
+  });
   const [who, setWho] = useState(staffName);
   const [queue, setQueue] = useState<Pending[]>([]);
   const [sending, setSending] = useState(false);
@@ -302,6 +306,12 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
             {myCourses.length > 0 && !myCourses.includes(courseId) && <p className="mt-1 text-[16px] font-bold text-[#654700]">いつもの担当ではないコースです（代わりの日）</p>}
 
             {planErr && <div className="mt-3 rounded-xl bg-[#fff3c4] px-4 py-3 font-bold text-[#654700]">{planErr}</div>}
+            {/* ⑧ 読み込み中は骨組み（前は何も出ず、空に見えた） */}
+            {!planErr && (!plan || plan.courseId !== courseId) && (
+              <div className="mt-3 space-y-2" aria-label="読み込み中">
+                {[0, 1, 2].map((i) => <div key={i} className="m-skel h-20 rounded-xl bg-[#c5cac5]/40" />)}
+              </div>
+            )}
             {plan && plan.courseId === courseId && (
               <>
                 {plan.courseOff && <div className="mt-3 rounded-xl bg-[#fff3c4] px-4 py-3 font-bold text-[#654700]">このコースは {W[new Date(`${day}T00:00:00Z`).getUTCDay()]}曜日は走りません</div>}
@@ -336,15 +346,15 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                                   ))}
                                 </span>
                               )}
+                              {/* ⑧ 文を短く: 着く時刻（無ければ希望の時刻だけ） */}
                               <span className="block text-[17px]">
-                                {s.arrive ? <><b>{s.arrive}</b> ごろ着</> : "着く時刻は未計算（位置なし）"}
-                                {s.window && <span className="text-[#565c57]">（希望 {s.window}）</span>}
+                                {s.arrive ? <><b>{s.arrive}</b> ごろ</> : s.window ? <span className="text-[#565c57]">希望 {s.window}</span> : null}
                               </span>
                               {s.late > 0 && <span className="block text-[16px] font-bold text-[#a51e28]">時間の希望に {s.late} 分おくれそう</span>}
                               <span className="block text-[17px] text-[#565c57]">
                                 {s.items.length
                                   ? `${s.items[0].name} ${s.items[0].quantity}${s.items[0].unit}${s.items.length > 1 ? ` ほか${s.items.length - 1}品` : ""}`
-                                  : s.usual.length ? `注文なし（いつも: ${s.usual.slice(0, 2).map((u) => u.name).join("・")}${s.usual.length > 2 ? " ほか" : ""}）` : "渡すものはありません"}
+                                  : "注文なし"}
                                 {s.items.some((i) => i.status === "needs_review") && <span className="ml-1 font-bold text-[#654700]">（要確認あり）</span>}
                               </span>
                             </>

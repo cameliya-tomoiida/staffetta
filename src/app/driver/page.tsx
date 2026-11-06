@@ -20,7 +20,7 @@ export default async function DriverPage() {
   const customers = masters.customers.filter((c) => c.active !== false).map((c) => ({ id: c.id, name: c.name, course: c.course ?? "", address: c.address ?? "" }));
   return (
     <DriverClient
-      courses={courses.map((c) => ({ id: c.id, name: c.name, departTime: c.departTime }))}
+      courses={courses.map((c) => ({ id: c.id, name: c.name, departTime: c.departTime, weekdays: c.weekdays ?? [] }))}
       myCourses={me?.courses ?? []}
       customers={customers}
       today={todayJst()}
