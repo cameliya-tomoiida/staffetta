@@ -386,3 +386,33 @@ a, button, input, select, textarea, label, summary, [role="button"] {
 @media (prefers-reduced-motion: reduce) {
   .rm-drop { opacity: 1; animation: none; }
 }
+
+/* 近未来の動き③（⑧）: 動くグラフの分析画面（司令室） */
+.an-room {
+  background:
+    radial-gradient(90% 60% at 10% 0%, rgba(179, 38, 30, 0.35), transparent 60%),
+    radial-gradient(70% 50% at 100% 30%, rgba(80, 90, 160, 0.25), transparent 60%),
+    linear-gradient(180deg, #120d10, #0b0c12);
+}
+.an-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+}
+.an-edge { background: linear-gradient(90deg, transparent, rgba(255, 138, 122, 0.9), transparent); animation: an-edge 4s linear infinite; background-size: 50% 100%; background-repeat: no-repeat; }
+@keyframes an-edge { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+.an-draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.4s cubic-bezier(0.3, 0.7, 0.2, 1); }
+.an-draw.an-late { transition-delay: 0.3s; }
+.an-draw.an-on { stroke-dashoffset: 0; }
+.an-fade { opacity: 0; transition: opacity 1s ease 0.6s; }
+.an-fade.an-on { opacity: 1; }
+.an-pop { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.2); transition: opacity 0.3s, transform 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.an-pop.an-on { opacity: 1; transform: none; }
+.an-bar { transition: width 1.1s cubic-bezier(0.3, 0.8, 0.2, 1); box-shadow: 0 0 10px rgba(255, 107, 94, 0.45); }
+.an-col { transition: height 1s cubic-bezier(0.3, 0.8, 0.2, 1); box-shadow: 0 0 10px rgba(255, 107, 94, 0.35); }
+.an-arc { transition: stroke-dasharray 1.2s cubic-bezier(0.3, 0.8, 0.2, 1); }
+.an-detail { animation: cs-in 0.2s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .an-edge { animation: none; }
+  .an-draw, .an-fade, .an-pop, .an-bar, .an-col, .an-arc { transition: none; }
+}
