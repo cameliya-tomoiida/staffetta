@@ -193,6 +193,8 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "doughId", label: "生地ID", type: "text", ref: "doughs", example: "DG01", requiredWhen: (r) => kind("make")(r) && "自社製造は「生地ID」が必須です" },
     { key: "doughGram", label: "分割（g）", type: "number", min: 1, example: "35", requiredWhen: (r) => kind("make")(r) && "自社製造は「分割（g）」が必須です" },
     { key: "toppingId", label: "トッピングID", type: "text", ref: "toppings" },
+    { key: "overRate", label: "多めに作る率（%）", type: "number", min: 0, max: 100, example: "3", help: "取れなかった分・ロスの分。注文 909 に 3% → 作る 937（切り上げ）" },
+    { key: "overPieces", label: "多めに作る数", type: "integer", min: 0, example: "", help: "率のほかに、決まった数を足す（例 毎日 5個）" },
     { key: "dailyCap", label: "この商品がある日の上限", type: "integer", min: 1 },
     { key: "excludeFromDailyCap", label: "ラインの上限に数えない", type: "boolean", default: false, example: "いいえ", help: "はい なら、ラインの1日の上限（枚・個）に数えない（生地玉など、別の作業で作るもの）" },
     { key: "packStyle", label: "包装", type: "enum", options: PACK_STYLE_OPTIONS, example: "1枚包装" },

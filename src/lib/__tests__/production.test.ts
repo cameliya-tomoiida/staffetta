@@ -200,3 +200,15 @@ describe("工程表", () => {
     expect(fmtTime(-120)).toBe("前日22:00");
   });
 });
+
+describe("多めに作る（取れなかった分・ロス）", () => {
+  it("作る数 = 注文 + 切り上げ(注文 × 率) + 数。注文 0 なら 0", async () => {
+    const { makeCount } = await import("../production");
+    expect(makeCount(909, 3)).toBe(937);
+    expect(makeCount(909, 3, 3)).toBe(940);
+    expect(makeCount(100, 0, 5)).toBe(105);
+    expect(makeCount(100)).toBe(100);
+    expect(makeCount(0, 10, 5)).toBe(0);
+    expect(makeCount(10, 2.5)).toBe(11);
+  });
+});

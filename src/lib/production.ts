@@ -10,7 +10,10 @@ import { allLines, allShifts, currentMasters, customerDeadline, customerDelivery
 export interface DoughItem {
   productId: string;
   name: string;
+  /** 作る数（注文＋多めに作る分） */
   pieces: number;
+  /** 注文の数（多めに作る分を足す前）。足していなければ無し */
+  ordered?: number;
   /** 1個の生地 g（分割g） */
   doughGram: number;
   toppingId?: string;
@@ -123,6 +126,19 @@ const round = (n: number, d = 3) => Math.round(n * 10 ** d) / 10 ** d;
 const fmtNum = (n: number) => n.toLocaleString("ja-JP");
 
 /** 1日分の集計から製造計画を作る（自社製造の商品だけ） */
+/** 作る数 = 注文 + 切り上げ(注文 × 率%) + 数（注文が 0 なら 0） */
+export function makeCount(ordered: number, overRate?: number, overPieces?: number): number {
+  if (!(ordered > 0)) return 0;
+  return ordered + Math.ceil(Math.round(ordered * (overRate ?? 0) * 100) / 10000) + Math.max(0, Math.round(overPieces ?? 0));
+}
+
+/** 商品の「多めに作る」を足す（足したときは ordered に注文の数を残す） */
+function withOver(it: DoughItem): DoughItem {
+  const p = currentMasters().products.find((x) => x.id === it.productId);
+  const made = makeCount(it.pieces, p?.overRate, p?.overPieces);
+  return made > it.pieces ? { ...it, ordered: it.pieces, pieces: made } : it;
+}
+
 export function planProduction(day: DayTotals, opts: ProductionOptions = {}): ProductionPlan {
   const warnings: string[] = [];
   const byDough = new Map<string, DoughItem[]>();
@@ -148,12 +164,15 @@ export function planProduction(day: DayTotals, opts: ProductionOptions = {}): Pr
       ...(byDough.get(spec.doughId) ?? []),
       { productId: t.productId, name: t.name, pieces: t.pieces, doughGram: spec.doughGram, toppingId: spec.toppingId, customers: t.customers.map((c) => c.customerId), customerPieces: t.customers.map((c) => ({ customerId: c.customerId, pieces: c.pieces })) },
     ]);
-    if (spec.toppingId) toppings.push({ productId: t.productId, toppingId: spec.toppingId, pieces: t.pieces });
+    if (spec.toppingId) {
+      const p = currentMasters().products.find((x) => x.id === t.productId);
+      toppings.push({ productId: t.productId, toppingId: spec.toppingId, pieces: makeCount(t.pieces, p?.overRate, p?.overPieces) });
+    }
   }
 
   const doughs: DoughBatchPlan[] = [...byDough.entries()].flatMap(([doughId, items]) =>
     splitByWave(doughId, items, opts.waveGapMinutes ?? 120).map((w, i, all) => ({
-      ...doughBatch(doughId, w.items, opts.lossRates?.[doughId]),
+      ...doughBatch(doughId, w.items.map(withOver), opts.lossRates?.[doughId]),
       key: all.length > 1 ? `${doughId}#${i + 1}` : doughId,
       ...(all.length > 1 ? { waveName: w.name } : {}),
     })),
