@@ -76,7 +76,8 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
 
       {brief && <Brief b={brief} />}
       <RecordGaps gaps={gaps} />
-      <Todo role={role} d={d} />
+      {/* ⑧ スマホは上のタイルで足りるので、文の多い「今日やること」の手順は出さない */}
+      <div className="max-md:hidden"><Todo role={role} d={d} /></div>
       {role === "管理者" && <Admin d={d} />}
       {role === "事務" && <Office d={d} />}
       {role === "工場" && <Factory d={d} />}
@@ -88,7 +89,28 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
 /** 朝の「今日の要点」（3行） */
 function Brief({ b }: { b: Briefing }) {
   return (
-    <section className="rounded-xl border-2 border-crust-600 bg-sheet px-5 py-4">
+    <>
+      {/* ⑧ スマホ: 1行の「今日の要点 ›」にたたむ。押したときだけ開く（文字を減らす） */}
+      <details className="group rounded-2xl border border-rule bg-sheet md:hidden">
+        <summary className="cursor-pointer list-none !p-0 after:!hidden [&::-webkit-details-marker]:hidden">
+          <span className="flex min-h-14 items-center gap-2 px-4">
+            <span className="text-[16px] font-bold">今日の要点</span>
+            <span className="rounded-full bg-paper px-2 text-[12px] text-ink-soft">{b.by === "AI" ? "AI" : "数字"}</span>
+            <svg viewBox="0 0 24 24" className="ml-auto h-5 w-5 text-ink-faint transition-transform duration-150 group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
+          </span>
+        </summary>
+        <ol className="space-y-1 border-t border-rule px-4 py-3 text-[16px] leading-relaxed">
+          {b.lines.map((l, i) => <li key={i} className="flex gap-2"><span className="font-black text-crust-700">{i + 1}.</span><span>{l}</span></li>)}
+        </ol>
+      </details>
+      <BriefFull b={b} />
+    </>
+  );
+}
+
+function BriefFull({ b }: { b: Briefing }) {
+  return (
+    <section className="rounded-xl border-2 border-crust-600 bg-sheet px-5 py-4 max-md:hidden">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-[22px] font-black">今日の要点</h2>
         <span className="rounded bg-off-bg px-2 py-0.5 text-[15px] text-ink-soft">{b.by === "AI" ? "AI が数字から作りました" : "数字から作りました"}・{new Date(b.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</span>
@@ -278,7 +300,15 @@ function RecordGaps({ gaps }: { gaps: Gap[] }) {
   const late = gaps.filter((g) => g.state === "late");
   const top = [...gaps.filter((g) => g.date === todayJst()), ...late.filter((g) => g.date !== todayJst())].slice(0, 3);
   return (
-    <section aria-label="記録の時間と漏れ" className={`rounded-xl border-2 p-4 ${late.length ? "border-alert-line bg-alert-bg" : "border-review-line bg-review-bg"}`}>
+    <>
+    {/* ⑧ スマホ: 1行の帯だけ（押すと漏れの一覧へ） */}
+    <Link href="/hygiene/missing" className={`flex min-h-14 items-center gap-2 rounded-2xl border px-4 md:hidden ${late.length ? "border-alert-line bg-alert-bg text-alert-ink" : "border-review-line bg-review-bg text-review-ink"}`}>
+      <span className="text-[16px] font-bold">{late.length ? "記録の漏れ" : "記録の時間"}</span>
+      <b className="m-display ml-auto text-[24px] tabular-nums">{late.length || gaps.length}</b>
+      <span className="text-[13px]">件</span>
+      <svg viewBox="0 0 24 24" className="h-5 w-5 opacity-60" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
+    </Link>
+    <section aria-label="記録の時間と漏れ" className={`rounded-xl border-2 p-4 max-md:hidden ${late.length ? "border-alert-line bg-alert-bg" : "border-review-line bg-review-bg"}`}>
       <p className={`text-[20px] font-black ${late.length ? "text-alert-ink" : "text-review-ink"}`}>
         {late.length ? `記録の漏れが ${late.length}件あります` : "記録の時間です"}
       </p>
@@ -296,5 +326,6 @@ function RecordGaps({ gaps }: { gaps: Gap[] }) {
         漏れの一覧を見る（{gaps.length}件）
       </Link>
     </section>
+    </>
   );
 }
