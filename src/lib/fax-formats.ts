@@ -9,6 +9,7 @@ import type { FaxFormatKind, FaxTemplate } from "./types";
 
 export const formatKindLabel: Record<FaxFormatKind, string> = {
   weekly_table: "期間の表（品名×日付・週間／月間）",
+  monthly_table: "1か月分の注文書（日付×品目の区分）",
   order_sheet: "発注書・発注伝票（1回分）",
   order_with_inspection: "発注書兼検収記録簿",
   corrected_print: "印字＋手書きの訂正",

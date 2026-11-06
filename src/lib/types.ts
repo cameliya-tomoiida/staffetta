@@ -14,9 +14,9 @@ export const FaxReadSchema = z.object({
     .string()
     .describe("この様式の特徴（見出し、日付の書き方、品名の並び、数量の単位、丸で選ぶ欄の有無など）を2〜3文で。様式の登録に使うので、向き・かすれ・受信日時などこの1枚だけの事情は書かない"),
   format_kind: z
-    .enum(["weekly_table", "order_sheet", "order_with_inspection", "corrected_print", "multi_page_set", "change_notice", "handwritten_note", "other"])
+    .enum(["weekly_table", "monthly_table", "order_sheet", "order_with_inspection", "corrected_print", "multi_page_set", "change_notice", "handwritten_note", "other"])
     .describe(
-      "様式の型。weekly_table=品名×日付の表（週間・月間） / order_sheet=1回分の発注書・発注伝票 / order_with_inspection=発注書兼検収記録簿（検収・温度・サインの欄つき） / corrected_print=印字の表に手書きで数や訂正を書き込むもの / multi_page_set=仮発注などの複数枚つづり（日付ごとに1枚など） / change_notice=変更・訂正の連絡票 / handwritten_note=決まった様式のない手書きのメモ / other",
+      "様式の型。weekly_table=品名×日付の表（週間・月間） / monthly_table=日付×品目の区分の表（1か月分の注文書。行が 1〜31日） / order_sheet=1回分の発注書・発注伝票 / order_with_inspection=発注書兼検収記録簿（検収・温度・サインの欄つき） / corrected_print=印字の表に手書きで数や訂正を書き込むもの / multi_page_set=仮発注などの複数枚つづり（日付ごとに1枚など） / change_notice=変更・訂正の連絡票 / handwritten_note=決まった様式のない手書きのメモ / other",
     ),
   page_note: z.string().describe("複数ページなら、ページの関係（例: 13枚つづりで1枚1日分）。1枚なら空文字"),
   rotation_degrees: z
@@ -78,6 +78,7 @@ export type FaxStatus =
 /** 得意先ごとの様式（人が承認したもの） */
 export type FaxFormatKind =
   | "weekly_table"
+  | "monthly_table"
   | "order_sheet"
   | "order_with_inspection"
   | "corrected_print"
