@@ -15,7 +15,10 @@ import { listPurchaseOrders } from "@/lib/purchase-store";
 import { nowMs } from "@/lib/clock";
 import { PurchaseClient, type PoView } from "./PurchaseClient";
 import { loadMasters } from "@/lib/masters/seed-db";
-import { withMasters } from "@/lib/catalog";
+import { findProduct, withMasters } from "@/lib/catalog";
+import { purchaseTotalsForDate } from "@/lib/purchase";
+import { checkPurchaseTotals } from "@/lib/purchase-check";
+import { TotalsCheck } from "./TotalsCheck";
 
 export const metadata = { title: "発注書｜STAFFETTA" };
 
@@ -75,6 +78,14 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
     return s && s.status !== "draft" ? ({ ...d, lines: s.lines as typeof d.lines } as PurchaseOrderDraft) : d;
   });
   const pos = drafts.filter((p) => p.lines.length > 0).map(view);
+  // ⑧ C 発注の合計と注文の合計の照らし合わせ（承認・送信のあとに注文が変わった・仕入品がどの発注書にも入っていない）
+  const buyOrdered = withMasters(masters, () =>
+    purchaseTotalsForDate(orders, date).products.filter((p) => {
+      const spec = findProduct(p.productId)?.spec;
+      return spec?.kind === "buy" && !spec.slicesPerItem;
+    }),
+  ).map((p) => ({ productId: p.productId, name: p.name, pieces: p.pieces }));
+  const check = checkPurchaseTotals(r.productPurchaseOrders, [...stored.values()].filter((s) => s.deliveryDate === date), buyOrdered);
 
   return (
     <>
@@ -87,7 +98,12 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
         serverNow={nowMs()}
         lateMaterials={r.materialPlan.lateItems.map((x) => x.message)}
         unconfirmed={orders.filter((o) => o.deliveryDate === date && (o.status === "needs_review" || o.status === "provisional")).length}
-        costBox={<CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} />}
+        costBox={
+          <>
+            <TotalsCheck rows={check} />
+            <CostBox s={withMasters(masters, () => dayCostSummary(r))} show={["purchase", "material"]} />
+          </>
+        }
       dateNav={
         dates.length > 0 && (
           <>
