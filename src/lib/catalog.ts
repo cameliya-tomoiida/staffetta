@@ -230,6 +230,9 @@ export const findLine = (id: ProductionLineId): CatalogLine => cat().lines[id];
 export const allLines = (): CatalogLine[] => Object.values(cat().lines);
 export const findEquipment = (id: string) => cat().masters.equipment.find((e) => e.id === id);
 export const findCustomer = (id: string) => cat().masters.customers.find((c) => c.id === id);
+/** 予備（⑧）: 取引先 × 商品で、仕入先への発注に足す個数（取引先の商品の「予備」。無ければ 0） */
+export const spareFor = (customerId: string, productId: string): number =>
+  (cat().masters.customerProducts ?? []).find((x) => x.customerId === customerId && x.productId === productId && x.active !== false && (x.spare ?? 0) > 0)?.spare ?? 0;
 export const allShifts = () => cat().masters.shifts;
 
 /** 得意先がこの仕入先の品物をどの便で受けるか（便の「受ける得意先」に無ければ最初の便） */

@@ -59,7 +59,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
         let detail: string | undefined;
         if (l.itemType === "product" && l.customers?.length) {
           const per = l.customers.map((c) => `${customerById(c.customerId)?.name ?? c.customerId} ${c.pieces}個→${c.packs}${l.unitLabel === "個" ? "個" : "袋"}`).join("／");
-          detail = `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}`;
+          detail = `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}${l.notes?.length ? `　${l.notes.join("・")}` : ""}`;
         } else if (l.notes?.length) {
           detail = l.notes.join("・");
         } else if (l.itemType === "material") {

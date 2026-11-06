@@ -88,7 +88,7 @@ export default async function SlipsPage(props: PageProps<"/orders/slips">) {
           <span className="font-bold">コース:</span>
           <Link href={href({})} className={`rounded-full border px-3 py-1 ${!courseQ && !customerQ ? "border-ink bg-ink text-sheet" : "border-rule-strong"}`}>全部</Link>
           {courses.map((c) => (
-            <Link key={c} href={href({ course: c })} className={`rounded-full border px-3 py-1 ${courseQ === c ? "border-ink bg-ink text-sheet" : "border-rule-strong"}`}>{c || "コースなし"}</Link>
+            <Link key={c} href={href({ course: c })} className={`rounded-full border px-3 py-1 ${courseQ === c ? "border-ink bg-ink text-sheet" : "border-rule-strong"}`}>{c || "注文がある時だけ（コースなし）"}</Link>
           ))}
         </div>
         {multi.length > 0 && (
@@ -124,7 +124,7 @@ function SlipCard({ s, md }: { s: Slip; md: string }) {
           <div className="text-[9pt]">{md} 納品</div>
           <div className="truncate text-[13pt] leading-tight font-bold">{s.place ? s.customerName : "　"}</div>
         </div>
-        <div className="shrink-0 rounded border-2 border-black px-2 py-0.5 text-center text-[11pt] font-black">{s.course || "コースなし"}</div>
+        <div className="shrink-0 rounded border-2 border-black px-2 py-0.5 text-center text-[11pt] font-black">{s.course || "ある時だけ"}</div>
       </div>
       {/* 届け先（センター・事業所）を大きく。指定が無ければ取引先の名前を大きく */}
       <div className="mt-[1.5mm] line-clamp-2 text-[20pt] leading-tight font-black">{s.place ?? s.customerName}</div>

@@ -6,7 +6,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { customers } from "@/data/master";
 // 商品は③の catalog から引く（master.ts の商品＋③が足した商品 P11〜 の両方）
-import { allProducts, findProduct } from "@/lib/catalog";
+import { allProducts, findCustomer, findProduct } from "@/lib/catalog";
+import { orderDates } from "@/lib/center-dates";
 import type { Order, OrderLine, OrderSource, ReadValue } from "@/data/types";
 import { updateDb } from "@/lib/store";
 import { nowIso } from "@/lib/clock";
@@ -70,10 +71,12 @@ export function toOrderLine(orderId: string, l: ImportedLine, i: number): OrderL
 }
 
 export function toOrder(o: ImportedOrder): Order {
+  // 使用日で来る取引先は、こちらの納品日＝センター納めの日に直す（⑧）
+  const dates = orderDates(findCustomer(o.customerId), o.deliveryDate);
   return {
     id: o.id,
     customerId: customers.some((c) => c.id === o.customerId) ? o.customerId : "",
-    deliveryDate: o.deliveryDate,
+    ...dates,
     deliveryPlace: o.deliveryPlace,
     lines: o.lines.map((l, i) => toOrderLine(o.id, l, i)),
     source: o.source,

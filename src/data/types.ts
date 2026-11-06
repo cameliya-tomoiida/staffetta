@@ -99,6 +99,8 @@ export interface Order {
   customerId: string; // 判定できないときは ""（要確認）
   deliveryDate: string; // YYYY-MM-DD
   deliveryPlace?: string;
+  /** 使用日（喫食日）。取引先が使用日で注文するとき（⑧）。deliveryDate はセンター納めの日 */
+  useDate?: string;
   lines: OrderLine[];
   source: OrderSource;
   status: OrderStatus;
@@ -527,6 +529,17 @@ export interface CustomerMaster {
   deliveryCaution?: string;
   /** この先の納品にかかる時間（分）。空なら便の「1件の納品の時間」（それも空なら 10 分） */
   serviceMinutes?: number;
+  /**
+   * 注文の日付の意味（⑧）。use = 使用日（喫食日）で来る取引先（給食会社など）。
+   * そのときは 使用日 → 事業所着（useToSiteDays 日前）→ センター納め（useToCenterDays 日前）を出し、こちらの納品日＝センター納めにする
+   */
+  orderDateIs?: "delivery" | "use";
+  /** 使用日の何日前に事業所に着くか（例: 土曜に食べる → 金曜着 = 1） */
+  useToSiteDays?: number;
+  /** 使用日の何日前にセンターに納めるか（例: 土曜に食べる → 木曜センター = 2）。こちらの納品日 */
+  useToCenterDays?: number;
+  /** 納めるセンターの名前 */
+  centerName?: string;
   /** 地図の位置（住所から国土地理院の住所検索で出す。手で直してもよい） */
   lat?: number;
   lng?: number;
@@ -643,6 +656,8 @@ export interface CustomerProductMaster {
   weekdays?: number[];
   /** 最後に出た日 */
   lastDate?: string;
+  /** 予備（⑧）: 仕入先への発注に、この取引先のこの商品の注文があるたびに足す数（個。例 おにぎり 225 → 226 なら 1） */
+  spare?: number;
   note?: string;
   active: boolean;
 }
