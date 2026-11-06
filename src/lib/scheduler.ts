@@ -6,6 +6,7 @@
 //   2. 時刻で動く仕事（⑤ runDueAutomations：定期注文の自動作成・夜の「作り終えた」・発注書の自動承認・返事）
 // どれも機能の ON/OFF（src/lib/settings/features.ts）で止められる。
 // 出来事のあと（確定・承認・入荷など）は checkAlertsSoon() を呼ぶと、数秒後に1回だけアラートを見直す。
+import type { PurchaseOrder } from "@/data/types";
 import { nowIso } from "./clock";
 import { listAlerts, syncAlerts, tickAlerts, type AlertCandidate, type AlertRow } from "./db/alerts-store";
 import { isOn, type FeatureKey } from "./settings/features";
@@ -37,7 +38,26 @@ async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
     return r ? r.supplierIds.map((supplierId) => ({ id: `${productId}:${supplierId}`, productId, supplierId, requestedAt: r.at })) : [];
   });
   const masters = await loadMasters();
-  const alerts = evaluateAlerts(await loadDb(), masters, now, {
+  const db = await loadDb();
+  // #1 発注忘れ: まだ一度も開いていない（保存していない）発注書も見る（⑧ A）。今日から2日先までの納品日の下書きを計算する
+  let poDrafts: PurchaseOrder[] = [];
+  if (on(alertFeatureKey("po_not_sent"))) {
+    try {
+      const [{ runPipeline }, { demoOrders }] = await Promise.all([import("./pipeline"), import("@/demo/orders")]);
+      const ids = new Set(db.orders.map((o) => o.id));
+      const orders = [...db.orders, ...demoOrders().filter((o) => !ids.has(o.id))];
+      const today = new Date(Date.parse(now) + 9 * 3600_000).toISOString().slice(0, 10);
+      for (let i = 0; i <= 2; i++) {
+        const d = new Date(Date.parse(`${today}T00:00:00Z`) + i * 86400_000).toISOString().slice(0, 10);
+        const r = runPipeline(orders, d, { masters });
+        poDrafts.push(...[...r.productPurchaseOrders, ...r.materialPurchaseOrders].filter((p) => p.lines.length > 0));
+      }
+    } catch {
+      poDrafts = []; // 計算できないときは、保存した発注書だけで見る
+    }
+  }
+  const alerts = evaluateAlerts(db, masters, now, {
+    poDrafts,
     isOn: (k) => on(alertFeatureKey(k)),
     dayOffs: [
       ...listDayOffs().map(({ customerId, date }) => ({ customerId, date })),

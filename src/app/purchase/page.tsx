@@ -50,7 +50,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       notes: po.notes,
       state: (() => {
         const s = stored.get(po.id);
-        return s ? { status: s.status, approvedBy: s.approvedBy, approvedAt: s.approvedAt, sentAt: s.sentAt, sentBy: s.sentBy } : { status: "draft" as const };
+        return s ? { status: s.status, approvedBy: s.approvedBy, approvedAt: s.approvedAt, sentAt: s.sentAt, sentBy: s.sentBy, sentVia: s.sentVia } : { status: "draft" as const };
       })(),
       lines: po.lines.map((l) => {
         let detail: string | undefined;

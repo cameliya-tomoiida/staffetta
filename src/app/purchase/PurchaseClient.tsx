@@ -38,9 +38,16 @@ export interface PoState {
   approvedAt?: string;
   sentAt?: string;
   sentBy?: string;
+  sentVia?: string;
 }
 
-const WARN_MIN = 60; // 締めの何分前から警告するか
+const WARN_MIN = 60;
+
+/** 送ったあとに押すボタンの文（送った記録の「どの方法で」にも使う） */
+function sendLabelOf(method: PurchaseMethod) {
+  const kind = methodLabel[method]?.kind ?? "site";
+  return kind === "fax" ? "FAXを送った" : kind === "email" ? "メールを送った" : kind === "site" ? "サイトに入力した" : "電話で伝えた";
+} // 締めの何分前から警告するか
 
 
 /** 今から締めまでの分。締め未設定なら null */
@@ -87,7 +94,7 @@ export function PurchaseClient({
   };
   const approve = (po: PoView) => run(() => approvePoAction({ date, poId: po.id, who }));
   // 実際の送信は「送り出し」画面（⑤）・複合機・サイトで人が行い、送ったらこれを押す
-  const send = (po: PoView) => run(() => markSentAction({ poId: po.id, who }));
+  const send = (po: PoView) => run(() => markSentAction({ poId: po.id, who, via: sendLabelOf(po.method) }));
 
   const counts = { draft: 0, approved: 0, sent: 0 } as Record<PurchaseStatus, number>;
   pos.forEach((p) => counts[st(p.id).status]++);
@@ -262,7 +269,7 @@ function PoSheet({
   const m = methodLabel[po.method] ?? { short: po.method, kind: "site" as const };
   const late = left != null && left < 0;
   const near = left != null && left >= 0 && left <= WARN_MIN;
-  const sendLabel = m.kind === "fax" ? "FAXを送った" : m.kind === "email" ? "メールを送った" : m.kind === "site" ? "サイトに入力した" : "電話で伝えた";
+  const sendLabel = sendLabelOf(po.method);
   return (
     <section className={`flex flex-col rounded-sm border bg-sheet ${s.status === "draft" ? "border-rule-strong" : s.status === "approved" ? "border-ok-line" : "border-info-line"}`}>
       {/* 帳票の頭 */}
@@ -367,7 +374,7 @@ function PoSheet({
         )}
         {s.status === "sent" && (
           <div className="text-sm text-info-ink">
-            <b>送信済み</b>（{s.sentAt ? fmtDateTime(s.sentAt) : ""}{s.sentBy ? `・${s.sentBy}` : ""}{po.contact ? `・${po.contact}` : ""}）／ 承認：{s.approvedBy}
+            <b>送信済み</b>（{s.sentAt ? fmtDateTime(s.sentAt) : ""}{s.sentBy ? `・${s.sentBy}` : ""}{s.sentVia ? `・${s.sentVia}` : ""}{po.contact ? `・${po.contact}` : ""}）／ 承認：{s.approvedBy}
           </div>
         )}
       </div>
