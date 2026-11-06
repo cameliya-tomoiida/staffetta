@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { PrintButton } from "@/app/plan/PrintButton";
-import { FactoryPrint } from "@/components/FactoryPrint";
 import { todayJst } from "@/lib/clock";
 import { FREQ_LABEL, isPlanned, monthDays, outOfRange, runDays, WD, type Day, type SheetDef, type SheetRecord } from "@/lib/hygiene/sheets";
 import { getRecord, getSheet, holidaysOf, listSheets } from "@/lib/hygiene/store";
@@ -26,7 +25,6 @@ export default async function HygienePrint(props: PageProps<"/hygiene/print">) {
         <PrintButton label={`印刷する（${list.length}枚・A4 横）`} primary />
         <span className="text-lg text-ink-soft">PDF にするときは、印刷の画面で「PDF に保存」を選びます。</span>
       </div>
-      <FactoryPrint path={`/hygiene/print?month=${month}${one ? `&sheet=${encodeURIComponent(one.id)}` : ""}`} label={`衛生管理 ${Number(month.slice(5))}月 ${one ? one.title : `全部（${list.length}枚）`}`} />
       {list.map((def, i) => (
         <Sheet key={def.id} def={def} rec={getRecord(def.id, month).rec} month={month} holidays={holidays} first={i === 0} />
       ))}

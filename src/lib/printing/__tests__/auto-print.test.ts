@@ -69,8 +69,7 @@ describe("印刷の流れ（本物のプリンターは使わない）", () => {
     const f1 = fake();
     const r1 = await a.runPrintJob(job, j("2026-11-06T09:00"), "見本", { deps: f1.deps });
     expect(r1).toMatchObject({ ok: true, printed: false });
-    // 印刷の合いかぎ（(36) B）を付けて開く（ログインを使っていても PDF にできるように）
-    expect(f1.calls).toEqual([expect.stringMatching(/^pdf http:\/\/localhost:3100\/hygiene\/print\?month=2026-12&printKey=[0-9a-f]{32}$/)]);
+    expect(f1.calls).toEqual(["pdf http://localhost:3100/hygiene/print?month=2026-12"]);
     a.savePrintSettings({ ...a.getPrintSettings(), method: "acrobat" });
     const f2 = fake();
     const r2 = await a.runPrintJob(job, j("2026-11-06T09:00"), "見本", { deps: f2.deps });

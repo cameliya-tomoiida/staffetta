@@ -85,8 +85,6 @@ export const ALERT_SOURCES: AlertSource[] = [
   { name: "system", feature: "system_watch", run: gatherSystem },
   // AI の案 D: いつもと違う注文の見張り（理由は AI。同じ注文は2回聞かない）
   { name: "ai_watch", feature: "ai_watch", run: async (now) => (await import("./ai/watch")).watchAlerts(now) },
-  // (36) 記録のアラーム: 衛生のシートの記録の時刻・製品カードの工程・金属検査の回数・提出期限
-  { name: "records", feature: "record_alarms", run: async (now) => (await import("./records/store")).recordAlertCandidates(now) },
 ];
 
 const g = globalThis as unknown as { __hubScheduler?: { timer: ReturnType<typeof setInterval>; running: boolean; last?: TickResult }; __hubAlertSoon?: ReturnType<typeof setTimeout> };
@@ -121,8 +119,7 @@ export async function runAlertCheck(now = nowIso(), sources: AlertSource[] = ALE
     try {
       const { sendAlertsToStaff } = await import("./channels/line/staff-alerts");
       const r = await sendAlertsToStaff(
-        // 記録のアラームは「LINE にも送る」が ON のときだけ
-        open.filter((a) => !a.kind.startsWith("record_") || isOn("record_alarms_line")).map((a) => ({ key: a.dedupeKey, level: a.level, title: a.title, action: a.action, assignee: a.escalatedTo ?? a.assignee, href: a.href })),
+        open.map((a) => ({ key: a.dedupeKey, level: a.level, title: a.title, action: a.action, assignee: a.escalatedTo ?? a.assignee, href: a.href })),
       );
       staff = { sent: r.sent.length, skipped: r.skipped.length };
     } catch (e) {

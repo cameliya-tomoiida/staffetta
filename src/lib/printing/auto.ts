@@ -11,7 +11,6 @@ import { kvGet, kvSet } from "@/lib/db/sqlite";
 import { runDays, sheetProblems, type SheetRecord } from "@/lib/hygiene/sheets";
 import { holidaysOf, listSheets, recordsOf } from "@/lib/hygiene/store";
 import { DEFAULT_PRINT_SETTINGS, dueJobs, monthFor, printPath, type PrintJob, type PrintSettings } from "./jobs";
-import { isPrintPage, withPrintKey } from "./print-key";
 
 export function getPrintSettings(): PrintSettings {
   const s = kvGet<PrintSettings>("auto_print");
@@ -51,7 +50,7 @@ export async function runPrintJob(job: PrintJob, now: string, who: string, opts:
   const s = getPrintSettings();
   const deps = opts.deps ?? (await realDeps());
   const toPaper = (opts.mode ?? "settings") === "settings" && s.method === "acrobat";
-  const url = withPrintKey(`${s.baseUrl.replace(/\/$/, "")}${printPath(job, now)}`);
+  const url = `${s.baseUrl.replace(/\/$/, "")}${printPath(job, now)}`;
   let log: PrintLog;
   try {
     if (job.what !== "cards") await precheckHygiene(job.what === "hygiene-sheet" ? job.sheetId : undefined, monthFor(job, now), now);
@@ -65,32 +64,6 @@ export async function runPrintJob(job: PrintJob, now: string, who: string, opts:
   if (!log.ok) {
     syncAlerts("auto_print", [{ dedupeKey: `print:${job.id}`, kind: "print_failed", level: "warn", title: `自動印刷できませんでした: ${job.label}`, detail: log.message, href: "/settings/auto-print", action: "自動印刷の設定を見る" }], now);
   }
-  return log;
-}
-
-/**
- * いま印刷する（(36) B: スマホ・タブレットの「工場のプリンターで印刷」）。
- * 3100 が動いている PC が印刷の画面を PDF にして、設定の仕方が「紙に出す」ならプリンターへ送る（「PDF だけ作る」なら PDF だけ）。
- * だれが・いつ・何を印刷したかは、自動印刷と同じ記録（auto_print_log）に残す。
- */
-export async function printNow(x: { path: string; label: string; copies: number; printer?: string }, who: string, now: string, deps?: PrintDeps): Promise<PrintLog> {
-  const s = getPrintSettings();
-  const u = new URL(x.path, "http://localhost");
-  if (!isPrintPage(u.pathname)) throw new Error("この画面は工場のプリンターでは印刷できません");
-  const copies = Math.min(20, Math.max(1, Math.round(x.copies) || 1));
-  const printer = x.printer?.trim() || s.printer;
-  const d = deps ?? (await realDeps());
-  const toPaper = s.method === "acrobat";
-  const url = withPrintKey(`${s.baseUrl.replace(/\/$/, "")}${u.pathname}${u.search}`);
-  let log: PrintLog;
-  try {
-    const pdf = await d.renderPdf(url, `now-${u.pathname.replace(/\W+/g, "_")}-${now.slice(0, 19).replace(/[:T-]/g, "")}`);
-    if (toPaper) await d.sendToPrinter(pdf, printer, copies);
-    log = { at: now, jobId: "now", label: x.label, ok: true, printed: toPaper, pdf, message: toPaper ? `${printer} に ${copies}部 送りました` : "PDF を作りました（いまの設定は「PDF だけ作る」なので、紙には出していません）", who };
-  } catch (e) {
-    log = { at: now, jobId: "now", label: x.label, ok: false, printed: false, message: e instanceof Error ? e.message : String(e), who };
-  }
-  addLog(log);
   return log;
 }
 
@@ -169,14 +142,6 @@ export async function makeMonthSummary(month: string, now: string, ai = !!apiKey
     const filled = s.kind === "temp" ? run.filter((d) => rec?.temps?.[d.date]?.am != null || rec?.temps?.[d.date]?.pm != null).length : run.filter((d) => Object.keys(rec?.done ?? {}).some((k) => k.endsWith(`|${d.date}`))).length;
     const out = s.kind === "temp" ? run.filter((d) => [rec?.temps?.[d.date]?.am, rec?.temps?.[d.date]?.pm].some((v) => v != null && ((s.temp?.min != null && v < s.temp.min) || (s.temp?.max != null && v > s.temp.max)))).length : 0;
     facts.push(`${s.title}: 記入 ${filled}/${run.length}日${out ? `・範囲の外 ${out}日` : ""}${p.length ? `・気になる所 ${p.length}件` : ""}${rec?.approvedBy ? "・責任者確認済み" : ""}`);
-  }
-  // (36) 記録の漏れ（締めを過ぎても書いていない記録。衛生のシート＋製品カード）
-  try {
-    const { missingReport } = await import("@/lib/records/store");
-    const m = await missingReport(month, now);
-    facts.push(m.rows.length ? `記録の漏れ: ${m.rows.length}件（${m.bySheet.map((b) => `${b.title} ${b.count}件`).join("・")}）` : "記録の漏れ: なし");
-  } catch {
-    /* 漏れの集計ができなくても、まとめは作る */
   }
   const summary: MonthSummary = { month, at: now, facts };
   if (ai) {

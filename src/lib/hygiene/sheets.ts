@@ -69,8 +69,6 @@ export interface SheetDef {
   columns?: LogColumn[];
   /** 使う（いいえにすると一覧・印刷から外す） */
   active?: boolean;
-  /** 記録する時刻・締め（(36) 記録のアラーム。src/lib/records/alarms.ts） */
-  timing?: { times?: string[]; graceMin?: number; off?: boolean };
 }
 
 /** 1日分 */
