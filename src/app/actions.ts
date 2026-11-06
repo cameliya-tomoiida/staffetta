@@ -2,7 +2,8 @@
 import { nowIso, nowMs } from "@/lib/clock";
 import { revalidatePath } from "next/cache";
 import { customers } from "@/data/master";
-import { findProduct as productById } from "@/lib/catalog";
+import { findCustomer, findProduct as productById } from "@/lib/catalog";
+import { orderDates } from "@/lib/center-dates";
 import type { EditRecord, Order, OrderChannel } from "@/data/types";
 import { readFax } from "@/lib/fax-reader";
 import { addAlias, aliasMapFor } from "@/lib/aliases";
@@ -53,14 +54,16 @@ export async function readFaxAction(faxId: string) {
       read.orders.forEach((ro, oi) => {
         // 行が無い納品日（「発注なし」の連絡など）は注文を作らない。FAX は確定で「受け取った」記録だけ残る
         if (!ro.lines.length) return;
+        // 使用日で来る取引先は、こちらの納品日＝センター納めの日に直す（⑧）
+        const dates = orderDates(findCustomer(customerId), ro.delivery_date);
         // 変更FAX: 同じ取引先・納品日の元の注文を探して changeOf に入れる（元の注文には触らない）
         const original = isChange
-          ? d.orders.find((o) => o.customerId === customerId && o.deliveryDate === ro.delivery_date && (o.status === "confirmed" || o.status === "provisional") && (o.intent ?? "new") === "new")
+          ? d.orders.find((o) => o.customerId === customerId && o.deliveryDate === dates.deliveryDate && (o.status === "confirmed" || o.status === "provisional") && (o.intent ?? "new") === "new")
           : undefined;
         d.orders.push({
           id: `${faxId}-${oi}`,
           customerId,
-          deliveryDate: ro.delivery_date,
+          ...dates,
           deliveryPlace: ro.delivery_place || undefined,
           intent: isChange ? (ro.lines.every((l) => l.quantity === 0) ? "cancel" : "change") : "new",
           changeOf: original?.id,

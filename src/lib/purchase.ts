@@ -5,7 +5,7 @@ import type { SupplierMethod } from "@/data/production";
 import type { Order, OrderLine } from "@/data/types";
 import { KIRARA_ITEMS, KIRARA_SUPPLY } from "./channels/kirara/config";
 import { countsInTotals, totalsForDate, type DayTotals } from "./aggregate";
-import { deliveryFor, findMaterial, findProduct, findSupplier } from "./catalog";
+import { deliveryFor, findMaterial, findProduct, findSupplier, spareFor } from "./catalog";
 import { bestPack, packFor, slicePlan } from "./packing";
 
 export interface PurchaseLineDraft extends PurchaseOrderLine {
@@ -182,7 +182,11 @@ export function buildProductPurchaseOrders(day: DayTotals, opts: ProductPurchase
       const dl = c.supplierDeliveryId ?? deliveryFor(spec.supplierId, c.customerId)?.id ?? "1";
       byDelivery.set(dl, [...(byDelivery.get(dl) ?? []), c]);
     }
-    for (const [dl, customers] of byDelivery) {
+    for (const [dl, orig] of byDelivery) {
+      // 予備（⑧）: 取引先 × 商品ごとの「予備 +N」を、その取引先の数に足して発注する（例 おにぎり 225 → 226）
+      const spares = new Map(orig.map((c) => [c.customerId, spareFor(c.customerId, t.productId)]));
+      const customers = orig.map((c) => ({ ...c, pieces: c.pieces + (spares.get(c.customerId) ?? 0) }));
+      const spareNotes = orig.filter((c) => (spares.get(c.customerId) ?? 0) > 0).map((c) => `予備: ${c.customerId} ${c.pieces}個 → ${c.pieces + spares.get(c.customerId)!}個（+${spares.get(c.customerId)}）`);
       const need = customers.reduce((s, c) => s + c.pieces, 0);
       // 入数の候補が複数あるときは全体で1つ選ぶ（得意先ごとに違う入数を混ぜない）
       const packSize = spec.packSizes.length === 1 ? spec.packSizes[0] : bestPack(need, spec.packSizes).packSize;
@@ -207,8 +211,8 @@ export function buildProductPurchaseOrders(day: DayTotals, opts: ProductPurchase
         needQuantity: need,
         surplus,
         customers: detail,
-        ...(ahead.length
-          ? { notes: ahead.map((x) => `前日入れ: ${x.customerId} の ${Number(x.forDeliveryDate!.slice(5, 7))}/${Number(x.forDeliveryDate!.slice(8, 10))} 納品分 ${x.pieces}個（${x.packs}袋）`) }
+        ...(ahead.length || spareNotes.length
+          ? { notes: [...spareNotes, ...ahead.map((x) => `前日入れ: ${x.customerId} の ${Number(x.forDeliveryDate!.slice(5, 7))}/${Number(x.forDeliveryDate!.slice(8, 10))} 納品分 ${x.pieces}個（${x.packs}袋）`)] }
           : {}),
       });
     }

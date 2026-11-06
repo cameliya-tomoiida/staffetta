@@ -257,6 +257,12 @@ function OrderRow({
               納品 <span className="num text-lg">{fmtDate(o.deliveryDate)}</span>
               {dayName && <span className="ml-1 text-sm text-ink-soft">{dayName}</span>}
             </span>
+            {/* ⑧ 使用日で来る取引先: 納品日はセンター納めの日 */}
+            {o.useDate && (
+              <span className="text-sm font-bold text-ink-soft">
+                使用日 <span className="num">{fmtDate(o.useDate)}</span> → センター納め <span className="num">{fmtDate(o.deliveryDate)}</span>
+              </span>
+            )}
           </div>
           <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-0.5">
             {o.lines.map((l) => {
