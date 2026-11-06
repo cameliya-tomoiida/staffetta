@@ -100,18 +100,20 @@ export function evaluateAlerts(db: Db, masters: Masters, now: string, opts: Aler
 function poNotSent(db: Db, now: string, opts: AlertOptions): Alert[] {
   const warnMin = opts.poWarnMinutes ?? 120;
   const saved = db.purchaseOrders ?? [];
-  const savedKey = new Set(saved.map((p) => `${p.supplierId}|${p.deliveryDate}`));
-  const drafts = (opts.poDrafts ?? []).filter((d) => !savedKey.has(`${d.supplierId}|${d.deliveryDate}`));
+  // 発注書は「仕入先 × 納品日 × 便（1便・2便）」ごと（id に便が入る）。便ごとに別のお知らせにする（⑧ A）
+  const savedKey = new Set(saved.map((p) => p.id));
+  const drafts = (opts.poDrafts ?? []).filter((d) => !savedKey.has(d.id));
   const res: Alert[] = [];
   for (const po of [...saved.filter((p) => p.status !== "sent"), ...drafts]) {
     if (!po.cutoffAt) continue;
     const left = minutesBetween(now, po.cutoffAt);
     if (left > warnMin) continue;
     if (left < -24 * 60) continue; // 1日以上前に締めを過ぎたものは、もう出さない
-    const sup = findSupplier(po.supplierId)?.name ?? po.supplierId;
+    const bin = (po as { deliveryName?: string }).deliveryName;
+    const sup = `${findSupplier(po.supplierId)?.name ?? po.supplierId}${bin && bin !== "通常便" ? `（${bin}）` : ""}`;
     const late = left < 0;
     const isSaved = saved.includes(po);
-    res.push(mk("po_not_sent", `${po.supplierId}|${po.deliveryDate}`, late ? "danger" : "warn",
+    res.push(mk("po_not_sent", po.id, late ? "danger" : "warn",
       late ? `${sup}の発注の締めを過ぎました` : `${sup}への発注を忘れていませんか？`,
       `${md(po.deliveryDate)}に届く分の発注書が${po.status === "approved" ? "承認済みですが、まだ送っていません" : "まだ承認されていません"}。締めは ${md(jstDate(po.cutoffAt))} ${hm(po.cutoffAt)}${late ? "（過ぎています。電話で間に合うか確かめてください）" : `（あと ${Math.max(0, Math.round(left))}分）`}。`,
       [

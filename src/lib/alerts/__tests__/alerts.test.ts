@@ -49,6 +49,15 @@ describe("アラートの判定", () => {
     expect(a[1].message).toMatch(/あと 30分/);
   });
 
+  it("#1 発注忘れ: 同じ仕入先・納品日でも、便（1便・2便）ごとに別のお知らせ。保存していない下書きも見る", () => {
+    const b1 = { ...po("PO-1bin", {}), deliveryName: "1便" } as PurchaseOrder;
+    const b2 = { ...po("PO-2bin", { cutoffAt: "2026-11-05T15:30:00+09:00" }), deliveryName: "2便" } as PurchaseOrder;
+    const a = evaluateAlerts(db({ purchaseOrders: [b1] }), masters, NOW, { isOn: only("po_not_sent"), poDrafts: [b1, b2] });
+    expect(a.map((x) => x.relatedIds[0])).toEqual(["PO-1bin", "PO-2bin"]);
+    expect(a[0].title).toMatch(/（1便）/);
+    expect(a[1].title).toMatch(/（2便）/);
+  });
+
   it("#2 いつもと違う数: ±50%で warn、読み違い（10 と 70）・桁違いで danger", () => {
     const same = evaluateAlerts(db({ orders: [...history, order("N1", "C01", "2026-11-06", [["P01", 65]])] }), masters, NOW, { isOn: only("unusual_quantity") });
     expect(same).toEqual([]);

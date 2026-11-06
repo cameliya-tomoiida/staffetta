@@ -3,7 +3,7 @@
 import type {
   CourseMaster, CustomerMaster, CustomerProductMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, RecipeItemMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster,
-  SupplierItemMaster, SupplierMaster, ToppingItemMaster, ToppingMaster,
+  SupplierItemMaster, SupplierMaster, SupplierStoreMaster, ToppingItemMaster, ToppingMaster,
 } from "@/data/types";
 import type { ColumnDef, ColumnOption, MasterDef, MasterName } from "./columns";
 
@@ -198,6 +198,7 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "bakeMinutes", label: "焼成の時間（分）", type: "number", min: 0, example: "12" },
     { key: "bakeToleranceC", label: "焼成の温度の許す幅（±℃）", type: "number", min: 0, example: "10", help: "空なら 10" },
     { key: "supplierId", label: "仕入先ID", type: "text", ref: "suppliers", requiredWhen: (r) => kind("buy")(r) && "仕入は「仕入先ID」が必須です" },
+    { key: "supplierItemNo", label: "仕入先の品番", type: "text", example: "17", help: "仕入先の発注表に書く番号（仕入先の商品台帳の品番）" },
     { key: "packSizes", label: "仕入の入数", type: "list", example: "6;8", requiredWhen: (r) => kind("buy")(r) && "仕入は「仕入の入数」が必須です（1個ずつなら 1）" },
     { key: "unitCost", label: "仕入値（円/個）", type: "number", min: 0 },
     { key: "packPrices", label: "入数ごとの仕入値", type: "map", example: "6:144;8:200" },
@@ -283,6 +284,23 @@ export const supplierDef: MasterDef<SupplierMaster> = {
     { key: "cutoff", label: "締め時刻", type: "time", example: "15:00" },
     { key: "leadDays", label: "リードタイム（日）", type: "integer", min: 0, example: "1" },
     { key: "minLot", label: "最小ロット", type: "integer", min: 1, example: "1" },
+    { key: "orderForm", label: "発注表の形", type: "enum", options: opts({ per_store: "届け先（店番）ごとに1枚", matrix: "1枚に届け先ごとの列" }), example: "届け先（店番）ごとに1枚", help: "届け先ごとに店番がちがう仕入先だけ（空ならふつうの発注書）" },
+    { key: "ownStoreNo", label: "自社の店番", type: "text", example: "1234567", help: "仕入先から見た自社の店番（1枚に列の形の表の上に書く）" },
+    ACTIVE,
+  ],
+};
+
+// ───────── 仕入先の届け先と店番（⑧） ─────────
+export const supplierStoreDef: MasterDef<SupplierStoreMaster> = {
+  name: "supplierStores", label: "仕入先の店番", keyColumns: ["supplierId", "storeNo"],
+  columns: [
+    { key: "supplierId", label: "仕入先ID", type: "text", required: true, ref: "suppliers", example: "S03" },
+    { key: "storeNo", label: "店番", type: "text", required: true, example: "10001" },
+    { key: "name", label: "店の名前", type: "text", required: true, example: "見本 第1工場" },
+    { key: "customerIds", label: "届ける取引先", type: "textlist", example: "C01;C02", help: "この店番で頼む取引先（得意先ID）。; で区切る" },
+    { key: "isDefault", label: "ほかの分を入れる店", type: "boolean", example: "いいえ", help: "どの店にも入らない取引先の分（ふつうは自社）" },
+    { key: "order", label: "列の順", type: "integer", min: 0, example: "1" },
+    { key: "note", label: "メモ", type: "text" },
     ACTIVE,
   ],
 };
@@ -460,14 +478,14 @@ export const staffAssignmentDef: MasterDef<StaffAssignmentMaster> = {
 export const MASTER_DEFS: Record<MasterName, MasterDef> = {
   lines: lineDef, equipment: equipmentDef, doughs: doughDef, recipeItems: recipeItemDef, steps: stepDef,
   toppings: toppingDef, toppingItems: toppingItemDef, products: productDef, materials: materialDef, packaging: packagingDef,
-  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef, standingOrders: standingOrderDef, customerProducts: customerProductDef, supplierItems: supplierItemDef,
+  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef, standingOrders: standingOrderDef, customerProducts: customerProductDef, supplierItems: supplierItemDef, supplierStores: supplierStoreDef,
   shifts: shiftDef, staffAssignments: staffAssignmentDef,
 } as unknown as Record<MasterName, MasterDef>;
 
 /** 取り込みの順番（参照される側から） */
 export const MASTER_ORDER: MasterName[] = [
   "lines", "suppliers", "supplierDeliveries", "courses", "customers", "materials", "packaging", "equipment", "doughs", "recipeItems",
-  "steps", "toppings", "toppingItems", "products", "productPackaging", "standingOrders", "customerProducts", "supplierItems", "shifts", "staffAssignments",
+  "steps", "toppings", "toppingItems", "products", "productPackaging", "standingOrders", "customerProducts", "supplierItems", "supplierStores", "shifts", "staffAssignments",
 ];
 
 /** マスタ一式をまとめて確かめる（参照・重複・種類ごとの検査）。画面の「マスタの点検」やテストで使う */

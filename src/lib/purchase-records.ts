@@ -23,6 +23,8 @@ export type StoredPurchaseOrder = PurchaseOrder & {
   approvedAt?: string;
   /** 送信済みにした人 */
   sentBy?: string;
+  /** どの方法で送ったか（「FAXを送った」「サイトに入力した」など） */
+  sentVia?: string;
   history?: PurchaseHistory[];
   [extra: string]: unknown;
 };
@@ -100,6 +102,7 @@ export function markSentRecord(
     status: "sent",
     sentAt: at,
     sentBy: who.trim() || undefined,
+    ...(note ? { sentVia: note } : {}),
     history: [...(po.history ?? []), { at, who: who.trim(), action: "sent", note }],
   };
   const next = [...list];

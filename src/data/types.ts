@@ -370,6 +370,8 @@ export interface ProductMaster {
   bakeToleranceC?: number;
   // 仕入
   supplierId?: string;
+  /** 仕入先の品番（発注表に書く番号。⑧） */
+  supplierItemNo?: string;
   /** 仕入先が売る入数（6・8 など、複数可） */
   packSizes?: number[];
   /** 1個の仕入値（円）。入数ごとの値段があれば packPrices（"6:144;8:200"） */
@@ -449,6 +451,26 @@ export interface SupplierMaster {
   leadDays?: number;
   /** 最小ロット（発注単位の数） */
   minLot?: number;
+  /** 発注表の形（⑧）: per_store＝届け先（店番）ごとに1枚 ／ matrix＝1枚の表に届け先ごとの列 */
+  orderForm?: "per_store" | "matrix";
+  /** 仕入先から見た自社の店番（matrix の表の上に書く） */
+  ownStoreNo?: string;
+  active: boolean;
+}
+
+/** 仕入先の届け先と店番（⑧）。同じ仕入先でも、届け先（取引先の店）ごとに店番がちがう */
+export interface SupplierStoreMaster {
+  supplierId: string;
+  storeNo: string;
+  /** 店の名前（発注表に書く） */
+  name: string;
+  /** この店に届ける取引先（得意先ID）。空で isDefault なら、どこにも入らない分 */
+  customerIds?: string[];
+  /** どの店にも入らない取引先の分を入れる店（ふつうは自社の工場） */
+  isDefault?: boolean;
+  /** 発注表の列の順（matrix） */
+  order?: number;
+  note?: string;
   active: boolean;
 }
 
@@ -676,6 +698,7 @@ export interface Masters {
   standingOrders: StandingOrderMaster[];
   customerProducts: CustomerProductMaster[];
   supplierItems: SupplierItemMaster[];
+  supplierStores: SupplierStoreMaster[];
   shifts: ShiftMaster[];
   staffAssignments: StaffAssignmentMaster[];
 }

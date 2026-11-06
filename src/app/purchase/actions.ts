@@ -32,10 +32,10 @@ async function approve(input: { date: string; poId: string; who: string }) {
 }
 
 /** 人が送ったあとに押す（実際の送信は⑤の送り出し画面・複合機・サイトで行う） */
-export async function markSentAction(input: { poId: string; who: string }): Promise<Result> {
+export async function markSentAction(input: { poId: string; who: string; via?: string }): Promise<Result> {
   try {
     if (!input.who.trim()) throw new Error("送った人を選んでください");
-    await markSent(input.poId, input.who);
+    await markSent(input.poId, input.who, input.via);
     revalidatePath("/purchase");
     return { ok: true };
   } catch (e) {
