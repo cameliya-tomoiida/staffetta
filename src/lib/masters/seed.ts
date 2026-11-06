@@ -269,6 +269,11 @@ export function sampleMasters(): Masters {
     courses: SAMPLE_COURSES,
     standingOrders: SAMPLE_STANDING_ORDERS,
     customerProducts: sampleCustomerProducts(products, customers),
+    // 仕入先の商品台帳（⑧）の見本（架空）。ひので製パン（デモ）の台帳の2品
+    supplierItems: [
+      { supplierId: "S03", itemNo: "17", productCode: "1", name: "見本 食パン6枚スライス", category: "食パン", retailPrice: 282, wholesalePrice: 211, cost: 170, jan: "4900000000017", shelfDaysSummer: 4, shelfDaysWinter: 4, factory: "A", secondDelivery: true, ledgerMonth: "2026-11", active: true },
+      { supplierId: "S03", itemNo: "143", productCode: "143", name: "見本 ロール6個入", category: "ロール", retailPrice: 215, wholesalePrice: 161, cost: 130, jan: "4900000000143", shelfDaysSummer: 4, shelfDaysWinter: 4, factory: "B", secondDelivery: false, ledgerMonth: "2026-11", active: true },
+    ],
     shifts: SAMPLE_SHIFTS,
     staffAssignments: SAMPLE_STAFF,
   };

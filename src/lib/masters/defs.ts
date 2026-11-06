@@ -3,7 +3,7 @@
 import type {
   CourseMaster, CustomerMaster, CustomerProductMaster, DoughMaster, StandingOrderMaster, Equipment, LineMaster, MaterialMaster, Masters, PackagingMaterial, ProcessStepMaster,
   ProductMaster, ProductPackagingMaster, RecipeItemMaster, ShiftMaster, StaffAssignmentMaster, SupplierDeliveryMaster,
-  SupplierMaster, ToppingItemMaster, ToppingMaster,
+  SupplierItemMaster, SupplierMaster, ToppingItemMaster, ToppingMaster,
 } from "@/data/types";
 import type { ColumnDef, ColumnOption, MasterDef, MasterName } from "./columns";
 
@@ -407,6 +407,29 @@ export const customerProductDef: MasterDef<CustomerProductMaster> = {
   check: (r) => (r.lastDate && !/^\d{4}-\d{2}-\d{2}$/.test(r.lastDate) ? ["「最後に出た日」は 2026-09-30 の形で入れてください"] : []),
 };
 
+// ───────── 仕入先の商品台帳（⑧） ─────────
+export const supplierItemDef: MasterDef<SupplierItemMaster> = {
+  name: "supplierItems", label: "仕入先の商品台帳", keyColumns: ["supplierId", "itemNo"],
+  columns: [
+    { key: "supplierId", label: "仕入先ID", type: "text", required: true, ref: "suppliers", example: "S01" },
+    { key: "itemNo", label: "品番", type: "text", required: true, example: "17", help: "仕入先に発注するときの番号（弥生の商品コードと同じことがある）" },
+    { key: "productCode", label: "製品コード", type: "text", example: "1" },
+    { key: "name", label: "品名", type: "text", required: true, example: "見本 食パン6枚" },
+    { key: "category", label: "分類", type: "text", example: "食パン" },
+    { key: "retailPrice", label: "定価（円）", type: "number", min: 0, example: "282" },
+    { key: "wholesalePrice", label: "卸価格（円）", type: "number", min: 0, example: "211" },
+    { key: "cost", label: "原価（円）", type: "number", min: 0, example: "170", help: "自社が仕入れる値段。取引先の商品の原価に使う" },
+    { key: "jan", label: "JAN", type: "text", example: "4900000000000" },
+    { key: "shelfDaysSummer", label: "消費期限 夏（日）", type: "integer", min: 0, example: "4" },
+    { key: "shelfDaysWinter", label: "消費期限 冬（日）", type: "integer", min: 0, example: "4" },
+    { key: "factory", label: "製造工場", type: "text", example: "A" },
+    { key: "secondDelivery", label: "2便で頼める", type: "boolean", example: "はい" },
+    { key: "ledgerMonth", label: "台帳の月", type: "text", example: "2026-11" },
+    { key: "note", label: "メモ", type: "text" },
+    ACTIVE,
+  ],
+};
+
 // ───────── 人員 ─────────
 export const shiftDef: MasterDef<ShiftMaster> = {
   name: "shifts", label: "班", keyColumns: ["id"],
@@ -437,14 +460,14 @@ export const staffAssignmentDef: MasterDef<StaffAssignmentMaster> = {
 export const MASTER_DEFS: Record<MasterName, MasterDef> = {
   lines: lineDef, equipment: equipmentDef, doughs: doughDef, recipeItems: recipeItemDef, steps: stepDef,
   toppings: toppingDef, toppingItems: toppingItemDef, products: productDef, materials: materialDef, packaging: packagingDef,
-  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef, standingOrders: standingOrderDef, customerProducts: customerProductDef,
+  productPackaging: productPackagingDef, suppliers: supplierDef, supplierDeliveries: supplierDeliveryDef, customers: customerDef, courses: courseDef, standingOrders: standingOrderDef, customerProducts: customerProductDef, supplierItems: supplierItemDef,
   shifts: shiftDef, staffAssignments: staffAssignmentDef,
 } as unknown as Record<MasterName, MasterDef>;
 
 /** 取り込みの順番（参照される側から） */
 export const MASTER_ORDER: MasterName[] = [
   "lines", "suppliers", "supplierDeliveries", "courses", "customers", "materials", "packaging", "equipment", "doughs", "recipeItems",
-  "steps", "toppings", "toppingItems", "products", "productPackaging", "standingOrders", "customerProducts", "shifts", "staffAssignments",
+  "steps", "toppings", "toppingItems", "products", "productPackaging", "standingOrders", "customerProducts", "supplierItems", "shifts", "staffAssignments",
 ];
 
 /** マスタ一式をまとめて確かめる（参照・重複・種類ごとの検査）。画面の「マスタの点検」やテストで使う */
