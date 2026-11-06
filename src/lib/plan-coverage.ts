@@ -56,3 +56,24 @@ export function planCoverage(
     : [];
   return { date, confirmed: day.length, included, missing, afterPrepared };
 }
+
+/** 計画を作った（印刷の用意をした）あとに増えた分（生地 kg・材料 kg）。工場長「前の日に急に注文が増えて、材料の計算が狂う」 */
+export interface PlanIncrease {
+  doughs: { key: string; name: string; before: number; now: number; plus: number }[];
+  materials: { materialId: string; name: string; unit: string; before: number; now: number; plus: number }[];
+}
+
+export function planIncrease(
+  r: { production: { doughs: { key: string; name: string; doughKg: number }[] }; materials: { materialId: string; name: string; unit: string; needKg: number }[] },
+  prepared: { doughKg?: Record<string, number>; materialKg?: Record<string, number> } | undefined,
+): PlanIncrease | undefined {
+  if (!prepared?.doughKg || !prepared.materialKg) return undefined;
+  const r1 = (x: number) => Math.round(x * 10) / 10;
+  const doughs = r.production.doughs
+    .filter((d) => d.doughKg - (prepared.doughKg![d.key] ?? 0) >= 0.1)
+    .map((d) => ({ key: d.key, name: d.name, before: r1(prepared.doughKg![d.key] ?? 0), now: r1(d.doughKg), plus: r1(d.doughKg - (prepared.doughKg![d.key] ?? 0)) }));
+  const materials = r.materials
+    .filter((m) => m.needKg - (prepared.materialKg![m.materialId] ?? 0) >= 0.1)
+    .map((m) => ({ materialId: m.materialId, name: m.name, unit: m.unit, before: r1(prepared.materialKg![m.materialId] ?? 0), now: r1(m.needKg), plus: r1(m.needKg - (prepared.materialKg![m.materialId] ?? 0)) }));
+  return doughs.length || materials.length ? { doughs, materials } : undefined;
+}

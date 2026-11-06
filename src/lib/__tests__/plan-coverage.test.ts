@@ -23,3 +23,14 @@ describe("確定した注文が製造計画・発注に入ったか（(E)）", (
     expect(c.afterPrepared.map((x) => x.orderId)).toEqual(["B"]);
   });
 });
+
+describe("計画を作ったあとに増えた分", async () => {
+  const { planIncrease } = await import("../plan-coverage");
+  it("作ったときの生地・材料の kg と比べて、増えた所だけ（0.1kg 未満は出さない）", () => {
+    const now = { production: { doughs: [{ key: "D1", name: "ロール生地", doughKg: 23.4 }, { key: "D2", name: "食パン生地", doughKg: 10 }] }, materials: [{ materialId: "M1", name: "強力粉", unit: "kg", needKg: 15.2 }, { materialId: "M2", name: "砂糖", unit: "kg", needKg: 1.0 }] };
+    const inc = planIncrease(now, { doughKg: { D1: 20, D2: 10 }, materialKg: { M1: 13, M2: 0.95 } });
+    expect(inc).toEqual({ doughs: [{ key: "D1", name: "ロール生地", before: 20, now: 23.4, plus: 3.4 }], materials: [{ materialId: "M1", name: "強力粉", unit: "kg", before: 13, now: 15.2, plus: 2.2 }] });
+    expect(planIncrease(now, { doughKg: { D1: 30, D2: 10 }, materialKg: { M1: 20, M2: 2 } })).toBeUndefined();
+    expect(planIncrease(now, undefined)).toBeUndefined();
+  });
+});

@@ -348,6 +348,10 @@ export interface ProductMaster {
   price: number;
   /** 消費税率（%）。食品は 8（軽減税率）、食品でないもの（容器・雑貨）は 10。空なら 8（(37) 伝票） */
   taxRate?: number;
+  /** 食パン（工場長の話）: もとの食パン（例「食パン 3斤」）・切り方（6枚切り・2枚食・4枚切り（手切り）など）・この商品1つにもとの食パンを何本使うか（1斤＝0.333、2枚食1袋＝2/30） */
+  loafName?: string;
+  cutLabel?: string;
+  loavesPerUnit?: number;
   kind: "make" | "buy" | "repack";
   line?: ProductionLineId;
   /** 1袋（P）・1ケース（c/s）の入数 */

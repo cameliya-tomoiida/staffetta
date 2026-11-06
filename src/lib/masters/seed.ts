@@ -206,6 +206,8 @@ export function sampleMasters(): Masters {
         ...(s.leadDays !== undefined ? { leadDays: s.leadDays } : {}), ...(s.cutoffTime ? { cutoffTime: s.cutoffTime } : {}),
         packStyle: shokupan ? "single" : "bulk", packMethod: "machine", metalCheck: "after_pack",
         ...(p.id === "P03" ? { sliceMm: 15 } : p.id === "P04" ? { sliceMm: 20 } : {}),
+        // 食パンのまとめ（見本）: 3斤の食パンを切り分ける
+        ...(p.id === "P03" ? { loafName: "食パン 3斤", cutLabel: "8枚切り", loavesPerUnit: 1 / 3 } : p.id === "P04" ? { loafName: "食パン 3斤", cutLabel: "6枚切り", loavesPerUnit: 1 / 3 } : {}),
         ...(s.laborCost !== undefined ? { laborCost: s.laborCost } : {}),
         // 焼成の目安（見本。⑦の製品カード）: ピザ 450℃・2分、食パン 210℃・35分、ほか 200℃・12分
         ...(d?.line === "pizza" ? { bakeTempC: 450, bakeMinutes: 2 } : shokupan ? { bakeTempC: 210, bakeMinutes: 35 } : { bakeTempC: 200, bakeMinutes: 12 }),
@@ -221,6 +223,8 @@ export function sampleMasters(): Masters {
     return {
       ...base, kind: "repack", sourceProductId: s.sourceProductId, slicesPerPack: s.slicesPerPack, bagSize: s.bagSize, caseSize: s.caseSize,
       packStyle: s.slicesPerPack === 1 ? "single" : "double", packMethod: "machine", metalCheck: "after_pack",
+      // 食パンのまとめ（見本）: 30枚にとる 3斤の食パンを、N枚食の個包装に
+      loafName: "食パン 3斤（30枚スライス）", cutLabel: `${s.slicesPerPack}枚食`, loavesPerUnit: s.slicesPerPack / 30,
     };
   });
 

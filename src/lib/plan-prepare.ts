@@ -18,6 +18,9 @@ export interface PreparedPlan {
   warnings: string[];
   printed: false;
   printNote?: string;
+  /** 作ったときの生地 kg・材料 kg（あとで増えた分を出すため。工場長「前の日に急に増えて材料が狂う」） */
+  doughKg?: Record<string, number>;
+  materialKg?: Record<string, number>;
 }
 
 const jst = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOString();
@@ -50,6 +53,8 @@ export async function preparePlanIfDue(now: string): Promise<PreparedPlan | unde
     products,
     warnings: r.warnings,
     printed: false,
+    doughKg: Object.fromEntries(r.production.doughs.map((d) => [d.key, d.doughKg])),
+    materialKg: Object.fromEntries(r.materials.map((x) => [x.materialId, x.needKg])),
     ...(isOn("plan_auto_print") ? { printNote: "印刷の設定（複合機）がまだ無いので、印刷はしていません" } : {}),
   };
   kvSet(key, rec);

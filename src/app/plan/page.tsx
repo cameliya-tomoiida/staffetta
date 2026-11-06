@@ -27,7 +27,8 @@ import { DailySheet, EquipmentChart, PlanSheet, StaffSheet, type MakeRow } from 
 import { LangPicker } from "./LangPicker";
 import { cookies } from "next/headers";
 import { loadMasters } from "@/lib/masters/seed-db";
-import { planCoverage } from "@/lib/plan-coverage";
+import { planCoverage, planIncrease } from "@/lib/plan-coverage";
+import { breadSummary } from "@/lib/bread-cuts";
 import { kvGet } from "@/lib/db/sqlite";
 import { doughCards, type DoughCard } from "@/components/recipe/cards";
 import { DoughDetailButton } from "@/components/recipe/DoughCards";
@@ -71,7 +72,11 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const masters = await loadMasters(); // マスタ画面で直した値で計算（③の loadMasters）
   const r = runPipeline(orders, date, { masters });
   // (E) 確定した注文が、この計画・発注に全部入ったか（入れ忘れ・計画を作ったあとの確定）
-  const cov = planCoverage(orders, date, r, kvGet<{ at: string }>(`plan_prepared_${date}`));
+  const prepared = kvGet<{ at: string; doughKg?: Record<string, number>; materialKg?: Record<string, number> }>(`plan_prepared_${date}`);
+  const cov = planCoverage(orders, date, r, prepared);
+  // 計画を作ったあとに増えた分（生地・材料）と、食パンのまとめ（工場長の話）
+  const inc = planIncrease(r, prepared);
+  const bread = breadSummary(r.totals.products, masters.products);
   const prov = withMasters(masters, () => provisionalForDate(orders, date));
   const cost = withMasters(masters, () => dayCostSummary(r));
   const units = new Map(withMasters(masters, () => allProducts()).map((p) => [p.id, p.unit]));
@@ -244,6 +249,31 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           </div>
         ))}
       </div>
+
+      {inc && (
+        <section className="no-print mb-4 rounded-lg border-2 border-alert-line bg-alert-bg px-4 py-3 text-alert-ink" lang="ja">
+          <div className="text-[18px] font-black">計画を作ったあとに増えた分（{prepared?.at ? new Date(prepared.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""} より）</div>
+          {inc.doughs.length > 0 && <div className="mt-1">計量: {inc.doughs.map((d) => `${d.name} +${d.plus}kg（${d.now}kg に）`).join("・")}</div>}
+          {inc.materials.length > 0 && <div className="mt-1">材料: {inc.materials.slice(0, 8).map((m) => `${m.name} +${m.plus}kg`).join("・")}{inc.materials.length > 8 ? " …" : ""}</div>}
+          {r.shortages.length > 0 && <div className="mt-1 font-bold">足りない材料 {r.shortages.length}件 → <Link href={`/purchase?date=${date}`} className="underline">発注書を見る</Link></div>}
+          <div className="mt-1 text-[15px]">計量の紙・工程表は、印刷し直してください。</div>
+        </section>
+      )}
+      {bread.length > 0 && (
+        <section className="no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3" lang="ja">
+          <div className="mb-1 font-black">食パンのまとめ</div>
+          {bread.map((b) => (
+            <div key={b.loaf} className="space-y-1">
+              <div className="text-[18px]"><b>{b.loaf}</b> を <b className="num text-[22px]">{b.loaves}</b> 本（ちょうど {b.exact} 本）</div>
+              <div className="flex flex-wrap gap-2">
+                {b.cuts.map((c) => (
+                  <span key={c.productId} className="rounded-lg border border-rule-strong px-2.5 py-1 text-[16px]"><b>{c.cut}</b> {c.units.toLocaleString("ja-JP")}{c.unit}（{c.loaves}本ぶん）</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* 印刷する紙をえらぶ（チェックしたものだけ印刷。プレビューで画面にも出す）。CSS の :has で切りかえる（print.css・globals.css） */}
       <div className="no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3" lang="ja">
