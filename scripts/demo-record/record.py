@@ -215,6 +215,64 @@ def d10(pg):
     pg.wait_for_timeout(1500)
 
 
+# ── v8（台本 第11稿・11/7）: 撮影用の DB は scripts/demo-record/v8.ts で作る ──
+def e3(pg):
+    # 発注書: 1個包装 ＋ 2個包装 → 6個入り ◯袋（電卓で出していた所）
+    pg.goto(f"{BASE}/purchase?date={PO_DAY}", wait_until="domcontentloaded")
+    pg.wait_for_timeout(2500)
+    line = pg.get_by_text("1個包装 35").first
+    center(line)
+    pg.wait_for_timeout(1500)
+    line.evaluate("e => { const b = e.closest('li, tr, div'); if (b) { b.style.transition = 'box-shadow .4s'; b.style.boxShadow = '0 0 0 4px #ff8a7a'; } }")
+    pg.wait_for_timeout(4500)
+
+
+def e4(pg):
+    # 配送: 住所の一覧 → AI がコースを組む → 線が光って走り、ピンが順に立つ → 距離と時間
+    pg.goto(f"{BASE}/admin/routes?yobi=1", wait_until="load")
+    pg.wait_for_timeout(2500)
+    slow_scroll(pg, 900, steps=30, wait=90)  # 届け先（住所）の一覧
+    pg.wait_for_timeout(1000)
+    btn = pg.get_by_role("button", name="月曜の見直し案を出す")
+    btn.scroll_into_view_if_needed()
+    pg.wait_for_timeout(1200)
+    btn.click()
+    pg.wait_for_timeout(1500)
+    pg.get_by_role("button", name="地図: 見直し案").wait_for()
+    pg.get_by_role("button", name="地図: 見直し案").evaluate("e => e.scrollIntoView({block: 'start'})")
+    pg.evaluate("window.scrollBy(0, -120)")
+    pg.wait_for_timeout(6000)  # 線が光って走り、ピンが順に立つ
+    tbl = pg.get_by_text("見直し案").first
+    center(tbl)
+    pg.wait_for_timeout(3500)  # コースの数・回る先・時間・距離
+
+
+def e5(pg):
+    # 記録の漏れが 1件だけ → アラーム
+    pg.goto(f"{BASE}/hygiene/missing", wait_until="domcontentloaded")
+    pg.wait_for_timeout(3500)
+    pg.goto(f"{BASE}/alerts", wait_until="domcontentloaded")
+    pg.wait_for_timeout(1500)
+    pg.get_by_label("操作する人").first.select_option(index=1)  # 調べ直すには、操作する人が要る
+    pg.wait_for_timeout(600)
+    pg.get_by_role("button", name="いま調べ直す").click()
+    pg.wait_for_timeout(3000)
+    card = pg.get_by_text("書いていない所が 1件").first
+    card.wait_for()
+    center(card)
+    pg.wait_for_timeout(3500)
+
+
+def e6(pg):
+    # 分析: 右肩上がり・取引先ごと
+    pg.goto(f"{BASE}/analytics", wait_until="domcontentloaded")
+    pg.wait_for_timeout(4500)
+    slow_scroll(pg, 520, steps=16)
+    pg.wait_for_timeout(2500)
+    slow_scroll(pg, 650, steps=16)
+    pg.wait_for_timeout(3000)
+
+
 SCENES = [
     ("D1_fax到着", d1, {}),
     ("D2_fax読取", d2, {}),
@@ -226,13 +284,17 @@ SCENES = [
     ("D8_分析", d8, {}),
     ("D9_ホーム", d9, {}),
     ("D10_受注一覧", d10, {}),
+    ("E3_発注書_袋の数", e3, {}),
+    ("E4_配送_住所からコース", e4, {}),
+    ("E5_記録の漏れ_1件", e5, {}),
+    ("E6_分析_右肩上がり", e6, {}),
 ]
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel="chrome")
     warm = b.new_page()
     warm.set_default_timeout(240000)
-    for path in (["/orders"] if ONLY == {"D10"} else ["/", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]):
+    for path in (["/orders"] if ONLY == {"D10"} else [f"/purchase?date={PO_DAY}", "/admin/routes?yobi=1", "/hygiene/missing", "/alerts", "/analytics"] if ONLY and all(x.startswith("E") for x in ONLY) else ["/", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]):
         try:
             warm.goto(BASE + path, wait_until="domcontentloaded")
             warm.wait_for_timeout(1500)
