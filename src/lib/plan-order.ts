@@ -91,7 +91,7 @@ export async function proposePlanOrder(date: string, r: Pick<PipelineResult, "sc
     try {
       const res = await aiClient("作る順番の案").beta.messages.parse({
         model: ORDER_MODEL,
-        max_tokens: 2000,
+        max_tokens: 4000,
         output_config: { format: betaZodOutputFormat(Schema) },
         system:
           "パン・ピザ工場の製造の段取りを考える係です。生地ごとの工程表の時刻・締め（便の出発）・ミキサーと回数から、仕込む順番の案を作ります。" +
