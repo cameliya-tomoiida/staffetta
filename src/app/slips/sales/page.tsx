@@ -36,6 +36,7 @@ export default async function SalesPage(props: PageProps<"/slips/sales">) {
       <header className="space-y-2">
         <p><Link href={`/slips?tab=invoice&month=${month}`} className="text-lg">← 伝票にもどる</Link></p>
         <h1 className="text-3xl font-bold">売上管理表（{Number(month.slice(0, 4))}年{Number(month.slice(5))}月）</h1>
+        <p className="text-lg text-ink-soft">弥生販売に取り込む CSV は、確定した注文を売上伝票の形（伝票日付・伝票番号・得意先コード・商品コード・数量・単価・金額・税率）で出します（Shift_JIS）。列の形は、弥生の「汎用データ受入」の画面で確かめて合わせます。</p>
         <p className="text-lg text-ink-soft">確定した注文の売上（税抜）です。単価は取引先の卸価格（無ければ商品の売価）。粗利は原価がわかる行だけ（取引先の原価・仕入値・材料費）。</p>
       </header>
       <nav aria-label="月" className="flex flex-wrap gap-2">
@@ -55,6 +56,7 @@ export default async function SalesPage(props: PageProps<"/slips/sales">) {
       </section>
       <div className="flex flex-wrap gap-2">
         <a href={`/api/slips/sales?month=${month}&by=${by}`} className="btn-primary text-lg" download>CSV で書き出す</a>
+        <a href={`/api/slips/yayoi?from=${month}-01&to=${month}-${String(new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).getUTCDate()).padStart(2, "0")}`} className="btn-ghost text-lg" download>弥生販売に取り込む CSV（この月の売上伝票）</a>
         <Link href="/analytics" className="btn-ghost text-lg">司令室（グラフ）を見る</Link>
       </div>
       <section className="card overflow-x-auto p-0">

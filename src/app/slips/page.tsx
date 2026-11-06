@@ -77,6 +77,7 @@ async function Delivery({ date, today }: { date: string; today: string }) {
             <Link href={href({ mode: "split" })} className="btn-ghost text-lg">ぜんぶ 1枚に2つ</Link>
             <Link href={href({ mode: "two" })} className="btn-ghost text-lg">ぜんぶ 2枚ずつ</Link>
             <Link href={href({ mode: "delivery" })} className="btn-ghost text-lg">納品書だけ</Link>
+            <a href={`/api/slips/yayoi?from=${date}&to=${date}`} download className="btn-ghost text-lg">弥生販売に取り込む CSV（この日）</a>
           </div>
         )}
         {slips.length === 0 && <p className="text-lg text-ink-soft">この日の確定した注文はまだありません。要確認の注文は、確定すると伝票になります。</p>}

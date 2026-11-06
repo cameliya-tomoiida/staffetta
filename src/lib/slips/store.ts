@@ -86,3 +86,12 @@ export async function salesOf(month: string, by: SalesBy): Promise<SalesRow[]> {
   const orders = await ordersSince(`${y - 1}-${String(mm).padStart(2, "0")}-01`);
   return salesTable(orders, month, by, m.customers, bookOf(m));
 }
+
+/** 期間の納品書（弥生販売への取り込み用。納品日・コースの順） */
+export async function slipsBetween(from: string, to: string): Promise<DeliverySlip[]> {
+  const [orders, m] = await Promise.all([ordersSince(from), loadMasters()]);
+  const dates = [...new Set(orders.filter((o) => o.deliveryDate >= from && o.deliveryDate <= to).map((o) => o.deliveryDate))].sort();
+  const book = bookOf(m);
+  const order = courseOrder(m);
+  return dates.flatMap((d) => deliverySlips(orders, d, m.customers, book).sort(order));
+}

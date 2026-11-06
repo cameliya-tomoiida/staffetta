@@ -26,6 +26,8 @@ import { DailySheet, EquipmentChart, PlanSheet, StaffSheet, type MakeRow } from 
 import { LangPicker } from "./LangPicker";
 import { cookies } from "next/headers";
 import { loadMasters } from "@/lib/masters/seed-db";
+import { planCoverage } from "@/lib/plan-coverage";
+import { kvGet } from "@/lib/db/sqlite";
 import { doughCards, type DoughCard } from "@/components/recipe/cards";
 import { DoughDetailButton } from "@/components/recipe/DoughCards";
 
@@ -67,6 +69,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   // 計算はすべて③（src/lib）。画面は表示するだけ
   const masters = await loadMasters(); // マスタ画面で直した値で計算（③の loadMasters）
   const r = runPipeline(orders, date, { masters });
+  // (E) 確定した注文が、この計画・発注に全部入ったか（入れ忘れ・計画を作ったあとの確定）
+  const cov = planCoverage(orders, date, r, kvGet<{ at: string }>(`plan_prepared_${date}`));
   const prov = withMasters(masters, () => provisionalForDate(orders, date));
   const cost = withMasters(masters, () => dayCostSummary(r));
   const units = new Map(withMasters(masters, () => allProducts()).map((p) => [p.id, p.unit]));
@@ -187,6 +191,12 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         <div>
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">製造計画・工程表</h1>
           <p className="mt-1 text-ink-soft">納品日を選び、下のタブでことばを選んで印刷し、現場に渡します。</p>
+          <p className={`no-print mt-2 inline-flex flex-wrap items-center gap-x-2 rounded-lg px-3 py-1.5 text-[17px] font-bold ${cov.missing.length || cov.afterPrepared.length ? "bg-alert-bg text-alert-ink" : "bg-ok-bg text-ok-ink"}`}>
+            確定した注文 {cov.confirmed}件 → 製造計画・発注に入った {cov.included}件
+            {cov.missing.length > 0 && <span>（入っていない明細 {cov.missing.length}行。<Link href={`/orders?date=${date}`} className="underline">注文を確かめる</Link>）</span>}
+            {cov.afterPrepared.length > 0 && <span>・計画を作ったあとに確定 {cov.afterPrepared.length}件（印刷し直してください）</span>}
+            {!cov.missing.length && !cov.afterPrepared.length && cov.confirmed > 0 && <span>✓</span>}
+          </p>
         </div>
         <DateNav date={date} today={today} pattern={href({ date: "__DATE__" })} marks={dates} />
         <div className="no-print flex flex-wrap items-center gap-2 max-md:hidden">

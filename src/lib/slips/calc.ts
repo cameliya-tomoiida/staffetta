@@ -21,6 +21,8 @@ export interface SlipLine {
   priceFrom: "卸価格" | "売価";
   /** 原価（税抜・円。わかるときだけ） */
   cost?: number;
+  /** 商品コード（取引先の商品のコード＝弥生販売の商品コード。無ければ商品ID） */
+  code?: string;
 }
 
 export interface TaxTotals {
@@ -49,7 +51,7 @@ export interface DeliverySlip {
 
 export interface PriceBook {
   products: Pick<ProductMaster, "id" | "name" | "unit" | "price" | "unitCost" | "kind" | "taxRate">[];
-  customerProducts: Pick<CustomerProductMaster, "customerId" | "productId" | "name" | "unit" | "price" | "cost" | "active">[];
+  customerProducts: (Pick<CustomerProductMaster, "customerId" | "productId" | "name" | "unit" | "price" | "cost" | "active"> & { code?: string })[];
   /** 商品の原価（円/個。自社製造は材料費など）。わからなければ undefined */
   costOf?: (productId: string) => number | undefined;
 }
@@ -69,16 +71,16 @@ export function priceLine(line: Pick<Order["lines"][number], "productId" | "quan
   if (cp && (!cp.unit || cp.unit === line.unit)) {
     const amount = yen(cp.price! * line.quantity);
     const cost = cp.cost != null ? yen(cp.cost * line.quantity) : pieceCost != null ? yen(pieceCost * line.pieces) : undefined;
-    return { productId: line.productId, name, quantity: line.quantity, unit: line.unit, unitPrice: cp.price!, amount, taxRate, priceFrom: "卸価格", ...(cost != null ? { cost } : {}) };
+    return { productId: line.productId, name, quantity: line.quantity, unit: line.unit, unitPrice: cp.price!, amount, taxRate, priceFrom: "卸価格", code: cp.code || line.productId, ...(cost != null ? { cost } : {}) };
   }
   if (cp && cp.unit === "個") {
     const amount = yen(cp.price! * line.pieces);
     const cost = cp.cost != null ? yen(cp.cost * line.pieces) : pieceCost != null ? yen(pieceCost * line.pieces) : undefined;
-    return { productId: line.productId, name, quantity: line.pieces, unit: "個", unitPrice: cp.price!, amount, taxRate, priceFrom: "卸価格", ...(cost != null ? { cost } : {}) };
+    return { productId: line.productId, name, quantity: line.pieces, unit: "個", unitPrice: cp.price!, amount, taxRate, priceFrom: "卸価格", code: cp.code || line.productId, ...(cost != null ? { cost } : {}) };
   }
   const unitPrice = Math.round((p?.price ?? 0) * per * 100) / 100;
   const cost = pieceCost != null ? yen(pieceCost * line.pieces) : undefined;
-  return { productId: line.productId, name: p?.name ?? line.productId, quantity: line.quantity, unit: line.unit, unitPrice, amount: yen((p?.price ?? 0) * line.pieces), taxRate, priceFrom: "売価", ...(cost != null ? { cost } : {}) };
+  return { productId: line.productId, name: p?.name ?? line.productId, quantity: line.quantity, unit: line.unit, unitPrice, amount: yen((p?.price ?? 0) * line.pieces), taxRate, priceFrom: "売価", code: book.customerProducts.find((x) => x.customerId === customerId && x.productId === line.productId)?.code || line.productId, ...(cost != null ? { cost } : {}) };
 }
 
 /** 税率ごとに合計してから、消費税を1回だけ切り捨て（インボイスの決まり） */
@@ -238,4 +240,18 @@ export function salesTable(orders: Order[], month: string, by: SalesBy, customer
 export function toCsv(head: string[], rows: (string | number | undefined)[][]): string {
   const q = (v: string | number | undefined) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   return "﻿" + [head, ...rows].map((r) => r.map(q).join(",")).join("\r\n") + "\r\n";
+}
+
+// ───────── 弥生販売への取り込み（(D) 事務の人「弥生に毎回、商品ごとの数を入れ直している」）─────────
+
+/** 弥生販売の売上伝票の取り込み用の列（見本の形。項目と順は、弥生の「汎用データ受入」の画面で確かめて合わせる） */
+export const YAYOI_HEAD = ["伝票日付", "伝票番号", "得意先コード", "得意先名", "行", "商品コード", "商品名", "数量", "単位", "単価", "金額", "税率", "備考"];
+
+/** 納品書（確定した売上）→ 弥生の売上伝票の行（1明細＝1行。同じ伝票番号の行が1枚の伝票） */
+export function yayoiRows(slips: DeliverySlip[], customerCode: (customerId: string) => string = (id) => id): (string | number)[][] {
+  return slips.flatMap((s) =>
+    s.lines.map((l, i) => [
+      s.date.replace(/-/g, "/"), s.no, customerCode(s.customerId), s.customerName, i + 1, l.code ?? l.productId, l.name, l.quantity, l.unit, l.unitPrice, l.amount, `${l.taxRate}%${l.taxRate === 8 ? "（軽減）" : ""}`, l.priceFrom === "売価" ? "単価は商品の売価" : "",
+    ]),
+  );
 }

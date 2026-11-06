@@ -121,6 +121,8 @@ export const FEATURES = [
     label: "仕組みの見張り", description: "FAX がいつもの時間に届かない・バックアップが7日ない・ディスクの空きが少ない、をお知らせします。" },
   { key: "ai_watch", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
     label: "いつもと違う注文の見張り（AI）", description: "取引先のいつもの数より大きく多い・少ない・桁がちがうかもしれない注文を、AI が理由つきでお知らせします（AI の使った量は「設定 → AI」）。OFF だと出しません。" },
+  { key: "plan_check", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
+    label: "製造計画への入れ忘れの確かめ", description: "今日・明日の確定した注文が、製造計画・発注に全部入っているかを見ます。入っていない明細（商品が決まっていない・レシピや仕入先が無い）や、計画を作ったあとに確定した注文があれば知らせます。" },
   { key: "invoice_notice", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
     label: "締め日の請求書のお知らせ", description: "取引先の締め日の 17 時から 7 日間、「◯日締めの請求書 ◯件できました」をお知らせに出します（伝票の画面で確かめて印刷・送付。自動では送りません）。" },
   { key: "record_alarms", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",

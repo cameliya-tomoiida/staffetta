@@ -106,3 +106,17 @@ describe("売上管理表", () => {
     expect(toCsv(["名前", "売上"], [["ひまわり, 保育園", 510]])).toBe('﻿"名前","売上"\r\n"ひまわり, 保育園","510"\r\n');
   });
 });
+
+describe("弥生販売に取り込む CSV", () => {
+  it("1明細＝1行。商品コードは取引先の商品のコード（無ければ商品ID）。同じ伝票番号が1枚", async () => {
+    const { yayoiRows, YAYOI_HEAD } = await import("../calc");
+    const b2: PriceBook = { ...book, customerProducts: book.customerProducts.map((c) => (c.productId === "P01" ? { ...c, code: "10001" } : c)) };
+    const slips = deliverySlips([o("A", "C01", "2026-11-09", [line("P01", 50), line("P02", 2, "斤")])], "2026-11-09", customers, b2);
+    const rows = yayoiRows(slips);
+    expect(YAYOI_HEAD.slice(0, 3)).toEqual(["伝票日付", "伝票番号", "得意先コード"]);
+    expect(rows).toEqual([
+      ["2026/11/09", "D261109-C01", "C01", "ひまわり保育園", 1, "10001", "ロールパン（バター）", 50, "個", 33, 1650, "8%（軽減）", ""],
+      ["2026/11/09", "D261109-C01", "C01", "ひまわり保育園", 2, "P02", "食パン6枚", 2, "斤", 180, 360, "8%（軽減）", ""],
+    ]);
+  });
+});
