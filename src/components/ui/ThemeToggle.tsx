@@ -30,7 +30,7 @@ export function ThemeToggle({ className = "", compact = false }: { className?: s
   if (compact)
     return (
       <button type="button" onClick={() => apply(next)} aria-label="背景の色を切り替える" title={next === "light" ? "明るい色（白）にする" : "暗い色にする"}
-        className={`no-print grid h-11 w-11 shrink-0 place-items-center rounded-full border border-rule-strong text-ink active:scale-95 ${className}`}>
+        className={`no-print grid shrink-0 place-items-center rounded-full border border-rule-strong text-ink active:scale-95 ${className || "h-11 w-11"}`}>
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           {theme === "light" ? (
             <path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.66-5.66 1.41-1.41M4.93 19.07l1.41-1.41m0-11.32L4.93 4.93m14.14 14.14-1.41-1.41M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" />

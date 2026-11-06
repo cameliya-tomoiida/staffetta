@@ -56,8 +56,8 @@ export function AiChat() {
       {!open && (
         // 上の行（日付の横）に置く。画面の右下に浮かせると、保存などのボタンに重なるため
         <button type="button" onClick={() => setOpen(true)}
-          className="flex min-h-11 items-center gap-1.5 rounded-full bg-[#8b1a1a] px-4 text-[17px] font-bold whitespace-nowrap text-white hover:bg-[#701414] max-md:min-h-11 max-md:px-3 max-md:text-[16px]">
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          className="flex min-h-11 items-center gap-1.5 rounded-full bg-[#8b1a1a] px-4 text-[17px] font-bold whitespace-nowrap text-white hover:bg-[#701414] max-md:min-h-9 max-md:gap-1 max-md:px-2.5 max-md:text-[14px]">
+          <svg viewBox="0 0 24 24" className="h-6 w-6 max-md:h-5 max-md:w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M4 5h16v11H9l-5 4Z" />
             <path d="M9 9.5h6M9 12.5h4" />
           </svg>

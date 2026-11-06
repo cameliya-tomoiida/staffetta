@@ -3,6 +3,7 @@ import { CountUp } from "@/components/ui/CountUp";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";
+import { TodayBar } from "@/components/ui/TodayBar";
 import type { Role } from "@/lib/auth/roles";
 import { accountsExist } from "@/lib/staff";
 import { homeData, type HomeData } from "@/lib/home";
@@ -34,8 +35,23 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
   const gaps = role === "工場" || role === "管理者" ? await currentGaps().catch(() => [] as Gap[]) : [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-3">
+    <div className="space-y-6 max-md:space-y-4">
+      {/* ⑧ スマホ: 上の帯に「ホーム」が出ているので、大きな見出しは出さない。役割の小さな切りかえ → 1行 → 今日やること */}
+      <div className="space-y-3 md:hidden">
+        {!loginOn && (
+          <nav aria-label="見る人" className="grid grid-cols-3 gap-1 rounded-full border border-rule bg-paper p-1">
+            {(["管理者", "事務", "工場"] as Role[]).map((r) => (
+              <Link key={r} href={`/home?as=${encodeURIComponent(r)}`} aria-current={r === role ? "page" : undefined}
+                className={`flex min-h-9 items-center justify-center rounded-full text-[14px] font-bold transition-colors duration-150 ${r === role ? "bg-sheet text-ink shadow-[0_1px_3px_rgb(0_0_0/0.15)]" : "text-ink-soft"}`}>
+                {r}
+              </Link>
+            ))}
+          </nav>
+        )}
+        <p className="px-1 text-[13px] text-ink-soft">{user ? `${user.name} さん・` : ""}{md(d.date)} 納品の準備</p>
+        <TodayBar role={role} variant="cards" />
+      </div>
+      <div className="flex flex-wrap items-end gap-3 max-md:hidden">
         <div>
           <h1 className="text-[30px] font-black leading-tight">{user ? `${user.name} さんのホーム` : "ホーム"}</h1>
           <p className="text-[18px] text-ink-soft">{role}の画面です。{md(d.date)} 納品の準備をしています。</p>

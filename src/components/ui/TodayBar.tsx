@@ -71,6 +71,7 @@ const HINT: Record<IconName, string> = {
 };
 function WorkCard({ href, label, count, unit = "件", urgent = false, review = false, icon }: Parameters<typeof WorkItem>[0]) {
   const on = count != null && count > 0;
+  const loading = count == null;
   const tone = !on ? "text-ink-soft" : urgent ? "text-alert-ink" : review ? "text-review-ink" : "text-ink";
   const dot = !on ? "bg-rule" : urgent ? "bg-alert-ink" : review ? "bg-review-line" : "bg-ink-soft";
   return (
@@ -84,11 +85,18 @@ function WorkCard({ href, label, count, unit = "件", urgent = false, review = f
           <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
           {label}
         </span>
-        <span className="block truncate text-[13px] text-ink-soft">{on ? HINT[icon] : "いまは ありません"}</span>
+        <span className="block truncate text-[13px] text-ink-soft">{loading ? "読み込み中…" : on ? HINT[icon] : "いまは ありません"}</span>
       </span>
       <span className={`shrink-0 text-right leading-none ${tone}`}>
-        <b className="text-[30px] font-extrabold tabular-nums">{count == null ? "—" : count > 999 ? "999+" : count}</b>
-        <span className="ml-0.5 text-[13px]">{unit}</span>
+        {loading ? (
+          // 読み込み中は骨組み（数の所に、うすく光る四角）
+          <span aria-hidden className="m-skel inline-block h-7 w-10 rounded-md bg-rule align-middle" />
+        ) : (
+          <>
+            <b className="text-[30px] font-extrabold tabular-nums">{count > 999 ? "999+" : count}</b>
+            <span className="ml-0.5 text-[13px]">{unit}</span>
+          </>
+        )}
       </span>
       <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-ink-faint" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
     </Link>

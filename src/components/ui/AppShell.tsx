@@ -264,11 +264,6 @@ export function AppShell({ factory, user = null, children }: { factory: string; 
       <div className="flex min-w-0 flex-1 flex-col max-md:overflow-x-clip">
         {/* スマホ（768px 未満）: 上の細い帯・下のタブ・メニューのシート（⑧ docs/mobile-rules.md） */}
         <MobileTopBar path={path} title={titleOf(path, MENU)} ai={<AiChat />} user={user} tabs={tabsFor(user?.role)} onMenu={() => setSheet(true)} />
-        {path === "/home" && (
-          <div className="no-print px-4 pt-4 md:hidden">
-            <TodayBar role={user?.role} variant="cards" />
-          </div>
-        )}
         <header className="fx-line no-print z-20 hidden border-b border-rule-strong bg-sheet px-4 pt-2 sm:px-5 md:block">
           <div className="flex items-center gap-3 pb-2">
             <button

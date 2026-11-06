@@ -94,9 +94,9 @@ export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: st
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
   return (
-    // ⑧ 上の帯（担当者のアプリの形）: 左＝戻る（入口の画面では印）とメニュー・まん中＝画面の名前・右＝背景の色の切りかえと AI
-    <div className="fx-line no-print sticky top-0 z-40 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-rule bg-sheet/85 px-1.5 backdrop-blur-xl md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <div className="flex min-w-0 items-center gap-0.5">
+    // ⑧ 上の帯（担当者のアプリの形）: 左＝戻る（入口の画面では印）・まん中＝画面の名前・右＝AI・≡ メニュー・背景の色の切りかえ（小さな丸）
+    <div className="fx-line no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule bg-sheet/85 px-1.5 backdrop-blur-xl md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <div className="flex shrink-0 items-center gap-0.5">
         {root ? (
           // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
           <img src="/brand/staffetta-mark.svg" alt="" width={30} height={30} className="mx-1.5 h-[30px] w-[30px] shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
@@ -105,6 +105,11 @@ export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: st
             <MIcon name="back" className="h-7 w-7" />
           </button>
         )}
+      </div>
+      {/* 画面の名前は、左右のボタンの残りの幅のまん中（かぶらない） */}
+      <h1 className="min-w-0 flex-1 truncate text-center text-[17px] font-black">{title || "STAFFETTA"}</h1>
+      <div className="flex shrink-0 items-center justify-end gap-1">
+        <div className="shrink-0">{ai}</div>
         {onMenu && (
           <button type="button" onClick={onMenu} aria-label={user ? `メニュー（${user.name}）` : "メニュー"}
             className="flex h-11 min-w-11 shrink-0 flex-col items-center justify-center rounded-xl px-1 text-ink active:scale-95 active:bg-paper">
@@ -112,11 +117,7 @@ export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: st
             <span className="text-[10px] leading-none font-bold">メニュー</span>
           </button>
         )}
-      </div>
-      <h1 className="max-w-[44vw] truncate text-center text-[17px] font-black">{title || "STAFFETTA"}</h1>
-      <div className="flex min-w-0 items-center justify-end gap-1">
-        <ThemeToggle compact />
-        <div className="shrink-0">{ai}</div>
+        <ThemeToggle compact className="h-9 w-9" />
       </div>
     </div>
   );

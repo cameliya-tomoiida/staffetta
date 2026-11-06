@@ -581,3 +581,8 @@ a, button, input, select, textarea, label, summary, [role="button"] {
 html[data-theme="light"] img[src="/brand/staffetta-logo-dark.svg"] {
   content: url("/brand/staffetta-logo.svg");
 }
+
+/* ⑧ 読み込み中の骨組み（スマホ）: うすく光って、待っていることが分かる */
+.m-skel { animation: m-skel 1.2s ease-in-out infinite; }
+@keyframes m-skel { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .m-skel { animation: none; } }
