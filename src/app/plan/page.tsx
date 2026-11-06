@@ -29,6 +29,8 @@ import { cookies } from "next/headers";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { planCoverage, planIncrease } from "@/lib/plan-coverage";
 import { breadSummary } from "@/lib/bread-cuts";
+import { getPlanOrder } from "@/lib/plan-order";
+import { OrderProposal } from "./OrderProposal";
 import { kvGet } from "@/lib/db/sqlite";
 import { doughCards, type DoughCard } from "@/components/recipe/cards";
 import { DoughDetailButton } from "@/components/recipe/DoughCards";
@@ -259,6 +261,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           <div className="mt-1 text-[15px]">計量の紙・工程表は、印刷し直してください。</div>
         </section>
       )}
+      <OrderProposal key={date} date={date} initial={getPlanOrder(date) ?? null} />
       {bread.length > 0 && (
         <section className="no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3" lang="ja">
           <div className="mb-1 font-black">食パンのまとめ</div>
