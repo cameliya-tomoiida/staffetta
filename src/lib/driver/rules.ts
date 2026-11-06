@@ -2,7 +2,7 @@
 // 時間指定・必ず検品・サイン・置き場所を、配達の画面（/driver・スマホ）で着く前に大きく出す。代わりの人でも回れるように。
 import type { CustomerMaster } from "@/data/types";
 
-export type RuleKind = "time" | "inspect" | "sign" | "place" | "caution";
+export type RuleKind = "dest" | "time" | "inspect" | "sign" | "place" | "caution";
 
 export interface DeliveryRule {
   kind: RuleKind;
@@ -12,7 +12,7 @@ export interface DeliveryRule {
   detail?: string;
 }
 
-type RuleSource = Pick<CustomerMaster, "deliveryWindowFrom" | "deliveryWindowTo" | "inspectRequired" | "signRequired" | "signBy" | "deliveryHowTo" | "deliveryCaution">;
+type RuleSource = Pick<CustomerMaster, "deliverTo" | "deliveryWindowFrom" | "deliveryWindowTo" | "inspectRequired" | "signRequired" | "signBy" | "deliveryHowTo" | "deliveryCaution">;
 
 const hm = (t?: string) => (t && /^\d{2}:\d{2}$/.test(t) ? t.replace(/^0/, "") : undefined);
 
@@ -20,6 +20,7 @@ const hm = (t?: string) => (t && /^\d{2}:\d{2}$/.test(t) ? t.replace(/^0/, "") :
 export function deliveryRules(c: RuleSource | undefined): DeliveryRule[] {
   if (!c) return [];
   const out: DeliveryRule[] = [];
+  if (c.deliverTo) out.push({ kind: "dest", text: "届け先", detail: c.deliverTo });
   const from = hm(c.deliveryWindowFrom);
   const to = hm(c.deliveryWindowTo);
   if (from && to) out.push({ kind: "time", text: `${from}〜${to} に` });

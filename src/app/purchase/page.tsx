@@ -10,7 +10,6 @@ import { runPipeline } from "@/lib/pipeline";
 import { deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
 import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
-import { customerById } from "@/data/master";
 import { listPurchaseOrders } from "@/lib/purchase-store";
 import { nowMs } from "@/lib/clock";
 import { PurchaseClient, type PoView } from "./PurchaseClient";
@@ -34,6 +33,8 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
   // 発注書の下書きは③（src/lib）が作る。画面は表示と、人の承認・送信の操作だけ
   const masters = await loadMasters(); // マスタ画面で直した値で計算（③の loadMasters）
   const r = runPipeline(orders, date, { masters });
+  // 取引先の名前はマスタ（DB）から（見本の固定の一覧ではなく。3100 の本当の取引先も名前で出す）
+  const customerName = new Map((masters.customers ?? []).map((c) => [c.id, c.name]));
   const shortage = new Map(r.shortages.map((s) => [s.materialId, s]));
   // 承認・送信済みの記録は③の purchase-store から（承認済みのものは中身も保存した方を見せる）
   const stored = new Map((await listPurchaseOrders()).map((p) => [p.id, p]));
@@ -58,7 +59,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
       lines: po.lines.map((l) => {
         let detail: string | undefined;
         if (l.itemType === "product" && l.customers?.length) {
-          const per = l.customers.map((c) => `${customerById(c.customerId)?.name ?? c.customerId} ${c.pieces}個→${c.packs}${l.unitLabel === "個" ? "個" : "袋"}`).join("／");
+          const per = l.customers.map((c) => `${customerName.get(c.customerId) ?? c.customerId} ${c.pieces}個→${c.packs}${l.unitLabel === "個" ? "個" : "袋"}`).join("／");
           detail = `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}${l.notes?.length ? `　${l.notes.join("・")}` : ""}`;
         } else if (l.notes?.length) {
           detail = l.notes.join("・");

@@ -531,6 +531,10 @@ export interface CustomerMaster {
   deliveryHowTo?: string;
   /** 注意事項（駐車・時間・気をつけること） */
   deliveryCaution?: string;
+  /** 電話番号（⑧・住所の調べ直しで足した） */
+  phone?: string;
+  /** 届け先の名前（請求先とちがうとき。例: 〇〇店）。配達の画面・仕分け札に出す */
+  deliverTo?: string;
   /** 納品の決まり（⑧）: 必ず検品してもらう */
   inspectRequired?: boolean;
   /** 納品の決まり（⑧）: 受け取りのサインをもらう */

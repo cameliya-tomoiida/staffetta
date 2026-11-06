@@ -345,6 +345,8 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "deliveryWindowTo", label: "納品時間の希望（まで）", type: "time", example: "09:00" },
     { key: "deliveryHowTo", label: "納品の仕方", type: "text", example: "裏口の棚に置く。番重は前回分を回収", help: "新しい人に教えるときに地図に出す" },
     { key: "deliveryCaution", label: "注意事項", type: "text", example: "8時までは正面に車を止めない" },
+    { key: "phone", label: "電話", type: "text", example: "052-000-0000" },
+    { key: "deliverTo", label: "届け先の名前", type: "text", example: "〇〇店", help: "請求先とちがうとき。配達の画面に出す" },
     { key: "inspectRequired", label: "必ず検品", type: "boolean", example: "いいえ", help: "はい なら、配達の画面で「必ず検品」を大きく出す" },
     { key: "signRequired", label: "サインをもらう", type: "boolean", example: "いいえ", help: "はい なら、配達の画面で「サインをもらう」を大きく出す" },
     { key: "signBy", label: "サインをもらう人・所", type: "text", example: "受付", help: "例: 必ず受付でもらう" },
