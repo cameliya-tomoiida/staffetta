@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { currentUser } from "@/lib/auth/current-user";
 import { getPrintSettings } from "@/lib/printing/auto";
 import { canPrint } from "@/lib/printing/jobs";
-import { printUrl } from "@/lib/printing/pass";
+import { printUrl, sameServer } from "@/lib/printing/pass";
 import { accountsExist } from "@/lib/staff";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   if (!canPrint(user?.role, path)) return new Response("この画面は、この役割では印刷できません", { status: 403 });
   try {
     const { renderPdf } = await import("@/lib/printing/printer");
-    const file = await renderPdf(printUrl(getPrintSettings().baseUrl, path, user ? { id: user.id, name: user.name, role: user.role } : undefined), `open-${Date.now()}`);
+    const file = await renderPdf(printUrl(sameServer(req.headers.get("host"), getPrintSettings().baseUrl), path, user ? { id: user.id, name: user.name, role: user.role } : undefined), `open-${Date.now()}`);
     const body = await readFile(file);
     return new Response(body, { headers: { "content-type": "application/pdf", "content-disposition": "inline; filename=staffetta.pdf", "cache-control": "no-store" } });
   } catch (e) {

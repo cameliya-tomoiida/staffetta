@@ -108,6 +108,8 @@ export interface CardItemInput {
   loss?: number;
   stock?: number;
   metal?: Check;
+  /** 2回目からの金属検査（流すたびに。ミキサーの回数ぶん。⑧） */
+  metalRuns?: Check[];
   sensory?: Check;
   /** 工程ごとのロス数（キー＝工程。第3版）。前の版の loss は包装のロスとして読む */
   losses?: Record<string, number>;
@@ -400,6 +402,9 @@ export function checkCard(base: CardBase, input: CardInput): Problem[] {
       p.push({ field: f("bakeTempC"), message: `${it.name}: 焼成温度が目安（${br.temp}℃ ±${br.tol}）から外れています` });
     }
     if (x.metal === "ng") p.push({ field: f("metal"), message: `${it.name}: 金属検査が × です（責任者に知らせる）` });
+    (x.metalRuns ?? []).forEach((c, i) => {
+      if (c === "ng") p.push({ field: f("metal"), message: `${it.name}: ${i + 2}回目の金属検査が × です（責任者に知らせる）` });
+    });
     if (x.sensory === "ng") p.push({ field: f("sensory"), message: `${it.name}: 官能検査が × です` });
     if (x.packed != null && x.packed < it.orders) p.push({ field: f("packed"), message: `${it.name}: 製品数が注文数（${it.orders}）より ${it.orders - x.packed} 少ない` });
   }

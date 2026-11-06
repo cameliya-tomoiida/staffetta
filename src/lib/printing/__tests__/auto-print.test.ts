@@ -151,3 +151,13 @@ describe("⑧ スマホ・タブレットから工場のプリンターで印刷
     expect(c).toMatchObject({ ok: false, message: "Chrome が見つかりません" });
   });
 });
+
+describe("⑧ 印刷の PDF を作る元の住所", () => {
+  it("社内の住所なら押した画面と同じサーバー、それ以外は設定の住所", async () => {
+    const { sameServer } = await import("../pass");
+    expect(sameServer("localhost:3107", "http://localhost:3100")).toBe("http://localhost:3107");
+    expect(sameServer("192.168.1.20:3100", "http://localhost:3100")).toBe("http://192.168.1.20:3100");
+    expect(sameServer("hub.example.com", "http://localhost:3100")).toBe("http://localhost:3100");
+    expect(sameServer(null, "http://localhost:3100")).toBe("http://localhost:3100");
+  });
+});

@@ -9,6 +9,11 @@ import { accountsExist, listStaff } from "@/lib/staff";
 export const PRINT_PASS_PARAM = "__pt";
 const PASS_HOURS = 10 / 60;
 
+/** 押した画面と同じサーバー（社内の住所のときだけ。トンネルの外の住所なら設定の住所） */
+export function sameServer(host: string | null | undefined, fallback: string): string {
+  return host && /^(localhost|127\.0\.0\.1|\[::1\]|\d{1,3}(\.\d{1,3}){3})(:\d+)?$/.test(host) ? `http://${host}` : fallback;
+}
+
 /** base + path に印を付けた URL。ログインを使っていなければ、印は付けない */
 export function printUrl(base: string, path: string, user?: { id: string; name: string; role: Role }, nowMs = Date.now()): string {
   const url = `${base.replace(/\/$/, "")}${path}`;

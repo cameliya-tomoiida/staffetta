@@ -49,6 +49,12 @@ export default async function HygienePage(props: PageProps<"/hygiene">) {
             </Link>
           );
         })}
+        <Link href="/hygiene/missing" className="btn-ghost text-xl">
+          記録の漏れ
+        </Link>
+        <Link href="/hygiene/alarms" className="btn-ghost text-xl">
+          記録の時刻・締め
+        </Link>
         <Link href="/hygiene/ai" className="btn-ghost ml-auto text-xl">
           AI と話してシートを作る
         </Link>

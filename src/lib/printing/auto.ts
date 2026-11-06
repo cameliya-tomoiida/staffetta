@@ -75,7 +75,7 @@ export async function runPrintJob(job: PrintJob, now: string, who: string, opts:
  * だれが・いつ・何を印刷したかを、自動印刷と同じ記録に残す。
  */
 export async function printNow(
-  x: { path: string; label: string; copies: number; printer?: string; who: string; user?: { id: string; name: string; role: Role } },
+  x: { path: string; label: string; copies: number; printer?: string; who: string; user?: { id: string; name: string; role: Role }; base?: string },
   now: string,
   deps?: PrintDeps,
 ): Promise<PrintLog> {
@@ -86,7 +86,7 @@ export async function printNow(
   const copies = Math.min(20, Math.max(1, Math.round(x.copies) || 1));
   let log: PrintLog;
   try {
-    const pdf = await d.renderPdf(printUrl(s.baseUrl, x.path, x.user), `now-${now.slice(0, 19).replace(/[:T-]/g, "")}`);
+    const pdf = await d.renderPdf(printUrl(x.base ?? s.baseUrl, x.path, x.user), `now-${now.slice(0, 19).replace(/[:T-]/g, "")}`);
     if (toPaper) await d.sendToPrinter(pdf, printer, copies);
     log = { at: now, jobId: "now", label: x.label, ok: true, printed: toPaper, pdf, message: toPaper ? `${printer} に ${copies}部 送りました` : "PDF を作りました（設定が「PDF だけ作る」なので、紙には出していません）", who: x.who };
   } catch (e) {

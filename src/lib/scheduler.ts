@@ -85,6 +85,8 @@ export const ALERT_SOURCES: AlertSource[] = [
   { name: "system", feature: "system_watch", run: gatherSystem },
   // AI の案 D: いつもと違う注文の見張り（理由は AI。同じ注文は2回聞かない）
   { name: "ai_watch", feature: "ai_watch", run: async (now) => (await import("./ai/watch")).watchAlerts(now) },
+  // ⑧ A 記録の漏れ・時間のアラーム（衛生のシート・製品カードの金属検査）。締めを期限に（過ぎたら段が上がって責任者へ・スタッフの LINE）
+  { name: "records", run: async (now) => (await import("./records/store")).recordAlerts(now) },
 ];
 
 const g = globalThis as unknown as { __hubScheduler?: { timer: ReturnType<typeof setInterval>; running: boolean; last?: TickResult }; __hubAlertSoon?: ReturnType<typeof setTimeout> };
