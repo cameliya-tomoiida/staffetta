@@ -147,7 +147,7 @@ describe("中身の検査（参照・重複・種類ごと）", () => {
   });
 
   it("ミキサーに上限が無ければ教える", () => {
-    const e = validateItems(equipmentDef, [{ ...m.equipment[0], maxBatchKg: undefined }], m);
+    const e = validateItems(equipmentDef, [{ ...m.equipment[0], maxBatchKg: undefined, maxFlourKg: undefined }], m);
     expect(e[0].message).toMatch(/1回の上限/);
   });
 });

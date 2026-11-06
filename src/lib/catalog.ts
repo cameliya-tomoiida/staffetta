@@ -164,6 +164,11 @@ export function buildCatalog(m: Masters): Built {
     return {
       id: d.id, name: d.name, line: d.line, lossRate: d.lossRate,
       mixerMaxKg: d.mixerMaxKg ?? mixer?.maxBatchKg ?? 50,
+      // P1: このラインのミキサーで、粉の上限が入っているもの（大・中・小）
+      mixers: m.equipment
+        .filter((e) => e.kind === "mixer" && e.active !== false && (e.line === d.line || e.line === "common") && (e.maxFlourKg ?? 0) > 0)
+        .map((e) => ({ id: e.id, name: e.name, ...(e.minFlourKg ? { minFlourKg: e.minFlourKg } : {}), maxFlourKg: e.maxFlourKg! })),
+      ...(d.maxFlourKg ? { maxFlourKg: d.maxFlourKg } : {}),
       items: m.recipeItems.filter((r) => r.doughId === d.id).map((r) => ({ materialId: r.materialId, percent: r.percent })),
       steps: steps.map((s): ProcessStep => {
         const eq = s.equipmentId ? m.equipment.find((e) => e.id === s.equipmentId) : undefined;

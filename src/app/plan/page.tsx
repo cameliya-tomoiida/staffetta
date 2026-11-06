@@ -1,4 +1,5 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
+import { mixerText } from "@/lib/mixer-plan";
 import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import Link from "next/link";
 import { DateNav } from "@/components/ui/DateNav";
@@ -549,6 +550,8 @@ function MakeTable({ bs, lang, t, name, unitOf, cards }: { bs: DoughBatchPlan[];
               <Stat label={t("flour")} value={fmtNum(b.flourKg, 1)} unit="kg" />
               <Stat label={t("mixer")} value={String(b.batches)} unit={t("times")} />
             </div>
+            {/* P1: どのミキサーで、粉何 kg を何回（ミキサーに粉の上限が入っているとき） */}
+            {b.mixer && <div className="w-full text-[15px] font-bold text-ink-soft">{mixerText(b.mixer)}</div>}
           </div>
           <table className="w-full">
             <tbody>

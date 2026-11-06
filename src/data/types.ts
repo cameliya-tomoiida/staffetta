@@ -235,6 +235,9 @@ export interface Equipment {
   lanes?: number;
   /** 1回に仕込める量 kg（ミキサー） */
   maxBatchKg?: number;
+  /** ミキサー: 1回に入れる粉の下限・上限 kg（大 50・中 18〜25・小 1〜7 など。入っていれば、生地ごとにどのミキサーで何回かを粉の量で出す） */
+  minFlourKg?: number;
+  maxFlourKg?: number;
   /** 扱える1個の重さ g（分割機の上限・下限） */
   minPieceGram?: number;
   maxPieceGram?: number;
@@ -297,6 +300,8 @@ export interface DoughMaster {
   line: ProductionLineId;
   /** ロス率（0.05 = 5%） */
   lossRate: number;
+  /** 1回の粉の上限 kg（硬い生地は少なめ。空ならミキサーの上限のまま） */
+  maxFlourKg?: number;
   /** ミキサー1回の上限 kg（空なら使うミキサーの maxBatchKg） */
   mixerMaxKg?: number;
   /** 目標の捏上温度（℃）と許す幅（±℃。空なら 2）。製品カードで外れたら赤（⑦） */

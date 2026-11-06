@@ -17,8 +17,9 @@ const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:
 // ───────── 設備（架空。台数・能力・時間帯は現場の資料（01_設計/現場条件_20261105.md）に寄せた） ─────────
 // 要確認: 資料ではパンの早出は 4:00〜。デモの納品時刻（7:30〜）に合わせて、パンの設備は前日の夜から使える設定にしている。
 export const SAMPLE_EQUIPMENT: Equipment[] = [
-  { id: "EQ-B-MIX1", name: "ミキサー（大）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 75, exclusiveGroup: "ミキサー", active: true, note: "粉45kg（生地 約75kg）まで。同じ時間に他のミキサーは回せない" },
-  { id: "EQ-B-MIX2", name: "ミキサー（小）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 30, exclusiveGroup: "ミキサー", active: true, note: "台数は要確認" },
+  { id: "EQ-B-MIX1", name: "ミキサー（大）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 75, maxFlourKg: 50, exclusiveGroup: "ミキサー", active: true, note: "粉45kg（生地 約75kg）まで。同じ時間に他のミキサーは回せない" },
+  { id: "EQ-B-MIX2", name: "ミキサー（中）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 30, minFlourKg: 8, maxFlourKg: 25, exclusiveGroup: "ミキサー", active: true, note: "粉 18〜25kg（生地の硬さで変わる。硬い生地は生地の「1回の粉の上限」で）" },
+  { id: "EQ-B-MIX3", name: "ミキサー（小）", kind: "mixer", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", maxBatchKg: 12, minFlourKg: 1, maxFlourKg: 7, exclusiveGroup: "ミキサー", active: true, note: "粉 1〜7kg（少しだけ作る生地）" },
   { id: "EQ-B-DIV", name: "分割丸め機（パン）", kind: "divider", line: "bread", count: 1, availableFrom: "21:00", availableTo: "12:00", piecesPerHour: 1800, lanes: 1, minPieceGram: 20, maxPieceGram: 150, active: true, note: "小さいロール用。食パン（460g）は手で分割" },
   { id: "EQ-B-OVN", name: "平釜", kind: "oven", line: "bread", count: 2, availableFrom: "21:00", availableTo: "12:00", piecesPerHour: 750, active: true, note: "常にいっぱいで、増設を検討中。1回の本数は要確認" },
   { id: "EQ-B-SLC", name: "スライサー", kind: "slicer", line: "bread", count: 1, availableFrom: "00:00", availableTo: "12:00", piecesPerHour: 200, active: true, note: "3斤66本で20分。6切・8切・24枚切" },

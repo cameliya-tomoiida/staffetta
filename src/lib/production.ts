@@ -1,6 +1,7 @@
 // 製造計画と工程表。
 // 自社で作る商品の個数 → 生地kg（ロス率込み）→ ミキサー回数・材料kg、ライン（パン・ピザ）ごとの上限チェック、
 // 工程の時間割（工程表）を出す。全部ふつうの計算で、同じ入力なら必ず同じ結果になる。
+import { planMixers, type MixerPlan } from "./mixer-plan";
 import type { Line, ProcessKey } from "@/data/production";
 import type { ShiftMaster } from "@/data/types";
 import type { DayTotals } from "./aggregate";
@@ -47,6 +48,8 @@ export interface DoughBatchPlan {
   batches: number;
   /** 1回あたりの生地 kg */
   batchKg: number;
+  /** どのミキサーで何回か（ミキサーに粉の上限が入っているとき。P1） */
+  mixer?: MixerPlan;
   ingredients: DoughIngredient[];
 }
 
@@ -251,7 +254,9 @@ export function doughBatch(doughId: string, items: DoughItem[], lossRateOverride
   const doughKg = netKg / (1 - lossRate);
   const totalPercent = d.items.reduce((s, i) => s + i.percent, 0);
   const flourKg = doughKg / (totalPercent / 100);
-  const batches = doughKg > 0 ? Math.ceil(doughKg / d.mixerMaxKg) : 0;
+  // P1: ミキサーに粉の上限が入っていれば、粉の量でミキサーと回数を決める。無ければ今までどおり生地 kg ÷ 1回の上限
+  const mixer = d.mixers?.length ? planMixers(flourKg, d.mixers, d.maxFlourKg) : undefined;
+  const batches = mixer ? mixer.batches : doughKg > 0 ? Math.ceil(doughKg / d.mixerMaxKg) : 0;
   return {
     key: doughId,
     doughId,
@@ -265,6 +270,7 @@ export function doughBatch(doughId: string, items: DoughItem[], lossRateOverride
     flourKg: round(flourKg),
     batches,
     batchKg: batches ? round(doughKg / batches) : 0,
+    ...(mixer ? { mixer } : {}),
     ingredients: d.items.map((i) => ({
       materialId: i.materialId,
       name: findMaterial(i.materialId)?.name ?? i.materialId,

@@ -198,6 +198,9 @@ export interface DoughRecipe {
   lossRate: number;
   /** ミキサー1回で仕込める生地の上限 kg */
   mixerMaxKg: number;
+  /** 粉の量で決めるミキサー（このラインの、粉の上限が入っているミキサー）と、この生地の1回の粉の上限（P1） */
+  mixers?: { id: string; name: string; minFlourKg?: number; maxFlourKg: number }[];
+  maxFlourKg?: number;
   steps: ProcessStep[];
 }
 

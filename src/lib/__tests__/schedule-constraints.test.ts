@@ -43,8 +43,11 @@ describe("設備の制約", () => {
     expect(s.end - s.start).toBe(5 + Math.ceil((1010 * 4) / 60)); // ロール 1,010個（段取り5分）
   });
 
-  it("ミキサーの上限（設備の kg）で回数が決まる", () => {
-    const m = patch((m) => (m.equipment.find((e) => e.id === "EQ-B-MIX1")!.maxBatchKg = 10));
+  it("ミキサーの上限（設備の kg）で回数が決まる（粉の上限が入っていないとき）", () => {
+    const m = patch((m) => {
+      for (const e of m.equipment) delete e.maxFlourKg;
+      m.equipment.find((e) => e.id === "EQ-B-MIX1")!.maxBatchKg = 10;
+    });
     const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
     expect(r.production.doughs.find((d) => d.doughId === "DG01")!.batches).toBe(Math.ceil(r.production.doughs.find((d) => d.doughId === "DG01")!.doughKg / 10));
   });
@@ -187,3 +190,23 @@ describe("分割機の重さの範囲の外は手分割", () => {
   });
 });
 
+
+describe("仕込みの回数（P1・粉の量でミキサーを決める）", () => {
+  it("見本: 大 粉50kg・中 25kg・小 7kg。生地ごとに、どのミキサーで粉何 kg を何回か。硬い生地は生地の上限で回数が増える", async () => {
+    const { sampleMasters } = await import("@/lib/masters/seed");
+    const m = sampleMasters();
+    const r = runPipeline(demoOrders, DEMO_DATE, { masters: m });
+    // パンのミキサー（大・中・小）に粉の上限が入っている。ピザのミキサーは入っていないので今までどおり
+    const bread = r.production.doughs.filter((d) => d.line === "bread");
+    expect(bread.length).toBeGreaterThan(0);
+    for (const d of bread) {
+      expect(d.mixer).toBeDefined();
+      expect(d.mixer!.batches).toBe(d.batches);
+      expect(d.mixer!.flourPerBatch * d.batches).toBeCloseTo(d.flourKg, 0);
+    }
+    const dg = bread[0];
+    const hard = { ...m, doughs: m.doughs.map((x) => (x.id === dg.doughId ? { ...x, maxFlourKg: Math.max(0.5, dg.flourKg / 3) } : x)) };
+    const r2 = runPipeline(demoOrders, DEMO_DATE, { masters: hard });
+    expect(r2.production.doughs.find((x) => x.doughId === dg.doughId)!.batches).toBeGreaterThanOrEqual(3);
+  });
+});
