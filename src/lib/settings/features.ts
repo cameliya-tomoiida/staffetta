@@ -121,6 +121,10 @@ export const FEATURES = [
     label: "仕組みの見張り", description: "FAX がいつもの時間に届かない・バックアップが7日ない・ディスクの空きが少ない、をお知らせします。" },
   { key: "ai_watch", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
     label: "いつもと違う注文の見張り（AI）", description: "取引先のいつもの数より大きく多い・少ない・桁がちがうかもしれない注文を、AI が理由つきでお知らせします（AI の使った量は「設定 → AI」）。OFF だと出しません。" },
+  { key: "record_alarms", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
+    label: "記録のアラーム（衛生・製品カード）", description: "衛生のシートの記録の時刻や、製品カードの記録が来ても書いていないとき、お知らせに「記録がまだです」を出します。締めを過ぎたら赤にして責任者にも知らせます。OFF だと出しません（漏れの一覧は見られます）。" },
+  { key: "record_alarms_line", group: "アラート", kind: "auto", default: false, owner: "①", dependsOn: "record_alarms",
+    label: "記録のアラームをスタッフの LINE にも送る", description: "記録のアラームも、スタッフの LINE のお知らせ（大事なもの・担当のもの）に送ります。OFF ならアプリの中だけに出します。" },
   { key: "ai_briefing", group: "アラート", kind: "feature", default: true, owner: "①",
     label: "朝の「今日の要点」（AI）", description: "管理者のホームに、今日の要点を3行で出します（朝に1回 AI が作る。キーが無ければ数字から作る）。" },
 ] as const satisfies readonly FeatureDef[];
