@@ -14,7 +14,7 @@ import time
 from playwright.sync_api import sync_playwright
 import imageio_ffmpeg
 
-BASE = "http://localhost:3107"
+BASE = os.environ.get("DEMO_BASE", "http://localhost:3107")
 OUT = sys.argv[1]
 DB = sys.argv[2]
 ONLY = None
@@ -203,6 +203,18 @@ def d9(pg):
     pg.wait_for_timeout(1500)
 
 
+def d10(pg):
+    # 「FAX も LINE も電話も、同じ一覧に」: 入口の印（FAX・LINE・電話・メール・サイト…）が並ぶ所
+    pg.goto(f"{BASE}/orders", wait_until="load")
+    pg.wait_for_timeout(1500)
+    first = pg.locator("ul.m-limit > li").first
+    first.wait_for()
+    center(first)
+    pg.wait_for_timeout(1200)
+    slow_scroll(pg, 650, steps=20, wait=90)
+    pg.wait_for_timeout(1500)
+
+
 SCENES = [
     ("D1_fax到着", d1, {}),
     ("D2_fax読取", d2, {}),
@@ -213,13 +225,14 @@ SCENES = [
     ("D7_製品カードと衛生", d7, {}),
     ("D8_分析", d8, {}),
     ("D9_ホーム", d9, {}),
+    ("D10_受注一覧", d10, {}),
 ]
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel="chrome")
     warm = b.new_page()
     warm.set_default_timeout(240000)
-    for path in ["/", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]:
+    for path in (["/orders"] if ONLY == {"D10"} else ["/", "/fax/F002", "/orders", f"/plan?date={DAY}", f"/plan?date={DAY}&lang=vi", f"/purchase?date={PO_DAY}", "/admin/routes", "/cards/templates", "/hygiene/temp-storage", "/hygiene/missing", "/analytics", "/home"]):
         try:
             warm.goto(BASE + path, wait_until="domcontentloaded")
             warm.wait_for_timeout(1500)
