@@ -4,7 +4,7 @@
 //   - 衛生のシートごとに 記録する時刻（例 9:00・15:00）・締め（何分過ぎたら漏れ）・提出期限（翌月の何日までに責任者の確認）を決める
 //   - 時刻が来たら「記録の時間です」（due）、締めを過ぎたら「漏れ」（late）。過ぎた日の書いていない所も漏れ
 //   - 製品カードの金属検査は、ミキサーの回数（＝流す回数）ぶん ○× が要る
-import { isPlanned, runDays, type SheetDef, type SheetRecord } from "../hygiene/sheets";
+import { isPlanned, runDays, slotVal, type SheetDef, type SheetRecord } from "../hygiene/sheets";
 
 export interface SheetAlarm {
   on: boolean;
@@ -117,11 +117,11 @@ export function recordGaps(now: string, sheets: SheetInput[], settings: AlarmSet
     const href = `/hygiene/${def.id}?month=${month}`;
     const days = runDays(def, month, holidays).filter((d) => d.date <= today && (!opts.onlyToday || d.date === today));
     if (def.kind === "temp") {
-      const slots = a.times.slice(0, def.temp?.perDay ?? 1);
+      // 記録する時刻の数だけ欄がある（毎時なら毎時）
       for (const d of days) {
         const e = rec?.temps?.[d.date];
-        slots.forEach((time, i) => {
-          if (has(i === 0 ? e?.am : e?.pm)) return;
+        a.times.forEach((time, i) => {
+          if (has(slotVal(e, i))) return;
           const s = stateOf(d.date, time, a.graceMin, now);
           if (!s.state) return;
           out.push({ key: `temp:${def.id}:${d.date}:${time}`, kind: "temp", sheetId: def.id, title: def.title, date: d.date, time, text: `${time} の温度の記録がまだです`, state: s.state, deadline: s.deadline, href });

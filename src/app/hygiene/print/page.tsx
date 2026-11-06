@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { alarmOf } from "@/lib/records/alarms";
+import { getAlarmSettings } from "@/lib/records/store";
 import { PrintButton } from "@/app/plan/PrintButton";
 import { todayJst } from "@/lib/clock";
-import { FREQ_LABEL, isPlanned, monthDays, outOfRange, runDays, WD, type Day, type SheetDef, type SheetRecord } from "@/lib/hygiene/sheets";
+import { FREQ_LABEL, isPlanned, monthDays, outOfRange, runDays, slotHum, slotVal, tempSlots, WD, type Day, type SheetDef, type SheetRecord } from "@/lib/hygiene/sheets";
 import { getRecord, getSheet, holidaysOf, listSheets } from "@/lib/hygiene/store";
 
 export const metadata = { title: "衛生管理の印刷｜STAFFETTA" };
@@ -68,8 +70,18 @@ function Sheet({ def, rec, month, holidays, first }: { def: SheetDef; rec: Sheet
 // 温度: 前半・後半の2段。目盛りの行に ●（管理範囲は灰色の帯）。目盛りが無い（原料保管庫）は数字を書く
 function TempSheet({ def, rec, run }: { def: SheetDef; rec: SheetRecord; run: Day[] }) {
   const t = def.temp!;
-  const halves = [run.filter((d) => d.d <= 15), run.filter((d) => d.d > 15)];
-  const slots = t.perDay === 2 ? (["am", "pm"] as const) : (["am"] as const);
+  // 記録する時刻の数だけ欄（毎時など。⑧）。1表に 30 列くらいになるように日を分ける
+  const labels = tempSlots(t, alarmOf(def, getAlarmSettings()).times);
+  const slots = labels.map((_, i) => i);
+  const per = labels.length <= 2 ? 15 : Math.max(1, Math.floor(30 / labels.length));
+  const halves: Day[][] = [];
+  for (let i = 0; i < run.length; ) {
+    const first = run[i];
+    const chunk = labels.length <= 2 ? run.filter((d) => (first.d <= 15 ? d.d <= 15 : d.d > 15)) : run.slice(i, i + per);
+    halves.push(chunk);
+    i += chunk.length;
+  }
+  const head = (i: number) => (labels.length <= 2 && !/^\d/.test(labels[0]) ? ["①", "②"][i] : labels[i].replace(/:00$/, "時"));
   const near = (v: number | undefined, s: number) => v != null && t.scale && t.scale.reduce((b, x) => (Math.abs(x - v) < Math.abs(b - v) ? x : b), t.scale[0]) === s;
   return (
     <div className="space-y-[3mm]">
@@ -86,7 +98,7 @@ function TempSheet({ def, rec, run }: { def: SheetDef; rec: SheetRecord; run: Da
             </tr>
             <tr>
               <th className={`${th} text-left`}>{t.unit}＼時間</th>
-              {h.flatMap((d) => slots.map((s) => <th key={d.date + s} className={`${th} font-normal`}>{s === "am" ? "①" : "②"}</th>))}
+              {h.flatMap((d) => slots.map((s) => <th key={d.date + s} className={`${th} font-normal`}>{head(s)}</th>))}
             </tr>
           </thead>
           <tbody>
@@ -98,7 +110,7 @@ function TempSheet({ def, rec, run }: { def: SheetDef; rec: SheetRecord; run: Da
                     <th className={`${th} ${t.scale!.length > 9 ? "h-[4.3mm]" : "h-[5.2mm]"} text-left`}>{sv}</th>
                     {h.flatMap((d) =>
                       slots.map((s) => {
-                        const v = rec.temps?.[d.date]?.[s];
+                        const v = slotVal(rec.temps?.[d.date], s);
                         return (
                           <td key={d.date + s} className={`${B} ${band ? "bg-[#e3e3e3]" : ""} ${near(v, sv) && outOfRange(t, v) ? "text-[#a00]" : ""}`}>
                             {near(v, sv) ? "●" : ""}
@@ -113,12 +125,12 @@ function TempSheet({ def, rec, run }: { def: SheetDef; rec: SheetRecord; run: Da
               <>
                 <tr>
                   <th className={`${th} h-[8mm] text-left`}>室温 ℃</th>
-                  {h.flatMap((d) => slots.map((s) => <td key={d.date + s} className={B}>{rec.temps?.[d.date]?.[s] ?? ""}</td>))}
+                  {h.flatMap((d) => slots.map((s) => <td key={d.date + s} className={B}>{slotVal(rec.temps?.[d.date], s) ?? ""}</td>))}
                 </tr>
                 {t.humidity && (
                   <tr>
                     <th className={`${th} h-[8mm] text-left`}>湿度 %</th>
-                    {h.flatMap((d) => slots.map((s) => <td key={d.date + s} className={B}>{rec.temps?.[d.date]?.[s === "am" ? "humAm" : "humPm"] ?? ""}</td>))}
+                    {h.flatMap((d) => slots.map((s) => <td key={d.date + s} className={B}>{slotHum(rec.temps?.[d.date], s) ?? ""}</td>))}
                   </tr>
                 )}
               </>

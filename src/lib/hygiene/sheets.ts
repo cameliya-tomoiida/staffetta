@@ -132,14 +132,46 @@ export const FREQ_LABEL: Record<Freq, string> = { daily: "毎日", weekly: "1回
 export type Check = "" | "ok" | "ng";
 
 export interface TempEntry {
+  /** 1つ目の時刻（前の版の ①午前） */
   am?: number;
+  /** 2つ目の時刻（前の版の ②午後） */
   pm?: number;
   humAm?: number;
   humPm?: number;
+  /** 3つ目からの時刻（毎時など。⑧ 記録する時刻の数だけ欄ができる）。添え字は時刻の順（0・1 は am・pm を使う） */
+  vals?: (number | null)[];
+  hums?: (number | null)[];
   /** 異常時の措置 */
   action?: string;
   who?: string;
 }
+
+/** 温度の欄の名前（記録する時刻があれば、その時刻。無ければ ①午前・②午後） */
+export function tempSlots(rule: Pick<TempRule, "perDay"> | undefined, times?: string[]): string[] {
+  if (times?.length) return times;
+  return rule?.perDay === 2 ? ["①午前", "②午後"] : ["①午前"];
+}
+/** i 番目の時刻の温度・湿度 */
+export const slotVal = (e: TempEntry | undefined, i: number): number | undefined => (i === 0 ? e?.am : i === 1 ? e?.pm : (e?.vals?.[i] ?? undefined));
+export const slotHum = (e: TempEntry | undefined, i: number): number | undefined => (i === 0 ? e?.humAm : i === 1 ? e?.humPm : (e?.hums?.[i] ?? undefined));
+/** i 番目の時刻に値を入れた新しい記録 */
+export function withSlot(e: TempEntry | undefined, i: number, v: number | undefined, hum = false): TempEntry {
+  const x: TempEntry = { ...e };
+  if (i < 2) {
+    const k = hum ? (i === 0 ? "humAm" : "humPm") : i === 0 ? "am" : "pm";
+    if (v == null) delete x[k];
+    else x[k] = v;
+    return x;
+  }
+  const arr = [...((hum ? x.hums : x.vals) ?? [])];
+  while (arr.length <= i) arr.push(null);
+  arr[i] = v ?? null;
+  if (hum) x.hums = arr;
+  else x.vals = arr;
+  return x;
+}
+/** その日の温度の値（全部の時刻） */
+export const allVals = (e: TempEntry | undefined): number[] => [e?.am, e?.pm, ...(e?.vals ?? []).slice(2)].filter((v): v is number => v != null);
 
 export interface SheetRecord {
   /** temp: 日付 → 値 */
@@ -170,9 +202,9 @@ export function sheetProblems(def: SheetDef, rec: SheetRecord | undefined, month
   if (def.kind === "temp") {
     for (const d of run) {
       const t = rec?.temps?.[d.date];
-      const bad = [t?.am, t?.pm].some((v) => outOfRange(def.temp, v));
+      const bad = allVals(t).some((v) => outOfRange(def.temp, v));
       if (bad && !t?.action) out.push(`${d.d}日: 管理範囲の外です。異常時の措置を書いてください`);
-      if (d.date < today && !t?.am && t?.am !== 0 && !t?.pm && t?.pm !== 0) out.push(`${d.d}日: 記入がありません`);
+      if (d.date < today && !allVals(t).length) out.push(`${d.d}日: 記入がありません`);
     }
   }
   if (def.kind === "clean") {

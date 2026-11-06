@@ -58,7 +58,7 @@ export function AlarmsForm({ rows, cards: cards0 }: { rows: Row[]; cards: CardAl
             </label>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="flex flex-col gap-1 text-lg">
-                記録する時刻{r.perDay ? `（${r.perDay === 2 ? "①午前, ②午後" : "1日1回"}）` : "（この時刻までに）"}
+                記録する時刻{r.perDay ? "（この数だけ記入の欄ができます。毎時なら 08:00, 09:00, 10:00 …）" : "（この時刻までに）"}
                 <input className={field} value={times[r.id]} onChange={(e) => setTimes((t) => ({ ...t, [r.id]: e.target.value }))} placeholder="09:00, 15:00" />
               </label>
               <label className="flex flex-col gap-1 text-lg">

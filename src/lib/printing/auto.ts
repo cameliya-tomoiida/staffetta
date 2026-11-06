@@ -8,7 +8,7 @@ import { aiClient } from "@/lib/ai/client";
 import { apiKey } from "@/lib/ai/settings";
 import { syncAlerts, type AlertCandidate } from "@/lib/db/alerts-store";
 import { kvGet, kvSet } from "@/lib/db/sqlite";
-import { runDays, sheetProblems, type SheetRecord } from "@/lib/hygiene/sheets";
+import { allVals, runDays, sheetProblems, type SheetRecord } from "@/lib/hygiene/sheets";
 import { holidaysOf, listSheets, recordsOf } from "@/lib/hygiene/store";
 import { DEFAULT_PRINT_SETTINGS, dueJobs, monthFor, printPath, type PrintJob, type PrintSettings } from "./jobs";
 import { printUrl } from "./pass";
@@ -168,8 +168,8 @@ export async function makeMonthSummary(month: string, now: string, ai = !!apiKey
     const rec: SheetRecord | undefined = recs.get(s.id);
     const run = runDays(s, month, holidays).filter((d) => d.date <= today);
     const p = sheetProblems(s, rec, month, today, holidays);
-    const filled = s.kind === "temp" ? run.filter((d) => rec?.temps?.[d.date]?.am != null || rec?.temps?.[d.date]?.pm != null).length : run.filter((d) => Object.keys(rec?.done ?? {}).some((k) => k.endsWith(`|${d.date}`))).length;
-    const out = s.kind === "temp" ? run.filter((d) => [rec?.temps?.[d.date]?.am, rec?.temps?.[d.date]?.pm].some((v) => v != null && ((s.temp?.min != null && v < s.temp.min) || (s.temp?.max != null && v > s.temp.max)))).length : 0;
+    const filled = s.kind === "temp" ? run.filter((d) => allVals(rec?.temps?.[d.date]).length > 0).length : run.filter((d) => Object.keys(rec?.done ?? {}).some((k) => k.endsWith(`|${d.date}`))).length;
+    const out = s.kind === "temp" ? run.filter((d) => allVals(rec?.temps?.[d.date]).some((v) => v != null && ((s.temp?.min != null && v < s.temp.min) || (s.temp?.max != null && v > s.temp.max)))).length : 0;
     facts.push(`${s.title}: 記入 ${filled}/${run.length}日${out ? `・範囲の外 ${out}日` : ""}${p.length ? `・気になる所 ${p.length}件` : ""}${rec?.approvedBy ? "・責任者確認済み" : ""}`);
   }
   const summary: MonthSummary = { month, at: now, facts };

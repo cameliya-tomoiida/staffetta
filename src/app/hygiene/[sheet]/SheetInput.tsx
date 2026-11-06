@@ -9,17 +9,21 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { buttonClass, choiceClass } from "@/components/ui";
-import { FREQ_LABEL, isPlanned, outOfRange, WD, type Day, type Freq, type SheetDef, type SheetItem, type SheetRecord, type TempEntry } from "@/lib/hygiene/sheets";
+import { allVals, FREQ_LABEL, isPlanned, outOfRange, slotHum, slotVal, tempSlots, withSlot, WD, type Day, type Freq, type SheetDef, type SheetItem, type SheetRecord, type TempEntry } from "@/lib/hygiene/sheets";
 import { approveRecordAction, saveRecordAction, saveSheetItemsAction } from "../actions";
 
 const CELL = "h-16 w-full min-w-0 rounded-md border-2 bg-sheet px-2 text-[22px]";
 const TH = "border border-rule-strong bg-cream px-2 py-2 text-left text-lg font-bold";
 const TD = "border border-rule-strong p-1 align-middle";
 
-export function SheetInput({ def, month, run, days, today, initial }: { def: SheetDef; month: string; run: Day[]; days: Day[]; today: string; initial: SheetRecord }) {
+export function SheetInput({ def, month, run, days, today, initial, slots }: { def: SheetDef; month: string; run: Day[]; days: Day[]; today: string; initial: SheetRecord; slots?: string[] }) {
   const [rec, setRec] = useState<SheetRecord>(initial);
   // 記入する人は、この端末で前に入れた名前を使う
-  const [who, setWho] = useState(() => (typeof window === "undefined" ? "" : (localStorage.getItem("hub.hygiene.who") ?? "")));
+  // 記入する人は、このブラウザに覚えた名前（サーバーの描画と食いちがわないよう、描いたあとに読む）
+  const [who, setWho] = useState("");
+  useEffect(() => {
+    setWho(localStorage.getItem("hub.hygiene.who") ?? ""); // eslint-disable-line react-hooks/set-state-in-effect -- 覚えた名前はブラウザでしか読めない
+  }, []);
   const [boss, setBoss] = useState("");
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -61,7 +65,7 @@ export function SheetInput({ def, month, run, days, today, initial }: { def: She
         <input suppressHydrationWarning className={`${CELL} border-rule-strong`} value={who} onChange={(e) => setName(e.target.value)} placeholder="名前" />
       </label>
 
-      {def.kind === "temp" && <TempInput def={def} run={run} today={today} rec={rec} update={update} who={who} disabled={approved} />}
+      {def.kind === "temp" && <TempInput def={def} run={run} today={today} rec={rec} update={update} who={who} disabled={approved} slots={tempSlots(def.temp, slots)} />}
       {(def.kind === "clean" || def.kind === "check") && <DoneInput def={def} run={run} days={days} today={today} rec={rec} update={update} who={who} disabled={approved} />}
       {def.kind === "log" && <LogInput def={def} rec={rec} update={update} who={who} today={today} disabled={approved} />}
       {def.kind === "label" && <LabelInput rec={rec} update={update} month={month} disabled={approved} />}
@@ -117,10 +121,17 @@ function num(v: string): number | undefined {
 }
 
 // ───────── 温度 ─────────
-function TempInput({ def, run, today, rec, update, who, disabled }: { def: SheetDef; run: Day[]; today: string; rec: SheetRecord; update: Upd; who: string; disabled: boolean }) {
+function TempInput({ def, run, today, rec, update, who, disabled, slots }: { def: SheetDef; run: Day[]; today: string; rec: SheetRecord; update: Upd; who: string; disabled: boolean; slots: string[] }) {
   const t = def.temp!;
   const set = (date: string, k: keyof TempEntry, v: TempEntry[keyof TempEntry]) =>
     update((r) => ({ ...r, temps: { ...r.temps, [date]: { ...r.temps?.[date], [k]: v, ...(who && !r.temps?.[date]?.who ? { who } : {}) } } }));
+  // 記録する時刻の数だけ欄（毎時なら毎時。⑧）。1・2つ目は前の版の ①午前・②午後 と同じ所に入る
+  const setSlot = (date: string, i: number, v: number | undefined, hum = false) =>
+    update((r) => {
+      const cur = r.temps?.[date];
+      const next = withSlot(cur, i, v, hum);
+      return { ...r, temps: { ...r.temps, [date]: { ...next, ...(who && !cur?.who ? { who } : {}) } } };
+    });
   const todayRow = useRef<HTMLTableRowElement>(null);
   // スマホ: はじめは今日（無ければ月の最後の日）だけ出す。「ほかの日も出す」で全部（⑧）
   const [allDays, setAllDays] = useState(false);
@@ -136,14 +147,12 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
         {t.set != null ? `設定 ${t.set}${t.unit}・` : ""}管理範囲 {range}（外れたら赤。異常時の措置を書く）
       </h2>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] table-fixed border-collapse">
+        <table className="w-full table-fixed border-collapse" style={{ minWidth: `${Math.max(900, 420 + slots.length * (t.humidity ? 180 : 100))}px` }}>
           <thead>
             <tr>
               <th className={`${TH} w-32`}>日付</th>
-              <th className={TH}>①午前 {t.unit}</th>
-              {t.perDay === 2 && <th className={TH}>②午後 {t.unit}</th>}
-              {t.humidity && <th className={TH}>湿度① %</th>}
-              {t.humidity && t.perDay === 2 && <th className={TH}>湿度② %</th>}
+              {slots.map((s) => <th key={s} className={TH}>{s} {t.unit}</th>)}
+              {t.humidity && slots.map((s) => <th key={`h${s}`} className={TH}>湿度 {s} %</th>)}
               <th className={`${TH} w-[28%]`}>異常時の措置</th>
               <th className={TH}>担当者</th>
             </tr>
@@ -152,31 +161,30 @@ function TempInput({ def, run, today, rec, update, who, disabled }: { def: Sheet
             {run.map((d) => {
               const e = rec.temps?.[d.date] ?? {};
               const isToday = d.date === today;
-              const box = (k: "am" | "pm" | "humAm" | "humPm", label: string) => {
-                const bad = (k === "am" || k === "pm") && outOfRange(t, e[k]);
+              const box = (i: number, label: string, hum = false) => {
+                const v = hum ? slotHum(e, i) : slotVal(e, i);
+                const bad = !hum && outOfRange(t, v);
                 return (
-                  <td className={TD}>
+                  <td key={`${hum ? "h" : "t"}${i}`} className={TD}>
                     <input
                       inputMode="decimal"
                       aria-label={`${d.d}日 ${label}`}
                       disabled={disabled}
                       className={`${CELL} num text-right ${bad ? "border-alert-ink bg-alert-bg text-alert-ink" : "border-rule-strong"}`}
-                      value={e[k] ?? ""}
-                      onChange={(ev) => set(d.date, k, num(ev.target.value))}
+                      value={v ?? ""}
+                      onChange={(ev) => setSlot(d.date, i, num(ev.target.value), hum)}
                     />
                   </td>
                 );
               };
-              const bad = [e.am, e.pm].some((v) => outOfRange(t, v));
+              const bad = allVals(e).some((v) => outOfRange(t, v));
               return (
                 <tr key={d.date} ref={isToday ? todayRow : undefined} className={isToday ? "bg-crust-50" : ""} data-m-hide={!allDays && d.date !== focus ? "" : undefined}>
                   <th className={`${TH} ${isToday ? "bg-crust-50 text-crust-700" : ""}`}>
                     {d.d}日（{WD[d.weekday]}）{isToday && <span className="block text-base">きょう</span>}
                   </th>
-                  {box("am", "①午前")}
-                  {t.perDay === 2 && box("pm", "②午後")}
-                  {t.humidity && box("humAm", "湿度①")}
-                  {t.humidity && t.perDay === 2 && box("humPm", "湿度②")}
+                  {slots.map((s, i) => box(i, s))}
+                  {t.humidity && slots.map((s, i) => box(i, `湿度 ${s}`, true))}
                   <td className={TD}>
                     <input aria-label={`${d.d}日 異常時の措置`} disabled={disabled} className={`${CELL} text-lg ${bad && !e.action ? "border-alert-ink bg-alert-bg" : "border-rule-strong"}`} value={e.action ?? ""} onChange={(ev) => set(d.date, "action", ev.target.value || undefined)} placeholder={bad ? "措置を書いてください" : ""} />
                   </td>

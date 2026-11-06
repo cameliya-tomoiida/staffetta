@@ -68,3 +68,19 @@ describe("お知らせの形", () => {
     expect(past[0].title).toContain("書いていない所が 4件");
   });
 });
+
+describe("毎時の記録（記録する時刻の数だけ欄）", () => {
+  it("3つ目からの時刻は vals に入り、漏れも時刻ごとに見る", async () => {
+    const { withSlot, slotVal, allVals, tempSlots } = await import("../../hygiene/sheets");
+    let e = withSlot(undefined, 0, 20);
+    e = withSlot(e, 3, 22);
+    expect([slotVal(e, 0), slotVal(e, 1), slotVal(e, 2), slotVal(e, 3)]).toEqual([20, undefined, undefined, 22]);
+    expect(allVals(e)).toEqual([20, 22]);
+    expect(withSlot(e, 0, undefined).am).toBeUndefined();
+    expect(tempSlots({ perDay: 2 })).toEqual(["①午前", "②午後"]);
+    expect(tempSlots({ perDay: 1 }, ["08:00", "09:00", "10:00"])).toEqual(["08:00", "09:00", "10:00"]);
+    const hourly: AlarmSettings = { ...S, sheets: { t1: { times: ["08:00", "09:00", "10:00", "11:00"], graceMin: 30 } } };
+    const g = recordGaps("2026-11-03T11:10", [{ def: temp, rec: { temps: { "2026-11-03": e } } }], hourly, [], { onlyToday: true });
+    expect(g.map((x) => [x.time, x.state])).toEqual([["09:00", "late"], ["10:00", "late"]]); // 11:00 は書いてある
+  });
+});
