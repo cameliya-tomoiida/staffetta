@@ -2,6 +2,8 @@
 #   40_courses.csv     … 便（例: Aコース）。走る曜日＝日報にある曜日、回る順番＝日報に並んだ順（月→土、左の列→右の列で先に出た順）
 #   41_customers.csv   … 日報に出た取引先の今の行を全部写して、配送コース・納品する曜日・注意事項（日報の備考を足す）だけ変える
 #   49_コースの要確認.csv … 取引先が見つからない行・今のコースとちがう・曜日がちがう・2つのコースに出る 物の一覧
+# 決まり（11/6 担当者）: 変えるのは日報に出る取引先だけ（ほかは今のまま。「コースなし」にもしない）。便は A〜F を足すだけ（今の便は消さない）。
+#   2つのコースに出る・今のコースがほかとちがう取引先は自動で変えず、一覧に残す。
 # 実名・コードは git に入れない: 日報・設定・出力はどれも data/（git の外）に置き、引数で渡す。
 #
 # 使い方:
@@ -178,18 +180,23 @@ def cell(c, key, t):
 
 cus = []
 changed_course = same = 0
+held = 0
 for cid, by in seen.items():
     c = dict(customers[cid])
-    # 2つのコースに出る: 曜日の多いほうにする
     course, days = max(by.items(), key=lambda t: len(t[1]))
+    # 2つのコースに出る・今のコースがほかとちがう 取引先は、給食・冷凍便などとのかけもちかもしれないので、自動で変えない（一覧に残す）
     if len(by) > 1:
-        flag(";".join(by), None, c["name"], "", cid, c["name"], "", "2つ以上のコースに出る（" + "・".join(f"{k} {wdl(v)}" for k, v in by.items()) + f"）。{course} にした")
+        flag(";".join(by), None, c["name"], "", cid, c["name"], "", "2つ以上のコースに出る（" + "・".join(f"{k} {wdl(v)}" for k, v in by.items()) + "）。変えずに残した")
+        held += 1
+        continue
+    if (c.get("course") or "") not in (usual.get(course), course):
+        flag(course, None, c["name"], "", cid, c["name"], "", f"今の配送コースがほかとちがう（{c.get('course') or '空'}。このコースの多くは {usual.get(course) or '空'}）。変えずに残した")
+        held += 1
+        continue
     alldays = set().union(*by.values())
     before = (c.get("course"), sorted(c.get("deliveryWeekdays") or []), c.get("deliveryCaution", ""))
     if c.get("course") != course:
         changed_course += 1
-        if (c.get("course") or "") != usual.get(course):
-            flag(course, None, c["name"], "", cid, c["name"], "", f"今の配送コースがほかとちがう（{c.get('course') or '空'}。このコースの多くは {usual.get(course) or '空'}）")
     if c.get("deliveryWeekdays") and set(c["deliveryWeekdays"]) != alldays:
         flag(course, None, c["name"], "", cid, c["name"], "", f"納品する曜日がちがう（今 {wdl(c['deliveryWeekdays'])} → 日報 {wdl(alldays)}）")
     c["course"] = course
@@ -208,6 +215,6 @@ rows = sorted(([k[0], wdl(v), *k[1:]] for k, v in check.items()), key=lambda r: 
 write("49_コースの要確認.csv", ["コース", "曜日", "日報の名前", "日報のコード", "取引先ID", "取引先の名前", "候補", "わけ"], rows)
 
 print("コース: " + "・".join(f"{k} {len(v['stops'])}件（{wdl(v['weekdays'])}）" for k, v in course_rows.items()))
-print(f"取引先: 日報で見つかった {len(seen)}件・変える {len(cus)}件（うち配送コースが変わる {changed_course}件）・同じ {same}件")
+print(f"取引先: 日報で見つかった {len(seen)}件・変える {len(cus)}件（うち配送コースが変わる {changed_course}件）・同じ {same}件・変えずに残した {held}件（日報に出ない取引先は触らない）")
 print("今のコース → 日報のコース: " + "・".join(f"{v or '空'} → {k}" for k, v in usual.items()))
 print(f"要確認: {len(rows)}行（" + "・".join(f"{w} {n}" for w, n in Counter(r[-1].split('（')[0] for r in rows).most_common()) + "）")

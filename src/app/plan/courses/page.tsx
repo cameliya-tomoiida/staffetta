@@ -14,6 +14,8 @@ export const dynamic = "force-dynamic";
 // 数は注文の個数（入数を掛けた数）。コースは取引先マスタの「配送コース」、列の順は便のマスタの順（コースなしは右端）。
 
 const WD = "日月火水木金土";
+/** コースに入っていない取引先＝注文がある時だけ届ける（11/6 担当者。全部の取引先がコースに入っているわけではない） */
+const NO_COURSE = "注文がある時だけ（コースなし）";
 
 export default async function CourseSheetPage(props: PageProps<"/plan/courses">) {
   const q = await props.searchParams;
@@ -29,7 +31,7 @@ export default async function CourseSheetPage(props: PageProps<"/plan/courses">)
   const cells = new Map<string, Map<string, number>>(); // 商品 → コース → 個数
   for (const o of orders) {
     if (o.deliveryDate !== date || !countsInTotals(o)) continue;
-    const course = customers.get(o.customerId)?.course || "コースなし";
+    const course = customers.get(o.customerId)?.course || NO_COURSE;
     for (const l of o.lines) {
       const p = products.get(l.productId);
       if (kind !== "all" && (p?.kind ?? "make") !== kind) continue;
@@ -39,7 +41,7 @@ export default async function CourseSheetPage(props: PageProps<"/plan/courses">)
     }
   }
   const courses = [...new Set([...cells.values()].flatMap((r) => [...r.keys()]))].sort(
-    (a, b) => Number(a === "コースなし") - Number(b === "コースなし") || (courseOrder.get(a) ?? 999) - (courseOrder.get(b) ?? 999) || a.localeCompare(b, "ja"),
+    (a, b) => Number(a === NO_COURSE) - Number(b === NO_COURSE) || (courseOrder.get(a) ?? 999) - (courseOrder.get(b) ?? 999) || a.localeCompare(b, "ja"),
   );
   const rows = [...cells.entries()]
     .map(([id, r]) => ({ id, name: products.get(id)?.name ?? id, unit: products.get(id)?.unit ?? "", i: products.get(id)?.i ?? 9999, r, total: [...r.values()].reduce((a, b) => a + b, 0) }))
@@ -81,7 +83,7 @@ export default async function CourseSheetPage(props: PageProps<"/plan/courses">)
                 <th className="border border-black px-1 text-left">商品</th>
                 <th className="w-[15mm] border-2 border-black">合計</th>
                 {courses.map((c) => (
-                  <th key={c} className="w-[15mm] border border-black text-[8.5pt] leading-tight">{c}</th>
+                  <th key={c} className={`border border-black text-[8.5pt] leading-tight ${c === NO_COURSE ? "w-[20mm] bg-white italic" : "w-[15mm]"}`}>{c}</th>
                 ))}
               </tr>
             </thead>
