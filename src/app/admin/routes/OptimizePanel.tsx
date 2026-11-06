@@ -2,7 +2,7 @@
 // コースの見直し（⑦の(17)）。曜日を選んで「見直し案を出す」→ 何コースに分けて・どの順で・何時に出ればよいか、今のコースとの差を表と地図で。
 // 計算はこのブラウザの中（src/lib/routes/optimize.ts）。保存はしない（案を見て、人がコースを直す）。
 import { AiThinking, ComputeShow } from "@/components/ui/ComputeShow";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { CourseMaster } from "@/data/types";
 import { buttonClass, choiceClass } from "@/components/ui";
 import { currentRoutes, DEFAULT_OPTIMIZE, deliversOn, optimizeRoutes, type OptimizeOptions, type OptimizeResult, type OptStop, type RoutePlan, summarize, type Summary } from "@/lib/routes/optimize";
@@ -176,7 +176,7 @@ export function OptimizePanel({
     r.timeline.rows.filter((x) => !x.noPosition).map((x) => {
       const c = byId.get(x.id)!;
       return {
-        id: `${ri}-${x.id}`, no: x.no, lat: c.lat!, lng: c.lng!, name: c.name, late: x.late > 0, color: ROUTE_COLORS[ri % ROUTE_COLORS.length],
+        id: `${ri}-${x.id}`, no: x.no, lat: c.lat!, lng: c.lng!, name: c.name, late: x.late > 0, color: ROUTE_COLORS[ri % ROUTE_COLORS.length], eta: toHHMM(x.arrive),
         lines: [`${r.name}・${x.no}件目`, `着 ${toHHMM(x.arrive)}${x.late > 0 ? `　${Math.round(x.late)}分おくれ` : ""}`, ...(c.deliveryWindowTo || c.deliveryTime ? [`希望 ${c.deliveryWindowFrom ?? ""}〜${c.deliveryWindowTo ?? ""}${c.deliveryTime && !c.deliveryWindowTo ? `（納品時刻 ${c.deliveryTime}）` : ""}`] : [])],
       };
     }),
@@ -289,7 +289,8 @@ export function OptimizePanel({
               地図: 今のコース（{result.now.length}コース）
             </button>
           </div>
-          <RouteMap depot={depot} pins={pins} lines={lines} />
+          <DriveTicker now={summarize(result.now)} plan={result.opt.summary} view={view} />
+          <RouteMap depot={depot} pins={pins} lines={lines} animate />
 
           <RouteTable title={view === "plan" ? "見直し案のコース" : "今のコース"} routes={shown} byId={byId} plan={view === "plan"} />
 
@@ -410,4 +411,53 @@ function RouteTable({ title, routes, byId, plan }: { title: string; routes: Rout
       </div>
     </div>
   );
+}
+
+/** 走る時間・距離（合計）。今のコース ⇔ 見直し案 を切りかえると、数字が数え上がり・数え下がる（⑧） */
+function DriveTicker({ now, plan, view }: { now: Summary; plan: Summary; view: "plan" | "now" }) {
+  const s = view === "plan" ? plan : now;
+  const drive = useTween(s.driveMinutes);
+  const km = useTween(s.km);
+  const saved = now.driveMinutes - plan.driveMinutes;
+  return (
+    <div className="cs-wrap relative flex flex-wrap items-end gap-x-8 gap-y-2 overflow-hidden rounded-2xl px-5 py-3 text-white">
+      <div>
+        <p className="text-[15px] font-bold text-white/75">{view === "plan" ? "見直し案" : "今のコース"}・走る時間（合計）</p>
+        <p className="num text-[34px] leading-tight font-black tabular-nums">{dur(drive)}</p>
+      </div>
+      <div>
+        <p className="text-[15px] font-bold text-white/75">走る距離</p>
+        <p className="num text-[34px] leading-tight font-black tabular-nums">{Math.round(km)}<span className="ml-1 text-[18px]">km</span></p>
+      </div>
+      {saved > 0.5 && (
+        <p className="ml-auto rounded-full bg-white/12 px-3 py-1 text-[17px] font-bold">見直しで {dur(saved)} 短く</p>
+      )}
+    </div>
+  );
+}
+
+/** 前の値から新しい値へ、0.9 秒でなめらかに（動きを減らす設定ならすぐ） */
+function useTween(value: number) {
+  const [v, setV] = useState(value);
+  const from = useRef(value);
+  useEffect(() => {
+    const start = from.current;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || start === value) {
+      from.current = value;
+      const t = setTimeout(() => setV(value), 0);
+      return () => clearTimeout(t);
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / 900);
+      const cur = start + (value - start) * (1 - Math.pow(1 - p, 3));
+      from.current = cur;
+      setV(cur);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return v;
 }

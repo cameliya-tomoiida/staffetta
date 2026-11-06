@@ -360,3 +360,29 @@ a, button, input, select, textarea, label, summary, [role="button"] {
 @media (prefers-reduced-motion: reduce) {
   .cs-glow, .cs-orb, .cs-row, .cs-hit, .cs-scan, .cs-bar-in { animation: none; }
 }
+
+/* 近未来の動き②（⑧）: 配送ルートが決まっていく（RouteMap animate） */
+.rm-drop {
+  opacity: 0;
+  animation: rm-drop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+@keyframes rm-drop {
+  0% { opacity: 0; transform: translateY(-36px) scale(0.6); }
+  70% { opacity: 1; transform: translateY(3px) scale(1.06); }
+  100% { opacity: 1; transform: none; }
+}
+.rm-line { filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9)); }
+.leaflet-tooltip.rm-eta {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(20, 16, 18, 0.86);
+  color: #fff;
+  font: 700 14px/1.4 "BIZ UDPGothic", sans-serif;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: cs-in 0.25s ease-out;
+}
+.leaflet-tooltip.rm-eta::before { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rm-drop { opacity: 1; animation: none; }
+}
