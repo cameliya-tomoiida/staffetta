@@ -319,6 +319,17 @@ export interface ScheduleRow {
   /** 作り終える時刻の根拠（「東コース（早朝便） 05:30 出発」「納品 7:30」） */
   deadlineBasis?: string;
   warnings: string[];
+  /** 人の足りなさ（ラインの当日の作業。足りない＝short・ちょうど＝tight）。同じラインの行は同じ配列。画面の帯の色に使う */
+  staff?: StaffBand[];
+}
+
+/** 人の足りなさの時間帯（0:00 からの分） */
+export interface StaffBand {
+  from: number;
+  to: number;
+  need: number;
+  have: number;
+  level: "short" | "tight";
 }
 
 export interface ScheduleOptions {
@@ -702,6 +713,7 @@ export function checkScheduleConstraints(rows: ScheduleRow[], date?: string): vo
     const points = [...new Set([...act.flatMap((u) => [u.step.start, u.step.end]), ...shiftPoints])].sort((a, b) => a - b);
     type Seg = { from: number; to: number; need: number; have: number; uses: Use[] };
     const short: Seg[] = [];
+    const bands: StaffBand[] = [];
     for (let i = 0; i + 1 < points.length; i++) {
       const from = points[i], to = points[i + 1];
       const on = act.filter((u) => u.step.start <= from && from < u.step.end);
@@ -710,6 +722,14 @@ export function checkScheduleConstraints(rows: ScheduleRow[], date?: string): vo
       const have = lineShifts
         .filter((s) => inSpan(from, s.from, s.to) && !(s.breaks ?? []).some((w) => { const [a, b] = w.split("-").map((x) => x.trim()); return !!a && !!b && inSpan(from, a, b); }))
         .reduce((s, x) => s + x.headcount, 0);
+      const level = need > have ? "short" : need > 0 && need === have ? "tight" : undefined;
+      if (level) {
+        const lb = bands[bands.length - 1];
+        if (lb && lb.to === from && lb.level === level) {
+          lb.to = to;
+          if (need - have > lb.need - lb.have) Object.assign(lb, { need, have });
+        } else bands.push({ from, to, need, have, level });
+      }
       if (need <= have) continue;
       const last = short[short.length - 1];
       if (last && last.to === from) {
@@ -718,6 +738,7 @@ export function checkScheduleConstraints(rows: ScheduleRow[], date?: string): vo
         for (const u of on) if (!last.uses.includes(u)) last.uses.push(u);
       } else short.push({ from, to, need, have, uses: [...on] });
     }
+    for (const r of rows) if (r.line === line) r.staff = bands;
     const lineName = findLine(line as Line).name;
     for (const g of short) {
       const by = new Map<string, number>();

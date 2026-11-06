@@ -274,7 +274,7 @@ export function customerDeadline(customerId: string, line: ProductionLineId, del
   const course = c?.course ? findCourse(c.course) : undefined;
   if (course && deliveryOverride === undefined) {
     const minute = hhmmToMinute(course.departTime) + course.dayOffset * 1440 - course.loadMinutes;
-    return { minute, courseId: course.id, basis: `${course.name} ${course.dayOffset < 0 ? "前日 " : ""}${course.departTime} 出発` };
+    return { minute, courseId: course.id, basis: `${course.dayOffset < 0 ? "前日 " : ""}${course.departTime.replace(/^0(\d)/, "$1")} 出発の便` };
   }
   const delivery = deliveryOverride ?? customerDeliveryMinute(customerId);
   return { minute: delivery - findLine(line).shipBufferMinutes, basis: `納品 ${Math.floor(delivery / 60)}:${String(delivery % 60).padStart(2, "0")}` };

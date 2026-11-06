@@ -30,10 +30,17 @@ export interface PlanOrder {
   status: "draft" | "approved";
   approvedBy?: string;
   approvedAt?: string;
+  /** 文の決まりの版。2 = コース名・生地の key を書かない（11/6 深夜）。古い版は作り直す */
+  v?: number;
 }
 
 const K = (date: string) => `plan_order_${date}`;
-export const getPlanOrder = (date: string) => kvGet<PlanOrder>(K(date));
+const VERSION = 2;
+/** 保存した案（古い決まりの文で作った案は「まだ無い」として作り直してもらう） */
+export const getPlanOrder = (date: string): PlanOrder | undefined => {
+  const p = kvGet<PlanOrder>(K(date));
+  return p && (p.v ?? 1) >= VERSION ? p : undefined;
+};
 
 const hm = (min: number) => {
   const prev = min < 0;
@@ -69,7 +76,7 @@ export function ruleOrder(facts: ReturnType<typeof orderFacts>): OrderStep[] {
 }
 
 const Schema = z.object({
-  steps: z.array(z.object({ key: z.string(), reason: z.string().describe("その順番にした理由を1行（40字くらい）。締め・ミキサー・生地の色や味の移り・発酵の待ち時間など") })),
+  steps: z.array(z.object({ key: z.string(), reason: z.string().describe("その順番にした理由を1行（25字くらい）。締め・ミキサー・生地の色や味の移り・発酵の待ち時間など") })),
   note: z.string().describe("全体の一言（40字くらい）"),
 });
 
@@ -89,7 +96,7 @@ export async function proposePlanOrder(date: string, r: Pick<PipelineResult, "sc
         system:
           "パン・ピザ工場の製造の段取りを考える係です。生地ごとの工程表の時刻・締め（便の出発）・ミキサーと回数から、仕込む順番の案を作ります。" +
           "締めに間に合うことをいちばん大事にし、同じミキサーを続けて使うときは、色や味が移らない順（白い生地 → 色の濃い生地・黒糖、プレーン → 具入り）、発酵の待ちが長い生地を先に、を考える。" +
-          "渡された生地の key だけを全部1回ずつ並べ、時刻や数は作らない。理由はやさしい日本語で1行。理由や一言に key（DG04 など）は書かず、生地の名前で書く。",
+          "渡された生地の key だけを全部1回ずつ並べ、時刻や数は作らない。理由はやさしい日本語で1行。理由や一言に key（DG04 など）は書かず、生地の名前で書く。コースや得意先の名前は書かず、締めは「5:30 出発の便」のように時刻で書く。理由は短く（25字くらい）。",
         messages: [{ role: "user", content: JSON.stringify(facts.map((f) => ({ key: f.key, 生地: f.name, ライン: f.line, 数: f.pieces, 生地kg: f.doughKg, ミキサー: f.mixer, ミキシング開始: f.mixStart, 終わり: f.finish, 締め: f.deadline, 商品: f.products }))) }],
       });
       const out = res.parsed_output;
@@ -104,7 +111,7 @@ export async function proposePlanOrder(date: string, r: Pick<PipelineResult, "sc
       /* AI が使えないときは決まりの順番 */
     }
   }
-  const p: PlanOrder = { date, steps, note, by, at: nowIso(), status: "draft" };
+  const p: PlanOrder = { date, steps, note, by, at: nowIso(), status: "draft", v: VERSION };
   kvSet(K(date), p);
   return p;
 }

@@ -31,6 +31,8 @@ import { planCoverage, planIncrease } from "@/lib/plan-coverage";
 import { breadSummary } from "@/lib/bread-cuts";
 import { getPlanOrder } from "@/lib/plan-order";
 import { OrderProposal } from "./OrderProposal";
+import { ShortageList } from "./ShortageList";
+import { materialShortList } from "@/lib/material-shortlist";
 import { kvGet } from "@/lib/db/sqlite";
 import { doughCards, type DoughCard } from "@/components/recipe/cards";
 import { DoughDetailButton } from "@/components/recipe/DoughCards";
@@ -87,6 +89,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const cards = doughCards(masters, { date: r.productionDate, doughs: r.production.doughs });
   // 材料の締めに間に合わないもの（③の materialPlan.lateItems）は黄色で別に出す
   const lateMaterials = r.materialPlan.lateItems.map((x) => x.message);
+  const shortRows = materialShortList(r, masters);
   const warn = splitWarnings(r.warnings.filter((w) => !lateMaterials.includes(w)));
   const otherWarnings = warn.others;
 
@@ -243,8 +246,16 @@ export default async function PlanPage(props: PageProps<"/plan">) {
                   <span className="ml-2 text-sm font-normal text-ink-soft">〜 {x.end} に終わる</span>
                 </dd>
                 <dt className="text-sm font-bold text-ink-soft">人</dt>
-                <dd className={`font-black ${x.shortAt ? "text-alert-ink" : x.hasShift ? "text-ok-ink" : "text-ink-soft"}`}>
-                  {x.shortAt ? `${x.shortAt} から足りません（いちばん多いとき ${x.shortMax}人 たりない）` : x.hasShift ? "足りています" : "班が登録されていません"}
+                <dd>
+                  {x.shortAt ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d64545] px-3 py-0.5 font-black text-white">
+                      <span className="num">{x.shortAt}〜</span> {x.shortMax}人 足りない
+                    </span>
+                  ) : x.hasShift ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-ok-bg px-3 py-0.5 font-black text-ok-ink">足りる</span>
+                  ) : (
+                    <Link href="/masters/shifts" className="text-ink-soft underline">班が未登録</Link>
+                  )}
                 </dd>
               </dl>
             )}
@@ -257,10 +268,11 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           <div className="text-[18px] font-black">計画を作ったあとに増えた分（{prepared?.at ? new Date(prepared.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""} より）</div>
           {inc.doughs.length > 0 && <div className="mt-1">計量: {inc.doughs.map((d) => `${d.name} +${d.plus}kg（${d.now}kg に）`).join("・")}</div>}
           {inc.materials.length > 0 && <div className="mt-1">材料: {inc.materials.slice(0, 8).map((m) => `${m.name} +${m.plus}kg`).join("・")}{inc.materials.length > 8 ? " …" : ""}</div>}
-          {r.shortages.length > 0 && <div className="mt-1 font-bold">足りない材料 {r.shortages.length}件 → <Link href={`/purchase?date=${date}`} className="underline">発注書を見る</Link></div>}
           <div className="mt-1 text-[15px]">計量の紙・工程表は、印刷し直してください。</div>
         </section>
       )}
+      {/* 足りない材料（文ではなくリスト。行ごとに「発注」→ 人が OK → 送り出し） */}
+      <ShortageList date={date} rows={shortRows} />
       <OrderProposal key={date} date={date} initial={getPlanOrder(date) ?? null} />
       {bread.length > 0 && (
         <section className="no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3" lang="ja">
@@ -459,20 +471,6 @@ export default async function PlanPage(props: PageProps<"/plan">) {
             </details>
           </Notice>
         )}
-        {lateMaterials.length > 0 && (
-          <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
-            <details>
-              <summary className="cursor-pointer">
-                間に合わない材料が <span className="num">{lateMaterials.length}</span> 件あります（発注書には入っていません）。押すと出します。
-              </summary>
-              <ul className="mt-1 list-disc pl-5 font-normal">
-                {lateMaterials.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </details>
-          </Notice>
-        )}
         <details className="rounded-lg border border-rule bg-sheet">
           <summary className="flex min-h-12 cursor-pointer items-center px-4 font-bold text-ink-soft">この日のお金（材料費・売上・粗利の目安）を見る</summary>
           <div className="px-2 pb-2">
@@ -615,7 +613,10 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
   const deadlines = rows.flatMap((r) => (r.deadline != null ? [r.deadline] : []));
   const start = Math.floor(Math.min(...todaySteps.map((s) => s.start)) / 60) * 60;
   const end = Math.ceil(Math.max(...todaySteps.map((s) => s.end), ...deadlines) / 60) * 60;
-  const rowWarnings = rows.flatMap((r) => r.warnings);
+  // 人の足りなさは文にせず、帯の色で出す（担当者 11/6 深夜）。ほかの注意だけ文で
+  const STAFF_RE = /は人が\s*\d+人\s*たりません/;
+  const rowWarnings = rows.flatMap((r) => r.warnings).filter((w) => !STAFF_RE.test(w));
+  const staff = (rows.find((r) => r.staff)?.staff ?? []).filter((b) => b.to > b.from);
   const span = Math.max(60, end - start);
   const hours = Array.from({ length: span / 60 + 1 }, (_, i) => start + i * 60);
   const pct = (m: number) => `${((m - start) / span) * 100}%`;
@@ -651,6 +652,22 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
               </span>
             ))}
           </div>
+          {/* 人の帯: 赤＝人が足りない・黄＝ぎりぎり（押すと人数） */}
+          {staff.length > 0 && (
+            <div className="flex items-center border-t border-rule py-1">
+              <div className="w-36 shrink-0 pr-2 text-sm font-bold" lang="ja">{t("staff_row")}</div>
+              <div className="relative h-5 flex-1 rounded-[3px] bg-ok-bg">
+                {staff.map((b, i) => (
+                  <span
+                    key={i}
+                    title={`${ft(b.from)}–${ft(b.to)} ${b.need}/${b.have}`}
+                    className={`absolute inset-y-0 rounded-[2px] ${b.level === "short" ? "bg-[#d64545]" : "bg-[#e9b949]"}`}
+                    style={{ left: pct(Math.max(b.from, start)), width: `calc(${pct(Math.min(b.to, end))} - ${pct(Math.max(b.from, start))})`, minWidth: 3 }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
           {rows.map((r) => {
             const b = bs.find((b) => b.key === r.key);
             return (
@@ -669,6 +686,14 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
                   )}
                 </div>
                 <div className="relative h-10 flex-1">
+                  {staff.map((sb, i) => (
+                    <span
+                      key={`sb${i}`}
+                      aria-hidden
+                      className={`absolute inset-y-0 ${sb.level === "short" ? "bg-[#d64545]/15" : "bg-[#e9b949]/20"}`}
+                      style={{ left: pct(Math.max(sb.from, start)), width: `calc(${pct(Math.min(sb.to, end))} - ${pct(Math.max(sb.from, start))})`, minWidth: 3 }}
+                    />
+                  ))}
                   {hours.map((h) => (
                     <span key={h} className="absolute inset-y-0 border-l border-dotted border-rule-strong" style={{ left: pct(h) }} />
                   ))}
@@ -697,6 +722,12 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
             );
           })}
           <div className="mt-2 ml-36 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            {staff.length > 0 && (
+              <>
+                <span className="inline-flex items-center gap-1 font-bold"><span className="inline-block h-3 w-4 rounded-[2px] bg-[#d64545]" />{t("staff_short")}</span>
+                <span className="inline-flex items-center gap-1 font-bold"><span className="inline-block h-3 w-4 rounded-[2px] bg-[#e9b949]" />{t("staff_tight")}</span>
+              </>
+            )}
             {used.map((k) => (
               <span key={k} className="inline-flex items-center gap-1">
                 <span className="inline-block h-3 w-4 rounded-[2px] border border-rule-strong" style={{ background: stepColor[k] }} />

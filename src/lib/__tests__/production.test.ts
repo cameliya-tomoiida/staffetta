@@ -135,7 +135,7 @@ describe("工程表", () => {
   it("パンは便の出発から逆算する: いちばん早い便（5:30 出発）− 積み込み30分 = 5:00 に金属検出が終わる", () => {
     const roll = rows.find((r) => r.doughId === "DG01")!;
     expect(roll).toMatchObject({ from: "delivery", deadline: 300 });
-    expect(roll.deadlineBasis).toMatch(/05:30 出発/);
+    expect(roll.deadlineBasis).toBe("5:30 出発の便"); // コースの名前（見本の「西コース」）は出さない（担当者 11/6 深夜）
     expect(roll.steps.at(-1)!.end).toBeLessThanOrEqual(300);
     expect(roll.steps[0].key).toBe("weigh");
   });

@@ -75,6 +75,17 @@ describe("人員の制約", () => {
     expect(msgs.some((x) => x.includes("成形 3"))).toBe(true);
   });
 
+  it("人の足りなさは帯（staff）でも持つ: 足りない＝short は注意の文と同じ時間。同じラインの行は同じ配列", () => {
+    const m = patch((m) => (m.shifts.find((s) => s.id === "SH-BN")!.headcount = 2));
+    const rs = rows(m).filter((x) => x.line === "bread");
+    const bands = rs[0].staff ?? [];
+    expect(bands.some((b) => b.level === "short" && b.need > b.have)).toBe(true);
+    expect(rs.every((x) => x.staff === rs[0].staff)).toBe(true);
+    for (const b of bands) expect(b.to).toBeGreaterThan(b.from);
+    // 隣どうしの帯は同じ level が続かない（まとめてある）
+    for (let i = 1; i < bands.length; i++) if (bands[i].from === bands[i - 1].to) expect(bands[i].level).not.toBe(bands[i - 1].level);
+  });
+
   it("工程の配置人数（班ごと）が、工程の人数より優先される", () => {
     const m = patch((m) => (m.staffAssignments.find((a) => a.line === "bread" && a.stepKey === "shape")!.people = 2));
     expect(step(m, "DG01", "shape").people).toBe(2);

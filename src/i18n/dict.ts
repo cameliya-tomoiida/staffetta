@@ -58,6 +58,9 @@ const ja = {
   "unit_c/s": "ケース",
   next_day: "翌",
   prev_day_time: "前日",
+  staff_row: "人",
+  staff_short: "人が足りない",
+  staff_tight: "ぎりぎり",
 };
 export type Key = keyof typeof ja;
 type Dict = Record<Key, string>;
@@ -121,6 +124,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "ケース",
       next_day: "つぎの ひ",
       prev_day_time: "まえの ひ",
+      staff_row: "ひと",
+      staff_short: "ひとが たりない",
+      staff_tight: "ぎりぎり",
     },
   },
   vi: {
@@ -180,6 +186,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "thùng",
       next_day: "hôm sau",
       prev_day_time: "hôm trước",
+      staff_row: "Người",
+      staff_short: "Thiếu người",
+      staff_tight: "Vừa đủ",
     },
   },
   id: {
@@ -239,6 +248,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "dus",
       next_day: "besok",
       prev_day_time: "hari sebelumnya",
+      staff_row: "Orang",
+      staff_short: "Kurang orang",
+      staff_tight: "Pas-pasan",
     },
   },
   zh: {
@@ -298,6 +310,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "箱",
       next_day: "次日",
       prev_day_time: "前一天",
+      staff_row: "人员",
+      staff_short: "人手不足",
+      staff_tight: "刚好够",
     },
   },
   ko: {
@@ -357,6 +372,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "박스",
       next_day: "다음날",
       prev_day_time: "전날",
+      staff_row: "인원",
+      staff_short: "인원 부족",
+      staff_tight: "빠듯함",
     },
   },
   fil: {
@@ -416,6 +434,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "kahon",
       next_day: "kinabukasan",
       prev_day_time: "noong nakaraang araw",
+      staff_row: "Tao",
+      staff_short: "Kulang ang tao",
+      staff_tight: "Sakto lang",
     },
   },
   my: {
@@ -475,6 +496,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "သေတ္တာ",
       next_day: "နောက်နေ့",
       prev_day_time: "ယမန်နေ့",
+      staff_row: "လူ",
+      staff_short: "လူမလောက်",
+      staff_tight: "လောက်ရုံ",
     },
   },
   ne: {
@@ -534,6 +558,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "बाकस",
       next_day: "भोलिपल्ट",
       prev_day_time: "अघिल्लो दिन",
+      staff_row: "मानिस",
+      staff_short: "मानिस नपुग",
+      staff_tight: "ठीकठाक",
     },
   },
   en: {
@@ -593,6 +620,9 @@ const dicts: Record<Lang, { reviewed: boolean; d: Dict }> = {
       "unit_c/s": "cases",
       next_day: "next day",
       prev_day_time: "day before",
+      staff_row: "Staff",
+      staff_short: "Short of staff",
+      staff_tight: "Just enough",
     },
   },
 };
