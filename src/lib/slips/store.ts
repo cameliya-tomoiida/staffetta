@@ -95,3 +95,16 @@ export async function slipsBetween(from: string, to: string): Promise<DeliverySl
   const order = courseOrder(m);
   return dates.flatMap((d) => deliverySlips(orders, d, m.customers, book).sort(order));
 }
+
+/** 月の日ごとの売上（⑧ 日ごとの実績のカレンダー）。確定した注文の納品書の税抜の合計と、納品した取引先の数 */
+export async function monthSales(month: string): Promise<Map<string, { net: number; customers: number }>> {
+  const [orders, m] = await Promise.all([ordersSince(`${month}-01`), loadMasters()]);
+  const book = bookOf(m);
+  const out = new Map<string, { net: number; customers: number }>();
+  const dates = [...new Set(orders.filter((o) => o.deliveryDate.startsWith(month)).map((o) => o.deliveryDate))];
+  for (const d of dates) {
+    const slips = deliverySlips(orders, d, m.customers, book);
+    if (slips.length) out.set(d, { net: slips.reduce((a, s) => a + s.totals.net, 0), customers: slips.length });
+  }
+  return out;
+}

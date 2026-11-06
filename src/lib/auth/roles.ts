@@ -7,12 +7,12 @@ export const deptName = (r: Role) => (r === "工場" ? "製造" : r);
 export const homeOf = (role: Role) => (role === "配送" ? "/driver" : "/home");
 
 const FACTORY_PATHS = [
-  "/home", "/plan", "/cards", "/hygiene", "/alerts",
+  "/home", "/daily", "/plan", "/cards", "/hygiene", "/alerts",
   "/masters/materials", "/masters/packaging", "/masters/recipes", "/masters/doughs", "/masters/recipeItems",
   "/masters/steps", "/masters/equipment", "/masters/shifts", "/masters/staffAssignments", "/masters/lines", "/masters/toppings", "/masters/toppingItems",
 ];
 /** 営業が開ける所（⑧ 部署ごとのホーム）: 自分の取引先の注文・お知らせ・ルート表・分析 */
-const SALES_PATHS = ["/home", "/orders", "/notices", "/alerts", "/routes", "/analytics", "/masters/customers", "/admin/customers", "/admin/customer-products", "/slips"];
+const SALES_PATHS = ["/home", "/daily", "/orders", "/notices", "/alerts", "/routes", "/analytics", "/masters/customers", "/admin/customers", "/admin/customer-products", "/slips"];
 /** 事務が開けない所（設定・機能の ON/OFF・バックアップ・スタッフの登録など） */
 const OFFICE_DENY = ["/settings"];
 
