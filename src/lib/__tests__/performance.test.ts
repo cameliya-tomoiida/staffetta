@@ -28,3 +28,29 @@ describe("計算の速さ", () => {
     expect(performance.now() - t).toBeLessThan(1000);
   });
 });
+
+// ⑧ 大量データの測定（docs/benchmark.md）で見つけて直した所: 取引先が多いと集計が遅かった（取引先を毎回先頭から探していた）
+describe("大量の注文の集計（⑧）", () => {
+  it("明細 10万行・取引先 5,000社でも 3秒以内で、数は正しい", async () => {
+    const { aggregateOrders } = await import("../aggregate");
+    const base = demoOrders.find((o) => o.lines.length > 0)!;
+    const pids = [...new Set(demoOrders.flatMap((o) => o.lines.map((l) => l.productId)).filter(Boolean))].slice(0, 10);
+    const many: Order[] = [];
+    let want = 0;
+    for (let i = 0; i < 10_000; i++) {
+      many.push({
+        ...base, id: `PERF${i}`, customerId: `PC${i % 5000}`, status: "confirmed", intent: undefined, deliveryDate: "2026-11-06",
+        lines: pids.map((p, k) => ({ ...base.lines[0], id: `PERF${i}-${k}`, productId: p, quantity: 2, piecesPerUnit: 1, pieces: 2 })),
+      });
+      want += pids.length * 2;
+    }
+    const t = performance.now();
+    const [day] = aggregateOrders(many);
+    const ms = performance.now() - t;
+    expect(day.products.reduce((a, p) => a + p.pieces, 0)).toBe(want);
+    const first = day.products[0];
+    expect(first.customers).toHaveLength(5000);
+    expect(first.customers[0]).toMatchObject({ customerId: "PC0", pieces: 4, orderIds: ["PERF0", "PERF5000"] });
+    expect(ms).toBeLessThan(3000);
+  });
+});
