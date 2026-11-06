@@ -19,7 +19,7 @@ export default async function NewPhoneOrderPage() {
   const products = allProducts().map((p) => ({ id: p.id, name: p.name, unit: p.unit }));
   return (
     <div>
-      <PageHeader title="電話・ドライバーの注文を入れる" lead="取引先 → 納品日 → 商品と数 → 受けた人 の順に、押して選ぶだけで入れられます。入れた注文は「要確認」になり、受注一覧で確定します。" />
+      <PageHeader title="電話・ドライバーの注文を入れる" lead={<span className="max-md:hidden">取引先 → 納品日 → 商品と数 → 受けた人 の順に、押して選ぶだけで入れられます。入れた注文は「要確認」になり、受注一覧で確定します。</span>} />
       <PhoneOrder customers={list} products={products} />
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 // 電話・ドライバーの注文を手で入れる（②）。文字はなるべく打たない: 選ぶ・＋−・テンキーだけ。
 // 1. 取引先 → 2. 納品日 → 3. 商品と数（前回と同じ・締めの判定はその場で）→ 4. 入口と受けた人 → 保存（要確認で入る）
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { NumPad } from "@/components/NumPad";
 import { Button, buttonClass, choiceClass, fmtDate, Icon, LinkButton, Notice } from "@/components/ui";
@@ -16,8 +16,17 @@ const WD = "日月火水木金土";
 const dow = (ymd: string) => WD[new Date(`${ymd}T00:00:00Z`).getUTCDay()];
 
 function Step({ n, title, done, onChange, children }: { n: number; title: string; done?: React.ReactNode; onChange?: () => void; children?: React.ReactNode }) {
+  // スマホ（片手）: 前の手順を選んだら、次の手順を画面の上に寄せる（下までスクロールしなくてよいように）
+  const ref = useRef<HTMLElement>(null);
+  const active = !!children;
+  useEffect(() => {
+    // 4（どこから・受けた人）は 3 と同時に開くので寄せない（商品を飛ばさないように）
+    if (!active || (n !== 2 && n !== 3) || window.innerWidth >= 768) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ref.current?.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+  }, [active, n]);
   return (
-    <section className={`rounded-lg border-2 bg-sheet ${children ? "border-crust-600" : "border-rule"}`}>
+    <section ref={ref} className={`scroll-mt-20 rounded-lg border-2 bg-sheet ${children ? "border-crust-600" : "border-rule"}`}>
       <div className="flex items-center gap-3 px-4 py-3">
         <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg font-black ${children ? "bg-crust-600 text-white" : "border-2 border-rule-strong text-ink-soft"}`}>{n}</span>
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3">
