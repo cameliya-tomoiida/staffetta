@@ -263,6 +263,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           <div className="flex flex-wrap gap-2">
             <PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />
             <FactoryPrint label={`製造計画・工程表（${date}）`} />
+            <Link href={`/plan/courses?date=${date}&kind=make`} className="link self-center text-base font-bold">コース別の製造指示書 →</Link>
           </div>
         }
       />
