@@ -96,18 +96,29 @@ export function AlertsClient({ open, done, now, lastAt, enabled }: { open: Alert
             {STAFF.map((s) => <option key={s}>{s}</option>)}
           </select>
         </label>
-        <Segmented<Filter>
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "all", label: `出ているもの ${active.length}` },
-            { value: "mine", label: "自分の担当" },
-            { value: "snoozed", label: `あとで ${snoozed.length}` },
-          ]}
-        />
+        <span className="max-md:hidden">
+          <Segmented<Filter>
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: `出ているもの ${active.length}` },
+              { value: "mine", label: "自分の担当" },
+              { value: "snoozed", label: `あとで ${snoozed.length}` },
+            ]}
+          />
+        </span>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-2 text-sm text-ink-soft">
-          {lastAt && <span>最後に調べた時刻 {fmtDateTime(lastAt)}</span>}
+      {/* ⑧ スマホ: 上のタブで切りかえ */}
+      <nav aria-label="お知らせの切りかえ" className="-mx-4 -mt-4 flex border-b border-rule px-2 md:hidden">
+        {([["all", "出ている", active.length], ["mine", "自分", null], ["snoozed", "あとで", snoozed.length]] as const).map(([v, l, n]) => (
+          <button key={v} type="button" onClick={() => setFilter(v)} aria-current={filter === v ? "page" : undefined}
+            className={`flex min-h-12 flex-1 items-center justify-center gap-1 border-b-[3px] text-[15px] font-bold ${filter === v ? "border-crust-600 text-ink" : "border-transparent text-ink-soft"}`}>
+            {l}{n != null && <span className="rounded-full bg-paper px-1.5 text-[12px] tabular-nums">{n}</span>}
+          </button>
+        ))}
+      </nav>
+      <div className="flex flex-wrap items-center justify-end gap-2 text-sm text-ink-soft max-md:-mt-2 max-md:text-[12px]">
+          {lastAt && <span><span className="max-md:hidden">最後に調べた時刻 </span>{fmtDateTime(lastAt)}</span>}
           <Button disabled={pending} onClick={() => run(() => checkAlertsNowAction(), "調べ直しました")}>いま調べ直す</Button>
           {newOnes.length > 0 && (
             <Button

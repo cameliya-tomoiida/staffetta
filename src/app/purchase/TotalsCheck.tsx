@@ -7,6 +7,16 @@ export function TotalsCheck({ rows }: { rows: CheckRow[] }) {
   const ok = rows.length - bad.length;
   const tone = (r: CheckRow) => (r.state === "short" || r.state === "missing" ? "border-alert-line bg-alert-bg text-alert-ink" : "border-review-line bg-review-bg text-review-ink");
   const statusText = { draft: "下書き", approved: "承認済み", sent: "送信済み", none: "発注書なし" } as const;
+  // ⑧ スマホ: 全部合っていれば小さな1行だけ
+  if (!bad.length)
+    return (
+      <>
+        <p className="no-print mb-3 inline-flex items-center gap-1 rounded-full border border-ok-line bg-ok-bg px-3 py-1 text-[13px] font-bold text-ok-ink md:hidden">✓ 注文と発注の数は合っています</p>
+        <section className="no-print mb-4 rounded-lg border-2 border-ok-line bg-ok-bg p-3 text-ok-ink max-md:hidden">
+          <h2 className="text-lg font-black">注文と発注の数は、全部合っています（仕入品 {ok}品）</h2>
+        </section>
+      </>
+    );
   return (
     <section className={`no-print mb-4 rounded-lg border-2 p-3 ${bad.length ? "border-alert-line" : "border-ok-line bg-ok-bg text-ok-ink"}`}>
       <h2 className="text-lg font-black">
