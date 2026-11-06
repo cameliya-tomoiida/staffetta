@@ -655,7 +655,8 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
       <div className="overflow-x-auto px-4 pt-3 pb-2">
         <div className={`pr-5 ${span > 600 ? "min-w-[860px]" : "min-w-[600px]"}`}>
           <div className="relative ml-36 h-6 text-xs text-ink-soft">
-            {hours.map((h) => (
+            {/* 長い日（生地が多い・前日から）は、時刻の字を 2〜3時間ごとにして重ならないように（線は1時間ごと） */}
+            {hours.filter((_, i) => i % (hours.length > 16 ? 3 : hours.length > 10 ? 2 : 1) === 0).map((h) => (
               <span key={h} className="num absolute -translate-x-1/2 whitespace-nowrap" style={{ left: pct(h) }}>
                 {axis(h)}
               </span>
