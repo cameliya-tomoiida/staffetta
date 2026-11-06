@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   description: "FAX・電話の注文から、製造計画と材料の発注までをつなぐ中小パン工場向けのしくみ",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
+// viewportFit: "cover" … iPhone の画面の端（ホームのバー・切り欠き）まで使い、env(safe-area-inset-*) を効かせる（⑧ 下のタブがホームのバーとかぶっていた）
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff", viewportFit: "cover" };
 
 /** ログインが無くても開ける画面（ログイン・最初の管理者・お客さんの LINE の画面） */
 const OPEN = ["/login", "/setup", "/liff"];

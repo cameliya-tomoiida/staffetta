@@ -89,12 +89,12 @@ function useTyping() {
 }
 
 /** 上の細い帯: ‹ 戻る・画面の名前・AI・名前 */
-export function MobileTopBar({ path, title, ai, user, tabs }: { path: string; title: string; ai: React.ReactNode; user: { name: string; role: Role } | null; tabs: Tab[] }) {
+export function MobileTopBar({ path, title, ai, user, tabs, onMenu }: { path: string; title: string; ai: React.ReactNode; user: { name: string; role: Role } | null; tabs: Tab[]; onMenu?: () => void }) {
   const router = useRouter();
   const root = tabs.some((t) => t.href === path || (t.href !== "/" && path === t.href));
   const back = () => (window.history.length > 1 ? router.back() : router.push(tabs[0]?.href ?? "/home"));
   return (
-    <div className="fx-line no-print sticky top-0 z-40 flex min-h-14 items-center gap-1 border-b border-rule-strong bg-sheet pr-2 pl-1 md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="fx-line no-print sticky top-0 z-40 flex min-h-14 items-center gap-1.5 border-b border-rule bg-sheet/85 pr-2 pl-1 backdrop-blur-xl md:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {root ? (
         // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
         <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="ml-2 h-8 w-8 shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />
@@ -105,7 +105,16 @@ export function MobileTopBar({ path, title, ai, user, tabs }: { path: string; ti
       )}
       <h1 className="min-w-0 flex-1 truncate px-1 text-[19px] font-black">{title || "STAFFETTA"}</h1>
       <div className="shrink-0">{ai}</div>
-      {user && <span className="max-w-[5.5em] shrink-0 truncate pl-1 text-[15px] font-bold text-ink-soft">{user.name}</span>}
+      {/* ⑧ メニューは上の右に、文字つきで（前は下のタブの右下で、気づきにくかった） */}
+      {onMenu ? (
+        <button type="button" onClick={onMenu} aria-label={user ? `メニュー（${user.name}）` : "メニュー"}
+          className="flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-rule-strong px-3 text-[15px] font-bold text-ink active:scale-95 active:bg-paper">
+          <MIcon name="menu" className="h-5 w-5" />
+          メニュー
+        </button>
+      ) : (
+        user && <span className="max-w-[5.5em] shrink-0 truncate pl-1 text-[15px] font-bold text-ink-soft">{user.name}</span>
+      )}
     </div>
   );
 }
@@ -114,14 +123,18 @@ export function MobileTopBar({ path, title, ai, user, tabs }: { path: string; ti
 export function BottomTabs({ path, tabs, onMenu, menuOpen }: { path: string; tabs: Tab[]; onMenu?: () => void; menuOpen: boolean }) {
   const typing = useTyping();
   if (typing) return null;
-  const cell = "flex min-h-[60px] flex-1 flex-col items-center justify-center gap-0.5 pt-1 text-[13px] leading-tight font-bold";
+  // ⑧ 浮いた下のタブ: iPhone のホームのバー（safe-area-inset-bottom）の上に、左右と下に少しすき間を空けて置く。
+  //   今いる所は、アイコンの後ろの丸い面と太字で。全部の画面は上の「メニュー」から
+  const cell = "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[12px] leading-tight font-bold transition-colors duration-150";
+  if (tabs.length <= 1 && !onMenu) return null;
   return (
-    <nav aria-label="下のタブ" className="no-print fixed inset-x-0 bottom-0 z-30 flex border-t border-rule-strong bg-sheet md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav aria-label="下のタブ" className="no-print fixed inset-x-3 z-30 flex gap-1 rounded-2xl border border-rule bg-sheet/85 p-1 shadow-[0_8px_24px_rgb(0_0_0/0.18)] backdrop-blur-xl md:hidden"
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 8px)" }}>
       {tabs.map((t) => {
         const on = !menuOpen && isOn(t, path);
         return (
-          <Link key={t.href} href={t.href} aria-current={on ? "page" : undefined} className={`${cell} ${on ? "text-crust-700" : "text-ink"} active:bg-crust-50`}>
-            <MIcon name={t.icon} className={`h-7 w-7 ${on ? "stroke-[2.4]" : ""}`} />
+          <Link key={t.href} href={t.href} aria-current={on ? "page" : undefined} className={`${cell} ${on ? "bg-crust-600/15 text-crust-700" : "text-ink-soft"} active:scale-95`}>
+            <MIcon name={t.icon} className={`h-6 w-6 ${on ? "stroke-[2.4]" : ""}`} />
             <span className={on ? "font-black" : ""}>{t.label}</span>
           </Link>
         );

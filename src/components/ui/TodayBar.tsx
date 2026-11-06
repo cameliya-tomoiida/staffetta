@@ -60,7 +60,42 @@ function WorkItem({ href, label, count, unit = "件", urgent = false, review = f
   );
 }
 
-export function TodayBar({ role }: { role?: Role } = {}) {
+// スマホのホームの「今日やること」カード（⑧ スマホの作り直し）。数のあるものを上に、大きな数字・控えめな文字・押すとその仕事へ
+const HINT: Record<IconName, string> = {
+  urgent: "すぐ見てください",
+  review: "確かめて確定する注文",
+  fax: "読み取りの確認・未読",
+  purchase: "承認・送るのを待っています",
+  stock: "安全在庫を割りそう",
+  warn: "製造計画の注意",
+};
+function WorkCard({ href, label, count, unit = "件", urgent = false, review = false, icon }: Parameters<typeof WorkItem>[0]) {
+  const on = count != null && count > 0;
+  const tone = !on ? "text-ink-soft" : urgent ? "text-alert-ink" : review ? "text-review-ink" : "text-ink";
+  const dot = !on ? "bg-rule" : urgent ? "bg-alert-ink" : review ? "bg-review-line" : "bg-ink-soft";
+  return (
+    <Link href={href} aria-label={`${label} ${count == null ? "取得できません" : `${count}${unit}`}`}
+      className={`m-card flex min-h-[72px] items-center gap-3 rounded-2xl border bg-sheet px-4 py-3 shadow-[0_1px_2px_rgb(0_0_0/0.06)] transition-transform duration-150 active:scale-[0.98] ${on && urgent ? "border-alert-line" : "border-rule"}`}>
+      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${on && urgent ? "bg-alert-bg" : on && review ? "bg-review-bg" : "bg-paper"} ${tone}`}>
+        <Icon name={icon} className="h-6 w-6" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-[16px] font-bold text-ink">
+          <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+          {label}
+        </span>
+        <span className="block truncate text-[13px] text-ink-soft">{on ? HINT[icon] : "いまは ありません"}</span>
+      </span>
+      <span className={`shrink-0 text-right leading-none ${tone}`}>
+        <b className="text-[30px] font-extrabold tabular-nums">{count == null ? "—" : count > 999 ? "999+" : count}</b>
+        <span className="ml-0.5 text-[13px]">{unit}</span>
+      </span>
+      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-ink-faint" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
+    </Link>
+  );
+}
+
+export function TodayBar({ role, variant = "grid" }: { role?: Role; variant?: "grid" | "cards" } = {}) {
   const path = usePathname() ?? "/";
   const hidden = path.startsWith("/liff") || path.startsWith("/driver") || path.startsWith("/login") || path.startsWith("/setup");
   const [s, setS] = useState<TodaySummary | null>(null);
@@ -131,6 +166,29 @@ export function TodayBar({ role }: { role?: Role } = {}) {
   // 役割で開けない項目は出さない（工場の人に FAX・発注書の数を見せても押せないため）
   const shown = role ? items.filter((it) => canOpen(role, it.href.split("?")[0])) : items;
   if (shown.length === 0) return null;
+  if (variant === "cards") {
+    // 数のあるものを上に（急ぎ → 要確認 → …の順はそのまま）。0件はまとめて下に小さく
+    const busy = shown.filter((it) => it.count == null || it.count > 0);
+    const calm = shown.filter((it) => it.count === 0);
+    return (
+      <section aria-label="今日やること" className="space-y-2 pb-1">
+        <h2 className="flex items-baseline justify-between px-1 text-[15px] font-black tracking-wide text-ink-soft">
+          今日やること
+          {failed && <span className="text-[13px] font-bold text-alert-ink">{s ? "数を更新できません" : "数を取得できません"}</span>}
+        </h2>
+        {busy.map((it) => <WorkCard key={it.label} {...it} />)}
+        {calm.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-1 pt-1">
+            {calm.map((it) => (
+              <Link key={it.label} href={it.href} className="rounded-full border border-rule px-3 py-1 text-[13px] text-ink-soft">
+                {it.label} 0
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
   return (
     <div className="pb-3">
       <nav aria-label="今日の仕事" className="grid w-full min-w-0 grid-cols-3 overflow-hidden rounded-[10px] border border-[#c5cac5] min-[851px]:grid-cols-6 [&>a]:border-r [&>a:nth-child(3n)]:border-r-0 min-[851px]:[&>a:nth-child(3n)]:border-r max-[850px]:[&>a:nth-child(-n+3)]:border-b [&>a:last-child]:border-r-0" style={shown.length < 6 ? { gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` } : undefined}>
