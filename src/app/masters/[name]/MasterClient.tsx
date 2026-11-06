@@ -6,6 +6,7 @@ import { Button, buttonClass, fmtDateTime, Notice, Tag } from "@/components/ui";
 import type { ColumnType } from "@/lib/masters/columns";
 import type { Preview } from "@/lib/masters/csv";
 import { useStaffNames } from "@/components/ui/staff";
+import { AiImport } from "./AiImport";
 
 type Rec = Record<string, unknown> & { id: string; disabled?: boolean };
 type RefIndex = Record<string, { id: string; name?: string }[]>;
@@ -65,6 +66,8 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
   const [counting, setCounting] = useState<{ id: string; value: string } | null>(null);
   const [preview, setPreview] = useState<(Preview & { hash: string }) | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  // ⑧ AI で取り込む（どんな形の CSV・Excel でも）
+  const [aiOpen, setAiOpen] = useState(false);
   const [showDisabled, setShowDisabled] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const allListCols = listKeys.map((k) => columns.find((c) => c.key === k)).filter((c): c is ClientColumn => !!c);
@@ -146,7 +149,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
 
   const field = "min-h-12 w-full rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base";
   // 1画面にやることは1つ: 1件を直している間・CSV を確かめている間は、一覧と上の道具を出さない
-  const focused = !!editing || !!preview;
+  const focused = !!editing || !!preview || aiOpen;
   const whoSelect = (
     <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
       操作する人
@@ -171,6 +174,7 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
         <div className="flex flex-wrap items-center gap-3">
           {whoSelect}
           <Button variant="primary" disabled={busy} onClick={() => openEdit()}>＋ {label}を1件追加</Button>
+          <Button disabled={busy} onClick={() => { setMsg(null); setAiOpen(true); }}>AI で取り込む（どんな形の CSV・Excel でも）</Button>
           <details className="relative">
             <summary className={`${buttonClass("ghost")} cursor-pointer list-none`}>CSV でまとめて入れる・書き出す ▾</summary>
             <div className="absolute z-30 mt-1 flex w-72 flex-col gap-2 rounded-lg border-2 border-rule-strong bg-sheet p-3 shadow-lg">
@@ -185,6 +189,19 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
         </div>
       )}
       {msg && <Notice tone={msg.ok ? "ok" : "alert"}>{msg.text}</Notice>}
+      {aiOpen && (
+        <>
+          {whoSelect}
+          <AiImport
+            name={name}
+            label={label}
+            columns={columns.map((c) => ({ key: c.key, label: c.label }))}
+            who={who}
+            onClose={() => setAiOpen(false)}
+            onDone={(text) => { setAiOpen(false); setMsg({ ok: true, text }); router.refresh(); }}
+          />
+        </>
+      )}
 
       {/* CSV のプレビュー */}
       {preview && (
