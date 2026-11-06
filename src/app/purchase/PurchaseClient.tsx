@@ -127,6 +127,7 @@ export function PurchaseClient({
       <div className="no-print mb-4 flex flex-wrap items-center gap-3">
         <FactoryPrint label={`発注書（${date}）`} />
         <Link href={`/purchase/stores?date=${date}`} className="link text-lg font-bold">店番ごとの発注表（FAX の形）→</Link>
+        <Link href={`/plan/courses?date=${date}&kind=buy`} className="link text-lg font-bold">コース別の仕入表 →</Link>
       </div>
       {costBox}
       {error && (
