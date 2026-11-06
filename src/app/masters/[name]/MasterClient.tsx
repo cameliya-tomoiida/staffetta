@@ -151,9 +151,10 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
   // 1画面にやることは1つ: 1件を直している間・CSV を確かめている間は、一覧と上の道具を出さない
   const focused = !!editing || !!preview || aiOpen;
   const whoSelect = (
-    <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
-      操作する人
-      <select className={`min-h-12 rounded-lg border-2 bg-sheet px-3 text-base text-ink ${who ? "border-rule-strong" : "border-review-line bg-review-bg"}`} value={who} onChange={(e) => setWho(e.target.value)}>
+    <label className="flex items-center gap-2 text-sm font-bold text-ink-soft" title="操作する人">
+      <span className="max-md:hidden">操作する人</span>
+      <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 md:hidden" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+      <select aria-label="操作する人" className={`min-h-12 rounded-lg border-2 bg-sheet px-3 text-base text-ink max-md:min-h-10 max-md:px-2 max-md:text-[14px] ${who ? "border-rule-strong" : "border-review-line bg-review-bg"}`} value={who} onChange={(e) => setWho(e.target.value)}>
         <option value="">えらんでください</option>
         {STAFF.map((s) => <option key={s}>{s}</option>)}
       </select>
@@ -173,10 +174,10 @@ export function MasterClient({ name, label, columns, listKeys, keyColumns, hasSt
       {!focused && (
         <div className="flex flex-wrap items-center gap-3">
           {whoSelect}
-          <Button variant="primary" disabled={busy} onClick={() => openEdit()}>＋ {label}を1件追加</Button>
-          <Button disabled={busy} onClick={() => { setMsg(null); setAiOpen(true); }}>AI で取り込む（どんな形の CSV・Excel でも）</Button>
+          <Button variant="primary" disabled={busy} onClick={() => openEdit()}>＋ <span className="max-md:hidden">{label}を1件</span>追加</Button>
+          <Button disabled={busy} onClick={() => { setMsg(null); setAiOpen(true); }}>AI で取り込む<span className="max-md:hidden">（どんな形の CSV・Excel でも）</span></Button>
           <details className="relative">
-            <summary className={`${buttonClass("ghost")} cursor-pointer list-none`}>CSV でまとめて入れる・書き出す ▾</summary>
+            <summary className={`${buttonClass("ghost")} cursor-pointer list-none after:!hidden [&::-webkit-details-marker]:hidden`}>CSV<span className="max-md:hidden"> でまとめて入れる・書き出す</span> ▾</summary>
             <div className="absolute z-30 mt-1 flex w-72 flex-col gap-2 rounded-lg border-2 border-rule-strong bg-sheet p-3 shadow-lg">
               <Button disabled={busy} onClick={() => fileInput.current?.click()}>CSV を読み込む（登録の前に確認します）</Button>
               <a className={buttonClass("ghost")} href={`/api/masters/${name}?format=csv`}>いまの中身を CSV に書き出す</a>
