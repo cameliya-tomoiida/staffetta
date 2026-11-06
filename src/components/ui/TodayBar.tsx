@@ -38,7 +38,7 @@ function WorkItem({ href, label, count, unit = "件", urgent = false, review = f
     ? "bg-[#8b1a1a] text-white hover:bg-[#701414]"
     : zero || count == null
       ? "bg-[#f3f4f2] text-[#565c57] hover:bg-[#e8ebe7]"
-      : "bg-sheet text-ink hover:bg-[#faf1f1]";
+      : "bg-sheet text-ink hover:bg-[#fcf0f0]";
   return (
     <Link
       href={href}

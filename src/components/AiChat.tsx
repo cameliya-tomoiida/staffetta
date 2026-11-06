@@ -87,7 +87,7 @@ export function AiChat() {
               </div>
             )}
             {list?.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "ml-8 rounded-xl bg-[#faf1f1] px-3 py-2" : "mr-4 rounded-xl border border-rule bg-cream px-3 py-2"}>
+              <div key={i} className={m.role === "user" ? "ml-8 rounded-xl bg-[#fcf0f0] px-3 py-2" : "mr-4 rounded-xl border border-rule bg-cream px-3 py-2"}>
                 <div className="whitespace-pre-wrap">{m.text}</div>
                 {m.did && m.did.length > 0 && (
                   <ul className="mt-2 space-y-1">

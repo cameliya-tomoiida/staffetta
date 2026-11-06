@@ -152,7 +152,7 @@ export function SheetChat({ initial }: { initial?: SheetDef }) {
 }
 
 const B = "border border-black";
-const TH = `${B} bg-[#ece6dc] px-1 text-left font-bold`;
+const TH = `${B} bg-[#eceef1] px-1 text-left font-bold`;
 
 /** 印刷の見本（はじめの1週間ぶん） */
 function Preview({ def }: { def: SheetDef }) {

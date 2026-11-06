@@ -39,22 +39,22 @@ export const metadata = { title: "製造計画・工程表｜STAFFETTA" };
 
 /** 工程の色（落ち着いた色。隣どうしが見分けられるように） */
 const stepColor: Record<ProcessKey, string> = {
-  // 落ち着いた生成り・灰色の濃淡。焼成だけ椿の赤に寄せ、冷やす工程は灰青（名前と時刻を必ず一緒に出す）
-  weigh: "#efe9df",
-  mix: "#ddd2c1",
-  ferment: "#ece2cc",
-  divide: "#e4ddd1",
-  bench: "#f3eee6",
-  shape: "#cfc5b5",
+  // 落ち着いた灰色の濃淡（肌色・生成りは使わない）。焼成だけ椿の赤に寄せ、冷やす工程は灰青（名前と時刻を必ず一緒に出す）
+  weigh: "#eef0f3",
+  mix: "#d5dae1",
+  ferment: "#e6e9ee",
+  divide: "#dde1e7",
+  bench: "#f3f4f6",
+  shape: "#c9cfd8",
   retard: "#dfe5eb",
-  proof: "#e8dabf",
-  topping: "#ead5d1",
+  proof: "#e1e5eb",
+  topping: "#ecdcdc",
   bake: "#d4a49b",
   cool: "#dde4ea",
   freeze: "#c8d3de",
-  pack: "#e3ddd5",
-  metal_check: "#f7e6e2",
-  cleanup: "#ecebe8",
+  pack: "#e2e5ea",
+  metal_check: "#fcebeb",
+  cleanup: "#eceef1",
 };
 const STEPS = Object.keys(stepColor) as ProcessKey[];
 

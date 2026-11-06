@@ -7,7 +7,7 @@ import type { Analytics, Named } from "@/lib/analytics";
 const yen = (n: number) => `${Math.round(n).toLocaleString("ja-JP")}円`;
 const man = (n: number) => (Math.abs(n) >= 10000 ? `${(n / 10000).toFixed(n >= 1_000_000 ? 0 : 1)}万円` : yen(n));
 const WD = "日月火水木金土";
-const COLORS = ["#ff6b5e", "#ffb199", "#f5c400", "#7fd1c7", "#9bb7ff", "#d9a2ff", "#ffffff", "#c9c0b4"];
+const COLORS = ["#ff6b5e", "#ffb199", "#f5c400", "#7fd1c7", "#9bb7ff", "#d9a2ff", "#ffffff", "#c6cbd2"];
 
 const reduce = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

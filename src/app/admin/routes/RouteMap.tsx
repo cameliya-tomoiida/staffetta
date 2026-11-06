@@ -157,7 +157,7 @@ export function RouteMap({
     L.marker([depot.lat, depot.lng], {
       icon: L.divIcon({
         className: "",
-        html: `<div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:6px;background:#2b2420;color:#fff;font:700 15px/1 'BIZ UDPGothic',sans-serif;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">工場</div>`,
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:6px;background:#1f2328;color:#fff;font:700 15px/1 'BIZ UDPGothic',sans-serif;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">工場</div>`,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
       }),

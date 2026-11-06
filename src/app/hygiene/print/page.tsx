@@ -35,7 +35,7 @@ export default async function HygienePrint(props: PageProps<"/hygiene/print">) {
 }
 
 const B = "border border-black";
-const th = `${B} bg-[#ece6dc] px-[1mm] font-bold`;
+const th = `${B} bg-[#eceef1] px-[1mm] font-bold`;
 
 function Sheet({ def, rec, month, holidays, first }: { def: SheetDef; rec: SheetRecord; month: string; holidays: string[]; first: boolean }) {
   const days = monthDays(month);

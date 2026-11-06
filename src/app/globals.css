@@ -14,19 +14,19 @@
  */
 @theme {
   /* 紙と墨 */
-  --color-paper: #faf8f5; /* 画面の地（ほぼ白） */
+  --color-paper: #ffffff; /* 画面の地（白） */
   --color-sheet: #ffffff; /* 帳票・カード */
-  --color-cream: #f7f3ec; /* うすいクリーム（選んだ行・表の見出し） */
-  --color-ink: #2b2420; /* 本文（墨） */
-  --color-ink-soft: #5f5650; /* 補足 */
-  --color-ink-faint: #7b7067; /* 注記 */
-  --color-rule: #e6e0d8; /* 罫線 */
-  --color-rule-strong: #c9c0b4;
+  --color-cream: #f5f6f8; /* うすい灰（選んだ行・表の見出し） */
+  --color-ink: #1f2328; /* 本文（墨） */
+  --color-ink-soft: #57606a; /* 補足 */
+  --color-ink-faint: #6e7781; /* 注記 */
+  --color-rule: #e3e6ea; /* 罫線 */
+  --color-rule-strong: #c6cbd2;
 
   /* 椿の赤（押す所・大事な所だけ）。crust という名前は前からの部品のために残す */
   --color-tsubaki: #8f1d1d;
-  --color-crust-50: #fbf4f3;
-  --color-crust-100: #f4e3e1;
+  --color-crust-50: #fdf3f3;
+  --color-crust-100: #f8e1e1;
   --color-crust-200: #e3bdb8;
   --color-crust-500: #a53a36;
   --color-crust-600: #8f1d1d;
@@ -39,10 +39,10 @@
   --color-ok-bg: #e8f1e6; /* 確定＝緑 */
   --color-ok-line: #93b38d;
   --color-ok-ink: #2f5a33;
-  --color-off-bg: #efece8; /* 取消・押せない＝灰 */
-  --color-off-line: #c3bcb3;
-  --color-off-ink: #6b645d;
-  --color-alert-bg: #f7e6e2; /* 締め切れ・エラー（赤より茶に寄せる） */
+  --color-off-bg: #eff1f4; /* 取消・押せない＝灰 */
+  --color-off-line: #c4c9d0;
+  --color-off-ink: #636c76;
+  --color-alert-bg: #fcebeb; /* 締め切れ・エラー（赤より茶に寄せる） */
   --color-alert-line: #c98b7c;
   --color-alert-ink: #7a2a1c;
   --color-info-bg: #e9eef3; /* 送信済み・お知らせ */
@@ -53,7 +53,7 @@
   --color-prov-ink: #34507a;
 
   /* ライン（パンは墨に近い茶、ピザは椿の赤） */
-  --color-bread: #6b4a2e;
+  --color-bread: #3d4652;
   --color-pizza: #8f1d1d;
 
   --font-sans: "BIZ UDPGothic", "BIZ UDゴシック", "Yu Gothic UI", "Meiryo", "Noto Sans JP", "Noto Sans", "Noto Sans Myanmar",
@@ -219,7 +219,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     display: block;
     margin: 0 0 10px;
     padding: 10px 12px;
-    border: 1px solid var(--color-rule-strong, #c5cac5);
+    border: 1px solid var(--color-rule-strong, #c6cbd2);
     border-radius: 12px;
     background: var(--color-sheet, #fff);
   }
@@ -247,7 +247,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     width: 6.5em;
     font-size: 15px;
     font-weight: 700;
-    color: var(--color-ink-soft, #55503f);
+    color: var(--color-ink-soft, #57606a);
   }
   /* 1つ目のセルは名前として大きく（見出しは出さない） */
   main table:not(.m-keep) > tbody > tr > :first-child {
@@ -286,7 +286,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     position: relative;
     min-height: 48px;
     padding: 10px 40px 10px 12px;
-    border: 2px solid var(--color-rule-strong, #c9c0b4);
+    border: 2px solid var(--color-rule-strong, #c6cbd2);
     border-radius: 12px;
     background: var(--color-sheet, #fff);
     font-weight: 700;
@@ -313,7 +313,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
     transform: translateY(-50%) rotate(90deg);
   }
   .text-ink-faint {
-    color: var(--color-ink-soft, #5f5650) !important;
+    color: var(--color-ink-soft, #57606a) !important;
   }
 }
 /* スマホ: class="m-limit" の一覧は、はじめ8件まで（「すべて見る」で m-all を付けて全部）（⑧） */
@@ -505,18 +505,18 @@ a, button, input, select, textarea, label, summary, [role="button"] {
   /* 直接書いた明るい色を、暗い色の決まりに読みかえる（紙の見本 .theme-paper の中はそのまま） */
   :where(html:not([data-theme="light"])) :where(.bg-white):not(.theme-paper *) { background-color: var(--color-sheet); }
   :where(html:not([data-theme="light"])) :where(.bg-\[\#fff3c4\]):not(.theme-paper *) { background-color: #4a3d0c; color: #fff4c2; } /* 確認する行（黄）は、暗い画面でもはっきり黄色に */
-  :where(html:not([data-theme="light"])) :where(.bg-\[\#fff0f1\], .bg-\[\#faf1f1\]):not(.theme-paper *) { background-color: var(--color-alert-bg); }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#fff0f1\], .bg-\[\#fcf0f0\]):not(.theme-paper *) { background-color: var(--color-alert-bg); }
   :where(html:not([data-theme="light"])) :where(.bg-\[\#e6f0fb\]):not(.theme-paper *) { background-color: var(--color-info-bg); }
   :where(html:not([data-theme="light"])) :where(.bg-\[\#eaf5ed\]):not(.theme-paper *) { background-color: var(--color-ok-bg); }
-  :where(html:not([data-theme="light"])) :where(.bg-\[\#ece6dc\], .bg-\[\#f4f4f4\], .bg-\[\#e3e3e3\]):not(.theme-paper *) { background-color: var(--color-cream); }
-  :where(html:not([data-theme="light"])) :where(.bg-\[\#c5cac5\]):not(.theme-paper *) { background-color: #4a5060; }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#eceef1\], .bg-\[\#f4f4f4\], .bg-\[\#e3e3e3\]):not(.theme-paper *) { background-color: var(--color-cream); }
+  :where(html:not([data-theme="light"])) :where(.bg-\[\#c6cbd2\]):not(.theme-paper *) { background-color: #4a5060; }
   :where(html:not([data-theme="light"])) :where(.text-\[\#565c57\], .text-\[\#555\], .text-\[\#444\], .text-\[\#242724\]):not(.theme-paper *) { color: var(--color-ink-soft); }
   :where(html:not([data-theme="light"])) :where(.text-\[\#654700\]):not(.theme-paper *) { color: var(--color-review-ink); }
   :where(html:not([data-theme="light"])) :where(.text-\[\#a51e28\], .text-\[\#a00\], .text-\[\#8b1a1a\]):not(.theme-paper *) { color: var(--color-alert-ink); }
   :where(html:not([data-theme="light"])) :where(.text-\[\#1f3f66\], .text-\[\#1d4b8f\]):not(.theme-paper *) { color: var(--color-info-ink); }
   :where(html:not([data-theme="light"])) :where(.text-\[\#24633d\]):not(.theme-paper *) { color: var(--color-ok-ink); }
   :where(html:not([data-theme="light"])) :where(.text-black):not(.theme-paper *) { color: var(--color-ink); }
-  :where(html:not([data-theme="light"])) :where(.border-\[\#c5cac5\], .border-\[\#838b83\]):not(.theme-paper *) { border-color: var(--color-rule-strong); }
+  :where(html:not([data-theme="light"])) :where(.border-\[\#c6cbd2\], .border-\[\#838b83\]):not(.theme-paper *) { border-color: var(--color-rule-strong); }
   :where(html:not([data-theme="light"])) :where(.border-\[\#b08210\]):not(.theme-paper *) { border-color: var(--color-review-line); }
   :where(html:not([data-theme="light"])) :where(.hover\:bg-crust-700:hover):not(.theme-paper *) { background-color: #a8332a; }
   /* 入力欄・選ぶ欄も暗く（文字は明るく） */
@@ -528,17 +528,17 @@ a, button, input, select, textarea, label, summary, [role="button"] {
 /* 紙の見本（印刷のページ・カードの形など）は、画面でも白い紙と墨のまま */
 .theme-paper {
   color-scheme: light;
-  --color-paper: #faf8f5;
+  --color-paper: #ffffff;
   --color-sheet: #ffffff;
-  --color-cream: #f7f3ec;
-  --color-ink: #2b2420;
-  --color-ink-soft: #5f5650;
-  --color-ink-faint: #7b7067;
-  --color-rule: #e6e0d8;
-  --color-rule-strong: #c9c0b4;
+  --color-cream: #f5f6f8;
+  --color-ink: #1f2328;
+  --color-ink-soft: #57606a;
+  --color-ink-faint: #6e7781;
+  --color-rule: #e3e6ea;
+  --color-rule-strong: #c6cbd2;
   --color-tsubaki: #8f1d1d;
-  --color-crust-50: #fbf4f3;
-  --color-crust-100: #f4e3e1;
+  --color-crust-50: #fdf3f3;
+  --color-crust-100: #f8e1e1;
   --color-crust-200: #e3bdb8;
   --color-crust-500: #a53a36;
   --color-crust-600: #8f1d1d;
@@ -549,10 +549,10 @@ a, button, input, select, textarea, label, summary, [role="button"] {
   --color-ok-bg: #e8f1e6;
   --color-ok-line: #93b38d;
   --color-ok-ink: #2f5a33;
-  --color-off-bg: #efece8;
-  --color-off-line: #c3bcb3;
-  --color-off-ink: #6b645d;
-  --color-alert-bg: #f7e6e2;
+  --color-off-bg: #eff1f4;
+  --color-off-line: #c4c9d0;
+  --color-off-ink: #636c76;
+  --color-alert-bg: #fcebeb;
   --color-alert-line: #c98b7c;
   --color-alert-ink: #7a2a1c;
   --color-info-bg: #e9eef3;
@@ -561,7 +561,7 @@ a, button, input, select, textarea, label, summary, [role="button"] {
   --color-prov-bg: #eaf0f6;
   --color-prov-line: #9db3cc;
   --color-prov-ink: #34507a;
-  --color-bread: #6b4a2e;
+  --color-bread: #3d4652;
   --color-pizza: #8f1d1d;
   background: #ffffff;
   color: var(--color-ink);

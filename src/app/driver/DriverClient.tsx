@@ -320,7 +320,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                   {plan.stops.map((s) => (
                     <li key={s.id}>
                       <button type="button" onClick={() => setOpen(s)}
-                        className={`flex w-full items-start gap-3 rounded-xl border-2 bg-white px-3 py-3 text-left active:bg-[#faf1f1] ${s.off ? "border-dashed border-[#c5cac5] opacity-60" : s.late > 0 ? "border-[#a51e28]" : "border-[#c5cac5]"}`}>
+                        className={`flex w-full items-start gap-3 rounded-xl border-2 bg-white px-3 py-3 text-left active:bg-[#fcf0f0] ${s.off ? "border-dashed border-[#c5cac5] opacity-60" : s.late > 0 ? "border-[#a51e28]" : "border-[#c5cac5]"}`}>
                         <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-[19px] font-black ${s.off ? "bg-[#c5cac5] text-white" : "bg-[#8b1a1a] text-white"}`}>{s.off ? "休" : s.no}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-[20px] leading-snug font-bold">{s.name}</span>
@@ -509,7 +509,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
 
             {/* 納品の決まり（⑧）: 着く前に、いちばん上に大きく。代わりの人でも回れるように */}
             {!open.off && open.rules.length > 0 && (
-              <div className="mt-3 rounded-xl border-[3px] border-[#8b1a1a] bg-[#faf1f1] px-3 py-2.5">
+              <div className="mt-3 rounded-xl border-[3px] border-[#8b1a1a] bg-[#fcf0f0] px-3 py-2.5">
                 <div className="text-[16px] font-black text-[#8b1a1a]">この先の納品の決まり</div>
                 {badgeRules(open.rules).length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-2">
@@ -541,7 +541,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                 <h2 className="mt-4 text-[18px] font-black">いつもの商品</h2>
                 <ul className="mt-1 flex flex-wrap gap-2">
                   {open.usual.map((u) => (
-                    <li key={u.name} className={`rounded-lg border-2 px-3 py-1.5 text-[18px] ${u.today ? "border-[#8b1a1a] bg-[#faf1f1] font-bold" : "border-[#c5cac5] bg-white"}`}>
+                    <li key={u.name} className={`rounded-lg border-2 px-3 py-1.5 text-[18px] ${u.today ? "border-[#8b1a1a] bg-[#fcf0f0] font-bold" : "border-[#c5cac5] bg-white"}`}>
                       {u.name}
                       {u.weekdays && <span className="ml-1 text-[15px] font-normal text-[#565c57]">（{u.weekdays}）</span>}
                     </li>

@@ -49,7 +49,7 @@ export default async function CardPrint(props: PageProps<"/cards/print">) {
 
 // 1マス: 高さ 7.6mm・字は 11.5pt。見出しは生成りの地、アプリが入れた所は青い地。
 const td = "h-[8.8mm] border border-black px-[1.5mm] align-middle text-[11.5pt]";
-const th = "h-[6.4mm] border border-black bg-[#ece6dc] px-[1.5mm] text-left align-middle text-[10pt] font-bold";
+const th = "h-[6.4mm] border border-black bg-[#eceef1] px-[1.5mm] text-left align-middle text-[10pt] font-bold";
 const auto = `${td} bg-[#e6f0fb] text-[#1f3f66]`;
 /** 小さい字の欄（予定・配置・確認）。td と字の大きさがぶつからないよう別に持つ */
 const small = "h-[8.8mm] border border-black px-[1mm] align-middle text-[8pt] leading-tight overflow-hidden whitespace-nowrap";
