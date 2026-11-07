@@ -135,3 +135,54 @@ export async function importCustomersAction(fd: FormData): Promise<{ added: numb
   revalidatePath("/", "layout");
   return { ...r, errors: [] };
 }
+
+/**
+ * お客さんがその日の納品書（PDF）を受け取る（担当者 11/7「納品される日・何が届くかを確かめて、納品書をダウンロードして、それを見ながら検品できるように」）。
+ * つながっている取引先の、その日の確定した注文だけ。右の「検品」の欄に、届いた物から印を付けられる。
+ */
+export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok: true; fileName: string; base64: string } | { ok: false; error: string }> {
+  try {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("日付が正しくありません");
+    const { userId } = await whoIsLiffUser(auth);
+    const [{ readLineState, customerIdForUser }, { deliveryDay }, { getCompany }, { makeSimplePdf }] = await Promise.all([
+      import("./state"),
+      import("@/lib/slips/store"),
+      import("@/lib/company"),
+      import("@/lib/channels/pdf"),
+    ]);
+    const customerId = customerIdForUser(await readLineState(), userId);
+    if (!customerId) throw new Error("お客さま番号でつないでから使えます");
+    const slip = (await deliveryDay(date, { customerId })).slips[0];
+    if (!slip) throw new Error("この日の確定した注文はまだありません");
+    const c = getCompany();
+    const yen = (n: number) => n.toLocaleString("ja-JP");
+    const md = `${Number(date.slice(0, 4))}年${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日`;
+    const pdf = await makeSimplePdf({
+      title: "納品書",
+      headerRight: [`納品日 ${md}`, `伝票番号 ${slip.no}`, ...(c.invoiceNo ? [`登録番号 ${c.invoiceNo}`] : [])],
+      to: [`${slip.customerName} 御中`],
+      from: [c.name, c.address ? `${c.postalCode ? `〒${c.postalCode} ` : ""}${c.address}` : "", c.tel ? `TEL ${c.tel}` : "", c.fax ? `FAX ${c.fax}` : ""].filter(Boolean),
+      lead: ["下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。"],
+      table: {
+        columns: [
+          { label: "品名", width: 215 },
+          { label: "数量", width: 55, align: "right" },
+          { label: "単位", width: 40, align: "center" },
+          { label: "単価", width: 60, align: "right" },
+          { label: "金額", width: 75, align: "right" },
+          { label: "検品", width: 70, align: "center" },
+        ],
+        rows: slip.lines.map((l) => [l.name, yen(l.quantity), l.unit, yen(l.unitPrice), yen(l.amount), "□"]),
+      },
+      notes: [
+        `小計（税抜） ${yen(slip.totals.net)} 円`,
+        ...slip.totals.byRate.map((r) => `消費税（${r.rate}%） ${yen(r.tax)} 円`),
+        `合計（税込） ${yen(slip.totals.total)} 円`,
+      ],
+      footer: ["検品した人 ＿＿＿＿＿＿＿＿　　検品の日時 ＿＿月＿＿日 ＿＿:＿＿"],
+    });
+    return { ok: true, fileName: `納品書_${date}.pdf`, base64: pdf.toString("base64") };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

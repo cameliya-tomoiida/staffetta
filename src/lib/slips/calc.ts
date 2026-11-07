@@ -74,10 +74,11 @@ export function priceLine(line: Pick<Order["lines"][number], "productId" | "quan
     const cost = cp.cost != null ? yen(cp.cost * line.quantity) : pieceCost != null ? yen(pieceCost * line.pieces) : undefined;
     return { productId: line.productId, name, quantity: line.quantity, unit: line.unit, unitPrice: cp.price!, amount, taxRate, priceFrom: "卸価格", code: cp.code || line.productId, ...(cost != null ? { cost } : {}) };
   }
-  if (cp && cp.unit === "個") {
+  // 取引先の単位が 1個あたり（個・枚・本・斤・なし）で、注文が袋（入数つき）なら、個数 × 卸価格（LINE の注文「5枚入を4袋」＝20枚。11/7）
+  if (cp && (cp.unit === "個" || (per > 1 && /^(個|枚|本|斤|ケ|切)$/.test(cp.unit ?? "")))) {
     const amount = yen(cp.price! * line.pieces);
     const cost = cp.cost != null ? yen(cp.cost * line.pieces) : pieceCost != null ? yen(pieceCost * line.pieces) : undefined;
-    return { productId: line.productId, name, quantity: line.pieces, unit: "個", unitPrice: cp.price!, amount, taxRate, priceFrom: "卸価格", code: cp.code || line.productId, ...(cost != null ? { cost } : {}) };
+    return { productId: line.productId, name, quantity: line.pieces, unit: cp.unit || "個", unitPrice: cp.price!, amount, taxRate, priceFrom: "卸価格", code: cp.code || line.productId, ...(cost != null ? { cost } : {}) };
   }
   const unitPrice = Math.round((p?.price ?? 0) * per * 100) / 100;
   const cost = pieceCost != null ? yen(pieceCost * line.pieces) : undefined;

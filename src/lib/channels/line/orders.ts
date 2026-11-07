@@ -263,7 +263,19 @@ export async function createLiffOrder(input: LiffOrderInput) {
   });
   const at = now();
   const id = `LF${Date.now()}`;
-  const text = items.map((i) => `${productById(i.productId)!.name} ${i.quantity}${productById(i.productId)!.unit}`).join("、");
+  // 入数（5枚入を4つ＝20枚）。単価の基準が1袋あたり（P・袋）なら、その単位で（作り直し 11/7）
+  const m = await (await import("@/lib/masters/seed-db")).loadMasters();
+  const { basisOf, packSizeOf } = await import("./liff-price");
+  const shape = (productId: string) => {
+    const p = productById(productId)!;
+    const pm = m.products.find((x) => x.id === productId);
+    const cp = (m.customerProducts ?? []).find((x) => x.customerId === customerId && x.productId === productId && x.active !== false);
+    const pack = packSizeOf(cp?.name || p.name, pm?.bagSize);
+    const basis = basisOf(cp?.unit || p.unit, cp?.priceBasis);
+    const unit = pack <= 1 ? p.unit : basis === "pack" ? cp?.unit || "袋" : "袋";
+    return { p, pack, unit };
+  };
+  const text = items.map((i) => { const s = shape(i.productId); return `${s.p.name} ${i.quantity}${s.unit}${s.pack > 1 ? `（${s.pack}入）` : ""}`; }).join("、");
   const order: Order = {
     id,
     customerId,
@@ -284,17 +296,17 @@ export async function createLiffOrder(input: LiffOrderInput) {
       },
     },
     lines: items.map((i, li) => {
-      const p = productById(i.productId)!;
+      const { p, pack, unit } = shape(i.productId);
       return {
         id: `${id}-${li}`,
         productId: p.id,
         quantity: i.quantity,
-        unit: p.unit,
-        piecesPerUnit: 1,
-        pieces: i.quantity,
+        unit,
+        piecesPerUnit: pack,
+        pieces: i.quantity * pack,
         confidence: 1,
         edits: [],
-        read: { writtenName: p.name, quantity: i.quantity, unitWritten: p.unit, piecesPerUnit: 1, productId: p.id, confidence: 1, attention: "" },
+        read: { writtenName: p.name, quantity: i.quantity, unitWritten: unit, piecesPerUnit: pack, productId: p.id, confidence: 1, attention: "" },
       };
     }),
   };
@@ -371,6 +383,9 @@ export async function liffContext(userId: string) {
     items[id] = { name: p.name, unit: p.unit, pack: packSizeOf(p.name, (p as { bagSize?: number }).bagSize), basis: basisOf(p.unit), category: categoryOf(p.name, (p as { category?: string }).category), lead: "" };
   }
   const cm = customerId ? m.customers.find((c) => c.id === customerId) : undefined;
+  // 履歴の値段は、納品書と同じ計算（slips/calc の priceLine）
+  const { priceLine } = await import("@/lib/slips/calc");
+  const book = { products: m.products, customerProducts: m.customerProducts ?? [] };
   return {
     /** 取引先ごとの商品を出している（マスタに登録がある） */
     own,
@@ -389,14 +404,17 @@ export async function liffContext(userId: string) {
     lastOrder: last
       ? {
           deliveryDate: last.deliveryDate,
-          items: last.lines.filter((l) => productById(l.productId) && l.quantity > 0).map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          items: last.lines
+            .filter((l) => productById(l.productId) && l.quantity > 0)
+            .map((l) => ({ productId: l.productId, quantity: Math.max(1, Math.ceil((l.pieces || l.quantity) / (items[l.productId]?.pack ?? 1))) })),
         }
       : null,
     /** お客さんに見せる「ご注文の履歴」（新しい順・最大8件。取消・変更の連絡も含む） */
     history: db.orders
       .filter((o) => isLineOrderOf(o, userId) || (customerId && o.customerId === customerId))
+      .filter((o) => o.deliveryDate >= todayJst(-92))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, 8)
+      .slice(0, 200)
       .map((o) => ({
         id: o.id,
         deliveryDate: o.deliveryDate,
@@ -405,7 +423,10 @@ export async function liffContext(userId: string) {
         intent: o.intent ?? "new",
         items: o.lines
           .filter((l) => l.quantity > 0)
-          .map((l) => ({ name: productById(l.productId)?.name ?? l.read?.writtenName ?? "商品", quantity: l.quantity, unit: l.unit })),
+          .map((l) => {
+            const s = customerId && l.productId ? priceLine(l, customerId, book) : undefined;
+            return { productId: l.productId, name: s?.name ?? productById(l.productId)?.name ?? l.read?.writtenName ?? "商品", quantity: s?.quantity ?? l.quantity, unit: s?.unit ?? l.unit, ...(s ? { unitPrice: s.unitPrice, amount: s.amount } : {}) };
+          }),
       })),
   };
 }

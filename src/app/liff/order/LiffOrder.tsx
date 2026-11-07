@@ -1,7 +1,7 @@
 "use client";
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { liffClaimAction, liffLoadAction, liffOrderAction, type LiffAuth } from "@/lib/channels/line/actions";
+import { liffClaimAction, liffLoadAction, liffOrderAction, liffSlipAction, type LiffAuth } from "@/lib/channels/line/actions";
 import { lineAmount, shippingOf } from "@/lib/channels/line/liff-price";
 import { nowMs } from "@/lib/clock";
 
@@ -56,7 +56,7 @@ const PLUS = "M12 5v14M5 12h14";
 const MINUS = "M5 12h14";
 
 /** お届け日のカレンダー（‹ 月 ›・マス 40px）。選べない日はグレーで押せないだけ（定休日は小さく「休み」） */
-function Calendar({ days, value, onPick, closed, today }: { days: string[]; value: string; onPick: (ymd: string) => void; closed: (ymd: string) => string; today: string }) {
+function Calendar({ days, value, onPick, closed, today, marks }: { days: string[]; value: string; onPick: (ymd: string) => void; closed: (ymd: string) => string; today: string; marks?: Set<string> }) {
   const months = [...new Set(days.map((d) => d.slice(0, 7)))];
   const [mi, setMi] = useState(() => Math.max(0, months.indexOf(value.slice(0, 7))));
   const ym = months[mi] ?? months[0];
@@ -106,6 +106,7 @@ function Calendar({ days, value, onPick, closed, today }: { days: string[]; valu
             >
               {d}
               {why === "休み" && <small className="mt-0.5 text-[9px] font-medium">休み</small>}
+              {marks?.has(ymd) && <span className={`mt-1 h-1.5 w-1.5 rounded-full ${on ? "bg-white" : "bg-crust-600"}`} aria-hidden />}
             </button>
           );
         })}
@@ -126,6 +127,24 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const [cat, setCat] = useState("");
   const [pad, setPad] = useState<null | { id: string; value: string }>(null);
   const [sending, setSending] = useState(false);
+  const [histDay, setHistDay] = useState("");
+  const [slip, setSlip] = useState<{ busy: boolean; error?: string }>({ busy: false });
+  /** その日の納品書（PDF）を受け取って開く（検品に使う） */
+  const getSlip = async (ymd: string) => {
+    if (!auth || slip.busy) return;
+    setSlip({ busy: true });
+    const r = await liffSlipAction(auth, ymd);
+    if (!r.ok) return setSlip({ busy: false, error: r.error });
+    const bin = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bin], { type: "application/pdf" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = r.fileName;
+    a.target = "_blank";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    setSlip({ busy: false });
+  };
   const [sent, setSent] = useState<null | { date: string; lines: [string, number][] }>(null);
   const [sdkReady, setSdkReady] = useState(!liffId);
   const [inClient, setInClient] = useState(false);
@@ -222,8 +241,13 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const send = async () => {
     if (!auth || sending || !lines.length) return;
     setSending(true);
+    navigator.vibrate?.(15);
     try {
-      await liffOrderAction(auth, { deliveryDate: date, items: lines.map(([productId, quantity]) => ({ productId, quantity })), repeat });
+      // 早すぎて押せたか不安にならないように、「送っています」を少しのあいだ見せる（担当者 11/7）
+      await Promise.all([
+        liffOrderAction(auth, { deliveryDate: date, items: lines.map(([productId, quantity]) => ({ productId, quantity })), repeat }),
+        new Promise((ok) => setTimeout(ok, 800)),
+      ]);
       setSent({ date, lines });
       setQty({});
       setTab("done");
@@ -312,6 +336,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
   return (
     <div className="mx-auto min-h-dvh max-w-[520px] bg-cream text-[15px] leading-[1.45] text-ink [-webkit-tap-highlight-color:transparent]">
+      <style>{`@keyframes liffPop { 0% { transform: scale(.4); opacity: 0 } 70% { transform: scale(1.12); opacity: 1 } 100% { transform: scale(1) } }`}</style>
       {liffId && <Script src="https://static.line-scdn.net/liff/edge/2/sdk.js" onLoad={() => setSdkReady(true)} />}
 
       {view === "loading" && (
@@ -477,8 +502,17 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                       は、この日に間に合わないので外しました
                     </p>
                   )}
-                  <button type="button" onClick={send} disabled={sending || !date} className="mx-4 mt-4 block h-[52px] w-[calc(100%-32px)] rounded-xl bg-crust-600 text-[16px] font-bold text-white active:scale-[.98] disabled:opacity-60">
-                    {sending ? "おくっています…" : "注文する"}
+                  <button
+                    type="button"
+                    onClick={send}
+                    disabled={sending || !date}
+                    aria-busy={sending}
+                    className={`mx-4 mt-4 flex h-[52px] w-[calc(100%-32px)] items-center justify-center gap-2 rounded-xl text-[16px] font-bold text-white shadow-[0_3px_0_#5c1010] transition-all duration-100 active:translate-y-[3px] active:shadow-none ${
+                      sending ? "translate-y-[3px] bg-crust-700 shadow-none" : "bg-crust-600"
+                    } disabled:cursor-default`}
+                  >
+                    {sending && <span className="h-5 w-5 animate-spin rounded-full border-[2.5px] border-white/40 border-t-white" aria-hidden />}
+                    {sending ? "送っています…" : "注文する"}
                   </button>
                 </>
               ) : (
@@ -501,34 +535,110 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 <Svg d="M15 5l-7 7 7 7" w={2.6} />
                 もどる
               </button>
-              <h1 className="mt-1 text-[20px] font-bold">これまでの注文</h1>
-              {ctx.history.length === 0 && <p className="mt-3 text-[14px] text-ink-faint">まだご注文はありません</p>}
-              <ul className="mt-3 space-y-2">
-                {ctx.history.map((h) => (
-                  <li key={h.id} className="rounded-xl border border-rule bg-sheet px-3 py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[15px] font-bold">{md(h.deliveryDate)} お届け</span>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
-                          h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
-                        }`}
-                      >
-                        {h.state === "confirmed" ? "確定" : h.state === "cancelled" ? "取消" : "確認中"}
-                      </span>
-                    </div>
-                    {h.intent !== "new" && <div className="text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : "変更のご連絡"}</div>}
-                    <div className="mt-1 text-[14px] leading-snug tabular-nums">{h.items.map((i) => `${i.name} ${i.quantity}`).join("、") || "（内容を確認中）"}</div>
-                  </li>
-                ))}
-              </ul>
+              <h1 className="mt-1 mb-2 text-[20px] font-bold">これまでの注文</h1>
+              {ctx.history.length === 0 ? (
+                <p className="mt-3 text-[14px] text-ink-faint">まだご注文はありません</p>
+              ) : (
+                (() => {
+                  // 担当者 11/7「過去の注文をカレンダーで。日付を押したら、その日の注文が下に出る」
+                  const orderDays = [...new Set(ctx.history.map((h) => h.deliveryDate))].sort();
+                  const pick = orderDays.includes(histDay) ? histDay : (orderDays.filter((d) => d <= today).at(-1) ?? orderDays[0]);
+                  const list = ctx.history.filter((h) => h.deliveryDate === pick);
+                  return (
+                    <>
+                      <Calendar key={pick.slice(0, 7)} days={orderDays} value={pick} onPick={(d) => { setHistDay(d); setSlip({ busy: false }); }} closed={() => ""} today={today} marks={new Set(orderDays)} />
+                      <h2 className="mt-4 mb-1.5 ml-0.5 text-[13px] font-bold text-ink-faint">{mdLong(pick)} お届け</h2>
+                      {ctx.linked && list.some((h) => h.state === "confirmed" && h.intent === "new") && (
+                        <div className="mb-3">
+                          <button
+                            type="button"
+                            onClick={() => getSlip(pick)}
+                            disabled={slip.busy}
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-crust-600 bg-sheet text-[15px] font-bold text-crust-600 transition active:scale-[.98] active:bg-crust-50"
+                          >
+                            {slip.busy ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-crust-600/30 border-t-crust-600" aria-hidden />
+                            ) : (
+                              <Svg d="M12 4v11M7 10l5 5 5-5M5 20h14" className="h-[18px] w-[18px]" />
+                            )}
+                            {slip.busy ? "納品書を作っています…" : "納品書（PDF）を受け取る"}
+                          </button>
+                          {slip.error && <p className="mt-1.5 text-[13px] font-bold text-alert-ink">{slip.error}</p>}
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {list.map((h) => {
+                          const priced = h.items.some((i) => i.amount != null);
+                          const net = h.items.reduce((sum, i) => sum + (i.amount ?? 0), 0);
+                          return (
+                            <div key={h.id} className="overflow-hidden rounded-xl border border-rule bg-sheet">
+                              <div className="flex items-center justify-between gap-2 px-4 py-2">
+                                <span className="text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : h.intent === "change" ? "変更のご連絡" : "ご注文"}</span>
+                                <span
+                                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
+                                    h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
+                                  }`}
+                                >
+                                  {h.state === "confirmed" ? "確定" : h.state === "cancelled" ? "取消" : "確認中"}
+                                </span>
+                              </div>
+                              {h.items.length ? (
+                                // 納品書と同じ値段（数量・単位・単価・金額）
+                                <table className="m-keep w-full border-collapse text-[14px]">
+                                  <thead>
+                                    <tr className="border-y border-rule-strong">
+                                      <th className="!bg-cream py-[7px] pl-4 !text-left text-[12px] font-bold text-ink-faint">商品</th>
+                                      <th className="bg-cream px-1.5 text-right text-[12px] font-bold text-ink-faint">数量</th>
+                                      {priced && <th className="bg-cream px-1.5 text-right text-[12px] font-bold text-ink-faint">単価</th>}
+                                      {priced && <th className="bg-cream pr-4 pl-1.5 text-right text-[12px] font-bold text-ink-faint">金額</th>}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {h.items.map((i, k) => (
+                                      <tr key={k} className="border-b border-rule">
+                                        <td className="bg-sheet py-2.5 pr-1.5 pl-4 text-left">{i.name}</td>
+                                        <td className="px-1.5 text-right whitespace-nowrap tabular-nums">
+                                          <b>{num(i.quantity)}</b>
+                                          <small className="ml-0.5 text-[12px] text-ink-faint">{i.unit}</small>
+                                        </td>
+                                        {priced && <td className="px-1.5 text-right tabular-nums">{i.unitPrice != null ? num(i.unitPrice) : "—"}</td>}
+                                        {priced && <td className="pr-4 pl-1.5 text-right font-bold tabular-nums">{i.amount != null ? num(i.amount) : "—"}</td>}
+                                      </tr>
+                                    ))}
+                                    {priced && (
+                                      <tr>
+                                        <td className="bg-sheet py-2.5 pl-4 text-left font-bold" colSpan={3}>
+                                          合計<small className="ml-1 text-[12px] font-medium text-ink-faint">税抜</small>
+                                        </td>
+                                        <td className="pr-4 text-right font-bold tabular-nums">{yen(net)}</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <p className="px-4 pb-3 text-[14px]">（内容を確認中）</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()
+              )}
             </main>
           )}
 
           {tab === "done" && sent && (
             <main>
-              <div className="px-4 pt-4 pb-2">
+              <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ok-ink text-white" style={{ animation: "liffPop .35s ease-out" }} aria-hidden>
+                  <Svg d="M5 12.5l4.5 4.5L19 7.5" className="h-6 w-6" w={3} />
+                </span>
+                <div>
                 <h1 className="text-[20px] font-bold">受け付けました</h1>
                 <p className="mt-0.5 text-[13px] text-ink-faint">{mdLong(sent.date)} お届け・確定したらこの LINE でお知らせします</p>
+                </div>
               </div>
               {orderTable(sent.lines, false)}
               <button
