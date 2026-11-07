@@ -45,6 +45,11 @@ export function proxy(request: NextRequest) {
     res.headers.set("Referrer-Policy", "same-origin");
     return res;
   };
+  // 審査員向けの見本（HUB_DEMO=1）には LINE のスタッフのログインが無い。/liff/staff は ID・パスワードのログインへ（画面を描く前に送る）
+  if (process.env.HUB_DEMO === "1" && request.nextUrl.pathname === "/liff/staff") {
+    const to = request.nextUrl.searchParams.get("to") ?? request.nextUrl.searchParams.get("next") ?? "/";
+    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(to.startsWith("/") && !to.startsWith("//") ? to : "/")}`, request.url));
+  }
   // ⑧ 最初の画面: 「/」はその人の部署のホームへ（FAX 受信箱は /fax）。画面を描く前に送る
   if (request.nextUrl.pathname === "/" && request.method === "GET") {
     const role = userFromCookies((n) => request.cookies.get(n)?.value)?.role;

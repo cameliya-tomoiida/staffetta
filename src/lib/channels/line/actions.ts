@@ -13,6 +13,8 @@ import { claimCustomerByCode, createLiffOrder, liffContext } from "./orders";
  * - デモ（LINEログインのチャネルID未設定）: 画面から渡された userId をそのまま使う
  */
 async function whoIsLiffUser(auth: { idToken?: string; demoUserId?: string }) {
+  // 審査員向けの見本（HUB_DEMO=1・Render）は外からでも、架空のお客さん（U_demo_…）だけ受ける（本物の LINE の人にはなれない）
+  if (process.env.HUB_DEMO === "1" && auth.demoUserId?.startsWith("U_demo_") && !auth.idToken) return { userId: auth.demoUserId, displayName: undefined };
   // 社内PC（localhost・トンネルを通らない）からのデモは、架空のお客さん（U_demo_…）だけ受ける
   if (auth.demoUserId && !auth.idToken) {
     const h = await headers();

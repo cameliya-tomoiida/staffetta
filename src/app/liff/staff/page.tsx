@@ -12,6 +12,8 @@ export default async function StaffLoginPage({ searchParams }: { searchParams: P
   // 行き先は ?to=（通知のリンク）か ?next=（proxy.ts が送るとき）
   const sp = await searchParams;
   const next = safeNext(sp.to ?? sp.next);
+  // 審査員向けの見本（HUB_DEMO=1）には LINE のスタッフのログインが無い。ID・パスワードのログインへ
+  if (process.env.HUB_DEMO === "1") redirect(`/login?next=${encodeURIComponent(next)}`);
   const jar = await cookies();
   if (verifyStaffSession(jar.get(STAFF_COOKIE)?.value, nowMs())) redirect(next);
   return <StaffLogin liffId={process.env.NEXT_PUBLIC_LIFF_STAFF_ID ?? ""} next={next} />;
