@@ -19,6 +19,9 @@ import { listAlerts } from "@/lib/db/alerts-store";
 import { nowMs } from "@/lib/clock";
 import { liveCustomers } from "@/lib/customers-live";
 import { packingDay } from "@/lib/packing-day";
+import { customers as SEED_CUSTOMERS } from "@/data/master";
+import { currentUser } from "@/lib/auth/current-user";
+import type { Order } from "@/data/types";
 import type { AlertGroup } from "@/lib/alert-groups";
 import { alertForRole } from "@/lib/home";
 import { kvGet } from "@/lib/db/sqlite";
@@ -86,7 +89,16 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   const date = summary.purchaseDate;
   const r = runPipeline(orders, date, { masters });
   const { date: todayJ, min: nowMin } = jstParts(now);
-  const cust = new Map([...(masters.customers ?? []), ...(await liveCustomers({ all: true }).catch(() => []))].map((c) => [c.id, c]));
+  // 取引先の名前: 見本の取引先（src/data/master）→ マスタ → 今の取引先の順に重ねる（後ろが勝つ）。DV01 などマスタに無い見本も名前で出す
+  const cust = new Map([...SEED_CUSTOMERS, ...(masters.customers ?? []), ...(await liveCustomers({ all: true }).catch(() => []))].map((c) => [c.id, c as typeof c & { salesRep?: string }]));
+  /** 名前が無い取引先は、注文に書いてあった送り主（取り込みの extra）か ID */
+  const nameOf = (id: string, o?: Order) => {
+    const n = cust.get(id)?.name;
+    if (n) return n;
+    const x = o?.source.extra ?? {};
+    const w = [x.customerName, x.sender, x.from, x.fromName].find((v) => typeof v === "string" && v.trim());
+    return (w as string | undefined) ?? (id || "取引先なし");
+  };
   const status = new Map(stored.map((p) => [p.id, p.status]));
   const pos = [...r.productPurchaseOrders, ...r.materialPurchaseOrders].filter((p) => p.lines.length > 0).map((p) => ({ ...p, status: status.get(p.id) ?? "draft" }));
   const review = orders.filter((o) => o.status === "needs_review");
@@ -197,15 +209,21 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   }
 
   if (role === "営業") {
+    // 担当の取引先だけ（ログインした営業の人の ID が「担当の営業」に入っている取引先）。担当が1件も無ければ全部
+    const me = await currentUser().catch(() => undefined);
+    const mine = new Set([...cust.values()].filter((c) => c.salesRep && me && c.salesRep === me.id).map((c) => c.id));
+    const isMine = (id: string) => !mine.size || mine.has(id);
     // 締めが近い先: 次の納品日の注文がまだ来ていない取引先で、今日の締めがこれから
     const ordered = new Set(day.map((o) => o.customerId));
-    const waiting = (masters.customers ?? []).filter((c) => c.active !== false && c.cutoff && !ordered.has(c.id)).map((c) => ({ c, m: Number(c.cutoff.slice(0, 2)) * 60 + Number(c.cutoff.slice(3, 5)) })).filter((x) => x.m >= nowMin).sort((a, b) => a.m - b.m);
+    const waiting = (masters.customers ?? []).filter((c) => c.active !== false && c.cutoff && !ordered.has(c.id) && isMine(c.id)).map((c) => ({ c, m: Number(c.cutoff.slice(0, 2)) * 60 + Number(c.cutoff.slice(3, 5)) })).filter((x) => x.m >= nowMin).sort((a, b) => a.m - b.m);
     const near = waiting[0];
     const nearCount = near ? waiting.filter((x) => x.m === near.m).length : 0;
-    const createdToday = orders.filter((o) => o.createdAt.slice(0, 10) === todayJ || (o.source.receivedAt ?? "").slice(0, 10) === todayJ);
+    const createdToday = orders.filter((o) => isMine(o.customerId) && (o.createdAt.slice(0, 10) === todayJ || (o.source.receivedAt ?? "").slice(0, 10) === todayJ));
     const notices = listNotices().filter((n) => n.status === "draft").length;
     const byCust = new Map<string, { items: number; pieces: number; review: boolean; change: boolean; channel: string }>();
-    for (const o of orders.filter((x) => x.deliveryDate === date && x.status !== "cancelled")) {
+    const firstOrder = new Map<string, Order>();
+    for (const o of orders.filter((x) => x.deliveryDate === date && x.status !== "cancelled" && isMine(x.customerId))) {
+      if (!firstOrder.has(o.customerId)) firstOrder.set(o.customerId, o);
       const v = byCust.get(o.customerId) ?? { items: 0, pieces: 0, review: false, change: false, channel: o.source.channel };
       if ((o.intent ?? "new") === "new") {
         v.items += o.lines.length;
@@ -214,7 +232,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
       if (o.status === "needs_review") v.review = true;
       byCust.set(o.customerId, v);
     }
-    const CH: Record<string, string> = { customer_site: "サイト", fax: "FAX", line: "LINE", phone: "電話", email: "メール", driver: "ドライバー", site: "サイト", csv: "CSV" };
+    const CH: Record<string, string> = { customer_site: "サイト", infomart: "インフォマート", fax: "FAX", line: "LINE", phone: "電話", email: "メール", driver: "ドライバー", site: "サイト", csv: "CSV" };
     return {
       role, date, confirm,
       tiles: [
@@ -224,11 +242,11 @@ export async function deptHome(role: Role): Promise<DeptHome> {
         { label: "値上げ・お知らせ", value: num(notices), unit: "件", href: "/notices", tone: tone(notices) },
       ],
       table: {
-        title: "取引先の注文", head: ["取引先", "品", "個数", "入口", ""], wideCols: [3], empty: "この日の注文はまだありません",
-        rows: [...byCust.entries()].sort((a, b) => Number(b[1].review) - Number(a[1].review) || (cust.get(a[0])?.name ?? a[0]).localeCompare(cust.get(b[0])?.name ?? b[0], "ja")).map(([id, v]) => ({
+        title: mine.size ? `担当の取引先の注文（${mine.size}社）` : "取引先の注文", head: ["取引先", "品", "個数", "入口", ""], wideCols: [3], empty: "この日の注文はまだありません",
+        rows: [...byCust.entries()].sort((a, b) => Number(b[1].review) - Number(a[1].review) || nameOf(a[0], firstOrder.get(a[0])).localeCompare(nameOf(b[0], firstOrder.get(b[0])), "ja")).map(([id, v]) => ({
           href: `/orders?customer=${encodeURIComponent(id)}`,
           cells: [
-            { text: cust.get(id)?.name ?? id, strong: true },
+            { text: nameOf(id, firstOrder.get(id)), strong: true },
             { text: num(v.items) },
             { text: num(v.pieces) },
             { text: CH[v.channel] ?? v.channel, tone: "soft" },
@@ -252,7 +270,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   const depot = getDepot();
   const settings = getRouteSettings();
   const staff = listStaff();
-  const located = [...cust.values()].filter((c) => "lat" in c && c.lat != null && c.lng != null && (("deliveryMethod" in c ? c.deliveryMethod : undefined) ?? "own") === "own") as unknown as (Stop & { course?: string; active?: boolean; closedWeekdays?: number[] })[];
+  const located = ([...cust.values()] as unknown as { lat?: number; lng?: number; deliveryMethod?: string }[]).filter((c) => c.lat != null && c.lng != null && (c.deliveryMethod ?? "own") === "own") as unknown as (Stop & { course?: string; active?: boolean; closedWeekdays?: number[] })[];
   const routes = (masters.courses ?? []).filter((c) => c.active !== false && (!c.weekdays?.length || c.weekdays.includes(wd))).flatMap((course) => {
     const stops = orderedStops(course, located as never[]).filter((c) => deliversOn(c as never, wd)) as Stop[];
     if (!stops.length) return [];

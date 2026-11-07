@@ -10,6 +10,7 @@ import { productCost } from "@/lib/cost";
 import { getDb } from "@/lib/db/sqlite";
 import { deliveryDay } from "@/lib/slips/store";
 import { liveCustomers } from "@/lib/customers-live";
+import { customers as SEED_CUSTOMERS } from "@/data/master";
 import { getProductionActual } from "@/lib/stock/store";
 
 export interface SalesCourse {
@@ -27,7 +28,7 @@ const hhmm = (m: number) => `${String(Math.floor((((m % 1440) + 1440) % 1440) / 
 export async function dayDetail(date: string): Promise<DayDetail> {
   const [{ slips }, masters, { orders }, live] = await Promise.all([deliveryDay(date), loadMasters(), allOrders(), liveCustomers({ all: true }).catch(() => [])]);
   const courseName = new Map((masters.courses ?? []).map((c) => [c.id, c.name]));
-  const custName = new Map([...(masters.customers ?? []), ...live].map((c) => [c.id, c.name]));
+  const custName = new Map([...SEED_CUSTOMERS, ...(masters.customers ?? []), ...live].map((c) => [c.id, c.name]));
 
   // 売上: 納品書（コースの順・回る順に並んでいる）をコースごとに
   const courses: SalesCourse[] = [];

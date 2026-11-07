@@ -517,6 +517,8 @@ export interface CustomerMaster {
   deliveryTime?: string;
   /** 配送コース（便）。便のマスタ（CourseMaster）の id と同じ文字 */
   course?: string;
+  /** 担当の営業（スタッフの登録の ID）。営業のホームで、その人の取引先だけを出す（⑧） */
+  salesRep?: string;
   /** 納品する曜日（0=日〜6=土）。空なら便の曜日、それも空なら毎日 */
   deliveryWeekdays?: number[];
   /** 仮発注・注文を受けたら、受付の返事（FAX・メール）を出す先（⑤が下書きを自動で作る。送るのは人） */
