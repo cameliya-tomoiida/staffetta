@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { buttonClass, Notice } from "@/components/ui";
+import { HelpTip } from "@/components/ui/HelpTip";
 
 type Channel = "email" | "sheet" | "kirara" | "infomart";
 
@@ -58,8 +59,10 @@ export function ImportPanel({ samples }: Props) {
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <section className="card space-y-2 p-4">
-          <h2 className="text-lg font-black">メール注文（本文・PDF・Excel）</h2>
-          <p className="text-sm text-ink-soft">Claude が本文と添付を読み、要確認の注文にします。変更・キャンセルは元の注文を書き換えず、別の「変更」として入ります。</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-black">メール注文（本文・PDF・Excel）</h2>
+            <HelpTip>Claude が本文と添付を読み、要確認の注文にします。変更・キャンセルは元の注文を書き換えず、別の「変更」として入ります。</HelpTip>
+          </div>
           <div className="flex flex-wrap gap-2">
             {samples.email.map((s) => (
               <button key={s} className={sub} disabled={!!busy} onClick={() => run("email", s, { sample: s })}>
@@ -73,8 +76,10 @@ export function ImportPanel({ samples }: Props) {
         </section>
 
         <section className="card space-y-2 p-4">
-          <h2 className="text-lg font-black">Google スプレッドシート</h2>
-          <p className="text-sm text-ink-soft">店舗別・月別のシート（行＝納品日、列＝商品、セル＝ケース数）を読み、前回とのちがいを出します。</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-black">Google スプレッドシート</h2>
+            <HelpTip>店舗別・月別のシート（行＝納品日、列＝商品、セル＝ケース数）を読み、前回とのちがいを出します。</HelpTip>
+          </div>
           <div className="flex flex-wrap gap-2">
             <button className={sub} disabled={!!busy} onClick={() => run("sheet", "シート 1回目", { sample: "v1" })}>デモ: 1回目を読む</button>
             <button className={sub} disabled={!!busy} onClick={() => run("sheet", "シート 2回目（本部が書き換えた後）", { sample: "v2" })}>デモ: 書き換え後を読む</button>
@@ -90,8 +95,10 @@ export function ImportPanel({ samples }: Props) {
         </section>
 
         <section className="card space-y-2 p-4">
-          <h2 className="text-lg font-black">得意先の専用サイト（CSV）</h2>
-          <p className="text-sm text-ink-soft">あおい医療フードサービスの発注サイトから落とした CSV を入れると、事業所ごとの注文と、振り分け表（仕入先への本発注・前日分・自社製造・包装・菓子パン）を作ります。</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-black">得意先の専用サイト（CSV）</h2>
+            <HelpTip>あおい医療フードサービスの発注サイトから落とした CSV を入れると、事業所ごとの注文と、振り分け表（仕入先への本発注・前日分・自社製造・包装・菓子パン）を作ります。</HelpTip>
+          </div>
           <div className="flex flex-wrap gap-2">
             {samples.kirara.map((s) => (
               <button key={s} className={sub} disabled={!!busy} onClick={() => run("kirara", s, { sample: s })}>{s}</button>
@@ -103,8 +110,10 @@ export function ImportPanel({ samples }: Props) {
         </section>
 
         <section className="card space-y-2 p-4">
-          <h2 className="text-lg font-black">インフォマート（受注 CSV）</h2>
-          <p className="text-sm text-ink-soft">受注明細の CSV を取り込みます（いまは架空の形。実物の形は画面調査で合わせます）。</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-black">インフォマート（受注 CSV）</h2>
+            <HelpTip>受注明細の CSV を取り込みます（いまは架空の形。実物の形は画面調査で合わせます）。</HelpTip>
+          </div>
           <div className="flex flex-wrap gap-2">
             {samples.infomart.map((s) => (
               <button key={s} className={sub} disabled={!!busy} onClick={() => run("infomart", s, { sample: s })}>{s}</button>

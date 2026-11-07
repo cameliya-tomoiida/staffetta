@@ -19,12 +19,28 @@ export interface InboundFax {
  * メッセージIDで二重取り込みを防ぐ。PDFは data/fax-inbox/ に保存（git には入らない）。
  * 返すのは新しく受信箱に入ったFAXのID。
  */
-export async function receiveFax(input: InboundFax): Promise<{ duplicated: boolean; faxIds: string[] }> {
+export async function receiveFax(input: InboundFax): Promise<{ duplicated: boolean; faxIds: string[]; restored?: string[] }> {
   const pdfs = input.attachments.filter((a) => a.name.toLowerCase().endsWith(".pdf") && a.base64);
   if (!pdfs.length) throw new Error("PDFの添付がありません");
   await fs.mkdir(FAX_INBOX_DIR, { recursive: true });
   return updateDb(async (db) => {
-    if (db.importedMessageIds.includes(input.messageId)) return { duplicated: true, faxIds: [] };
+    if (db.importedMessageIds.includes(input.messageId)) {
+      // もう受け取ったメール。FAX の PDF だけが消えていたら、書き戻す（11/7: demo:reset で消えた本物の FAX を戻すため）。
+      // FAX の記録（読み取りの結果・状態）は変えない。新しい FAX は作らない
+      const restored: string[] = [];
+      const mine = db.faxes.filter((f) => f.messageId === input.messageId && f.file.startsWith("/api/fax-file/"));
+      for (const [i, f] of mine.entries()) {
+        const a = pdfs[i];
+        if (!a) continue;
+        const file = path.join(FAX_INBOX_DIR, `${f.id}.pdf`);
+        if (await fs.stat(file).then(() => true, () => false)) continue;
+        const buf = Buffer.from(a.base64, "base64");
+        if (buf.subarray(0, 5).toString() !== "%PDF-") throw new Error(`${a.name} はPDFではありません`);
+        await fs.writeFile(file, buf);
+        restored.push(f.id);
+      }
+      return { duplicated: true, faxIds: [], ...(restored.length ? { restored } : {}) };
+    }
     const faxIds: string[] = [];
     const stamp = nowMs().toString(36);
     for (const [i, a] of pdfs.entries()) {

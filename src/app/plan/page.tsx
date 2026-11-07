@@ -304,13 +304,19 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         ))}
       </div>
 
+      {/* 計画のあとに増えた分: 1行だけ（押すと中身）。印刷し直しは「札・印刷」のタブの印で知らせる（管理役2 11/7） */}
       {inc && (
-        <section className={`no-print mb-4 rounded-lg border-2 border-alert-line bg-alert-bg px-4 py-3 text-alert-ink ${vis("today")}`} lang="ja">
-          <div className="text-[18px] font-black">計画を作ったあとに増えた分（{prepared?.at ? new Date(prepared.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""} より）</div>
-          {inc.doughs.length > 0 && <div className="mt-1">計量: {inc.doughs.map((d) => `${d.name} +${d.plus}kg（${d.now}kg に）`).join("・")}</div>}
-          {inc.materials.length > 0 && <div className="mt-1">材料: {inc.materials.slice(0, 8).map((m) => `${m.name} +${m.plus}kg`).join("・")}{inc.materials.length > 8 ? " …" : ""}</div>}
-          <div className="mt-1 text-[15px]">計量の紙・工程表は、印刷し直してください。</div>
-        </section>
+        <details className={`no-print mb-4 rounded-lg border-2 border-alert-line bg-alert-bg text-alert-ink ${vis("today")}`} lang="ja">
+          <summary className="flex min-h-12 cursor-pointer items-center gap-2 px-4 font-black">
+            計画のあとに増えた分 <span className="num">+{Math.round(inc.doughs.reduce((a, d) => a + d.plus, 0) * 10) / 10}kg</span>
+            {inc.materials.length > 0 && <span className="text-base">・材料 <span className="num">{inc.materials.length}</span>品</span>}
+          </summary>
+          <div className="space-y-1 px-4 pb-3">
+            <div className="text-sm font-bold">{prepared?.at ? new Date(prepared.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""} に計画を作ったあと</div>
+            {inc.doughs.length > 0 && <div>計量: {inc.doughs.map((d) => `${d.name} +${d.plus}kg（${d.now}kg に）`).join("・")}</div>}
+            {inc.materials.length > 0 && <div>材料: {inc.materials.map((m) => `${m.name} +${m.plus}kg`).join("・")}</div>}
+          </div>
+        </details>
       )}
       {/* 足りない材料（文ではなくリスト。行ごとに「発注」→ 人が OK → 送り出し） */}
       <div className={vis("material")}>
@@ -390,6 +396,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         right={
           <div className="flex flex-wrap gap-2">
             <PrintButton label={lang === "ja" ? "印刷する" : `${jaLabel}で印刷する`} primary />
+            {inc && <span title="計画のあとに注文が増えました。計量の紙・工程表を印刷し直してください" className="self-center rounded-full bg-alert-bg px-2.5 py-1 text-sm font-black text-alert-ink">🖨 要印刷</span>}
             <FactoryPrint label={`製造計画・工程表（${date}）`} />
             <Link href={`/plan/courses?date=${date}&kind=make`} className="link self-center text-base font-bold">コース別の製造指示書 →</Link>
           </div>
@@ -579,7 +586,7 @@ const stepName = (lang: Lang, key: ProcessKey | string, ja: string) => (key in s
 function Stat({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
     <div className="text-right">
-      <div className="text-xs text-ink-soft">{label}</div>
+      <div className="text-xs whitespace-nowrap text-ink-soft">{label}</div>
       <div className="num text-2xl leading-none font-black">
         {value}
         {unit && <span className="ml-0.5 text-sm font-bold">{unit}</span>}
@@ -651,7 +658,7 @@ function MakeTable({ bs, lang, t, name, unitOf, cards }: { bs: DoughBatchPlan[];
               })()}
               {b.waveName && <WaveTag w={name(b.waveName).text} />}
             </div>
-            <div className="flex gap-5">
+            <div className="flex gap-3 sm:gap-5">
               <Stat label={t("dough_kg")} value={fmtNum(b.doughKg, 1)} unit="kg" />
               <Stat label={t("flour")} value={fmtNum(b.flourKg, 1)} unit="kg" />
               <Stat label={t("mixer")} value={String(b.batches)} unit={t("times")} />

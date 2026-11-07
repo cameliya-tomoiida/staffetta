@@ -11,6 +11,7 @@ import type { StoredReply } from "@/lib/replies/store";
 import type { OutgoingDraft } from "@/lib/drafts/store";
 import type { OutboundRecord } from "@/lib/channels/outbound/workflow";
 import { useStaffNames } from "@/components/ui/staff";
+import { HelpTip } from "@/components/ui/HelpTip";
 
 type View = OutboundRecord & {
   supplierName: string;
@@ -79,7 +80,7 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
       {/* FAX 送信待ち */}
       <section className="space-y-2 rounded-sm border border-rule-strong bg-sheet p-4">
         <h2 className="flex items-center gap-2 text-xl font-black"><MethodIcon method="fax" className="h-6 w-6" />FAX 送信待ち（<span className="num">{faxQueue.length}</span> 件）</h2>
-        {!faxQueue.length && <p className="text-sm text-ink-soft">承認された FAX の発注書はありません。</p>}
+        {!faxQueue.length && <p className="text-ink-soft">まだありません</p>}
         {faxQueue.map((r) => (
           <div key={r.po.id} className="flex flex-wrap items-center gap-3 border-t border-dashed border-rule pt-2">
             <div className="min-w-60 flex-1">
@@ -100,9 +101,11 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
 
       {/* 受注の確認返信（⑤）。受注一覧の「返事を作る」と、「受けたら返事が要る」先の自動の下書き */}
       <section id="replies" className="space-y-2 rounded-sm border border-rule-strong bg-sheet p-4">
-        <h2 className="text-xl font-black">お客さんへの返事 送信待ち（<span className="num">{replies.filter((x) => x.status === "draft").length}</span> 件）</h2>
-        <p className="text-sm text-ink-soft">受けた内容・変更・間に合わない品と代わりの日を書いた下書きです。開いて確かめ、送ったら「送った」を押してください（自動では送りません）。</p>
-        {!replies.length && <p className="text-sm text-ink-soft">返事の下書きはありません。受注一覧の「返事を作る」で作れます。</p>}
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-black">お客さんへの返事 送信待ち（<span className="num">{replies.filter((x) => x.status === "draft").length}</span> 件）</h2>
+          {replies.length > 0 && <HelpTip>開いて確かめ、送ったら「送った」を押します（自動では送りません）。</HelpTip>}
+        </div>
+        {!replies.length && <p className="text-ink-soft">まだありません</p>}
         {replies.map((x) => (
           <div key={x.id} className={`flex flex-wrap items-center gap-3 border-t border-dashed border-rule pt-2 ${x.status === "sent" ? "opacity-60" : ""}`}>
             <div className="min-w-60 flex-1">
