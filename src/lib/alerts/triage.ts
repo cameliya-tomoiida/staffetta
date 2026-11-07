@@ -64,7 +64,8 @@ export function triageAlerts(source: string, list: AlertCandidate[]): TriageResu
   for (const a of rest) byKind.set(a.kind, [...(byKind.get(a.kind) ?? []), a]);
   const keep: AlertCandidate[] = [];
   for (const [kind, items] of byKind) {
-    if (items.length < 2) {
+    // AI の案は1件ずつ（もう中身のある確認なので、まとめない）
+    if (items.length < 2 || kind === "proposal") {
       keep.push(...items);
       continue;
     }

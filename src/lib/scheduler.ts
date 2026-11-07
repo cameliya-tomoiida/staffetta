@@ -112,6 +112,8 @@ export const ALERT_SOURCES: AlertSource[] = [
   // (37) 締め日の請求書ができたお知らせ（送るのは人）
   { name: "slips", feature: "invoice_notice", run: async (now) => (await import("./slips/notice")).invoiceNotices(now) },
   { name: "records", feature: "record_alarms", run: async (now) => (await import("./records/store")).recordAlerts(now) },
+  // AI の案（11/7 担当者）: 足りない材料の発注の案・人が足りない時間をなくす工程表の案。［OK］で実行・［直す］で言葉で直す
+  { name: "proposals", run: async (now) => (await import("./proposal-alerts")).proposalAlerts(now) },
 ];
 
 const g = globalThis as unknown as { __hubScheduler?: { timer: ReturnType<typeof setInterval>; running: boolean; last?: TickResult }; __hubAlertSoon?: ReturnType<typeof setTimeout> };

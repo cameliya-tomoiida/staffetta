@@ -139,15 +139,16 @@ export function scaleMasters(base: Masters): Masters {
     const labor = Math.round((p.price * (1 - target(p.id, i) / 100) - c.materialCost - c.packagingCost) * 10) / 10;
     if (labor > 0) p.laborCost = labor;
   });
-  // デモの日はきれいな状態に（担当者 11/7: 足りない材料は 0〜2件）。在庫は十分に持ち、黒糖と乾燥バジルだけ少し足りない見本
-  for (const x of m.materials) if (x.id !== "M04" && x.id !== "M16" && x.supplierId) x.stock = Math.max(x.stock, 3000);
+  // デモの日はきれいな状態に（担当者 11/7: 足りない材料は 0〜2件）。在庫は十分に持ち、ライ麦粉とレーズンだけ在庫が無い見本（AI の発注の案）
+  for (const x of m.materials) if (x.supplierId) x.stock = x.id === "M-RYE" || x.id === "M-RAISIN" ? 0 : Math.max(x.stock, 3000);
   // 湯種は前の日に仕込む（工程の名前で分かるように）
   for (const s of m.steps) if (s.doughId === "DG12" && s.key === "weigh") s.name = "計量・湯種（前日に仕込んだ湯種を入れる）";
   return m;
 }
 
 /** 本物の規模の注文（その日の分）。得意先は見本の取引先から */
-export function scaleOrders(date: string, customerIds: string[], at = `${date}T06:00:00+09:00`): Order[] {
+/** busy: 次の日の見本（ピザを多めにして、人が足りない時間ができる → AI の工程表の案） */
+export function scaleOrders(date: string, customerIds: string[], at = `${date}T06:00:00+09:00`, busy = false): Order[] {
   // 商品 → 1日の数（本物の工場の目安。食パンは 5回回すくらい・ピザは 5回仕込むくらい）
   const plan: [productId: string, pieces: number][] = [
     ["P51", 50], ["P64", 60], ["P52", 60], ["P65", 90], ["P66", 40], ["P53", 40], ["P54", 30], ["P55", 50],
@@ -155,7 +156,7 @@ export function scaleOrders(date: string, customerIds: string[], at = `${date}T0
     ["P62", 300], ["P63", 200],
     ["P71", 400], ["P72", 400], ["P73", 300],
     // 見本の食パン（DG03）とピザ（DG04）を本物の量に足す（食パン 5回・ピザ 5回くらい）
-    ["P03", 300], ["P07", 900],
+    ["P03", 300], ["P07", busy ? 2200 : 900],
   ];
   const cs = customerIds.length ? customerIds : ["C01"];
   return plan.map(([productId, pieces], i): Order => {

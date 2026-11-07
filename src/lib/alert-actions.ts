@@ -123,6 +123,11 @@ export async function runAlertAction(input: AlertActionInput): Promise<AlertActi
       return { ...(await legacy({ kind: "draft_inquiry", who: input.who, poId: str(a.poId) })), kind: input.kind };
     case "draft_reply_fax":
       return { ...(await legacy({ kind: "draft_inquiry", who: input.who, orderId: str(a.orderId) })), kind: input.kind };
+    case "proposal_ok": {
+      // AI の案を OK → そのまま実行（proposals.ts）
+      const r = await (await import("./proposals")).approveProposal(str(a.id) ?? "", input.who);
+      return done(r.message, r.href);
+    }
     case "approve_po": {
       const po = await approvePo(str(a.poId) ?? "", input.who);
       return done(`発注書 ${po.id} を承認しました（送るのは人）`, "/outbound");

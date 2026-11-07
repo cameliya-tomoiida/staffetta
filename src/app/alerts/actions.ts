@@ -70,7 +70,7 @@ export async function runAlertActionAction(key: string, index: number, who: stri
   const { runAlertAction } = await import("@/lib/alert-actions");
   type Input = Parameters<typeof runAlertAction>[0];
   const r = await runAlertAction({ kind: act.run as Input["kind"], who, payload: act.args ?? {} });
-  const closes = act.run === "accept_quantity" || act.run === "mark_day_off";
+  const closes = act.run === "accept_quantity" || act.run === "mark_day_off" || act.run === "proposal_ok";
   const result: AlertRunResult = { message: r.message, href: r.href ?? act.href, done: closes || undefined };
   updateAlert(key, closes ? { state: "done", note: `「${act.label}」: ${r.message}` } : { note: `「${act.label}」を実行: ${r.message}` }, who, now);
   checkAlertsSoon(); // 下書きができた・済んだなどで、お知らせが変わるので見直す

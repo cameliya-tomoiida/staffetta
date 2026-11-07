@@ -10,6 +10,7 @@ import { Button, buttonClass, Empty, fmtDateTime, Notice, Segmented } from "@/co
 import { notifyHubChanged } from "@/components/ui/refresh";
 import type { AlertAction, AlertLevel, AlertRow } from "@/lib/db/alerts-store";
 import { checkAlertsNowAction, runAlertActionAction, updateAlertAction } from "./actions";
+import { ProposalFix } from "@/components/ProposalFix";
 import { useStaffNames } from "@/components/ui/staff";
 
 
@@ -135,7 +136,8 @@ export function AlertsClient({ open, done, now, lastAt, enabled }: { open: Alert
 
       {shown.length ? (
         <ul className="space-y-3">
-          {shown.map((a) => (
+          {/* AI の案（人の確認だけで済む物）を上に */}
+          {[...shown].sort((x, y) => Number(y.kind === "proposal") - Number(x.kind === "proposal")).map((a) => (
             <AlertItem key={a.dedupeKey} a={a} who={who} nowMs={nowMs} pending={pending} run={run} />
           ))}
         </ul>
@@ -203,6 +205,14 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
       }
     });
   };
+
+  // AI の案（11/7 担当者）: 判断と中身を見せ、［OK］でそのまま実行・［直す］で言葉で直す（ProposalFix）
+  if (a.kind === "proposal" && a.dedupeKey.startsWith("proposal:"))
+    return (
+      <li>
+        <ProposalFix proposalId={a.dedupeKey.slice("proposal:".length)} onClose={() => { notifyHubChanged(); router.refresh(); }} />
+      </li>
+    );
 
   return (
     <li className={`relative overflow-hidden rounded-lg border-2 bg-sheet ${lv.box}`}>

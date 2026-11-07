@@ -34,6 +34,8 @@ export interface AlertCandidate {
   dueAt?: string;
   /** 最初の担当者（人が変えたら、そちらが優先） */
   assignee?: string;
+  /** AI の案の中身（仕入先ごとの品と数・どの生地を何分ずらすか など。1行ずつ） */
+  plan?: { lines: string[] };
 }
 
 export interface AlertAction {
@@ -136,7 +138,7 @@ export function syncAlerts(source: string, candidates: AlertCandidate[], now0: s
       const r: AlertRow = {
         ...cur,
         // 判定が出す中身は新しくする。人が付けた担当者・期限は残す
-        kind: c.kind, title: c.title, detail: c.detail, action: c.action, href: c.href, actions: c.actions,
+        kind: c.kind, title: c.title, detail: c.detail, action: c.action, href: c.href, actions: c.actions, plan: c.plan,
         dueAt: cur.dueAt ?? (c.dueAt ? toJst(c.dueAt) : undefined),
         assignee: cur.assignee ?? c.assignee,
         source,

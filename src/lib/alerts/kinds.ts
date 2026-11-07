@@ -39,7 +39,7 @@ export type AlertActionKind =
   | "call_memo" | "mark_day_off" | "open_inbox" | "draft_reply_fax"
   | "mark_received" | "draft_inquiry_email" | "open_schedule" | "add_staff"
   | "open_product" | "open_material" | "approve_template" | "link_item"
-  | "start_stocktake";
+  | "start_stocktake" | "proposal_ok";
 
 export interface AlertAction {
   label: string;

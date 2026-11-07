@@ -29,7 +29,8 @@ async function main() {
   }
   const customers = m.customers.filter((c) => c.active !== false).map((c) => c.id).slice(0, 8);
   const { db: hub, save } = await loadForUpdate();
-  const add = scaleOrders(date, customers).filter((o) => !hub.orders.some((x) => x.id === o.id));
+  // 見本の日（11/6）のあとの日は「次の日の見本」: ピザを多めにして、人が足りない時間ができる（AI の工程表の案）
+  const add = scaleOrders(date, customers, undefined, date !== DEMO_DATE).filter((o) => !hub.orders.some((x) => x.id === o.id));
   hub.orders.push(...add);
   // 値上げの流れの見本: 仕入先（米田製粉（デモ））からの「価格改定のお願い」の FAX（強力粉・中力粉 12月1日から）
   if (!hub.faxes.some((f) => f.id === "F011"))

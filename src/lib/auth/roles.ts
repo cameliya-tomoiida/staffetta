@@ -7,7 +7,7 @@ export const deptName = (r: Role) => (r === "工場" ? "製造" : r);
 export const homeOf = (role: Role) => (role === "配送" ? "/driver" : "/home");
 
 const FACTORY_PATHS = [
-  "/home", "/daily", "/packing", "/plan", "/cards", "/hygiene", "/alerts",
+  "/home", "/daily", "/packing", "/plan", "/cards", "/hygiene", "/alerts", "/proposals",
   "/masters/materials", "/masters/packaging", "/masters/recipes", "/masters/doughs", "/masters/recipeItems",
   "/masters/steps", "/masters/equipment", "/masters/shifts", "/masters/staffAssignments", "/masters/lines", "/masters/toppings", "/masters/toppingItems",
 ];
