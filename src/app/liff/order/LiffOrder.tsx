@@ -98,19 +98,30 @@ function Calendar({ days, value, onPick, closed, today, marks }: { days: string[
               type="button"
               disabled={!range || Boolean(why)}
               aria-pressed={on}
-              aria-label={`${m}月${d}日${why === "休み" ? "（休み）" : ""}`}
+              aria-label={`${m}月${d}日${why === "休み" ? "（休み）" : ""}${marks?.has(ymd) ? "（納品あり）" : ""}`}
               onClick={() => onPick(ymd)}
               className={`mx-auto flex h-10 w-10 flex-col items-center justify-center rounded-[10px] text-[16px] leading-none tabular-nums ${
-                on ? "bg-crust-600 font-bold text-white" : !range || why ? "font-medium text-ink-faint/60" : "font-bold text-ink active:bg-crust-50"
+                on
+                  ? "bg-crust-600 font-bold text-white"
+                  : marks?.has(ymd)
+                    ? "bg-[#dcf2e1] font-bold text-[#1d6b34]" // 納品のある日は薄い緑（担当者 11/7「どの日に納品があったか、すぐ見えるように」）
+                    : !range || why
+                      ? "font-medium text-ink-faint/60"
+                      : "font-bold text-ink active:bg-crust-50"
               } ${ymd === today && !on ? "ring-1 ring-rule-strong ring-inset" : ""}`}
             >
               {d}
               {why === "休み" && <small className="mt-0.5 text-[9px] font-medium">休み</small>}
-              {marks?.has(ymd) && <span className={`mt-1 h-1.5 w-1.5 rounded-full ${on ? "bg-white" : "bg-crust-600"}`} aria-hidden />}
             </button>
           );
         })}
       </div>
+      {marks && cells.some((c) => c && marks.has(c)) && (
+        <p className="mt-1 flex items-center justify-end gap-1 px-1 text-[12px] text-ink-faint">
+          <span className="inline-block h-3 w-3 rounded-[3px] bg-[#dcf2e1]" aria-hidden />
+          納品のある日
+        </p>
+      )}
     </div>
   );
 }
@@ -386,7 +397,14 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             <main>
               <section className="px-4 pt-3">
                 <h2 className="mb-1.5 ml-0.5 text-[13px] font-bold text-ink-faint">お届け日</h2>
-                <Calendar days={ctx.days.map((d) => d.ymd)} value={date} onPick={setDate} closed={dayClosed} today={today} />
+                <Calendar
+                  days={ctx.days.map((d) => d.ymd)}
+                  value={date}
+                  onPick={setDate}
+                  closed={dayClosed}
+                  today={today}
+                  marks={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.intent === "new").map((h) => h.deliveryDate))}
+                />
               </section>
               {ctx.lastOrder && (
                 <section className="px-4 pt-3">
@@ -554,7 +572,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   const list = ctx.history.filter((h) => h.deliveryDate === pick);
                   return (
                     <>
-                      <Calendar key={pick.slice(0, 7)} days={orderDays} value={pick} onPick={(d) => { setHistDay(d); setSlip({ busy: false }); }} closed={() => ""} today={today} marks={new Set(orderDays)} />
+                      <Calendar key={pick.slice(0, 7)} days={orderDays} value={pick} onPick={(d) => { setHistDay(d); setSlip({ busy: false }); }} closed={() => ""} today={today} marks={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.intent === "new").map((h) => h.deliveryDate))} />
                       <h2 className="mt-4 mb-1.5 ml-0.5 text-[13px] font-bold text-ink-faint">{mdLong(pick)} お届け</h2>
                       {ctx.linked && list.some((h) => h.state === "confirmed" && h.intent === "new") && (
                         <div className="mb-3">
