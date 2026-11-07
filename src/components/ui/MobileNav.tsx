@@ -25,9 +25,11 @@ export function tabsFor(role: Role | undefined): Tab[] {
     case "工場":
       return [home, { href: "/plan", label: "製造計画", icon: "plan" }, { href: "/cards", label: "製品カード", icon: "card" }, { href: "/hygiene", label: "衛生", icon: "hygiene" }];
     case "事務":
-      return [home, orders, { href: "/", label: "FAX", icon: "fax", match: (p) => p === "/" || under(p, "/fax") }, alerts];
+      return [home, orders, { href: "/fax", label: "FAX", icon: "fax", match: (p) => under(p, "/fax") }, alerts];
     case "配送":
       return [{ href: "/driver", label: "配送", icon: "truck" }];
+    case "営業":
+      return [home, orders, { href: "/routes", label: "ルート", icon: "truck" }, alerts];
     default:
       return [home, orders, { href: "/plan", label: "製造", icon: "plan", match: (p) => under(p, "/plan") || under(p, "/cards") || under(p, "/hygiene") }, alerts];
   }

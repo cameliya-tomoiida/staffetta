@@ -150,7 +150,7 @@ export function ReviewClient({
       ? others.filter((o) => o.status === "provisional" && o.customerId === customerId && rows.some((r) => r.deliveryDate === o.deliveryDate))
       : [];
 
-  const run = (fn: () => Promise<void>, after = "/") => {
+  const run = (fn: () => Promise<void>, after = "/fax") => {
     setError(null);
     start(async () => {
       try {
@@ -355,7 +355,7 @@ export function ReviewClient({
       />
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2 lg:flex-nowrap lg:items-center">
         <div className="min-w-0 lg:flex lg:flex-wrap lg:items-center lg:gap-x-3">
-          <Link href="/" className="text-[16px] text-ink-soft underline underline-offset-2 hover:text-ink lg:mr-3">← FAX受信箱に戻る</Link>
+          <Link href="/fax" className="text-[16px] text-ink-soft underline underline-offset-2 hover:text-ink lg:mr-3">← FAX受信箱に戻る</Link>
           <h1 className="mt-1 text-[28px] font-black leading-tight lg:mt-0 lg:inline lg:text-[22px]">FAXを見比べて確認</h1>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[18px] text-ink-soft lg:text-[16px]">
             <span className="font-bold text-ink">{customerName}</span>

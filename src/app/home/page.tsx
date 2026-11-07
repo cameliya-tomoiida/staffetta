@@ -1,361 +1,207 @@
 import Link from "next/link";
-import { CountUp } from "@/components/ui/CountUp";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";
-import { TodayBar } from "@/components/ui/TodayBar";
-import { FirstGuide } from "@/components/ui/FirstGuide";
-import type { Role } from "@/lib/auth/roles";
+import { deptName, type Role } from "@/lib/auth/roles";
 import { accountsExist } from "@/lib/staff";
-import { homeData, type HomeData } from "@/lib/home";
-import { briefFacts } from "@/lib/home-brief";
-import { briefingFor, type Briefing } from "@/lib/ai/briefing";
-import { todayJst } from "@/lib/clock";
-import { RefreshBriefing } from "./RefreshBriefing";
-import { currentGaps } from "@/lib/records/store";
-import { getCompany } from "@/lib/company";
-import { listPriceChanges, marginLine, priceImpact } from "@/lib/price-change";
-import { loadMasters } from "@/lib/masters/seed-db";
-import type { Gap } from "@/lib/records/alarms";
+import { deptHome, type DeptTable, type Progress, type Tile } from "@/lib/home-dept";
+import type { AlertGroup } from "@/lib/alert-groups";
+import { TimeBoard } from "./TimeBoard";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
 
-const yen = (n: number) => `${Math.round(n).toLocaleString("ja-JP")}円`;
-const num = (n: number) => n.toLocaleString("ja-JP");
-const md = (d: string) => `${Number(d.slice(5, 7))}月${Number(d.slice(8, 10))}日(${"日月火水木金土"[new Date(`${d}T00:00:00Z`).getUTCDay()]})`;
+const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}(${"日月火水木金土"[new Date(`${d}T00:00:00Z`).getUTCDay()]})`;
+const hhmm = (x: number) => {
+  const m = Math.round(x);
+  return `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, "0")}:${String(((m % 60) + 60) % 60).padStart(2, "0")}`;
+};
+const ROLES: Role[] = ["管理者", "事務", "工場", "配送", "営業"];
 
-// 役割ごとのホーム（作者 11/6 (22)）。ログインを使っていないとき（管理者がまだいない）は、上の切り替えで役割ごとの中身を見られる。
+// 部署ごとのホーム（⑧・担当者 11/7「朝いちばんに、何をすればよいか」だけ）。
+// タイル 3〜4枚（数字＋一言・押すとその仕事へ・0件はうすく）＋ 表を1つ。説明の文は出さない。
+// ログインを使っていないとき（見本）と管理者は、上の小さな切りかえで部署ごとの画面を見られる。
 export default async function HomePage({ searchParams }: PageProps<"/home">) {
   await connection();
   const user = await currentUser();
   const loginOn = accountsExist();
   const asked = (await searchParams).as;
-  const role: Role = loginOn && user ? user.role : (["管理者", "事務", "工場"] as Role[]).find((r) => r === asked) ?? user?.role ?? "管理者";
+  const canSwitch = !loginOn || user?.role === "管理者";
+  const role: Role = (canSwitch ? ROLES.find((r) => r === asked) : undefined) ?? user?.role ?? "管理者";
   if (role === "配送") redirect("/driver");
-  const d = await homeData(role);
-  // 管理者には朝の「今日の要点」（その日の最初に1回作って覚える）
-  const brief = role === "管理者" ? await briefingFor(briefFacts(d), todayJst()) : null;
-  // 記録の時間・漏れ（⑧ A）。工場と管理者に「今日やること」の上で
-  const gaps = role === "工場" || role === "管理者" ? await currentGaps().catch(() => [] as Gap[]) : [];
+  const h = await deptHome(role);
 
   return (
-    <div className="space-y-6 max-md:space-y-4">
-      {/* ⑧ スマホ: 上の帯に「ホーム」が出ているので、大きな見出しは出さない。役割の小さな切りかえ → 1行 → 今日やること */}
-      <div className="space-y-3 md:hidden">
-        {!loginOn && (
-          <nav aria-label="見る人" data-guide="role" className="grid grid-cols-3 gap-1 rounded-full border border-rule bg-paper p-1">
-            {(["管理者", "事務", "工場"] as Role[]).map((r) => (
-              <Link key={r} href={`/home?as=${encodeURIComponent(r)}`} aria-current={r === role ? "page" : undefined}
-                className={`flex min-h-9 items-center justify-center rounded-full text-[14px] font-bold transition-colors duration-150 ${r === role ? "bg-sheet text-ink shadow-[0_1px_3px_rgb(0_0_0/0.15)]" : "text-ink-soft"}`}>
-                {r}
-              </Link>
-            ))}
-          </nav>
-        )}
-        <TodayBar role={role} variant="cards" />
-        <FirstGuide id="home" steps={[
-          ...(!loginOn ? [{ target: '[data-guide="role"]', text: "見る人を切りかえます" }] : []),
-          { target: '[data-guide="cards"]', text: "押すと、その仕事の画面へ" },
-          { target: '[data-guide="menu"]', text: "≡ で、全部の画面" },
-          { target: '[data-guide="tabs"]', text: "よく使う画面は下から" },
-        ]} />
-      </div>
-      <div className="flex flex-wrap items-end gap-3 max-md:hidden">
-        <div>
-          <h1 className="text-[30px] font-black leading-tight">{user ? `${user.name} さんのホーム` : "ホーム"}</h1>
-          <p className="text-[18px] text-ink-soft">{role}の画面です。{md(d.date)} 納品の準備をしています。</p>
-        </div>
-        {!loginOn && (
-          <nav aria-label="見る人" className="ml-auto flex gap-2">
-            {(["管理者", "事務", "工場"] as Role[]).map((r) => (
-              <Link key={r} href={`/home?as=${encodeURIComponent(r)}`} aria-current={r === role ? "page" : undefined}
-                className={`min-h-12 rounded-lg border-2 px-4 py-2 text-[18px] font-bold ${r === role ? "border-crust-600 bg-crust-600 text-white" : "border-rule-strong bg-sheet"}`}>
-                {r}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 className="m-display text-[22px] font-black max-md:hidden">{deptName(role)}</h1>
+        <span className="text-[14px] text-ink-soft max-md:hidden">{md(h.date)} 納品</span>
+        {canSwitch && (
+          <nav aria-label="部署" className="flex rounded-full border border-rule bg-paper p-0.5 md:ml-auto max-md:w-full">
+            {ROLES.map((r) => (
+              <Link key={r} href={r === "配送" ? "/driver" : `/home?as=${encodeURIComponent(r)}`} aria-current={r === role ? "page" : undefined}
+                className={`flex min-h-9 flex-1 items-center justify-center rounded-full px-3 text-[13px] font-bold whitespace-nowrap ${r === role ? "bg-sheet text-ink shadow-[0_1px_3px_rgb(0_0_0/0.15)]" : "text-ink-soft"}`}>
+                {deptName(r)}
               </Link>
             ))}
           </nav>
         )}
       </div>
 
-      {brief && <Brief b={brief} />}
-      <RecordGaps gaps={gaps} />
-      {/* ⑧ スマホは上のタイルで足りるので、文の多い「今日やること」の手順は出さない */}
-      <div className="max-md:hidden"><Todo role={role} d={d} /></div>
-      {role === "管理者" && <Admin d={d} />}
-      {role === "事務" && <Office d={d} />}
-      {role === "工場" && <Factory d={d} />}
-      <Alerts d={d} bankDemo={role === "管理者" && !getCompany().bank.trim()} price={role === "事務" || role === "管理者" ? await pricePending() : []} />
+      {/* 5枚のとき（製造＋包装）は、スマホで先頭を横いっぱいに。タブレット（横）・パソコンは1列に5枚 */}
+      <div className={`grid grid-cols-2 gap-2 md:gap-3 ${h.tiles.length === 5 ? "md:grid-cols-5 max-md:[&>*:first-child]:col-span-2" : "md:grid-cols-4"}`} data-testid="dept-tiles">
+        {h.tiles.map((t) => <TileCard key={t.label} t={t} />)}
+      </div>
+
+      <Confirm groups={h.confirm} />
+      {h.progress && <ProgressView p={h.progress} date={h.date} />}
+      {h.table && <Table t={h.table} />}
+      {h.timetable && <TimeBoard t={h.timetable} />}
     </div>
   );
 }
 
-/** 朝の「今日の要点」（3行） */
-function Brief({ b }: { b: Briefing }) {
+/** 1行のお知らせ（押すとその画面へ）。ホームに黄色の箱を並べないため、1行だけにする */
+function Line({ href, tone, label, note, value, unit }: { href: string; tone: "alert" | "review"; label: string; note?: string; value?: number; unit?: string }) {
+  const cls = tone === "alert" ? "border-alert-line bg-alert-bg text-alert-ink" : "border-review-line bg-review-bg text-review-ink";
   return (
-    <>
-      {/* ⑧ スマホ: 1行の「今日の要点 ›」にたたむ。押したときだけ開く（文字を減らす） */}
-      <details className="group rounded-2xl border border-rule bg-sheet md:hidden">
-        <summary className="cursor-pointer list-none !p-0 after:!hidden [&::-webkit-details-marker]:hidden">
-          <span className="flex min-h-14 items-center gap-2 px-4">
-            <span className="text-[16px] font-bold">今日の要点</span>
-            <span className="rounded-full bg-paper px-2 text-[12px] text-ink-soft">{b.by === "AI" ? "AI" : "数字"}</span>
-            <svg viewBox="0 0 24 24" className="ml-auto h-5 w-5 text-ink-faint transition-transform duration-150 group-open:rotate-90" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
-          </span>
-        </summary>
-        <ol className="space-y-1 border-t border-rule px-4 py-3 text-[16px] leading-relaxed">
-          {b.lines.map((l, i) => <li key={i} className="flex gap-2"><span className="font-black text-crust-700">{i + 1}.</span><span>{l}</span></li>)}
-        </ol>
-      </details>
-      <BriefFull b={b} />
-    </>
-  );
-}
-
-function BriefFull({ b }: { b: Briefing }) {
-  return (
-    <section className="rounded-xl border-2 border-crust-600 bg-sheet px-5 py-4 max-md:hidden">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-[22px] font-black">今日の要点</h2>
-        <span className="rounded bg-off-bg px-2 py-0.5 text-[15px] text-ink-soft">{b.by === "AI" ? "AI が数字から作りました" : "数字から作りました"}・{new Date(b.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</span>
-        <span className="ml-auto" />
-        <RefreshBriefing />
-      </div>
-      <ol className="mt-2 space-y-1 text-[20px] leading-relaxed">
-        {b.lines.map((l, i) => <li key={i} className="flex gap-2"><span className="font-black text-crust-700">{i + 1}.</span><span>{l}</span></li>)}
-      </ol>
-    </section>
-  );
-}
-
-/** 大きな数字のカード */
-function Stat({ label, value, unit, href, tone = "plain", sub }: { label: string; value: string | number; unit?: string; href?: string; tone?: "plain" | "warn" | "urgent" | "ok"; sub?: string }) {
-  const cls = { plain: "border-rule-strong bg-sheet", warn: "border-[#b08210] bg-[#fff3c4]", urgent: "border-[#8b1a1a] bg-[#fff0f1]", ok: "border-ok-line bg-ok-bg" }[tone];
-  const body = (
-    <>
-      <div className="text-[18px] font-bold">{label}</div>
-      <div className="leading-none"><b className="text-[30px] font-extrabold tabular-nums [overflow-wrap:anywhere] sm:text-[40px]"><CountUp value={value} /></b>{unit && <span className="ml-1 text-[18px]">{unit}</span>}</div>
-      {sub && <div className="mt-1 text-[16px] text-ink-soft">{sub}</div>}
-    </>
-  );
-  return href ? (
-    <Link href={href} className={`flex min-h-[112px] flex-col justify-center gap-1 rounded-xl border-2 px-4 py-3 hover:border-crust-500 ${cls}`}>{body}</Link>
-  ) : (
-    <div className={`flex min-h-[112px] flex-col justify-center gap-1 rounded-xl border-2 px-4 py-3 ${cls}`}>{body}</div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <h2 className="mb-2 border-b-2 border-crust-600 pb-1 text-[22px] font-black">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-/** 今日やること（役割ごと）。0件のものは出さない */
-function Todo({ role, d }: { role: Role; d: HomeData }) {
-  const s = d.summary;
-  const fax = s.faxToReview + s.faxUnread;
-  const items: { text: string; href: string; urgent?: boolean }[] = [];
-  const office = role === "事務" || role === "管理者";
-  const factory = role === "工場" || role === "管理者";
-  if (office && fax) items.push({ text: `FAX を ${fax} 枚、見比べて確定する`, href: "/" });
-  if (office && s.ordersToReview) items.push({ text: `要確認の注文 ${s.ordersToReview} 件を確定する（LINE・電話・ドライバーなど）`, href: "/orders?status=needs_review" });
-  if (office && d.replies) items.push({ text: `受付の返事 ${d.replies} 件を確かめて送る`, href: "/orders" });
-  if (office && s.purchaseDraft) items.push({ text: `発注書 ${s.purchaseDraft} 枚を承認する`, href: `/purchase?date=${s.purchaseDate}`, urgent: s.overdue > 0 });
-  if (office && s.purchaseApproved) items.push({ text: `承認した発注書 ${s.purchaseApproved} 枚を送る`, href: "/outbound" });
-  const usual = d.alerts.filter((a) => a.kind === "usual_order_missing").length;
-  if (office && usual) items.push({ text: `いつもの注文がまだの先 ${usual} 件に確かめる`, href: "/alerts" });
-  if (factory) items.push({ text: `${md(d.date)} の製造計画・工程表を見て、印刷する`, href: `/plan?date=${d.date}` });
-  if (factory) items.push({ text: "製品カードを記入する（生地ごと）", href: "/cards" });
-  if (factory && s.lowStock) items.push({ text: `足りなくなる材料 ${s.lowStock} 件を確かめる`, href: s.lowStockHref, urgent: true });
-  if (role === "管理者" && s.alerts?.danger) items.push({ text: `急ぎのお知らせ ${s.alerts.danger} 件`, href: "/alerts", urgent: true });
-  return (
-    <Section title="今日やること">
-      {items.length === 0 ? (
-        <div className="rounded-xl bg-ok-bg px-4 py-3 text-[20px] font-bold text-ok-ink">いまやることはありません</div>
-      ) : (
-        <ol className="space-y-2">
-          {items.map((it, i) => (
-            <li key={i}>
-              <Link href={it.href} className={`flex min-h-14 items-center gap-3 rounded-xl border-2 bg-sheet px-4 py-2 text-[20px] font-bold hover:border-crust-500 ${it.urgent ? "border-[#8b1a1a]" : "border-rule-strong"}`}>
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[18px] text-white ${it.urgent ? "bg-[#8b1a1a]" : "bg-ink"}`}>{i + 1}</span>
-                <span className="flex-1">{it.text}</span>
-                <span className="text-[18px] text-crust-700">開く ›</span>
-              </Link>
-            </li>
-          ))}
-        </ol>
-      )}
-    </Section>
-  );
-}
-
-function Admin({ d }: { d: HomeData }) {
-  const s = d.summary;
-  return (
-    <Section title="全体のようす">
-      {/* 司令室（⑧ 近未来）: 動くグラフの分析画面へ */}
-      <Link href="/analytics" className="an-room mb-3 flex min-h-16 items-center gap-3 rounded-xl px-4 py-3 text-white">
-        <span className="cs-orb inline-block h-4 w-4 shrink-0 rounded-full" aria-hidden />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-bold tracking-widest text-[#ff8a7a]">ANALYTICS</span>
-          <span className="block text-[19px] font-black">売上・粗利・取引先・商品・ロスを、動くグラフで見る</span>
-        </span>
-        <span aria-hidden className="text-3xl">›</span>
-      </Link>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-        <Stat label={`${md(d.date)} 納品の受注`} value={num(d.orders.count)} unit="件" sub={`売上 ${yen(d.money.sales)}`} href={`/orders`} />
-        <Stat label="粗利のめやす" value={num(Math.round(d.money.grossRate * 1000) / 10)} unit="%" sub={`粗利 ${yen(d.money.gross)}`} tone={d.money.grossRate < 0.25 ? "warn" : "plain"} />
-        <Stat label="要確認の注文" value={s.ordersToReview} unit="件" tone={s.ordersToReview ? "warn" : "ok"} href="/orders?status=needs_review" />
-        <Stat label="発注書の承認待ち" value={s.purchaseDraft} unit="枚" tone={s.overdue ? "urgent" : s.purchaseDraft ? "warn" : "ok"} sub={s.overdue ? `締めを過ぎた ${s.overdue} 枚` : undefined} href={`/purchase?date=${s.purchaseDate}`} />
-      </div>
-      <h3 className="mt-4 mb-2 text-[20px] font-bold">製造の上限の余裕（{md(d.date)}）</h3>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        {d.lines.map((l) => (
-          <Stat key={l.name} label={l.name} value={l.room != null ? num(l.room) : "—"} unit={l.room != null ? `${l.unit} 余裕` : ""}
-            sub={`作る数 ${num(l.pieces)}${l.unit}${l.cap != null ? `／上限 ${num(l.cap)}${l.unit}` : ""}`} tone={l.room != null && l.room < 0 ? "urgent" : "plain"} href={`/plan?date=${d.date}`} />
-        ))}
-      </div>
-      <Office d={d} compact />
-      <Factory d={d} compact />
-    </Section>
-  );
-}
-
-function Office({ d, compact = false }: { d: HomeData; compact?: boolean }) {
-  const s = d.summary;
-  const ch = (k: string) => d.orders.byChannel[k] ?? 0;
-  const body = (
-    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-      <Stat label="FAX の確認待ち" value={s.faxToReview + s.faxUnread} unit="枚" tone={s.faxToReview + s.faxUnread ? "warn" : "ok"} sub={s.faxUnread ? `未読 ${s.faxUnread} 枚` : undefined} href="/" />
-      <Stat label="LINE・電話の確認待ち" value={ch("line") + ch("phone") + ch("driver")} unit="件" tone={ch("line") + ch("phone") + ch("driver") ? "warn" : "ok"} sub={`LINE ${ch("line")}・電話 ${ch("phone")}・ドライバー ${ch("driver")}`} href="/orders?status=needs_review" />
-      <Stat label="返事の送信待ち" value={d.replies} unit="件" tone={d.replies ? "warn" : "ok"} href="/orders" />
-      <Stat label="発注書（承認・送信）" value={s.purchaseDraft + s.purchaseApproved} unit="枚" tone={s.overdue ? "urgent" : "plain"} sub={`承認待ち ${s.purchaseDraft}・送信待ち ${s.purchaseApproved}`} href={`/purchase?date=${s.purchaseDate}`} />
-    </div>
-  );
-  return compact ? <><h3 className="mt-4 mb-2 text-[20px] font-bold">事務</h3>{body}</> : <Section title="事務の数字">{body}</Section>;
-}
-
-function Factory({ d, compact = false }: { d: HomeData; compact?: boolean }) {
-  const body = (
-    <>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-        {d.lines.map((l) => <Stat key={l.name} label={`${l.name}で作る数`} value={num(l.pieces)} unit={l.unit} href={`/plan?date=${d.date}`} />)}
-        <Stat label="材料の不足" value={d.summary.lowStock} unit="件" tone={d.summary.lowStock ? "urgent" : "ok"} href={d.summary.lowStockHref} />
-      </div>
-      {!compact && (
-        <div className="mt-3 overflow-x-auto rounded-xl border-2 border-rule-strong bg-sheet">
-          <table className="w-full text-[19px]">
-            <thead>
-              <tr className="bg-off-bg text-left"><th className="px-4 py-2">生地</th><th className="px-4 py-2 text-right">数</th><th className="px-4 py-2 text-right">仕込む生地</th></tr>
-            </thead>
-            <tbody>
-              {d.doughs.map((g) => (
-                <tr key={g.name} className="border-t border-rule">
-                  <td className="px-4 py-2 font-bold">{g.name}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{num(g.pieces)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{num(Math.round(g.doughKg * 10) / 10)} kg</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {!compact && (
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Link href={`/plan?date=${d.date}`} className="btn-primary min-h-14 px-6 text-[20px]">工程表を開く</Link>
-          <Link href="/cards" className="btn-ghost min-h-14 px-6 text-[20px]">製品カードを書く</Link>
-        </div>
-      )}
-    </>
-  );
-  return compact ? <><h3 className="mt-4 mb-2 text-[20px] font-bold">工場（{md(d.date)}）</h3>{body}</> : <Section title={`製造（${md(d.date)} 納品のぶん）`}>{body}</Section>;
-}
-
-/** 材料の値上げで、まだ終わっていない物（原価に反映していない・取引先へ知らせていない）。1件＝1行 */
-async function pricePending(): Promise<{ id: string; text: string; urgent: boolean }[]> {
-  const open = listPriceChanges().filter((c) => c.status === "draft" || !c.noticeId);
-  if (!open.length) return [];
-  const m = await loadMasters();
-  const line = marginLine();
-  return open.slice(0, 2).map((c) => {
-    const imp = priceImpact(c.items, m, line, c.status === "applied");
-    const below = imp.filter((p) => p.belowLine).length;
-    const what = `材料の値上げ：${c.items.map((i) => i.name).join("・")}（${Number(c.effectiveDate.slice(5, 7))}月${Number(c.effectiveDate.slice(8, 10))}日から）`;
-    return { id: c.id, text: c.status === "draft" ? `${what}。原価に反映しますか？` : `${what}。見直しが必要 ${below}品`, urgent: below > 0 };
-  });
-}
-
-function Alerts({ d, bankDemo, price = [] }: { d: HomeData; bankDemo?: boolean; price?: { id: string; text: string; urgent: boolean }[] }) {
-  const list = d.alerts.slice(0, 6);
-  return (
-    <Section title="お知らせ">
-      {/* 振込先がまだデモ（消せない。設定 → 自社の情報で振込先を入れると消える） */}
-      {bankDemo && (
-        <Link href="/settings/company" className="mb-2 block rounded-xl border-2 border-[#b08210] bg-sheet px-4 py-3 hover:border-crust-500">
-          <span className="mr-2 rounded bg-[#fff3c4] px-2 py-0.5 text-[16px] font-black text-[#654700]">注意</span>
-          <span className="text-[19px] font-bold">振込先がまだデモです（本番の前に 設定 → 自社の情報 で入れてください）</span>
-        </Link>
-      )}
-      {price.map((x) => (
-        <Link key={x.id} href={`/price-changes/${x.id}`} className={`mb-2 block rounded-xl border-2 bg-sheet px-4 py-3 hover:border-crust-500 ${x.urgent ? "border-[#8b1a1a]" : "border-[#b08210]"}`}>
-          <span className={`mr-2 rounded px-2 py-0.5 text-[16px] font-black ${x.urgent ? "bg-[#fff0f1] text-[#a51e28]" : "bg-[#fff3c4] text-[#654700]"}`}>値上げ</span>
-          <span className="text-[19px] font-bold">{x.text}</span>
-        </Link>
-      ))}
-      {list.length === 0 && !bankDemo && !price.length ? <p className="text-[18px] text-ink-soft">いまは ありません</p> : (
-        <ul className="space-y-2">
-          {list.map((a) => (
-            <li key={a.dedupeKey}>
-              <Link href={a.href ?? "/alerts"} className={`block rounded-xl border-2 bg-sheet px-4 py-3 hover:border-crust-500 ${a.level === "danger" ? "border-[#8b1a1a]" : a.level === "warn" ? "border-[#b08210]" : "border-rule-strong"}`}>
-                <span className={`mr-2 rounded px-2 py-0.5 text-[16px] font-black ${a.level === "danger" ? "bg-[#fff0f1] text-[#a51e28]" : a.level === "warn" ? "bg-[#fff3c4] text-[#654700]" : "bg-off-bg text-ink-soft"}`}>
-                  {a.level === "danger" ? "急ぎ" : a.level === "warn" ? "注意" : "お知らせ"}
-                </span>
-                <span className="text-[19px] font-bold">{a.title}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-      {d.alerts.length > list.length && <Link href="/alerts" className="mt-2 inline-block text-[18px] font-bold text-crust-700 underline">ほか {d.alerts.length - list.length} 件を見る</Link>}
-    </Section>
-  );
-}
-
-/** 記録の時間・漏れ（⑧ A）。今日の分を上に3件まで＋漏れの一覧へ */
-function RecordGaps({ gaps }: { gaps: Gap[] }) {
-  if (!gaps.length) return null;
-  const late = gaps.filter((g) => g.state === "late");
-  const top = [...gaps.filter((g) => g.date === todayJst()), ...late.filter((g) => g.date !== todayJst())].slice(0, 3);
-  return (
-    <>
-    {/* ⑧ スマホ: 1行の帯だけ（押すと漏れの一覧へ） */}
-    <Link href="/hygiene/missing" className={`flex min-h-14 items-center gap-2 rounded-2xl border px-4 md:hidden ${late.length ? "border-alert-line bg-alert-bg text-alert-ink" : "border-review-line bg-review-bg text-review-ink"}`}>
-      <span className="text-[16px] font-bold">{late.length ? "記録の漏れ" : "記録の時間"}</span>
-      <b className="m-display ml-auto text-[24px] tabular-nums">{late.length || gaps.length}</b>
-      <span className="text-[13px]">件</span>
-      <svg viewBox="0 0 24 24" className="h-5 w-5 opacity-60" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
+    <Link href={href} className={`flex min-h-12 items-center gap-2 rounded-xl border px-4 ${cls}`}>
+      <span className="min-w-0 truncate text-[15px] font-bold">{label}</span>
+      {note && <span className="text-[13px] opacity-80 max-md:hidden">{note}</span>}
+      {value != null && <b className="m-display ml-auto text-[22px] tabular-nums">{value}</b>}
+      {unit && <span className="text-[13px]">{unit}</span>}
+      <svg viewBox="0 0 24 24" className={`h-5 w-5 opacity-60 ${value == null ? "ml-auto" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
     </Link>
-    <section aria-label="記録の時間と漏れ" className={`rounded-xl border-2 p-4 max-md:hidden ${late.length ? "border-alert-line bg-alert-bg" : "border-review-line bg-review-bg"}`}>
-      <p className={`text-[20px] font-black ${late.length ? "text-alert-ink" : "text-review-ink"}`}>
-        {late.length ? `記録の漏れが ${late.length}件あります` : "記録の時間です"}
-      </p>
-      <ul className="mt-2 space-y-2">
-        {top.map((g) => (
-          <li key={g.key}>
-            <Link href={g.href} className="flex min-h-12 items-center gap-2 rounded-lg border-2 border-rule-strong bg-sheet px-3 py-2 text-[17px] font-bold">
-              <span className="min-w-0 flex-1">{g.title}: {g.text}{g.date !== todayJst() ? `（${Number(g.date.slice(8))}日）` : ""}</span>
-              <span aria-hidden className="text-2xl">›</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <Link href="/hygiene/missing" className="mt-2 inline-flex min-h-12 items-center text-[17px] font-bold underline underline-offset-4">
-        漏れの一覧を見る（{gaps.length}件）
-      </Link>
+  );
+}
+
+function TileCard({ t }: { t: Tile }) {
+  const cls = t.tone === "red" ? "border-alert-line bg-alert-bg text-alert-ink" : t.tone === "quiet" ? "border-rule bg-sheet opacity-55" : "border-rule-strong bg-sheet";
+  return (
+    <Link href={t.href} className={`flex min-h-[92px] flex-col justify-between rounded-xl border px-3 py-2.5 hover:border-crust-500 md:min-h-[104px] md:px-4 ${cls}`}>
+      <span className="text-[14px] font-bold md:text-[15px]">{t.label}</span>
+      <span className="flex flex-wrap items-baseline gap-x-1">
+        <b className="m-display text-[30px] leading-none tabular-nums md:text-[34px]">{t.value}</b>
+        {t.unit && <span className="text-[13px] whitespace-nowrap">{t.unit}</span>}
+        {t.note && <span className="truncate text-[12px] opacity-80 max-md:basis-full md:ml-auto md:pl-1 md:text-[13px]">{t.note}</span>}
+      </span>
+    </Link>
+  );
+}
+
+const cellTone = { red: "text-alert-ink", ok: "text-ok-ink", soft: "text-ink-soft" } as const;
+
+function Table({ t }: { t: DeptTable }) {
+  return (
+    <section aria-label={t.title} className="overflow-hidden rounded-xl border border-rule-strong bg-sheet">
+      <h2 className="border-b border-rule bg-cream px-3 py-2 text-[15px] font-bold">{t.title}</h2>
+      {t.rows.length === 0 ? <p className="px-3 py-3 text-[14px] text-ink-soft">{t.empty}</p> : (
+        <table className="m-keep w-full text-[15px] max-md:text-[14px]">
+          {t.head.some(Boolean) && (
+            <thead>
+              <tr className="text-[12px] text-ink-soft">
+                {t.head.map((x, j) => <th key={j} className={`px-3 pt-1.5 font-normal max-md:px-2 ${t.wideCols?.includes(j) ? "max-md:hidden" : ""} ${j === t.head.length - 1 ? "text-right" : "text-left"}`}>{x}</th>)}
+              </tr>
+            </thead>
+          )}
+          <tbody>
+            {t.rows.map((r, i) => (
+              <tr key={i} className={`border-t border-rule first:border-t-0 ${r.done ? "opacity-55" : ""}`}>
+                {r.cells.map((c, j) => (
+                  <td key={j} className={`px-3 py-2 max-md:px-2 ${t.wideCols?.includes(j) ? "max-md:hidden" : ""} ${j === 0 ? "[word-break:keep-all]" : j === r.cells.length - 1 ? "whitespace-nowrap" : "md:whitespace-nowrap"} ${j === r.cells.length - 1 ? "text-right" : ""} ${c.strong ? "font-bold" : ""} ${c.tone ? cellTone[c.tone] : ""}`}>
+                    {j === 0 && r.href ? <Link href={r.href} className="hover:underline">{c.text}</Link> : c.text}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
-    </>
+  );
+}
+
+/** 確認が必要なもの（⑧・担当者「漏れがないように。漏れていたら 確認が必要です」）。同じ種類はまとめて、3つまで */
+function Confirm({ groups }: { groups: AlertGroup[] }) {
+  if (!groups.length) return null;
+  const top = groups.slice(0, 3);
+  return (
+    <section aria-label="確認が必要" className="space-y-2">
+      {top.map((g) => (
+        <Line key={g.kind} href={g.href} tone={g.level === "danger" ? "alert" : "review"} label={g.label} note="確認が必要です" value={g.count} unit="件" />
+      ))}
+      {groups.length > 3 && <Link href="/alerts" className="block text-right text-[14px] font-bold text-crust-700">ほか {groups.length - 3}つ ›</Link>}
+    </section>
+  );
+}
+
+const bar = (pct: number, color: string) => (
+  <span className="relative block h-3 overflow-hidden rounded-full bg-rule">
+    <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: color }} />
+  </span>
+);
+
+/** 部署ごとの進み具合（管理者）: 文字だけでなく図で。配送はコースごとに何か所まで回ったか、製造は生地ごとにどこまで進んだか */
+function ProgressView({ p, date }: { p: Progress; date: string }) {
+  const card = "min-w-0 rounded-xl border border-rule-strong bg-sheet p-3";
+  const head = "mb-2 flex items-baseline gap-2 text-[16px] font-black";
+  return (
+    <section aria-label="部署ごとの進み具合" className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className={card}>
+        <Link href="/routes" className={head}>配送 <span className="text-[13px] font-normal text-ink-soft">誰がどこまで回ったか</span><span className="ml-auto text-[13px] text-crust-700">ルート表 ›</span></Link>
+        {p.routes.length === 0 ? <p className="text-[14px] text-ink-soft">今日走るコースはありません</p> : (
+          <ul className="space-y-2">
+            {p.routes.map((r) => (
+              <li key={r.id}>
+                <Link href={`/routes?c=${encodeURIComponent(r.id)}`} className="block">
+                  <span className="flex items-baseline gap-2 text-[14px]">
+                    <b className="truncate">{r.name}</b>
+                    <span className="truncate text-ink-soft">{r.driver}</span>
+                    <span className="ml-auto shrink-0 tabular-nums"><b>{r.done}</b>/{r.total}か所</span>
+                  </span>
+                  {/* 届け先の数だけ点を並べ、回った所を塗る */}
+                  <span className="mt-1 flex items-center gap-[3px]" aria-label={`${r.done}/${r.total}`}>
+                    <span aria-hidden className={`h-3 w-3 shrink-0 rounded-sm ${r.started ? "bg-ink" : "bg-rule-strong"}`} />
+                    {Array.from({ length: r.total }, (_, i) => (
+                      <span key={i} aria-hidden className={`h-3 min-w-[4px] flex-1 rounded-full ${i < r.done ? "bg-[#2f7d4a]" : i === r.done && r.started ? "bg-[#0ea5e9]" : "bg-rule"}`} />
+                    ))}
+                  </span>
+                  <span className="mt-0.5 flex justify-between text-[12px] text-ink-soft">
+                    <span className="truncate">{!r.started ? "出発前" : r.done >= r.total ? "回り終わり" : `次: ${r.next ?? ""}`}</span>
+                    <span className="shrink-0">戻り {r.back}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className={card}>
+        <Link href={`/plan?date=${date}`} className={head}>製造 <span className="text-[13px] font-normal text-ink-soft">生地ごとの進み</span><span className="ml-auto text-[13px] text-crust-700">工程表 ›</span></Link>
+        {p.make.length === 0 ? <p className="text-[14px] text-ink-soft">作るものはありません</p> : (
+          <ul className="space-y-2">
+            {p.make.map((m, i) => (
+              <li key={i}>
+                <span className="flex items-baseline gap-2 text-[14px]">
+                  <b className="truncate">{m.name}</b>
+                  <span className={`ml-auto shrink-0 ${m.pct >= 100 ? "text-ok-ink" : m.pct > 0 ? "font-bold" : "text-ink-soft"}`}>{m.step}</span>
+                  <span className="w-12 shrink-0 text-right tabular-nums">{hhmm(m.end)}</span>
+                </span>
+                {bar(m.pct, m.pct >= 100 ? "#2f7d4a" : "#c0392b")}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className={card}>
+        <Link href={`/purchase?date=${date}`} className={head}>事務 <span className="text-[13px] font-normal text-ink-soft">発注書を送った数</span></Link>
+        <span className="flex items-baseline gap-2 text-[14px]"><b className="tabular-nums">{p.office.sent}/{p.office.total}</b>送った{p.office.overdue > 0 && <span className="font-bold text-alert-ink">締め過ぎ {p.office.overdue}</span>}<span className="ml-auto">要確認の注文 <b className={p.office.review ? "text-alert-ink" : ""}>{p.office.review}</b></span></span>
+        {bar(p.office.total ? (p.office.sent / p.office.total) * 100 : 0, "#2563eb")}
+      </div>
+      <div className={card}>
+        <Link href="/orders" className={head}>営業 <span className="text-[13px] font-normal text-ink-soft">注文が来た取引先</span></Link>
+        <span className="flex items-baseline gap-2 text-[14px]"><b className="tabular-nums">{p.sales.ordered}/{p.sales.expected}</b>社<span className="ml-auto">変更 <b>{p.sales.changes}</b></span></span>
+        {bar(p.sales.expected ? (p.sales.ordered / p.sales.expected) * 100 : 0, "#2563eb")}
+      </div>
+    </section>
   );
 }

@@ -4,6 +4,7 @@ import { decideTunnelAccess } from "@/lib/tunnel-access";
 import { decideActionAccess } from "@/lib/auth/action-guard";
 import { userFromCookies } from "@/lib/auth/current-user";
 import { accountsExist } from "@/lib/staff";
+import { homeOf } from "@/lib/auth/roles";
 
 // トンネル（Cloudflare）経由で外から来たアクセスの通し方（中身は src/lib/tunnel-access.ts）。
 // - 外部サービスの受け口・LINE のミニアプリ・画面の JS/CSS はログイン無しで通す
@@ -20,6 +21,11 @@ export function proxy(request: NextRequest) {
     headers.set("cookie", [request.headers.get("cookie"), `hub_user=${printPass}`].filter(Boolean).join("; "));
   }
   const pass = () => NextResponse.next({ request: { headers } });
+  // ⑧ 最初の画面: 「/」はその人の部署のホームへ（FAX 受信箱は /fax）。画面を描く前に送る
+  if (request.nextUrl.pathname === "/" && request.method === "GET") {
+    const role = userFromCookies((n) => request.cookies.get(n)?.value)?.role;
+    return NextResponse.redirect(new URL(role ? homeOf(role) : "/home", request.url));
+  }
   // ボタンの処理（Server Actions）と API は、サーバー側でも役割で止める（ログインを使っているときだけ）
   const isServerAction = request.method === "POST" && request.headers.has("next-action");
   if (isServerAction || request.nextUrl.pathname.startsWith("/api/")) {

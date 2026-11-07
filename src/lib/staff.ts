@@ -10,12 +10,14 @@ import { hashPassword, verifyPassword } from "@/lib/auth/user-session";
 import type { Role } from "@/lib/auth/roles";
 
 export type StaffRole = Role;
-export const STAFF_ROLES: StaffRole[] = ["管理者", "事務", "工場", "配送"];
+export const STAFF_ROLES: StaffRole[] = ["管理者", "事務", "工場", "配送", "営業"];
 
 export interface StaffMember {
   id: string;
   name: string;
   role: StaffRole;
+  /** 部署の中の分け（⑧ 見本: 社員・パート・外注・包装（パート）など）。無くてもよい */
+  team?: string;
   /** 担当のコース（便のマスタの id）。配送の人の「いつものコース」 */
   courses: string[];
   /** ログインのユーザー名（無ければログインしない人） */
@@ -32,7 +34,7 @@ export type PublicStaff = Omit<StaffMember, "passwordHash"> & { hasPassword: boo
 
 const KEY = "staff_members";
 
-/** 架空の初期値（見本） */
+/** 架空の初期値（見本）。部署ごとの人数は担当者 11/7: 事務 5・製造 社員2＋ベトナムの人 約10・包装 パート 約9（製造の中）・配送 社員4＋外注2＋パート 5・営業 */
 export const SAMPLE_STAFF: StaffMember[] = [
   { id: "ST01", name: "たなか", role: "事務", courses: [], active: true },
   { id: "ST02", name: "うえの", role: "事務", courses: [], active: true },
@@ -40,6 +42,16 @@ export const SAMPLE_STAFF: StaffMember[] = [
   { id: "ST04", name: "こばやし", role: "配送", courses: ["西コース"], active: true },
   { id: "ST05", name: "もりた", role: "工場", courses: [], active: true },
   { id: "ST06", name: "はやし", role: "管理者", courses: [], active: true },
+  // ⑧ 部署ごとの見本の人（架空の名前）
+  ...["かわの", "みずの", "さかい"].map((name, i) => ({ id: `SX1${i}`, name, role: "事務" as const, courses: [], active: true })),
+  { id: "SX20", name: "いしだ", role: "工場", team: "社員", courses: [], active: true },
+  ...["ホア", "ラン", "ミン", "トゥアン", "フオン", "タオ", "ズン", "ハイ", "リン", "ナム"].map((name, i) => ({ id: `SX3${i}`, name, role: "工場" as const, team: "製造", courses: [], active: true })),
+  ...["あおき", "いのうえ", "うちだ", "えんどう", "おかだ", "きむら", "くどう", "こやま", "さとう"].map((name, i) => ({ id: `SX4${i}`, name, role: "工場" as const, team: "包装（パート）", courses: [], active: true })),
+  { id: "SX50", name: "まつだ", role: "配送", team: "社員", courses: ["南コース（早朝便）"], active: true },
+  { id: "SX51", name: "やまぐち", role: "配送", team: "社員", courses: ["南コース"], active: true },
+  ...["ひがし運送（外注）", "みなみ便（外注）"].map((name, i) => ({ id: `SX6${i}`, name, role: "配送" as const, team: "外注", courses: [i ? "午後便（売店）" : "東コース（早朝便）"], active: true })),
+  ...["のむら", "はらだ", "ふじい", "ほんだ", "まえだ"].map((name, i) => ({ id: `SX7${i}`, name, role: "配送" as const, team: "パート", courses: [], active: true })),
+  ...["すずき", "よしだ"].map((name, i) => ({ id: `SX8${i}`, name, role: "営業" as const, courses: [], active: true })),
 ];
 
 const all = (): StaffMember[] => kvGet<StaffMember[]>(KEY) ?? SAMPLE_STAFF;

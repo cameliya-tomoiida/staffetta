@@ -7,7 +7,7 @@ import { dayCostSummary } from "@/lib/cost";
 import { CostBox } from "@/components/ui/CostBox";
 import { addDays, fmtDate, choiceClass } from "@/components/ui";
 import { runPipeline } from "@/lib/pipeline";
-import { deliveryDatesOf } from "@/lib/aggregate";
+import { countsInTotals, deliveryDatesOf } from "@/lib/aggregate";
 import { findSupplier } from "@/lib/catalog";
 import { methodLabel, type PurchaseOrderDraft } from "@/lib/purchase";
 import { listPurchaseOrders } from "@/lib/purchase-store";
@@ -60,7 +60,16 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
         let detail: string | undefined;
         if (l.itemType === "product" && l.customers?.length) {
           const per = l.customers.map((c) => `${customerName.get(c.customerId) ?? c.customerId} ${c.pieces}個→${c.packs}${l.unitLabel === "個" ? "個" : "袋"}`).join("／");
-          detail = `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}${l.notes?.length ? `　${l.notes.join("・")}` : ""}`;
+          // ⑧ 事業所から来る包装ごとの数（1個包装 ◯・2個包装 ◯）→ 合わせて ◯個 → 6個入り ◯袋（前は電卓で出していた）
+          const packs = new Map<string, number>();
+          for (const o of orders) {
+            if (o.deliveryDate !== date || !countsInTotals(o) || !l.customers.some((c) => c.customerId === o.customerId)) continue;
+            for (const ol of o.lines) if (ol.productId === l.itemId) packs.set(ol.unit || "個", (packs.get(ol.unit || "個") ?? 0) + ol.quantity);
+          }
+          // 包装が2つ以上なら、その式だけ（ほかの文は出さない。担当者「意味が分からない」）
+          detail = packs.size > 1
+            ? `${[...packs].map(([u, q]) => `${u} ${q}`).join(" ＋ ")} ＝ ${l.needQuantity}個 → ${l.unitLabel} ${l.units}袋`
+            : `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}${l.notes?.length ? `　${l.notes.join("・")}` : ""}`;
         } else if (l.notes?.length) {
           detail = l.notes.join("・");
         } else if (l.itemType === "material") {
