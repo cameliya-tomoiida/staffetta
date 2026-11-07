@@ -2,6 +2,7 @@
 #   1. cloudflared の quick tunnel（LINE の Webhook 用）が動いていなければ起動する
 #   2. 3100 が動いていなければ起動する（next start。ビルド済みの .next を使う）
 #   3. 30秒待って scripts/line-webhook-sync.mjs で LINE の受け口の URL を合わせる（quick tunnel は起動ごとに URL が変わる）
+#   4. 見張り（scripts/line-webhook-watch.mjs）を立ち上げる: 5分ごとに見て、だめなら cloudflared を起こし直して合わせる
 # LIFF・画面の外からの入口は Tailscale Funnel（固定 URL）。Tailscale は Windows のサービスなので、ここでは起動しない。
 # 使い方:  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\start-3100.ps1
 $ErrorActionPreference = "Continue"
@@ -40,3 +41,12 @@ Push-Location $root
 $code = $LASTEXITCODE
 Pop-Location
 Say "LINE の受け口の URL を合わせました（終わりのコード $code。中身は data\line-webhook-sync.log）"
+
+# 4. 見張り（5分ごと。quick tunnel が Cloudflare の側から切られたら、cloudflared を起こし直して URL を合わせる。11/8 管理役2）
+$watching = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -like '*line-webhook-watch.mjs*' }
+if ($watching) {
+  Say "見張りは動いています"
+} else {
+  Start-Process -FilePath "node" -ArgumentList "scripts\line-webhook-watch.mjs" -WorkingDirectory $root -WindowStyle Hidden
+  Say "見張りを始めました（記録は data\line-webhook-watch.log）"
+}
