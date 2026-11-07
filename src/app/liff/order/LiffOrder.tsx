@@ -53,6 +53,96 @@ function Minus({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+/** 選べない理由（選べる日は ""）: 日曜・お届けのない曜日は「休み」、締めを過ぎたら「締切」 */
+function closedOf(ctx: Ctx | null, ymd: string, tomorrow: string): string {
+  if (new Date(`${ymd}T00:00:00Z`).getUTCDay() === 0) return "休み";
+  const info = ctx?.days.find((d) => d.ymd === ymd);
+  if (!info) return "";
+  if (info.closed) return "休み";
+  if (ymd === tomorrow && ctx && jstHHMM() >= ctx.cutoff) return "締切";
+  if (ctx && ctx.productIds.every((id) => info.late[id])) return "締切";
+  return "";
+}
+
+/** 上の「‹ もどる」（はっきり大きく。担当者 11/7「戻れない」） */
+function BackButton({ onClick, disabled, className = "" }: { onClick: () => void; disabled?: boolean; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className={`flex h-12 items-center gap-1 rounded-xl px-2 text-[18px] font-bold text-crust-600 active:bg-crust-50 ${className}`}>
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M15 5l-7 7 7 7" />
+      </svg>
+      もどる
+    </button>
+  );
+}
+
+const Arrow = ({ d }: { d: string }) => (
+  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d={d} />
+  </svg>
+);
+
+/** お届け日のカレンダー（‹ 月 ›）。days = 選べる範囲（あしたから3か月先まで）。休み・締切はグレー */
+function Calendar({ days, value, onPick, closed }: { days: string[]; value: string; onPick: (ymd: string) => void; closed: (ymd: string) => string }) {
+  const months = [...new Set(days.map((d) => d.slice(0, 7)))];
+  const [mi, setMi] = useState(() => Math.max(0, months.indexOf(value.slice(0, 7))));
+  const ym = months[mi] ?? months[0];
+  if (!ym) return null;
+  const [y, m] = ym.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const inRange = new Set(days);
+  const cells: (string | null)[] = [...Array<null>(first).fill(null), ...Array.from({ length: last }, (_, i) => `${ym}-${String(i + 1).padStart(2, "0")}`)];
+  const arrow = "grid h-12 w-12 place-items-center rounded-full text-crust-600 ring-1 ring-rule active:scale-95 disabled:opacity-25";
+  return (
+    <div className="mx-5 mt-2 rounded-3xl bg-white p-3 ring-1 ring-rule">
+      <div className="flex items-center justify-between">
+        <button type="button" aria-label="前の月" className={arrow} disabled={mi === 0} onClick={() => setMi(mi - 1)}>
+          <Arrow d="M15 5l-7 7 7 7" />
+        </button>
+        <span className="text-[22px] font-bold" style={serif}>
+          {m}月
+        </span>
+        <button type="button" aria-label="次の月" className={arrow} disabled={mi >= months.length - 1} onClick={() => setMi(mi + 1)}>
+          <Arrow d="M9 5l7 7-7 7" />
+        </button>
+      </div>
+      <div className="mt-2 grid grid-cols-7 text-center text-[14px] font-bold text-ink-faint">
+        {WD.map((w, i) => (
+          <span key={w} className={i === 6 ? "text-info-ink" : ""}>
+            {w}
+          </span>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {cells.map((ymd, i) => {
+          if (!ymd) return <span key={`b${i}`} />;
+          const d = Number(ymd.slice(8));
+          const range = inRange.has(ymd);
+          const why = range ? closed(ymd) : "";
+          const on = value === ymd;
+          return (
+            <button
+              key={ymd}
+              type="button"
+              disabled={!range || Boolean(why)}
+              aria-pressed={on}
+              aria-label={`${m}月${d}日${why ? `（${why}）` : ""}`}
+              onClick={() => onPick(ymd)}
+              className={`flex h-14 flex-col items-center justify-center rounded-xl leading-none ${
+                on ? "bg-crust-600 text-white" : !range ? "text-ink-faint/40" : why ? "bg-off-bg text-off-ink" : "text-ink ring-1 ring-rule active:bg-crust-50"
+              }`}
+            >
+              <span className="text-[20px] font-bold tabular-nums">{d}</span>
+              {why && <span className="mt-0.5 text-[11px]">{why}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; demoUserId?: string; catalog: Item[] }) {
   const [view, setView] = useState<View>("loading");
   const [error, setError] = useState("");
@@ -82,17 +172,12 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
     if (!r.ok) return setClaimErr(r.error);
     setCtx(await liffLoadAction(auth));
   };
-  const days = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8].map(jstDay).filter((d) => d.dow !== 0).slice(0, 7), []);
+  const tomorrow = useMemo(() => jstDay(1).ymd, []);
   const pastCutoff = ctx ? jstHHMM() >= ctx.cutoff : false;
-  // お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日。サーバーで出す）
+  // お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日。サーバーで出す。あしたから3か月先まで）
   const dayInfo = useCallback((ymd: string) => ctx?.days.find((d) => d.ymd === ymd), [ctx]);
-  const dayClosed = (ymd: string, i: number) => {
-    const info = dayInfo(ymd);
-    if (info?.closed) return "休み";
-    if (i === 0 && pastCutoff) return "締切";
-    if (ctx && info && ctx.productIds.every((id) => info.late[id])) return "締切";
-    return "";
-  };
+  /** 選べない理由（選べる日は ""） */
+  const dayClosed = (ymd: string) => closedOf(ctx, ymd, tomorrow);
   const lateOn = (id: string) => dayInfo(date)?.late[id];
 
   const fillLast = useCallback((c: Ctx) => {
@@ -107,19 +192,14 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
         const c = await liffLoadAction(a);
         setAuth(a);
         setCtx(c);
-        const open = days.find((d, i) => {
-          const info = c.days.find((x) => x.ymd === d.ymd);
-          return !info?.closed && !(i === 0 && jstHHMM() >= c.cutoff) && !(info && c.productIds.every((id) => info.late[id]));
-        });
-        setDate((open ?? days[1]).ymd);
+        const t = jstDay(1).ymd;
+        setDate(c.days.find((d) => !closedOf(c, d.ymd, t))?.ymd ?? "");
         // リッチメニューから: ?view=history（履歴）・?repeat=1（前回と同じ）
         const q = new URLSearchParams(location.search);
         if (q.get("view") === "history") setView("history");
         else {
-          if (q.get("repeat") === "1" && c.lastOrder) {
-            fillLast(c);
-            setSheet(true);
-          }
+          // 「前回と同じ」は数を入れるだけ（確認のシートは開かない。担当者 11/7）
+          if (q.get("repeat") === "1" && c.lastOrder) fillLast(c);
           setView("order");
         }
       } catch (e) {
@@ -127,7 +207,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
         setView("error");
       }
     },
-    [days, fillLast],
+    [fillLast],
   );
 
   useEffect(() => {
@@ -250,34 +330,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           {/* お届け日 */}
           <section className="pt-4">
             <h2 className="px-5 text-[16px] font-bold text-ink-faint">お届け日</h2>
-            <div className="mt-2 flex snap-x scroll-px-5 gap-2.5 overflow-x-auto px-5 pt-1 pb-3 [scrollbar-width:none]">
-              {days.map((d, i) => {
-                const closed = dayClosed(d.ymd, i);
-                const late = Boolean(closed);
-                const on = date === d.ymd;
-                return (
-                  <button
-                    key={d.ymd}
-                    disabled={late}
-                    aria-pressed={on}
-                    onClick={() => setDate(d.ymd)}
-                    className={`flex w-[74px] shrink-0 snap-start flex-col items-center rounded-2xl py-2.5 transition ${
-                      late
-                        ? "bg-off-bg text-off-ink"
-                        : on
-                          ? "bg-crust-600 text-white"
-                          : "bg-white text-ink ring-1 ring-rule"
-                    }`}
-                  >
-                    <span className={`text-[16px] font-bold ${on ? "text-white/80" : late ? "" : d.dow === 6 ? "text-info-ink" : "text-ink-faint"}`}>
-                      {i === 0 ? "あした" : i === 1 ? "あさって" : `${d.m}月`}
-                    </span>
-                    <span className="text-[26px] font-bold leading-none tabular-nums">{d.d}</span>
-                    <span className="text-[16px]">{late ? closed : d.wd}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <Calendar days={ctx.days.map((d) => d.ymd)} value={date} onPick={setDate} closed={dayClosed} />
           </section>
 
           {/* 前回と同じ */}
@@ -300,16 +353,13 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 </ul>
                 <div className="p-4">
                   <button
-                    onClick={() => {
-                      fillLast(ctx);
-                      setSheet(true);
-                    }}
+                    onClick={() => fillLast(ctx)}
                     className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-crust-50 text-[17px] font-bold text-crust-600 active:scale-[.98]"
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
                     </svg>
-                    この内容で注文する
+                    前回と同じ数を入れる
                   </button>
                 </div>
               </div>
@@ -428,10 +478,12 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             style={{ animation: "liffRise .25s ease-out" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-rule-strong" />
-            <h2 className="text-center text-[22px] font-bold" style={serif}>
-              ご注文の確認
-            </h2>
+            <div className="relative flex min-h-12 items-center justify-center">
+              <BackButton onClick={() => setSheet(false)} disabled={sending} className="absolute left-0" />
+              <h2 className="text-[22px] font-bold" style={serif}>
+                ご注文の確認
+              </h2>
+            </div>
             <div className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-rule">
               <div className="text-[16px] font-bold text-ink-faint">お届け日</div>
               <div className="text-[26px] font-bold" style={serif}>
@@ -455,34 +507,12 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 </p>
               )}
             </div>
-            {repeat && (
-              <div className="mt-4">
-                <div className="mb-2 text-[16px] font-bold text-ink-faint">お届け日を変えるとき</div>
-                <div className="flex gap-2">
-                  {days.slice(0, 4).map((d, i) => (
-                    <button
-                      key={d.ymd}
-                      disabled={Boolean(dayClosed(d.ymd, i))}
-                      onClick={() => setDate(d.ymd)}
-                      className={`h-12 flex-1 rounded-xl text-[16px] font-bold disabled:bg-off-bg disabled:text-off-ink ${
-                        date === d.ymd ? "bg-crust-600 text-white" : "bg-white ring-1 ring-rule"
-                      }`}
-                    >
-                      {d.m}/{d.d}（{d.wd}）
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
             <button
               onClick={send}
               disabled={sending || !items.length}
               className="mt-5 h-[60px] w-full rounded-2xl bg-crust-600 text-[19px] font-bold text-white active:scale-[.98] disabled:opacity-60"
             >
-              {sending ? "おくっています…" : "この内容で注文する"}
-            </button>
-            <button onClick={() => setSheet(false)} disabled={sending} className="mt-2 h-12 w-full text-[16px] font-bold text-ink-faint">
-              もどって 直す
+              {sending ? "おくっています…" : "注文する"}
             </button>
           </div>
         </div>
@@ -529,7 +559,8 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
       )}
 
       {view === "history" && ctx && (
-        <div className="px-5 pt-6 pb-10">
+        <div className="px-5 pt-3 pb-10">
+          <BackButton onClick={() => setView("order")} className="-ml-2 mb-2" />
           <p className="flex items-center gap-2 text-[16px] font-bold tracking-[.15em] text-crust-500">
             {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
             <img src="/brand/staffetta-mark.svg" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
@@ -559,9 +590,6 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
               </li>
             ))}
           </ul>
-          <button onClick={() => setView("order")} className="mt-6 h-14 w-full rounded-2xl bg-crust-600 text-[18px] font-bold text-white">
-            注文する
-          </button>
         </div>
       )}
 

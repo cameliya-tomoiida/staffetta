@@ -207,7 +207,10 @@ export interface LiffDay {
   late: Record<string, string>;
 }
 
-/** LIFF のお届け日ごとに「選べない日」「選べない商品」を出す（あした〜8日先） */
+/** LINE の注文フォームで選べるお届け日の長さ（あしたから。担当者 11/7「3か月先まで注文できるように」） */
+export const LIFF_SPAN = 92;
+
+/** LIFF のお届け日ごとに「選べない日」「選べない商品」を出す（あした〜span 日先。電話の注文の画面は 8日） */
 export function liffDays(customerId: string, productIds: string[], span = 8): LiffDay[] {
   const out: LiffDay[] = [];
   for (let n = 1; n <= span; n++) {
@@ -249,7 +252,7 @@ export async function createLiffOrder(input: LiffOrderInput) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.deliveryDate) || input.deliveryDate <= todayJst()) throw new Error("納品日を選んでください");
   // 締めを過ぎた商品・納品しない曜日は受けない（画面でも選べないようにしてある。古い画面から送られたときの守り）
   const known = customerIdForUser(await readLineState(), input.userId) ?? "";
-  const day = liffDays(known, items.map((i) => i.productId), 31).find((d) => d.ymd === input.deliveryDate);
+  const day = liffDays(known, items.map((i) => i.productId), LIFF_SPAN).find((d) => d.ymd === input.deliveryDate);
   if (day?.closed) throw new Error(`${input.deliveryDate} は${day.closed}`);
   const lateNames = items.filter((i) => day?.late[i.productId]).map((i) => productById(i.productId)!.name);
   if (lateNames.length) throw new Error(`${lateNames.join("・")}は、この日のお届けの締め切りを過ぎました。ほかの日をお選びください`);
@@ -350,7 +353,7 @@ export async function liffContext(userId: string) {
     linked: Boolean(customer),
     cutoff: customer?.cutoff ?? "17:00",
     /** お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日） */
-    days: liffDays(customerId ?? "", allProducts().map((p) => p.id)),
+    days: liffDays(customerId ?? "", allProducts().map((p) => p.id), LIFF_SPAN),
     productIds: own ? [...ownUsual, ...ownIds.filter((id) => !ownUsual.includes(id))] : usual.length ? [...usual, ...defaults.filter((id) => !usual.includes(id))] : defaults,
     usualCount: own ? ownUsual.length : usual.length,
     lastOrder: last
