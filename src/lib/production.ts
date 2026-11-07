@@ -14,6 +14,8 @@ export interface DoughItem {
   pieces: number;
   /** 注文の数（多めに作る分を足す前）。足していなければ無し */
   ordered?: number;
+  /** 商品のロス率（%）。マスタに入っていれば */
+  overRate?: number;
   /** 1個の生地 g（分割g） */
   doughGram: number;
   toppingId?: string;
@@ -136,7 +138,8 @@ export function makeCount(ordered: number, overRate?: number, overPieces?: numbe
 function withOver(it: DoughItem): DoughItem {
   const p = currentMasters().products.find((x) => x.id === it.productId);
   const made = makeCount(it.pieces, p?.overRate, p?.overPieces);
-  return made > it.pieces ? { ...it, ordered: it.pieces, pieces: made } : it;
+  const rate = p?.overRate != null ? { overRate: p.overRate } : {};
+  return made > it.pieces ? { ...it, ...rate, ordered: it.pieces, pieces: made } : { ...it, ...rate };
 }
 
 export function planProduction(day: DayTotals, opts: ProductionOptions = {}): ProductionPlan {

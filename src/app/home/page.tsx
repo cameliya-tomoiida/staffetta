@@ -5,6 +5,9 @@ import { currentUser } from "@/lib/auth/current-user";
 import { deptName, type Role } from "@/lib/auth/roles";
 import { accountsExist } from "@/lib/staff";
 import { deptHome, type DeptTable, type Tile, type Timetable } from "@/lib/home-dept";
+import { getCompany } from "@/lib/company";
+import { currentGaps } from "@/lib/records/store";
+import type { Gap } from "@/lib/records/alarms";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
 
@@ -24,6 +27,11 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
   const role: Role = (canSwitch ? ROLES.find((r) => r === asked) : undefined) ?? user?.role ?? "管理者";
   if (role === "配送") redirect("/driver");
   const h = await deptHome(role);
+  // ①: 振込先がまだデモ（管理者だけ。設定 → 自社の情報で振込先を入れると消える）
+  const bankDemo = role === "管理者" && !getCompany().bank.trim();
+  // 記録の漏れ（製造と管理者）: 部署ごとのホームの決まりに合わせて 1行だけ
+  const gaps = role === "工場" || role === "管理者" ? await currentGaps().catch(() => [] as Gap[]) : [];
+  const late = gaps.filter((g) => g.state === "late").length;
 
   return (
     <div className="space-y-4">
@@ -47,9 +55,30 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         {h.tiles.map((t) => <TileCard key={t.label} t={t} />)}
       </div>
 
+      {(bankDemo || gaps.length > 0) && (
+        <div className="space-y-2">
+          {bankDemo && <Line href="/settings/company" tone="review" label="振込先がまだデモです" note="設定 → 自社の情報" />}
+          {gaps.length > 0 && <Line href="/hygiene/missing" tone={late ? "alert" : "review"} label={late ? "記録の漏れ" : "記録の時間"} value={late || gaps.length} unit="件" />}
+        </div>
+      )}
+
       {h.table && <Table t={h.table} />}
       {h.timetable && <TimeTable t={h.timetable} date={h.date} />}
     </div>
+  );
+}
+
+/** 1行のお知らせ（押すとその画面へ）。ホームに黄色の箱を並べないため、1行だけにする */
+function Line({ href, tone, label, note, value, unit }: { href: string; tone: "alert" | "review"; label: string; note?: string; value?: number; unit?: string }) {
+  const cls = tone === "alert" ? "border-alert-line bg-alert-bg text-alert-ink" : "border-review-line bg-review-bg text-review-ink";
+  return (
+    <Link href={href} className={`flex min-h-12 items-center gap-2 rounded-xl border px-4 ${cls}`}>
+      <span className="text-[15px] font-bold">{label}</span>
+      {note && <span className="text-[13px] opacity-80">{note}</span>}
+      {value != null && <b className="m-display ml-auto text-[22px] tabular-nums">{value}</b>}
+      {unit && <span className="text-[13px]">{unit}</span>}
+      <svg viewBox="0 0 24 24" className={`h-5 w-5 opacity-60 ${value == null ? "ml-auto" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
+    </Link>
   );
 }
 

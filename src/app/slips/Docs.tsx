@@ -206,7 +206,8 @@ export function InvoiceDoc({ inv, company, issued, first }: { inv: Invoice; comp
               </tbody>
             </table>
           )}
-          {company.bank && <div className="mt-2 border border-black px-2 py-1 text-[9pt]">お振込先：{company.bank}</div>}
+          {/* 振込先が空のときは、デモと分かる文（担当者 11/7: 本物の口座の番号のような値は入れない。本番の前に担当者が入れる） */}
+          <div className="mt-2 border border-black px-2 py-1 text-[9pt]">お振込先：{company.bank.trim() || "デモ（本番前に設定）"}</div>
         </div>
         {inv.rebate ? <RebateTotals t={inv.totals} r={inv.rebate} /> : <Totals t={inv.totals} />}
       </div>

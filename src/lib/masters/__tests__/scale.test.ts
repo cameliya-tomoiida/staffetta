@@ -46,6 +46,11 @@ describe("本物の規模の見本", () => {
     expect(roll.pieces).toBeGreaterThan(roll.ordered!);
   });
 
+  it("ふつうの日は注意が0件（動画で「全部できます」と見せる画面）", () => {
+    expect(r.schedule.flatMap((s) => s.warnings)).toEqual([]);
+    expect(r.warnings).toEqual([]);
+  });
+
   it("見本のマスタは変えない（足すだけ）", () => {
     const base = sampleMasters();
     expect(m.doughs.length).toBe(base.doughs.length + 9);

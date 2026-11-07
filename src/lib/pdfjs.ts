@@ -1,11 +1,13 @@
 "use client";
 // pdf.js をブラウザで使うための共通の準備（ワーカーは1つだけ作って使い回す）
+// iPhone の Safari などに無い新しい JS の機能を、pdf.js より先に足す（画面の側。ワーカーの側は pdf.worker.boot.mjs）
+import "./pdf-polyfills";
 let loading: Promise<typeof import("pdfjs-dist")> | null = null;
 
 export function getPdfjs() {
   loading ??= import("pdfjs-dist").then((pdfjs) => {
     if (!pdfjs.GlobalWorkerOptions.workerPort) {
-      pdfjs.GlobalWorkerOptions.workerPort = new Worker("/pdf.worker.min.mjs", { type: "module" });
+      pdfjs.GlobalWorkerOptions.workerPort = new Worker("/pdf.worker.boot.mjs", { type: "module" });
     }
     return pdfjs;
   });
