@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { lineConfig } from "./config";
 import { verifyLiffIdToken } from "./client";
-import { addCustomerAndLink, createLiffOrder, liffContext, linkUserToCustomer, notifyOrderConfirmed, unlinkUser } from "./orders";
+import { addCustomerAndLink, claimCustomerByCode, createLiffOrder, liffContext, linkUserToCustomer, notifyOrderConfirmed, unlinkUser } from "./orders";
 import { saveCustomerSettings, type CustomerSettings } from "./customers";
 
 // 画面から呼ぶサーバー関数（LIFFの注文画面・受注一覧の画面）。
@@ -35,6 +35,17 @@ export type LiffAuth = { idToken?: string; demoUserId?: string };
 export async function liffLoadAction(auth: LiffAuth) {
   const { userId } = await whoIsLiffUser(auth);
   return liffContext(userId);
+}
+
+/** お客さま番号＋FAX 番号の下4けたで、自分の会社につなぐ（つながると、その会社の商品・価格が出る） */
+export async function liffClaimAction(auth: LiffAuth, code: string, last4: string): Promise<{ ok: true; customerName: string } | { ok: false; error: string }> {
+  try {
+    const { userId } = await whoIsLiffUser(auth);
+    const r = await claimCustomerByCode(userId, code, last4);
+    return { ok: true, customerName: r.customerName };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 export async function liffOrderAction(

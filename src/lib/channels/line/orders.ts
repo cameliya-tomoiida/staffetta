@@ -321,14 +321,38 @@ export async function liffContext(userId: string) {
   const hasItems = (o: (typeof mine)[number]) => o.lines.some((l) => productById(l.productId) && l.quantity > 0);
   const last = mine.find((o) => o.status === "confirmed" && hasItems(o)) ?? mine.find(hasItems);
   const customer = customerId ? await getCustomerSettings(customerId) : undefined;
+  // 取引先ごとの商品（担当者 11/7: 取引先ごとに商品・価格・入数がちがう）。マスタ「取引先の商品と卸価格」に
+  // 登録した商品だけを、その取引先の名前・単位・卸価格・入数・締めで出す。登録が無ければ今までどおり
+  const m = await (await import("@/lib/masters/seed-db")).loadMasters();
+  const cps = customerId && isOn("line_own_products") ? (m.customerProducts ?? []).filter((cp) => cp.customerId === customerId && cp.productId && cp.active !== false && productById(cp.productId)) : [];
+  const items: Record<string, { name: string; unit: string; price?: number; pack?: string; lead: string }> = {};
+  for (const cp of cps) {
+    const p = m.products.find((x) => x.id === cp.productId);
+    const cut = p?.cutoffTime ?? customer?.cutoff ?? "17:00";
+    items[cp.productId!] = {
+      name: cp.name || p?.name || cp.productId!,
+      unit: cp.unit || p?.unit || "個",
+      ...(cp.price ? { price: cp.price } : {}),
+      ...(p?.bagSize && p.bagSize > 1 ? { pack: `${p.bagSize}個入` } : {}),
+      lead: p?.leadDays && p.leadDays > 1 ? `${p.leadDays}日前の${cut}まで` : `前日${cut}まで`,
+    };
+  }
+  const own = cps.length > 0;
+  const ownIds = Object.keys(items);
+  const ownUsual = usual.filter((id) => items[id]);
   return {
+    /** 取引先ごとの商品を出している（マスタに登録がある） */
+    own,
+    /** お客さま番号でつなげる（スイッチが ON のときだけ） */
+    canClaim: isOn("line_own_products"),
+    items,
     customerName: customer?.name ?? state.users[userId]?.claimedName ?? "",
     linked: Boolean(customer),
     cutoff: customer?.cutoff ?? "17:00",
     /** お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日） */
     days: liffDays(customerId ?? "", allProducts().map((p) => p.id)),
-    productIds: usual.length ? [...usual, ...defaults.filter((id) => !usual.includes(id))] : defaults,
-    usualCount: usual.length,
+    productIds: own ? [...ownUsual, ...ownIds.filter((id) => !ownUsual.includes(id))] : usual.length ? [...usual, ...defaults.filter((id) => !usual.includes(id))] : defaults,
+    usualCount: own ? ownUsual.length : usual.length,
     lastOrder: last
       ? {
           deliveryDate: last.deliveryDate,
@@ -351,6 +375,25 @@ export async function liffContext(userId: string) {
           .map((l) => ({ name: productById(l.productId)?.name ?? l.read?.writtenName ?? "商品", quantity: l.quantity, unit: l.unit })),
       })),
   };
+}
+
+// ───────── お客さま番号でのひも付け（お客さん自身が LINE で） ─────────
+
+/**
+ * お客さま番号（取引先 ID か 外部コード）と、登録している FAX 番号の下4けたが合えば、その LINE の人を取引先にひも付ける。
+ * 番号だけでは、ほかの会社の商品・価格が見えないように、下4けたで本人を確かめる。
+ */
+export async function claimCustomerByCode(userId: string, code: string, last4: string): Promise<{ customerName: string }> {
+  if (!isOn("line_own_products")) throw new Error("いまは使えません。工場にお電話ください");
+  const c4 = last4.replace(/\D/g, "");
+  const key = code.trim().toUpperCase();
+  if (!key || c4.length !== 4) throw new Error("お客さま番号と、FAX 番号の下4けたを入れてください");
+  const m = await (await import("@/lib/masters/seed-db")).loadMasters();
+  const c = m.customers.find((x) => x.active !== false && (x.id.toUpperCase() === key || x.externalCode?.toUpperCase() === key));
+  const fax4 = (c?.fax ?? "").replace(/\D/g, "").slice(-4);
+  if (!c || fax4.length !== 4 || fax4 !== c4) throw new Error("番号が合いませんでした。お手数ですが、工場にお電話ください");
+  await linkUserToCustomer(userId, c.id, "お客さま番号");
+  return { customerName: c.name };
 }
 
 // ───────── 初回のひも付け（人が確認） ─────────

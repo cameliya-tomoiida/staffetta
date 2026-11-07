@@ -1,7 +1,7 @@
 "use client";
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { liffLoadAction, liffOrderAction, type LiffAuth } from "@/lib/channels/line/actions";
+import { liffClaimAction, liffLoadAction, liffOrderAction, type LiffAuth } from "@/lib/channels/line/actions";
 import { nowMs } from "@/lib/clock";
 import { BreadArt } from "./BreadArt";
 
@@ -67,7 +67,21 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const [sdkReady, setSdkReady] = useState(!liffId);
   const [bump, setBump] = useState(0);
 
-  const byId = useMemo(() => Object.fromEntries(catalog.map((c) => [c.id, c])), [catalog]);
+  // 取引先ごとの商品（ctx.items）があれば、その名前・単位で出す
+  const byId = useMemo(
+    () => Object.fromEntries(catalog.map((c) => [c.id, ctx?.items?.[c.id] ? { ...c, name: ctx.items[c.id].name, unit: ctx.items[c.id].unit } : c])) as Record<string, Item>,
+    [catalog, ctx],
+  );
+  const [code, setCode] = useState("");
+  const [last4, setLast4] = useState("");
+  const [claimErr, setClaimErr] = useState("");
+  const claim = async () => {
+    if (!auth) return;
+    setClaimErr("");
+    const r = await liffClaimAction(auth, code, last4);
+    if (!r.ok) return setClaimErr(r.error);
+    setCtx(await liffLoadAction(auth));
+  };
   const days = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8].map(jstDay).filter((d) => d.dow !== 0).slice(0, 7), []);
   const pastCutoff = ctx ? jstHHMM() >= ctx.cutoff : false;
   // お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日。サーバーで出す）
@@ -214,6 +228,20 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 "パンのご注文"
               )}
             </h1>
+            {/* まだ会社につながっていない人: お客さま番号＋FAX の下4けたでつなぐと、御社の商品と価格が出る */}
+            {!ctx.linked && ctx.canClaim && (
+              <div className="mt-3 space-y-2 rounded-2xl border border-rule bg-sheet p-3">
+                <div className="text-[16px] font-bold">お客さま番号でつなぐ</div>
+                <div className="flex gap-2">
+                  <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="お客さま番号" aria-label="お客さま番号" className="min-h-12 min-w-0 flex-1 rounded-xl border border-rule-strong px-3 text-[18px]" />
+                  <input value={last4} onChange={(e) => setLast4(e.target.value)} inputMode="numeric" maxLength={4} placeholder="FAX 下4けた" aria-label="FAX 番号の下4けた" className="min-h-12 w-28 rounded-xl border border-rule-strong px-3 text-[18px]" />
+                </div>
+                <button type="button" onClick={claim} disabled={!code.trim() || last4.length !== 4} className="min-h-12 w-full rounded-xl bg-crust-600 text-[18px] font-bold text-white disabled:opacity-40">
+                  つなぐ
+                </button>
+                {claimErr && <p className="text-[16px] font-bold text-alert-ink">{claimErr}</p>}
+              </div>
+            )}
             <p className="mt-1 text-[16px] text-ink-faint">
               {pastCutoff ? `本日の締め切り（${ctx.cutoff}）をすぎました。あさって以降をお選びください。` : `ご注文の締め切りは、前日の ${ctx.cutoff} です。`}
             </p>
@@ -317,6 +345,12 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-[18px] font-bold leading-snug">{p.name}</div>
+                        {/* 取引先ごとの卸価格・入数・締め */}
+                        {ctx.items?.[id] && (
+                          <div className="text-[15px] text-ink-soft">
+                            {[ctx.items[id].price ? `${ctx.items[id].price}円/${p.unit}` : "", ctx.items[id].pack ?? "", ctx.items[id].lead].filter(Boolean).join("・")}
+                          </div>
+                        )}
                         {q === 0 ? (
                           <div className="text-[16px] text-ink-faint">{p.unit}で注文</div>
                         ) : (

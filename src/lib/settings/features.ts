@@ -123,6 +123,8 @@ export const FEATURES = [
     label: "いつもと違う注文の見張り（AI）", description: "取引先のいつもの数より大きく多い・少ない・桁がちがうかもしれない注文を、AI が理由つきでお知らせします（AI の使った量は「設定 → AI」）。OFF だと出しません。" },
   { key: "notice_send", group: "連絡", kind: "auto", default: false, owner: "①",
     label: "お客さんへのお知らせを本当に送る（送信の鍵）", description: "OFF（はじめ）のあいだは、お知らせ（値上げなど）で OK を押しても、本物のお客さんには LINE・FAX で送らず、下書きと印刷だけにします（見本の取引先「（デモ）」にだけ、試しに LINE を送れます）。ON にすると送ります。切りかえは管理者だけ（設定の画面）。" },
+  { key: "line_own_products", group: "連絡", kind: "auto", default: false, owner: "①",
+    label: "LINE の注文で、取引先ごとの商品だけを出す", description: "ON にすると、LINE の注文フォームに、その取引先に登録した商品（取引先の商品と卸価格）だけを、その取引先の名前・卸価格・入数・締めで出します。お客さま番号と FAX 番号の下4けたで、お客さん自身がつなげます。登録がそろってから ON にします。" },
   { key: "plan_check", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",
     label: "製造計画への入れ忘れの確かめ", description: "今日・明日の確定した注文が、製造計画・発注に全部入っているかを見ます。入っていない明細（商品が決まっていない・レシピや仕入先が無い）や、計画を作ったあとに確定した注文があれば知らせます。" },
   { key: "invoice_notice", group: "アラート", kind: "feature", default: true, owner: "①", dependsOn: "alerts",

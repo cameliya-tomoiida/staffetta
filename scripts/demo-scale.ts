@@ -36,6 +36,8 @@ async function main() {
   if (!hub.faxes.some((f) => f.id === "F011"))
     hub.faxes.push({ id: "F011", file: "/samples/fax11.pdf", via: "sample", receivedAt: "2026-11-07T09:12:00+09:00", label: "発信元: ﾖﾈﾀﾞｾｲﾌﾝ", status: "new" });
   await save();
+  // LINE の注文で、取引先ごとの商品だけを出す（見本の DB だけ ON。3100 は登録がそろってから人が ON）
+  (await import("../src/lib/settings/features")).setFlag("line_own_products", true, "本物の規模の見本");
   // 記録の漏れは1件だけ（⑧・担当者「1件抜けています、アラーム」の形。13件は多すぎる）
   const miss = oneRecordGap();
   console.log(`記録の漏れ: ${miss} の 9:00 の温度（原料保管庫）1件だけ`);
