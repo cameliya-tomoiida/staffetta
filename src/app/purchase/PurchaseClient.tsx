@@ -148,7 +148,7 @@ export function PurchaseClient({
       {lateMaterials.length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3 max-md:mb-2 max-md:py-2">
           <details>
-            <summary className="cursor-pointer max-md:after:!hidden">
+            <summary className="cursor-pointer max-md:!min-h-0 max-md:!rounded-none max-md:!border-0 max-md:!bg-transparent max-md:!p-0 max-md:after:!hidden">
               <span className="md:hidden">間に合わない材料 <span className="num text-xl">{lateMaterials.length}</span> ›</span>
               <span className="max-md:hidden">間に合わない材料が <span className="num text-xl">{lateMaterials.length}</span> 件あります（発注書には入っていません）。仕入先に電話で相談してください。
               <span className="ml-1 text-sm font-normal underline underline-offset-4">押すと出します</span></span>
@@ -162,11 +162,13 @@ export function PurchaseClient({
         </Notice>
       )}
       {warn.incomplete.length > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3">
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3 max-md:mb-2 max-md:py-2">
           <details>
-            <summary className="cursor-pointer">
-              お店か商品が決まっていない注文が <span className="num text-xl">{warn.incomplete.length}</span> 件あります。この分は発注書に入っていません。
-              <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で直す</Link>
+            <summary className="cursor-pointer max-md:!min-h-0 max-md:!rounded-none max-md:!border-0 max-md:!bg-transparent max-md:!p-0 max-md:after:!hidden">
+              {/* ⑧ スマホは1行（共通の「押して開く」枠は使わない） */}
+              <span className="md:hidden">お店・商品が未定の注文 <span className="num text-xl">{warn.incomplete.length}</span> ›</span>
+              <span className="max-md:hidden">お店か商品が決まっていない注文が <span className="num text-xl">{warn.incomplete.length}</span> 件あります。この分は発注書に入っていません。
+              <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で直す</Link></span>
             </summary>
             <ul className="mt-1 list-disc pl-5 font-normal">
               {warn.incomplete.map((o) => (
@@ -180,11 +182,12 @@ export function PurchaseClient({
         </Notice>
       )}
       {warn.others.length > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4">
+        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-4 max-md:mb-2 max-md:py-2">
           <details>
-            <summary className="cursor-pointer">
-              製造の注意が <span className="num text-xl">{warn.others.length}</span> 件あります（上限・時刻など）。
-              <span className="ml-1 text-sm font-normal underline underline-offset-4">押すと出します</span>
+            <summary className="cursor-pointer max-md:!min-h-0 max-md:!rounded-none max-md:!border-0 max-md:!bg-transparent max-md:!p-0 max-md:after:!hidden">
+              <span className="md:hidden">製造の注意 <span className="num text-xl">{warn.others.length}</span> ›</span>
+              <span className="max-md:hidden">製造の注意が <span className="num text-xl">{warn.others.length}</span> 件あります（上限・時刻など）。
+              <span className="ml-1 text-sm font-normal underline underline-offset-4">押すと出します</span></span>
             </summary>
             <ul className="mt-1 list-disc pl-5 font-normal">
               {warn.others.map((w, i) => (
@@ -211,8 +214,9 @@ export function PurchaseClient({
         </Notice>
       )}
       {late.length > 0 && (
-        <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-3">
-          締めを過ぎて、まだ送っていない発注書が <span className="num text-xl">{late.length}</span> 枚あります。仕入先に電話で確かめてください。
+        <Notice tone="alert" icon={<Icon.clock className="h-6 w-6" />} className="mb-3 max-md:py-2">
+          <span className="md:hidden">締め過ぎ・まだ送っていない <span className="num text-xl">{late.length}</span>枚</span>
+          <span className="max-md:hidden">締めを過ぎて、まだ送っていない発注書が <span className="num text-xl">{late.length}</span> 枚あります。仕入先に電話で確かめてください。</span>
         </Notice>
       )}
 
