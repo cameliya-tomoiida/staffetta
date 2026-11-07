@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import type { PublicStaff, StaffRole } from "@/lib/staff";
 import { saveStaffAction, setPasswordAction } from "./actions";
+import { deptName } from "@/lib/auth/roles";
 
 export function StaffClient({ initial, roles, courses, loginOn }: { initial: PublicStaff[]; roles: StaffRole[]; courses: string[]; loginOn: boolean }) {
   const [list, setList] = useState(initial);
@@ -55,7 +56,7 @@ export function StaffClient({ initial, roles, courses, loginOn }: { initial: Pub
                 </td>
                 <td className="px-3 py-2">
                   <select className={field} value={s.role} aria-label="役割" onChange={(e) => set(i, { role: e.target.value as StaffRole })}>
-                    {roles.map((r) => <option key={r}>{r}</option>)}
+                    {roles.map((r) => <option key={r} value={r}>{deptName(r)}</option>)}
                   </select>
                 </td>
                 <td className="px-3 py-2">

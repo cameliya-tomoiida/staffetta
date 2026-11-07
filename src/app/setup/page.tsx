@@ -14,10 +14,8 @@ export default async function SetupPage() {
       {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
       <img src="/brand/staffetta-logo-dark.svg" alt="STAFFETTA" width={180} height={48} className="mx-auto h-12 w-auto" />
       <h1 className="mt-6 text-center text-[28px] font-black">最初の管理者を作る</h1>
-      <div className="mt-3 mb-6 rounded-xl bg-[#fff3c4] px-4 py-3 text-[18px] text-[#654700]">
-        管理者を作ると、そこからは <b>ログインが要る</b> ようになり、役割（管理者・事務・工場・配送）で見られる画面が分かれます。
-        ほかの人のユーザー名とパスワードは、管理者が「設定 → スタッフの登録」で決めます。
-      </div>
+      {/* ⑧ 説明の文は短く: 部署は 管理者・事務・製造・配送・営業 */}
+      <p className="mt-2 mb-6 text-center text-[16px] text-ink-soft">作ると、ログインで部署（管理者・事務・製造・配送・営業）の画面に分かれます</p>
       <SetupForm />
     </div>
   );

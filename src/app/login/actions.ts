@@ -11,7 +11,7 @@ export async function loginAction(_: { error: string; username?: string } | null
   const username = String(form.get("username") ?? "");
   const s = checkLogin(username, String(form.get("password") ?? ""));
   // 違ったときは、ユーザー名は残す（入れ直すのはパスワードだけ）
-  if (!s) return { error: "ユーザー名かパスワードが違います", username };
+  if (!s) return { error: "ID かパスワードが違います", username };
   (await cookies()).set(USER_COOKIE, createUserSession({ id: s.id, name: s.name, role: s.role }, Date.now()), userCookieOptions);
   redirect(safe(form.get("next")) || homeOf(s.role));
 }
