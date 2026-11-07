@@ -53,7 +53,7 @@ export default async function Inbox(props: PageProps<"/fax">) {
         <div className="flex gap-2">
           <ReadAllButton count={db.faxes.filter((f) => f.status === "new" || f.status === "error").length} />
           {/* 「デモを最初から」は見本の DB のときだけ（開発の画面か、HUB_DEMO=1 で起動したとき。本番 3100 では出さない） */}
-          {(process.env.NODE_ENV !== "production" || process.env.HUB_DEMO === "1") && <ResetButton />}
+          {(process.env.NODE_ENV !== "production" || process.env.HUB_DEMO === "1") && <ResetButton publicDemo={process.env.HUB_DEMO === "1"} />}
         </div>
       </div>
       {waiting > 0 && (

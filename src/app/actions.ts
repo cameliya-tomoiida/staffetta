@@ -355,6 +355,9 @@ export async function resetDemoAction(input?: { understood?: boolean }) {
   }
   if (!input?.understood) throw new Error("「本物のデータも消えることを確認しました」にチェックを入れてください");
   await resetDb();
+  // 審査員向けの見本（HUB_DEMO=1）: 起動のときと同じ「最初の見本＋本物の規模の見本」に作り直す（押すと見本が少なくなって困る。11/8 管理役2）。
+  // アカウント（judge）は消えない（resetDb は注文・FAX・発注書・様式・在庫を戻すだけ）
+  if (process.env.HUB_DEMO === "1") await (await import("@/lib/demo/scale-demo")).applyDemoScale();
   revalidatePath("/", "layout");
 }
 
