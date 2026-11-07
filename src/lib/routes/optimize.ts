@@ -447,3 +447,42 @@ export function currentRoutes(
     })
     .filter((r) => r.ids.length);
 }
+
+/**
+ * 1つのコースの中の回る順を見直す（⑧・担当者 11/7「右へ行って左へ行って…ではなく、ぐるっと効率よく回る順に」）。
+ * 1) 工場からいちばん近い所を順にたどる → 2) 線が交差しない順に直す（2-opt。走る距離だけで）→ きれいな輪になる。
+ * 3) 時間の希望があるときは、その輪から始めて時間の希望に合わせて直す。ただし走る時間が 1割より増えるなら、輪のままにする
+ *    （希望に間に合わない先は、時刻表の「遅れ」で出る）。純関数。返すのは stops の id の順。
+ */
+export function bestStopOrder(depot: LatLng, stops: Stop[], o: OptimizeOptions): string[] {
+  const located = stops.filter((s) => s.lat != null && s.lng != null);
+  const rest = stops.filter((s) => s.lat == null || s.lng == null).map((s) => s.id);
+  if (located.length < 3) return [...located.map((s) => s.id), ...rest];
+  const c = makeCtx(depot, located, o);
+  const tour = (r: number[]) => r.reduce((a, v, i) => a + c.drive[i ? r[i - 1] : 0][v], 0) + c.drive[r[r.length - 1]][0];
+  // 1) 近い順
+  const left = new Set(located.map((_, i) => i + 1));
+  let route: number[] = [];
+  for (let at = 0; left.size; ) {
+    let best = -1;
+    for (const v of left) if (best < 0 || c.drive[at][v] < c.drive[at][best]) best = v;
+    route.push(best);
+    left.delete(best);
+    at = best;
+  }
+  // 2) 交差をほどく（2-opt）
+  for (let better = true, round = 0; better && round < 50; round++) {
+    better = false;
+    for (let i = 0; i < route.length - 1; i++)
+      for (let k = i + 1; k < route.length; k++) {
+        const cand = [...route.slice(0, i), ...route.slice(i, k + 1).reverse(), ...route.slice(k + 1)];
+        if (tour(cand) < tour(route) - 0.01) [route, better] = [cand, true];
+      }
+  }
+  // 3) 時間の希望に合わせる（走る時間が 1割より増えない間だけ）
+  if (routeCost(c, route) == null || located.some((s) => s.deliveryWindowFrom || s.deliveryWindowTo)) {
+    const timed = improveRoute(c, route);
+    if (routeCost(c, timed) != null && tour(timed) <= tour(route) * 1.1) route = timed;
+  }
+  return [...route.map((v) => located[v - 1].id), ...rest];
+}

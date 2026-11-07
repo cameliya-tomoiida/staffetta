@@ -1,7 +1,9 @@
 "use client";
 // ルート表の画面（⑧）。上にコースの切りかえ（＋「全部」）→ 1行のまとめ → 地図（道に沿った線・今の位置の印）とリスト。
 // スマホは「地図｜リスト」を切りかえ。パソコン（768px 以上）は地図とリストを横に並べる。文は少なく。
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { applyOrderAction, proposeOrderAction, type OrderProposal } from "./actions";
 import { RouteMap, type MapLine, type MapPin } from "../admin/routes/RouteMap";
 
 export interface BoardStop {
@@ -75,6 +77,13 @@ export function RouteBoard({ courses, depot, weekday, initial, demoNow, play = f
   const [view, setView] = useState<"map" | "list">("map");
   const [picked, setPicked] = useState<string | undefined>();
   const [t, setT] = useState<number | null>(null);
+  // 回る順の見直し（⑧ 11/7）: 案（今と比べた距離・時間）→「この順にする」で便のマスタに入れる
+  const [prop, setProp] = useState<(OrderProposal & { course: string }) | null>(null);
+  const [busy, start] = useTransition();
+  const [err, setErr] = useState("");
+  const router = useRouter();
+  const propose = (id: string) => { setErr(""); start(async () => { try { setProp({ ...(await proposeOrderAction(id)), course: id }); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } }); };
+  const apply = () => prop && start(async () => { await applyOrderAction(prop.course, prop.ids); setProp(null); router.refresh(); });
   useEffect(() => {
     const fixed = demoNow ? Number(demoNow.slice(0, 2)) * 60 + Number(demoNow.slice(3)) : null;
     const tick = () => setT(fixed ?? nowJstMin());
@@ -125,10 +134,25 @@ export function RouteBoard({ courses, depot, weekday, initial, demoNow, play = f
           <span><b className="text-lg">{course.depart}</b> 出発 → <b className="text-lg">{course.back}</b> 戻り</span>
           <span className="text-ink-soft">{hm(course.minutes)}・{course.km}km・{course.stops.length}か所</span>
           {course.late > 0 && <span className="rounded-full bg-alert-bg px-2 py-0.5 text-sm font-bold text-alert-ink">遅れ {course.late}</span>}
+          <button type="button" onClick={() => propose(course.id)} disabled={busy} className="ml-auto inline-flex min-h-9 items-center rounded-lg border border-rule-strong bg-sheet px-3 text-[14px] font-bold disabled:opacity-50">
+            {busy && !prop ? "考えています…" : "回る順を見直す"}
+          </button>
         </p>
-      ) : (
-        <p className="mt-2 text-[15px] text-ink-soft">{courses.length}コース・{courses.reduce((a, c) => a + c.stops.length, 0)}か所</p>
+      ) : null}
+      {course && prop?.course === course.id && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-info-line bg-info-bg px-3 py-2 text-[15px] text-info-ink">
+          <span className="rounded bg-ink px-1.5 py-0.5 text-[11px] font-bold text-paper">AI の案</span>
+          <span>距離 <b>{prop.before.km}</b> → <b className="text-[18px]">{prop.after.km}</b> km</span>
+          <span>時間 {hm(prop.before.minutes)} → <b className="text-[18px]">{hm(prop.after.minutes)}</b></span>
+          {(prop.before.late > 0 || prop.after.late > 0) && <span>遅れ {prop.before.late} → <b>{prop.after.late}</b></span>}
+          <span className="ml-auto flex gap-2">
+            <button type="button" onClick={apply} disabled={busy} className="min-h-10 rounded-lg bg-crust-600 px-4 font-bold text-white disabled:opacity-50">この順にする</button>
+            <button type="button" onClick={() => setProp(null)} className="min-h-10 rounded-lg border border-rule-strong bg-sheet px-3 font-bold text-ink">やめる</button>
+          </span>
+        </div>
       )}
+      {err && <p className="mt-1 text-[14px] text-alert-ink">{err}</p>}
+      {!course && <p className="mt-2 text-[15px] text-ink-soft">{courses.length}コース・{courses.reduce((a, c) => a + c.stops.length, 0)}か所</p>}
 
       {/* スマホ: 地図｜リスト */}
       {course && (
