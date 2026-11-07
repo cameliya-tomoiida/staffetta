@@ -19,6 +19,22 @@ export function AiChat({ floating = false }: { floating?: boolean } = {}) {
   const [q, setQ] = useState("");
   const [error, setError] = useState("");
   const [done, setDone] = useState<Record<string, string>>({}); // OK を押した結果（id → 文）
+  // スマホの浮いた AI ボタンは、画面を動かしている間は隠す（注文のカードに重なって読めない。管理役2 11/7）
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    if (!floating) return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const on = () => {
+      setMoving(true);
+      clearTimeout(t);
+      t = setTimeout(() => setMoving(false), 700);
+    };
+    window.addEventListener("scroll", on, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", on);
+      clearTimeout(t);
+    };
+  }, [floating]);
   const [pending, start] = useTransition();
   const end = useRef<HTMLDivElement>(null);
 
@@ -67,7 +83,7 @@ export function AiChat({ floating = false }: { floating?: boolean } = {}) {
         // 上の行（日付の横）に置く。画面の右下に浮かせると、保存などのボタンに重なるため
         floating ? (
           <button type="button" onClick={() => setOpen(true)} aria-label="AI に頼む"
-            className="fixed right-4 z-30 grid h-14 w-14 place-items-center rounded-full bg-[#8b1a1a] text-[17px] font-black text-white shadow-[0_6px_18px_rgb(0_0_0/0.35)] active:scale-95"
+            className={`fixed right-3 z-30 grid h-12 w-12 place-items-center rounded-full bg-[#8b1a1a] text-[15px] font-black text-white shadow-[0_6px_18px_rgb(0_0_0/0.35)] transition duration-200 active:scale-95 ${moving ? "pointer-events-none translate-x-20 opacity-0" : ""}`}
             style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}>
             AI
           </button>

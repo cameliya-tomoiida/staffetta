@@ -36,8 +36,10 @@ describe("LIFF のお届け日・商品の選べる／選べない", () => {
     await expect(o.createLiffOrder({ userId: "U_demo_kotori", deliveryDate: "2026-11-06", items: [{ productId: "P10", quantity: 2 }] })).rejects.toThrow(/締め切りを過ぎました/);
     await expect(o.createLiffOrder({ userId: "U_demo_kotori", deliveryDate: "2026-11-08", items: [{ productId: "P07", quantity: 2 }] })).rejects.toThrow(/お届けのない曜日/);
     expect(mem.db.orders.length).toBe(before);
+    // 取引先の定休日（ことり＝C06 は月曜）は受けない（管理役2 11/7）
+    await expect(o.createLiffOrder({ userId: "U_demo_kotori", deliveryDate: "2026-11-09", items: [{ productId: "P10", quantity: 2 }] })).rejects.toThrow(/お届けのない曜日/);
     // 同じ商品でも、間に合う日なら受ける
-    const ok = await o.createLiffOrder({ userId: "U_demo_kotori", deliveryDate: "2026-11-09", items: [{ productId: "P10", quantity: 2 }] });
+    const ok = await o.createLiffOrder({ userId: "U_demo_kotori", deliveryDate: "2026-11-10", items: [{ productId: "P10", quantity: 2 }] });
     expect(ok.status).toBe("needs_review");
   });
 });

@@ -35,10 +35,12 @@ export function orderChanges(orders: Order[], date: string): OrderChange[] {
 }
 
 /** 商品ごとのまとめ（+20・−10 など） */
-export function changesByProduct(list: OrderChange[]): { productId: string; plus: number; minus: number; customers: string[] }[] {
-  const m = new Map<string, { productId: string; plus: number; minus: number; customers: string[] }>();
+/** added = そのうち、元の注文が見つからず新しく入れた分（差でなく全部の数。管理役2 11/7「+50 は差ではない」） */
+export function changesByProduct(list: OrderChange[]): { productId: string; plus: number; minus: number; added: number; customers: string[] }[] {
+  const m = new Map<string, { productId: string; plus: number; minus: number; added: number; customers: string[] }>();
   for (const c of list) {
-    const x = m.get(c.productId) ?? { productId: c.productId, plus: 0, minus: 0, customers: [] };
+    const x = m.get(c.productId) ?? { productId: c.productId, plus: 0, minus: 0, added: 0, customers: [] };
+    if (c.kind === "add") x.added += c.pieces;
     if (c.pieces > 0) x.plus += c.pieces;
     else x.minus += -c.pieces;
     if (!x.customers.includes(c.customerId)) x.customers.push(c.customerId);

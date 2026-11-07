@@ -12,7 +12,7 @@ import { aiClient } from "@/lib/ai/client";
 import { apiKey } from "@/lib/ai/settings";
 import { DATA_DIR, getDb, kvGet, kvSet } from "@/lib/db/sqlite";
 import { decodeCsv, parseCsvText } from "./csv";
-import { detectHeader, headersOf, ruleMapping, shapeKey, toMasterCsv, type ColumnMap, type Mapping, type Transform } from "./ai-mapping";
+import { detectHeader, fillRequired, headersOf, ruleMapping, shapeKey, toMasterCsv, type ColumnMap, type Mapping, type Transform } from "./ai-mapping";
 import { applyUpload, defOf, list, previewUpload } from "./service";
 import type { ScreenName } from "./screens";
 
@@ -64,7 +64,7 @@ async function aiMapping(name: ScreenName, grid: string[][], rules: Mapping): Pr
       "ファイルの先頭の行を見て、見出しの行（題の行が上にあれば飛ばす・2行の見出しもある）と、元の列ごとに、登録先のどの項目（key）に入れるかを決めます。" +
       "使わない列は target を null。決めた理由を短い日本語で。自信は 0〜1（見出しと中身の両方が合えば高く）。" +
       "直し方: nfkc（全角→半角）・digits（数字だけ残す）・number（¥・カンマを外す）・date（日付を YYYY-MM-DD に）・trim。" +
-      "ID は今の登録の ID の形（頭に付く文字など）に合わせ、必要なら prefix に頭の文字を入れる。同じ項目に2つの列（住所1・住所2）を入れてもよい（つないで1つにする）。",
+      "ID は今の登録の ID の形（頭に付く文字など）に合わせ、必要なら prefix に頭の文字を入れる。ID の列が無ければ target に入れなくてよい（取り込むときに続きの番号を自動で付ける）。同じ項目に2つの列（住所1・住所2）を入れてもよい（つないで1つにする）。",
     messages: [{
       role: "user",
       content: JSON.stringify({
@@ -96,6 +96,8 @@ export interface Suggestion {
   /** 整えたあとの見本（5行） */
   shaped: { header: string[]; rows: string[][] };
   totalRows: number;
+  /** ファイルに無かったので埋めた必須の項目（「得意先ID（自動の番号）」「注文の締め（前日）（15:00）」） */
+  filled: string[];
   aiUsed: boolean;
   aiError?: string;
 }
@@ -122,16 +124,24 @@ export async function suggest(name: ScreenName, buf: Uint8Array, fileName: strin
     }
   }
   mapping ??= rules;
-  return { ...view(name, grid, mapping), shape, aiUsed, ...(aiError ? { aiError } : {}) };
+  return { ...(await view(name, grid, mapping)), shape, aiUsed, ...(aiError ? { aiError } : {}) };
 }
 
-function view(name: ScreenName, grid: string[][], mapping: Mapping) {
-  const out = toMasterCsv(defOf(name), grid, mapping);
+/** 整えた表（必須の空いた項目は埋める） */
+async function shapedCsv(name: ScreenName, grid: string[][], mapping: Mapping) {
+  const def = defOf(name);
+  const ids = (await list(name)).map((r) => String(r.id ?? "")).filter(Boolean);
+  return fillRequired(def, toMasterCsv(def, grid, mapping), ids);
+}
+
+async function view(name: ScreenName, grid: string[][], mapping: Mapping) {
+  const out = await shapedCsv(name, grid, mapping);
   return {
     mapping,
     sample: grid.slice(mapping.headerStart + mapping.headerRows, mapping.headerStart + mapping.headerRows + 8),
     shaped: { header: out.header, rows: out.rows.slice(0, 5) },
     totalRows: out.rows.length,
+    filled: out.filled,
   };
 }
 
@@ -146,7 +156,7 @@ export async function reshape(name: ScreenName, buf: Uint8Array, fileName: strin
 /** 試す（保存しない）: 整えた CSV を、今までの取り込み（プレビュー）に通す */
 export async function tryMapped(name: ScreenName, buf: Uint8Array, fileName: string, mapping: Mapping) {
   const grid = await readGrid(buf, fileName);
-  const { csv } = toMasterCsv(defOf(name), grid, mapping);
+  const { csv } = await shapedCsv(name, grid, mapping);
   return previewUpload(name, new TextEncoder().encode(csv), `${fileName}（AI で整えた）`);
 }
 
@@ -154,7 +164,7 @@ export async function tryMapped(name: ScreenName, buf: Uint8Array, fileName: str
 export async function applyMapped(name: ScreenName, buf: Uint8Array, fileName: string, mapping: Mapping, who: string) {
   if (!who.trim()) throw new Error("登録する人を選んでください");
   const grid = await readGrid(buf, fileName);
-  const { csv } = toMasterCsv(defOf(name), grid, mapping);
+  const { csv } = await shapedCsv(name, grid, mapping);
   const dir = path.join(DATA_DIR, "backups");
   mkdirSync(dir, { recursive: true });
   const backup = path.join(dir, `before-ai-import_${name}_${new Date().toISOString().replace(/[:.]/g, "-")}.sqlite`);

@@ -61,12 +61,15 @@ export function orderDeadline(productId: string, customerId: string, deliveryDat
  * できないときは、画面に出す理由を返す。
  */
 export function deliveryDayProblem(customerId: string, deliveryDate: string): string | undefined {
+  const W = "日月火水木金土";
+  const wd = new Date(`${deliveryDate}T00:00:00Z`).getUTCDay();
+  // 取引先の定休日（管理役2 11/7: 定休日の注文が、注文を入れる時は何も出ず、ルート表からだけ落ちていた＝運び忘れの恐れ）
+  const c = findCustomer(customerId);
+  if (c?.closedWeekdays?.includes(wd)) return `${c.name}は${W[wd]}曜日が定休日です（届け先に確認してください）`;
   const wds = customerWeekdays(customerId);
   if (!wds.length) return undefined;
-  const wd = new Date(`${deliveryDate}T00:00:00Z`).getUTCDay();
   if (wds.includes(wd)) return undefined;
-  const W = "日月火水木金土";
-  const name = findCustomer(customerId)?.name ?? customerId;
+  const name = c?.name ?? customerId;
   return `${name}は${W[wd]}曜日に納品していません（納品する曜日: ${wds.map((n) => W[n]).join("・")}）`;
 }
 

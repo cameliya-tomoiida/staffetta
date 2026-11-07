@@ -344,6 +344,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
                   {c.plus > 0 && <span className="num ml-2 font-black text-ok-ink">+{c.plus}</span>}
                   {c.minus > 0 && <span className="num ml-2 font-black text-alert-ink">−{c.minus}</span>}
                   <span className="ml-2 text-sm text-ink-soft">{c.customers.map(custName).join("・")}</span>
+                  {c.added > 0 && <span className="ml-2 text-sm text-review-ink">（元の注文が無く、全部を新しく入れた分 {c.added}）</span>}
                 </li>
               ))}
             </ul>

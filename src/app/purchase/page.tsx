@@ -68,7 +68,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
           }
           // 包装が2つ以上なら、その式だけ（ほかの文は出さない。担当者「意味が分からない」）
           detail = packs.size > 1
-            ? `${[...packs].map(([u, q]) => `${u} ${q}`).join(" ＋ ")} ＝ ${l.needQuantity}個 → ${l.unitLabel} ${l.units}袋`
+            ? `${[...packs].map(([u, q]) => `${u} ${q}`).join(" ＋ ")} ＝ ${l.needQuantity}個 → ${l.unitLabel === "個" ? `${l.units}個` : `${l.unitLabel} ${l.units}袋`}`
             : `注文 ${l.needQuantity}個${l.surplus ? `（余り ${l.surplus}個）` : ""}　${per}${l.notes?.length ? `　${l.notes.join("・")}` : ""}`;
         } else if (l.notes?.length) {
           detail = l.notes.join("・");

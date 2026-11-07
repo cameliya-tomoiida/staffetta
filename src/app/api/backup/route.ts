@@ -17,7 +17,8 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 400 });
   }
   kvSet("last_export", { at: data.exportedAt, files: includeFiles, month: month ?? null }); // 仕組みの見張り（7日ない）用
-  const stamp = data.exportedAt.slice(0, 16).replace(/[-:T]/g, "") + (includeFiles ? (month ? `-pdf${month}` : "-pdf") : "");
+  // ファイル名は日本時間（管理役2 11/7: 15:09 なのに 0609 になっていた）
+  const stamp = new Date(Date.parse(data.exportedAt) + 9 * 3600_000).toISOString().slice(0, 16).replace(/[-:T]/g, "") + (includeFiles ? (month ? `-pdf${month}` : "-pdf") : "");
   return new Response(JSON.stringify(data), {
     headers: {
       "content-type": "application/json; charset=utf-8",

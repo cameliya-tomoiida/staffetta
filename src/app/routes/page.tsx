@@ -37,7 +37,8 @@ export default async function RoutesPage(props: { searchParams: Promise<Record<s
 
   const courses: BoardCourse[] = [];
   let ci = 0;
-  for (const course of (masters.courses ?? []).filter((c) => c.active !== false && (!c.weekdays?.length || c.weekdays.includes(wd)))) {
+  // 便が走らない曜日でも、その便の先に注文があれば出す（定休日・便のない日の注文がルート表から落ちて運び忘れになるため。管理役2 11/7）
+  for (const course of (masters.courses ?? []).filter((c) => c.active !== false && (!c.weekdays?.length || c.weekdays.includes(wd) || orderedStops(c, customers).some((x) => ordered.has(x.id))))) {
     // その日のコース: 基準（便の回る順・その曜日に届ける先）→ その日に注文がある日は、注文のある先だけ＋ふだん来ない先は「追加」で、いちばん増えない所に入れる
     const all = orderedStops(course, customers).map(withService);
     const base = all.filter((c) => deliversOn(c, wd));

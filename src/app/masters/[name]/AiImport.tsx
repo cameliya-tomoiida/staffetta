@@ -11,6 +11,7 @@ interface Suggestion {
   sample: string[][];
   shaped: { header: string[]; rows: string[][] };
   totalRows: number;
+  filled?: string[];
   aiUsed?: boolean;
   aiError?: string;
 }
@@ -107,6 +108,7 @@ export function AiImport({ name, label, columns, who, onClose, onDone }: {
           </div>
           {s.aiError && <Notice tone="review">AI が使えなかったので、見出しの名前から振り分けました（{s.aiError}）</Notice>}
           {s.mapping.note && <p className="text-base"><b>AI の見立て：</b>{s.mapping.note}</p>}
+          {!!s.filled?.length && <p className="text-base"><b>ファイルに無いので入れた項目：</b>{s.filled.join("・")}（あとで直せます）</p>}
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <label className="flex items-center gap-2">見出しの行（上から）
               <input type="number" min={1} max={20} value={s.mapping.headerStart + 1} onChange={(e) => change({ ...s.mapping, headerStart: Math.max(0, Number(e.target.value) - 1) })} className="min-h-10 w-16 rounded border-2 border-rule-strong bg-sheet px-2" />

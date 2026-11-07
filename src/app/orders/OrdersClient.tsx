@@ -131,7 +131,7 @@ export function OrdersClient({
 
       {/* ⑧ スマホ: 上のタブ（状態）と、納品日の小さな切りかえ。説明の文は出さない */}
       <div className="no-print -mx-4 mb-3 md:hidden">
-        <nav aria-label="状態" className="flex gap-1 overflow-x-auto border-b border-rule px-4">
+        <nav aria-label="状態" className="grid auto-cols-fr grid-flow-col border-b border-rule px-2">
           {([
             ["all", "すべて", base.length],
             ["needs_review", "要確認", count("needs_review")],
@@ -140,8 +140,8 @@ export function OrdersClient({
             ["cancelled", "取消", count("cancelled")],
           ] as const).map(([v, l, n]) => (
             <button key={v} type="button" onClick={() => setStatus(v as StatusFilter)} aria-current={status === v ? "page" : undefined}
-              className={`flex min-h-12 shrink-0 items-center gap-1 border-b-[3px] px-3 text-[15px] font-bold whitespace-nowrap ${status === v ? "border-crust-600 text-ink" : "border-transparent text-ink-soft"}`}>
-              {l}<span className={`rounded-full px-1.5 text-[12px] tabular-nums ${v === "needs_review" && n > 0 ? "bg-review-bg text-review-ink" : "bg-paper"}`}>{n}</span>
+              className={`flex min-h-12 min-w-0 items-center justify-center gap-0.5 border-b-[3px] px-0.5 text-[14px] font-bold whitespace-nowrap ${status === v ? "border-crust-600 text-ink" : "border-transparent text-ink-soft"}`}>
+              {l}<span className={`rounded-full px-1 text-[11px] tabular-nums ${v === "needs_review" && n > 0 ? "bg-review-bg text-review-ink" : "bg-paper"}`}>{n}</span>
             </button>
           ))}
         </nav>

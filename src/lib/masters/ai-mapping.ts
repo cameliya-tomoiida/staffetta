@@ -156,6 +156,48 @@ export function toMasterCsv(def: MasterDef, grid: string[][], m: Mapping): { csv
   return { csv: tableToCsv([header, ...rows]), rows, header };
 }
 
+/**
+ * 必須なのにファイルに無い（空の）項目を埋める（管理役2 11/7: AI は「ID は自動採番」と言うのに、試すと必須のエラーになっていた）。
+ * ID: 今の登録の ID の形（頭の文字＋数字）で続きの番号。既定のある項目: 既定。選ぶ項目・時刻: 例の値（あとで画面で直せる）。
+ */
+export function fillRequired(def: MasterDef, out: { header: string[]; rows: string[][] }, existingIds: string[]): { csv: string; rows: string[][]; header: string[]; filled: string[] } {
+  const header = [...out.header];
+  const rows = out.rows.map((r) => [...r]);
+  const filled: string[] = [];
+  for (const col of def.columns) {
+    if (!col.required) continue;
+    let i = header.indexOf(col.label);
+    const empty = i < 0 || rows.some((r) => !r[i]);
+    if (!empty) continue;
+    let next: (() => string) | undefined;
+    if (col.key === "id" && col.type === "text") {
+      const ids = [...existingIds, ...(i >= 0 ? rows.map((r) => r[i]).filter(Boolean) : [])];
+      const pats = ids.map((x) => /^([A-Za-z_-]*)(\d+)$/.exec(x)).filter((m): m is RegExpExecArray => !!m);
+      const ex = /^([A-Za-z_-]*)(\d+)$/.exec(col.example ?? "") ?? ["", "X", "01"];
+      const prefix = pats.length ? pats[pats.length - 1][1] : ex[1];
+      const width = pats.length ? pats[pats.length - 1][2].length : ex[2].length;
+      let n = Math.max(0, ...pats.filter((m) => m[1] === prefix).map((m) => Number(m[2])));
+      next = () => `${prefix}${String(++n).padStart(width, "0")}`;
+    } else if (col.default !== undefined) {
+      const v = col.options?.find((o) => o.value === col.default)?.label ?? (typeof col.default === "boolean" ? (col.default ? "はい" : "いいえ") : String(col.default));
+      next = () => v;
+    } else if ((col.type === "enum" || col.type === "time") && col.example) {
+      const v = col.example;
+      next = () => v;
+    }
+    if (!next) continue;
+    if (i < 0) {
+      header.push(col.label);
+      for (const r of rows) r.push("");
+      i = header.length - 1;
+    }
+    let used = "";
+    for (const r of rows) if (!r[i]) r[i] = used = next();
+    filled.push(col.key === "id" ? `${col.label}（自動の番号）` : `${col.label}（${used}）`);
+  }
+  return { csv: tableToCsv([header, ...rows]), rows, header, filled };
+}
+
 /** 同じ形のファイルを見分けるしるし（見出しの並び） */
 export function shapeKey(master: string, headers: string[]): string {
   const s = `${master}|${headers.map(norm).join("|")}`;

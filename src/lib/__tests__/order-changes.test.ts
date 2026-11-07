@@ -24,7 +24,7 @@ describe("注文の変更", () => {
     const ch = orderChanges(orders, "2026-11-09");
     expect(ch.map((c) => [c.orderId, c.pieces])).toEqual(expect.arrayContaining([["A", 12], ["B", -10], ["F9-add0", 4]]));
     expect(ch).toHaveLength(3);
-    expect(changesByProduct(ch).find((x) => x.productId === "P01")).toEqual({ productId: "P01", plus: 12, minus: 10, customers: ["C02", "C01"] });
+    expect(changesByProduct(ch).find((x) => x.productId === "P01")).toEqual({ productId: "P01", plus: 12, minus: 10, added: 0, customers: ["C02", "C01"] });
   });
 });
 

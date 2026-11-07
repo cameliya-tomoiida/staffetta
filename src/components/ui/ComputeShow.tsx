@@ -114,11 +114,15 @@ function loadCounts(): Promise<Counts | null> {
   if (cache) return Promise.resolve(cache);
   loading ??= fetch("/api/stats", { cache: "no-store" })
     .then((r) => (r.ok ? (r.json() as Promise<Counts>) : null))
-    .then((d) => (cache = d))
-    .catch(() => null);
+    .then((d) => {
+      if (!d) loading = null; // ログイン前など: 次に開いたときに取り直す
+      return (cache = d);
+    })
+    .catch(() => (loading = null));
   return loading;
 }
-if (typeof window !== "undefined") {
+// 先に取っておくのは、ログインのあとの画面だけ（ログインの画面・LINE の注文フォームでは 401 になる。管理役2 11/7）
+if (typeof window !== "undefined" && !/^\/(login|liff)(\/|$)/.test(window.location.pathname)) {
   const idle = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1500));
   idle(() => void loadCounts());
 }
