@@ -16,6 +16,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const to = typeof next === "string" ? next : "";
   const demo = process.env.HUB_DEMO === "1"; // 審査員向けの見本（LINE のログインは無い）
   const untilLabel = demo ? demoPublicUntilLabel() : "";
+  // いつもとに戻るか（3118 は毎日 4:00。Render は眠って起きるたびに作り直す）
+  const resetText = process.env.HUB_DEMO_RESET_TEXT || "毎日 4:00 にもとに戻ります";
   return (
     <div className="mx-auto max-w-[420px] px-4 py-10">
       {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
@@ -23,7 +25,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <h1 className="m-display mt-6 mb-6 text-center text-[26px] font-black">ログイン</h1>
       <LoginForm next={to} />
       {demo ? (
-        <p className="mt-6 rounded-lg bg-cream px-3 py-2 text-center text-[15px] font-bold">これは審査員向けの見本です。データは架空で、毎日 4:00 にもとに戻ります{untilLabel ? `。公開は ${untilLabel} まで` : ""}</p>
+        <p className="mt-6 rounded-lg bg-cream px-3 py-2 text-center text-[15px] font-bold">これは審査員向けの見本です。データは架空で、{resetText}{untilLabel ? `。公開は ${untilLabel} まで` : ""}</p>
       ) : (
       <>
       <div className="my-5 flex items-center gap-3 text-[14px] text-ink-soft"><span className="h-px flex-1 bg-rule" />または<span className="h-px flex-1 bg-rule" /></div>

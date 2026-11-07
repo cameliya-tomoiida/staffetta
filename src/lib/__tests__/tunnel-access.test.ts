@@ -80,3 +80,9 @@ describe("decideTunnelAccess（見本）", () => {
     expect(decideTunnelAccess({ ...base, pathname: "/login" }).kind).toBe("login");
   });
 });
+
+describe("fromOutside（Render の見本）", () => {
+  it("*.onrender.com は外", () => {
+    expect(fromOutside(new Headers({ host: "staffetta-demo.onrender.com" }), "")).toBe(true);
+  });
+});

@@ -1,0 +1,39 @@
+# 審査員向けの見本の STAFFETTA（Render の無料枠・11/8 担当者の決定）。手順は docs/render.md。
+# 起動のたびに /tmp に架空の見本を作り直す（無料枠は眠るとディスクが消える。起きたら新品）。本番のデータ・秘密は入れない。
+services:
+  - type: web
+    name: staffetta-demo
+    runtime: node
+    plan: free
+    region: singapore # Render に東京は無い
+    # ビルドは GitHub Actions（.github/workflows/render-build.yml）で行い、ビルド済みの枝 render-build を使う。
+    # Render の 512MB では next build がメモリ不足になるため（11/8 手元で測ると 1.7GB）。ここでは依存を入れるだけ
+    branch: render-build
+    buildCommand: npm ci
+    startCommand: node scripts/start-demo-render.mjs
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: HUB_DEMO
+        value: "1"
+      - key: DEMO_PUBLIC_UNTIL
+        value: "2026-11-11T23:59:59+09:00"
+      - key: HUB_DEMO_RESET_TEXT
+        value: しばらく使われないと、もとに戻ります
+      - key: HUB_DATA_DIR # DB の外のファイル（FAX の PDF・発注の出力・印刷・翻訳の控え）の置き場
+        value: /tmp/staffetta
+      - key: HUB_DB_PATH
+        value: /tmp/staffetta/demo.sqlite
+      - key: HUB_OUTBOUND_DIR
+        value: /tmp/staffetta/outbound
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=400
+      - key: HUB_PUBLIC_URL # Render の URL が決まったら画面で直す
+        value: https://staffetta-demo.onrender.com
+      - key: JUDGE_USER
+        value: judge
+      - key: JUDGE_PASSWORD # 審査員に知らせるパスワード（8文字以上）。Render の画面で入れる
+        sync: false
+      - key: ANTHROPIC_API_KEY # Claude の API キー。Render の画面で入れる。月の上限は 3000円（約20ドル）で固定
+        sync: false

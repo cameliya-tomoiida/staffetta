@@ -22,7 +22,7 @@ export const STAFF_LOGIN_PATH = "/liff/staff";
  * どちらも 127.0.0.1:3100 へ中継するので、つないできた相手の IP では分からない。中継が付ける見出しで見る:
  *   - Cloudflare: cf-ray・cf-connecting-ip
  *   - Tailscale Funnel: Tailscale-Funnel-Request（tailscaled が付ける。外の人は消せない）
- *   - 念のため、宛先の名前が *.ts.net・*.trycloudflare.com・HUB_PUBLIC_URL のもの
+ *   - 念のため、宛先の名前が *.ts.net・*.trycloudflare.com・*.onrender.com（審査員向けの見本）・HUB_PUBLIC_URL のもの
  */
 export function fromOutside(h: { get(name: string): string | null }, publicUrl = process.env.HUB_PUBLIC_URL ?? ""): boolean {
   if (h.get("cf-ray") !== null || h.get("cf-connecting-ip") !== null || h.get("tailscale-funnel-request") !== null) return true;
@@ -34,7 +34,7 @@ export function fromOutside(h: { get(name: string): string | null }, publicUrl =
   }
   return [h.get("x-forwarded-host"), h.get("host")].some((v) => {
     const host = (v ?? "").split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
-    return Boolean(host) && (host.endsWith(".ts.net") || host.endsWith(".trycloudflare.com") || host === pub);
+    return Boolean(host) && (host.endsWith(".ts.net") || host.endsWith(".trycloudflare.com") || host.endsWith(".onrender.com") || host === pub);
   });
 }
 

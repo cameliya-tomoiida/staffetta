@@ -7,7 +7,11 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com"],
   // ⑤外部サイト: PDF作成(pdfkit)はフォントなどのファイルを自分の場所から読むので、まとめずにそのまま使う
   serverExternalPackages: ["pdfkit", "exceljs", "mailparser"],
+  // Render の無料枠（メモリ 512MB）でのビルド（HUB_LOW_MEM_BUILD=1・11/8）: 型の確かめで足りなくなるので飛ばす（型は手元の npm test・tsc で毎回確かめている）
+  typescript: { ignoreBuildErrors: process.env.HUB_LOW_MEM_BUILD === "1" },
   experimental: {
+    // 低メモリのビルドでは、ページを集める作業のプロセスを1つにする（CPU の数だけ立てると 512MB を超える）
+    ...(process.env.HUB_LOW_MEM_BUILD === "1" ? { cpus: 1, workerThreads: false } : {}),
     // 設定 → バックアップの「戻す」はファイル全体（FAX の PDF 入り）を Server Action で送る。既定の 1MB では 500 になる（管理役2 11/7）
     serverActions: { bodySizeLimit: "100mb" },
     // proxy.ts があると、送る中身は既定で 10MB まで。戻すファイルに合わせる
