@@ -1,0 +1,2 @@
+# サーバー（Linux）で動かす台本は、いつも LF
+*.sh text eol=lf

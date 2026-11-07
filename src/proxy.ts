@@ -87,7 +87,8 @@ export function proxy(request: NextRequest) {
     accept: request.headers.get("accept"),
     isServerAction: request.headers.has("next-action"),
     staffOk: Boolean(verifyStaffSession(request.cookies.get(STAFF_COOKIE)?.value, Date.now())),
-    demo: process.env.HUB_DEMO === "1",
+    // 見本（HUB_DEMO=1）と、インターネット上のサーバー（HUB_PASSWORD_LOGIN_OUTSIDE=1・11/8 ConoHa。どのアクセスも「外」になる）は、ID・パスワードのログインを外からも通す
+    demo: process.env.HUB_DEMO === "1" || process.env.HUB_PASSWORD_LOGIN_OUTSIDE === "1",
     loggedIn: Boolean(me),
   });
   if (d.kind === "next") return pass();
