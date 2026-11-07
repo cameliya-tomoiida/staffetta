@@ -237,11 +237,11 @@ export function ReviewClient({
   const matrix = isOrderish && kind !== "change" && allDates.length > 1 && !needsTemplate;
 
   /** 数量の入力欄（大きな数字。直した所は赤で「元 → 新 変更」） */
-  const qtyCell = (i: number, compact = false) => {
+  const qtyCell = (i: number, compact = false, bare = false) => {
     const r = rows[i];
     const edited = r.quantity !== r.aiQuantity;
     return (
-      <div className="flex flex-col items-end gap-1">
+      <div className="flex flex-col items-end gap-1" title={bare && edited && Number.isFinite(r.quantity) ? `${r.aiQuantity} → ${r.quantity} 変更` : undefined}>
         <div className="flex items-center gap-1.5">
           <input
             type="number"
@@ -258,7 +258,7 @@ export function ReviewClient({
             } ${!Number.isInteger(r.quantity) || r.quantity < 0 ? "outline outline-2 outline-[#a51e28]" : ""}`}
           />
         </div>
-        {edited && Number.isFinite(r.quantity) && (
+        {!bare && edited && Number.isFinite(r.quantity) && (
           <div className="text-[0.85em] font-bold text-[#a51e28]">{r.aiQuantity} → {r.quantity} 変更</div>
         )}
       </div>
@@ -277,6 +277,17 @@ export function ReviewClient({
         <span className="lg:hidden">{on ? `✓ ${label}をFAXと見比べました` : `${label}をFAXと見比べました`}</span>
         <span className="hidden lg:inline">{on ? "✓ 見比べた" : "見比べた"}</span>
       </label>
+    );
+  };
+
+  /** 表のマスの中の小さな「見比べた」の□（どのマスも同じ場所を取る。確認しないマスは空き） */
+  const miniCheck = (i: number, label: string) => {
+    const r = rows[i];
+    if (!mustCheck(r)) return <span aria-hidden className="inline-block h-6 w-6 shrink-0" />;
+    const on = !!checked[keyOf(r)];
+    return (
+      <input type="checkbox" className={`h-6 w-6 shrink-0 cursor-pointer accent-[#24633d] ${on ? "" : "outline-2 outline-offset-1 outline-review-line"}`} aria-label={`${label}をFAXと見比べました`} title="FAX と見比べたら印"
+        checked={on} onClick={(e) => e.stopPropagation()} onChange={(e) => setChecked((c) => ({ ...c, [keyOf(r)]: e.target.checked }))} />
     );
   };
 
@@ -546,10 +557,14 @@ export function ReviewClient({
                               const i = cellOf(name, d);
                               if (i < 0) return <td key={d} className="px-2 py-3 text-right text-ink-faint lg:py-1.5">—</td>;
                               return (
-                                <td key={d} className={`px-2 py-3 lg:py-1.5 ${rowCls(i)}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}>
-                                  {qtyCell(i, true)}
-                                  {why(rows[i])}
-                                  {checkBox(i, `${n + 1}行目の${md(d)}`)}
+                                <td key={d} className={`relative px-2 py-3 lg:py-1.5 ${rowCls(i)}`} onMouseEnter={() => setSelected(i)} onClick={() => setSelected(i)}
+                                  title={mustCheck(rows[i]) ? (rows[i].attention ?? "読み取りの自信が低い") : undefined}>
+                                  {/* ⑧ 11/7 担当者「そのマスだけ縦・横に広がるのはやめて。印と色だけにして、意味は下に」:
+                                      どのマスも [見比べの□の場所][数の欄] の同じ大きさ。理由の文は表の下にまとめる */}
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    {miniCheck(i, `${n + 1}行目の${md(d)}`)}
+                                    {qtyCell(i, true, true)}
+                                  </div>
                                 </td>
                               );
                             })}
@@ -658,9 +673,19 @@ export function ReviewClient({
             })}
 
             {!done && isOrderish && !needsTemplate && (
-              <div className="mb-3 flex flex-wrap gap-2 text-[0.85em]">
-                <span className="rounded bg-[#fff3c4] px-2 py-1 font-bold text-[#654700]">黄：確認する行</span>
-                <span className="rounded bg-[#fff0f1] px-2 py-1 font-bold text-[#a51e28]">赤：自分で変更した所</span>
+              <div className="mb-3 space-y-1.5 text-[0.85em]">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded bg-[#fff3c4] px-2 py-1 font-bold text-[#654700]">黄：確認する所（FAX と見比べたら □ に印）</span>
+                  <span className="rounded bg-[#fff0f1] px-2 py-1 font-bold text-[#a51e28]">赤：自分で変更した所</span>
+                </div>
+                {/* 何日分かの表: 確認する理由は、マスの中ではなくここに1行ずつ（マスの大きさをそろえるため） */}
+                {matrix && rows.some((r) => mustCheck(r)) && (
+                  <ul className="space-y-0.5 text-review-ink">
+                    {rows.map((r, i) => mustCheck(r) ? (
+                      <li key={i} className="flex gap-1.5"><b>!</b><span>{r.writtenName} {md(r.deliveryDate)}：{r.attention ?? (r.level === "low" ? "読み取りの自信が低い" : "読み取りの自信が少し低め")}{(() => { const lt = leadTimes[keyOf(r)]; return lt ? `・締め：${lt.reason}` : ""; })()}</span></li>
+                    ) : null)}
+                  </ul>
+                )}
               </div>
             )}
 
