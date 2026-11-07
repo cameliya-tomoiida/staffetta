@@ -123,3 +123,26 @@ export async function addPhoneOrderAction(input: {
   if (r.ok) revalidatePath("/", "layout");
   return r;
 }
+
+/**
+ * 納品日を変える（担当者 11/7「材料が足りない・在庫がない など、うちの都合で、お客さんの了解をもらって納品日を変えることがある。
+ * 変えたことがお客さんにも分かるように」）。元の日と変えた人を記録に残す（LINE の注文の画面で「変更 11/9 → 11/16」と出る）。
+ */
+export async function changeDeliveryDateAction(input: { orderId: string; newDate: string; who: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    if (!input.who.trim()) throw new Error("変える人を選んでください");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.newDate)) throw new Error("新しい納品日を選んでください");
+    await updateDb((db) => {
+      const o = db.orders.find((x) => x.id === input.orderId);
+      if (!o) throw new Error("注文が見つかりません（見本の注文は変えられません）");
+      if (o.status === "cancelled") throw new Error("取消の注文です");
+      if (o.deliveryDate === input.newDate) throw new Error("今と同じ納品日です");
+      o.edits.push({ at: new Date().toISOString(), who: input.who, field: "deliveryDate", from: o.deliveryDate, to: input.newDate });
+      o.deliveryDate = input.newDate;
+    });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

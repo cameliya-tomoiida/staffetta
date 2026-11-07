@@ -56,7 +56,7 @@ const PLUS = "M12 5v14M5 12h14";
 const MINUS = "M5 12h14";
 
 /** お届け日のカレンダー（‹ 月 ›・マス 40px）。選べない日はグレーで押せないだけ（定休日は小さく「休み」） */
-function Calendar({ days, value, onPick, closed, today, marks }: { days: string[]; value: string; onPick: (ymd: string) => void; closed: (ymd: string) => string; today: string; marks?: Set<string> }) {
+function Calendar({ days, value, onPick, closed, today, marks, moved }: { days: string[]; value: string; onPick: (ymd: string) => void; closed: (ymd: string) => string; today: string; marks?: Set<string>; moved?: Set<string> }) {
   const months = [...new Set(days.map((d) => d.slice(0, 7)))];
   const [mi, setMi] = useState(() => Math.max(0, months.indexOf(value.slice(0, 7))));
   const ym = months[mi] ?? months[0];
@@ -98,12 +98,14 @@ function Calendar({ days, value, onPick, closed, today, marks }: { days: string[
               type="button"
               disabled={(!range || Boolean(why)) && !marks?.has(ymd)}
               aria-pressed={on}
-              aria-label={`${m}月${d}日${why === "休み" ? "（休み）" : ""}${marks?.has(ymd) ? "（納品あり）" : ""}`}
+              aria-label={`${m}月${d}日${why === "休み" ? "（休み）" : ""}${moved?.has(ymd) ? "（納品日の変更）" : marks?.has(ymd) ? "（納品あり）" : ""}`}
               onClick={() => onPick(ymd)}
               className={`mx-auto flex h-10 w-10 flex-col items-center justify-center rounded-[10px] text-[16px] leading-none tabular-nums ${
                 on
                   ? "bg-crust-600 font-bold text-white"
-                  : marks?.has(ymd)
+                  : moved?.has(ymd)
+                    ? "bg-[#fde3c8] font-bold text-[#9a4d0b]" // 工場の都合で納品日を変えた日はオレンジ（11/7）
+                    : marks?.has(ymd)
                     ? "bg-[#dcf2e1] font-bold text-[#1d6b34]" // 納品のある日は薄い緑（担当者 11/7「どの日に納品があったか、すぐ見えるように」）
                     : !range || why
                       ? "font-medium text-ink-faint/60"
@@ -116,10 +118,18 @@ function Calendar({ days, value, onPick, closed, today, marks }: { days: string[
           );
         })}
       </div>
-      {marks && cells.some((c) => c && marks.has(c)) && (
-        <p className="mt-1 flex items-center justify-end gap-1 px-1 text-[12px] text-ink-faint">
-          <span className="inline-block h-3 w-3 rounded-[3px] bg-[#dcf2e1]" aria-hidden />
-          納品のある日
+      {marks && cells.some((c) => c && (marks.has(c) || moved?.has(c))) && (
+        <p className="mt-1 flex items-center justify-end gap-3 px-1 text-[12px] text-ink-faint">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-3 w-3 rounded-[3px] bg-[#dcf2e1]" aria-hidden />
+            納品のある日
+          </span>
+          {cells.some((c) => c && moved?.has(c)) && (
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-3 w-3 rounded-[3px] bg-[#fde3c8]" aria-hidden />
+              変更
+            </span>
+          )}
         </p>
       )}
     </div>
@@ -328,7 +338,14 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                           return (
                             <div key={h.id} className="overflow-hidden rounded-xl border border-rule bg-sheet">
                               <div className="flex items-center justify-between gap-2 px-4 py-2">
-                                <span className="text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : h.intent === "change" ? "変更のご連絡" : "ご注文"}</span>
+                                <span className="text-[13px] text-ink-faint">
+                                  {h.intent === "cancel" ? "取消のご連絡" : h.intent === "change" ? "変更のご連絡" : "ご注文"}
+                                  {h.movedFrom && (
+                                    <b className="ml-2 rounded-md bg-[#fde3c8] px-1.5 py-0.5 text-[13px] text-[#9a4d0b] tabular-nums">
+                                      変更 {md(h.movedFrom)} → {md(h.deliveryDate)}
+                                    </b>
+                                  )}
+                                </span>
                                 <span
                                   className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
                                     h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
@@ -496,6 +513,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   closed={dayClosed}
                   today={today}
                   marks={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.intent === "new").map((h) => h.deliveryDate))}
+                  moved={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.movedFrom).map((h) => h.deliveryDate))}
                 />
               </section>
               {ctx.history.some((h) => h.deliveryDate === (homeDay || date)) && <section className="px-4">{dayDetail(homeDay || date)}</section>}
@@ -664,7 +682,8 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   const pick = orderDays.includes(histDay) ? histDay : (orderDays.filter((d) => d <= today).at(-1) ?? orderDays[0]);
                   return (
                     <>
-                      <Calendar key={pick.slice(0, 7)} days={orderDays} value={pick} onPick={(d) => { setHistDay(d); setSlip({ busy: false }); }} closed={() => ""} today={today} marks={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.intent === "new").map((h) => h.deliveryDate))} />
+                      <Calendar key={pick.slice(0, 7)} days={orderDays} value={pick} onPick={(d) => { setHistDay(d); setSlip({ busy: false }); }} closed={() => ""} today={today} marks={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.intent === "new").map((h) => h.deliveryDate))}
+                  moved={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.movedFrom).map((h) => h.deliveryDate))} />
                       {dayDetail(pick)}
                     </>
                   );

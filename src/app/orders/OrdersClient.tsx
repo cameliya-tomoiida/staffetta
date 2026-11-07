@@ -12,6 +12,7 @@ import {
 import { SourceButton } from "@/components/ui/SourceViewer";
 import { ConfirmButton, LineNotifyButton } from "./ConfirmSheet";
 import { ReplyButton } from "./ReplyButton";
+import { ChangeDateButton } from "./ChangeDateButton";
 import { easyReasons, LOW_CONFIDENCE } from "@/components/ui/wording";
 import { useStaffNames } from "@/components/ui/staff";
 
@@ -416,6 +417,7 @@ function OrderRow({
             <ConfirmButton order={o} who={who} custName={custName} />
           )}
           {linePreview && <LineNotifyButton orderId={o.id} preview={linePreview} who={who} />}
+          {canConfirm && o.status !== "cancelled" && (o.intent ?? "new") === "new" && <ChangeDateButton orderId={o.id} current={o.deliveryDate} who={who} />}
           {(o.status === "confirmed" || o.status === "provisional") && o.source.channel !== "line" && <ReplyButton orderId={o.id} who={who} />}
           {faxRef?.kind === "fax_pdf" && o.status === "needs_review" && (
             <Link href={`/fax/${faxRef.faxId}`} className={buttonClass("primary")}>

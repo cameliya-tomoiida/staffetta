@@ -421,6 +421,11 @@ export async function liffContext(userId: string) {
         orderedAt: o.source.receivedAt,
         state: (o.status === "confirmed" ? "confirmed" : o.status === "cancelled" ? "cancelled" : "checking") as "confirmed" | "cancelled" | "checking",
         intent: o.intent ?? "new",
+        // 工場の都合で納品日を変えたとき、元の日（最初に頼まれた日）。担当者 11/7「変更 9日 → 16日 だけ分かればいい」
+        ...(() => {
+          const e = o.edits.find((x) => x.field === "deliveryDate");
+          return e && e.from !== o.deliveryDate ? { movedFrom: e.from } : {};
+        })(),
         items: o.lines
           .filter((l) => l.quantity > 0)
           .map((l) => {
