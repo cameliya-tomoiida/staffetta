@@ -35,6 +35,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h1 className="m-display text-[22px] font-black max-md:hidden">{deptName(role)}</h1>
         <span className="text-[14px] text-ink-soft max-md:hidden">{md(h.date)} 納品</span>
+        {h.viewAs && <span className="rounded-full border border-rule-strong px-2 py-0.5 text-[12px] text-ink-soft">見本：{h.viewAs}</span>}
         {/* 部署の切りかえは管理者の画面だけ（担当者「入口（ログイン）で部署が決まる。クリックで切りかえない」）。見本の状態でも、ほかの部署の画面には出さない */}
         {canSwitch && role === "管理者" && (
           <nav aria-label="部署" className="flex rounded-full border border-rule bg-paper p-0.5 md:ml-auto max-md:w-full">

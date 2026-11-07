@@ -58,7 +58,7 @@ export function StandingPanel({ customers }: { customers: StandingCustomer[] }) 
         </label>
         <Button variant="primary" size="lg" disabled={busy || !customers.length} onClick={() => make()}>{busy ? "作っています…" : "今週分を作る（全部の取引先）"}</Button>
       </div>
-      <p className="text-sm text-ink-soft">作った注文は「要確認」で受注一覧に入ります。お休み・変更の連絡がないか確かめてから確定してください。もう作ってある日は作りません。</p>
+      {/* ⑧ 11/7 説明の文は出さない（作ったあとの知らせで「要確認です」と出る） */}
       {err && <Notice tone="alert">{err}</Notice>}
       {res && (
         // 押したら何が起きたかを大きく: 作った件数・もう作ってあった件数・作らなかった日と理由

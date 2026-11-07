@@ -30,11 +30,9 @@ export default async function CardsPage(props: PageProps<"/cards">) {
 
   return (
     <main className="space-y-6 p-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold">製品カード</h1>
-        <p className="text-xl text-ink-soft">
-          生地ごとに1枚。日付・天気・製品名・注文数・仕込数・担当はアプリが入れます。現場で測ったところ（室温・水温・捏上温度・時間・製品数・検査）だけ入れてください。
-        </p>
+      {/* ⑧ 11/7 説明の文は出さない（題に重ねると出る）。スマホは上の帯に名前が出るので題も出さない */}
+      <header className="max-md:hidden">
+        <h1 className="text-3xl font-bold" title="生地ごとに1枚。日付・天気・製品名・注文数・仕込数・担当はアプリが入れます。現場で測ったところ（室温・水温・捏上温度・時間・製品数・検査）だけ入れてください。">製品カード</h1>
       </header>
       <DateNav date={date} today={today} pattern="/cards?date=__DATE__" marks={dates} />
       <nav aria-label="日付" className="flex flex-wrap gap-3 max-md:hidden">
