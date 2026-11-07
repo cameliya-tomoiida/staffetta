@@ -107,6 +107,7 @@ export const MENU: Group[] = [
       { href: "/settings/staff", label: "スタッフの登録" },
       { href: "/settings/holidays", label: "工場の休業日" },
       { href: "/settings/company", label: "自社の情報" },
+      { href: "/settings/mail", label: "メール送信" },
       { href: "/settings/yayoi", label: "弥生の CSV の様式" },
       { href: "/settings/ai", label: "AI（キー・使った量）" },
       { href: "/settings/backup", label: "バックアップ" },

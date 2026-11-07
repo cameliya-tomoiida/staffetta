@@ -74,3 +74,23 @@ export async function approveShortageOrderAction(poId: string, who: string): Pro
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/** OK 済みの発注書を、仕入先にメールで送る（メール送信の部品。鍵・試しの宛先の決まりのまま） */
+export async function sendOrderMailAction(poId: string, who: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  try {
+    if (!who.trim()) throw new Error("送る人を選んでください");
+    const po = await getPurchaseOrder(poId);
+    if (!po) throw new Error("発注書が見つかりません");
+    if (po.status === "draft") throw new Error("先に OK を押してください");
+    const m = await loadMasters();
+    const sup = m.suppliers.find((s) => s.id === po.supplierId);
+    if (!sup) throw new Error("仕入先がマスタにありません");
+    const mail = orderMail(po, sup, getCompany());
+    if (!mail.to) throw new Error("仕入先のメールアドレスが登録されていません");
+    const { sendMail } = await import("@/lib/mail/send");
+    const r = await sendMail({ to: [mail.to], subject: mail.subject, body: mail.body }, who);
+    return r.ok ? { ok: true, message: `${mail.to} に送りました` } : { ok: false, error: r.error ?? "送れませんでした" };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

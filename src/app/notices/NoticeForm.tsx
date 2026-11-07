@@ -10,7 +10,7 @@ import { draftNoticeAction, previewRecipientsAction, saveNoticeAction } from "./
 
 const INPUT = "min-h-14 w-full rounded-lg border-2 border-rule-strong bg-sheet px-3 text-lg";
 const LABEL = "block text-base font-bold text-ink-soft";
-const CH: Record<string, string> = { line: "LINE", fax: "FAX", none: "手渡し" };
+const CH: Record<string, string> = { line: "LINE", email: "メール", fax: "FAX", none: "手渡し" };
 
 export function NoticeForm({ products, courses }: { products: { id: string; name: string; price: number }[]; courses: string[] }) {
   const router = useRouter();
@@ -108,7 +108,7 @@ export function NoticeForm({ products, courses }: { products: { id: string; name
         <button type="button" onClick={preview} disabled={pending} className="btn-ghost text-lg">送る先を見る</button>
         {list && (
           <div className="space-y-2">
-            <p className="text-lg font-bold">{list.length}件（LINE {count("line")}・FAX {count("fax")}・手渡し {count("none")}）</p>
+            <p className="text-lg font-bold">{list.length}件（LINE {count("line")}・メール {count("email")}・FAX {count("fax")}・手渡し {count("none")}）</p>
             <ul className="max-h-60 overflow-auto rounded-lg border border-rule">
               {list.map((r) => <li key={r.customerId} className="flex justify-between border-b border-rule px-3 py-2 text-lg last:border-b-0"><span>{r.name}</span><span className="text-ink-soft">{CH[r.channel]}</span></li>)}
             </ul>
