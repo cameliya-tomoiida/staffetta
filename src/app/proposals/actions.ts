@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { approveProposal, getProposal, planLines, reviseProposal } from "@/lib/proposals";
 
-export interface ProposalView { id: string; kind: "purchase" | "schedule"; title: string; lines: string[]; status: "open" | "done" | "dropped"; rev: number; history: { at: string; who: string; what: string; text?: string }[] }
+export interface ProposalView { id: string; kind: "purchase" | "schedule"; title: string; note?: string; lines: string[]; status: "open" | "done" | "dropped"; rev: number; history: { at: string; who: string; what: string; text?: string }[] }
 
 const view = (id: string): ProposalView | null => {
   const p = getProposal(id);
-  return p ? { id: p.id, kind: p.kind, title: p.title, lines: planLines(p), status: p.status, rev: p.rev, history: p.history } : null;
+  return p ? { id: p.id, kind: p.kind, title: p.title, note: p.note, lines: planLines(p), status: p.status, rev: p.rev, history: p.history } : null;
 };
 
 export async function getProposalAction(id: string) {

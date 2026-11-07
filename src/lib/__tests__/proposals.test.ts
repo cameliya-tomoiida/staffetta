@@ -19,7 +19,7 @@ describe("AI の案", () => {
     const p = ps.find((x) => x.kind === "purchase");
     expect(p).toBeDefined();
     if (!p) return;
-    expect(p.title).toMatch(/^足りない材料の発注の案：\d+社・\d+品目。よろしいですか？$/);
+    expect(p.title).toMatch(/^発注の案：.+ \d+品（\d+\/\d+ 着）$/);
     expect(planLines(p).every((l) => /：.+（\d+\/\d+ 着）$/.test(l))).toBe(true);
     expect(buildProposals(DEMO_DATE, r, m).find((x) => x.kind === "purchase")!.id).toBe(p.id);
   });
@@ -32,7 +32,8 @@ describe("AI の案", () => {
     const first = p.purchase![0];
     const next = await reviseProposal(p.id, `${first.name}は来週でいい`, "たなか");
     expect(next.purchase!.some((x) => x.materialId === first.materialId)).toBe(false);
-    expect(next.title).toMatch(/^足りない材料の発注の案：.+こう直しました（.+）。よろしいですか？$/);
+    expect(next.title).toMatch(/^発注の案：/);
+    expect(next.note).toMatch(/^直した点：.+$/);
     expect(next.rev).toBe(1);
     expect(next.history.some((h) => h.who === "たなか" && h.text === `${first.name}は来週でいい`)).toBe(true);
     expect(next.purchase!.length).toBeGreaterThan(0);

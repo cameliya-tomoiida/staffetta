@@ -25,8 +25,10 @@ export interface Proposal {
   kind: "purchase" | "schedule";
   /** 納品日 */
   date: string;
-  /** AI の判断（一言） */
+  /** AI の判断（題・1行。例「発注の案：米田製粉 2品（11/8 着）」） */
   title: string;
+  /** 小さな2行目（「よろしいですか？」「こう直しました（…）。よろしいですか？」） */
+  note?: string;
   purchase?: PurchaseRow[];
   schedule?: ShiftRow[];
   status: "open" | "done" | "dropped";
@@ -56,8 +58,8 @@ export function planLines(p: Pick<Proposal, "kind" | "purchase" | "schedule">): 
   return (p.schedule ?? []).map((r) => `${r.name}：${Math.abs(r.minutes)}分${r.minutes < 0 ? "早く" : "遅く"}始める（${fmtTime(r.from)} → ${fmtTime(r.from + r.minutes)}）${r.reason ? `　${r.reason}` : ""}`);
 }
 
-const purchaseTitle = (rows: PurchaseRow[]) => `足りない材料の発注の案：${new Set(rows.map((r) => r.supplierId)).size}社・${rows.length}品目。よろしいですか？`;
-const scheduleTitle = (rows: ShiftRow[]) => `人が足りない時間をなくす工程表の案：${rows.length}つの生地の始める時刻をずらします。よろしいですか？`;
+const purchaseTitle = (rows: PurchaseRow[]) => `発注の案：${[...new Set(rows.map((r) => supName(r.supplierName)))].join("・")} ${rows.length}品（${rows[0] ? md(rows[0].arriveDate) : ""} 着）`;
+const scheduleTitle = (rows: ShiftRow[]) => `工程表の案：${rows.map((r) => `${r.name}を${Math.abs(r.minutes)}分${r.minutes < 0 ? "早く" : "遅く"}`).join("・")}`;
 
 /** その日の案を作る（同じ日・同じ種類の open の案があれば、中身を変えずにそのまま） */
 export function buildProposals(date: string, r: Pick<PipelineResult, "productionDate" | "materialPlan" | "materialPurchaseOrders" | "production" | "schedule">, m: Masters): Proposal[] {
@@ -124,7 +126,7 @@ export async function reviseProposal(id: string, text: string, who: string): Pro
         model: PROPOSAL_MODEL,
         max_tokens: 2000,
         output_config: { format: betaZodOutputFormat(ReviseSchema) },
-        system: "パン工場のアプリで、AI が作った案（材料の発注の案、または工程表を直す案）を、人の言葉どおりに直します。言われていない行は変えず、全部の行を返します。「来週でいい」「いらない」は 0、「先に」は早める（マイナス）。key・materialId は変えない。message は人に分かる言葉で書き、-340分 のようなマイナスの数や key は書かない（「30分さらに早めました」のように）。",
+        system: "パン工場のアプリで、AI が作った案（材料の発注の案、または工程表を直す案）を、人の言葉どおりに直します。言われていない行は変えず、全部の行を返します。「来週でいい」「いらない」は 0、「先に」は早める（マイナス）。key・materialId は変えない。message は直した点だけを15字くらいの短い言葉で（例「レーズンを来週に」「ピザ生地をさらに30分早く」）。マイナスの数や key は書かない。",
         messages: [{ role: "user", content: `案の種類: ${p.kind === "purchase" ? "発注の案" : "工程表を直す案"}\n今の中身: ${JSON.stringify(facts)}\n人の言葉: ${text}` }],
       });
       const o = res.parsed_output;
@@ -144,12 +146,13 @@ export async function reviseProposal(id: string, text: string, who: string): Pro
     const earlier = /先|早/.test(text);
     if (p.kind === "purchase") next.purchase = (p.purchase ?? []).filter((r) => !(drop && text.includes(r.name.slice(0, 2))));
     else next.schedule = (p.schedule ?? []).map((r) => (text.includes(r.name.replace(/生地$/, "").slice(0, 2)) ? { ...r, minutes: drop ? 0 : earlier ? r.minutes - 30 : r.minutes } : r)).filter((r) => r.minutes !== 0);
-    message = "言われたとおりに直しました";
+    message = "言われたとおりに";
   }
   next = {
     ...next,
     rev: p.rev + 1,
-    title: `${(p.kind === "purchase" ? purchaseTitle(next.purchase ?? []) : scheduleTitle(next.schedule ?? [])).replace("よろしいですか？", "")}こう直しました（${message}）。よろしいですか？`,
+    title: p.kind === "purchase" ? purchaseTitle(next.purchase ?? []) : scheduleTitle(next.schedule ?? []),
+    note: `直した点：${message}`,
     history: [...p.history, { at: nowIso(), who, what: "直すように頼んだ", text }, { at: nowIso(), who: "AI", what: `直した: ${message}` }],
   };
   save(next);

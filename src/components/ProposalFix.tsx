@@ -70,9 +70,10 @@ export function ProposalFix({ proposalId, onClose }: { proposalId: string; onClo
   return (
     <section className="space-y-3 rounded-xl border-2 border-crust-600 bg-sheet p-4">
       <h2 className="text-lg leading-snug font-black">
-        <span className="mr-1 rounded bg-crust-600 px-1.5 py-0.5 text-sm text-white">AI の判断</span>
+        <span className="mr-1 rounded bg-crust-600 px-1.5 py-0.5 text-sm text-white">AI の案</span>
         {v.title}
       </h2>
+      {v.note && <p className="-mt-2 text-base text-ink-soft">{v.note}</p>}
       <ul className="space-y-1 rounded-lg bg-cream p-3 text-[17px]">
         {v.lines.length === 0 && <li className="text-ink-soft">（することはありません）</li>}
         {v.lines.map((l, i) => (

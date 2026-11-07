@@ -17,33 +17,33 @@ interface GroupRule {
 
 const RULES: Record<string, GroupRule> = {
   stock_shortage: {
-    title: (n) => `AI の判断：足りなくなる材料 ${n}品を、仕入先ごとの発注の案にまとめました。よろしいですか？`,
-    ok: { label: "OK・発注の案を見る", href: "/plan?tab=material" },
+    title: (n) => `足りなくなる材料 ${n}品`,
+    ok: { label: "発注の案を見る", href: "/plan?tab=material" },
     fix: { label: "直す", href: "/purchase" },
   },
   margin_low: {
-    title: (n) => `AI の判断：粗利が低い商品 ${n}品は、卸価格の見直しが要ります。見直しますか？`,
-    ok: { label: "OK・見直す", href: "/masters/products" },
+    title: (n) => `粗利が低い商品 ${n}品`,
+    ok: { label: "卸価格を見直す", href: "/masters/products" },
     fix: { label: "あとで", href: "/alerts" },
   },
   record_missing: {
-    title: (n) => `AI の判断：記録の漏れ ${n}件を、担当に知らせます。よろしいですか？`,
-    ok: { label: "OK・漏れを見る", href: "/hygiene" },
+    title: (n) => `記録の漏れ ${n}件`,
+    ok: { label: "漏れを見る", href: "/hygiene" },
     fix: { label: "直す", href: "/alerts" },
   },
   record_due: {
-    title: (n) => `AI の判断：もうすぐ締めの記録 ${n}件を、担当に知らせます。よろしいですか？`,
-    ok: { label: "OK・記録を見る", href: "/hygiene" },
+    title: (n) => `もうすぐ締めの記録 ${n}件`,
+    ok: { label: "記録を見る", href: "/hygiene" },
     fix: { label: "直す", href: "/alerts" },
   },
   unusual_quantity: {
-    title: (n) => `AI の判断：いつもと違う数の注文 ${n}件を、取引先に確かめます。よろしいですか？`,
-    ok: { label: "OK・注文を見る", href: "/orders" },
+    title: (n) => `いつもと違う数の注文 ${n}件`,
+    ok: { label: "注文を見る", href: "/orders" },
     fix: { label: "直す", href: "/alerts" },
   },
   production_warning: {
-    title: (n) => `AI の判断：製造の注意 ${n}件。工程表を直す案を見ますか？`,
-    ok: { label: "OK・工程表を見る", href: "/plan?tab=time" },
+    title: (n) => `製造の注意 ${n}件`,
+    ok: { label: "工程表を見る", href: "/plan?tab=time" },
     fix: { label: "あとで", href: "/alerts" },
   },
 };

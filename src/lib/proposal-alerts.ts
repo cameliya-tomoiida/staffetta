@@ -23,7 +23,7 @@ export async function proposalAlerts(now: string): Promise<AlertCandidate[]> {
     dedupeKey: `proposal:${p.id}`,
     kind: "proposal",
     level: "warn",
-    title: `AI の判断：${p.title}`,
+    title: p.title,
     plan: { lines: planLines(p) },
     detail: planLines(p).join("\n"),
     action: "OK",

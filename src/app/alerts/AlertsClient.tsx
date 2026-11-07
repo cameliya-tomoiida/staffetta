@@ -170,7 +170,8 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
   const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
   const lv = LEVEL[a.level];
-  const [panel, setPanel] = useState<null | "assign" | "later" | { ask: AlertAction; i: number }>(null);
+  const [panel, setPanel] = useState<null | "assign" | "later" | "more" | { ask: AlertAction; i: number }>(null);
+  const [open, setOpen] = useState(false);
   const [assignee, setAssignee] = useState(a.assignee ?? "");
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, startRun] = useTransition();
@@ -224,8 +225,11 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
           {a.state === "snoozed" && a.snoozeUntil && <span className="text-sm font-bold text-ink-soft">あとで：{fmtDateTime(a.snoozeUntil)} にまた出します</span>}
           {a.assignee && <span className="text-sm text-ink-soft">担当 <b className="text-ink">{a.assignee}</b></span>}
         </div>
-        <h2 className="text-xl leading-snug font-black">{a.title}</h2>
-        {a.detail && <p className="text-ink-soft">{a.detail}</p>}
+        {/* 題は1行。くわしい説明は押して開いたときだけ（管理役2・担当者 11/7: 文字を少なく） */}
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="block w-full text-left">
+          <h2 className={`text-xl leading-snug font-black ${open ? "" : "line-clamp-2"}`}>{a.title}</h2>
+        </button>
+        {open && a.detail && <p className="whitespace-pre-line text-ink-soft">{a.detail}</p>}
         {a.dueAt && (
           <p className={`font-bold ${overdue ? "text-alert-ink" : "text-ink"}`}>
             いつまでに：<span className="num">{fmtDateTime(a.dueAt)}</span>（{leftText(a.dueAt, nowMs)}）
@@ -233,25 +237,35 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
           </p>
         )}
 
-        {/* スマホ: 次にすることのボタンは横いっぱい、「担当者に回す・あとで・済み」は1段に3つ */}
-        <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
-          {actions.map((act, i) =>
+        {/* ボタンは2つまで（次にすること・あとで）。ほかは「⋯」の中 */}
+        <div className="flex items-center gap-2 pt-1">
+          {actions.slice(0, 1).map((act, i) =>
             !act.ask && !act.run && act.href ? (
-              <Link key={i} href={act.href} onClick={() => void seen().catch(() => undefined)} className={buttonClass(act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost", "lg", "w-full sm:w-auto")}>
+              <Link key={i} href={act.href} onClick={() => void seen().catch(() => undefined)} className={buttonClass("primary", "lg", "min-w-0 flex-1 whitespace-nowrap sm:flex-none")}>
                 {act.label}
               </Link>
             ) : (
-              <Button key={i} size="lg" className="w-full sm:w-auto" variant={act.primary || (i === 0 && !actions.some((x) => x.primary)) ? "primary" : "ghost"} disabled={pending || busy} onClick={() => doAction(act, i)}>
+              <Button key={i} size="lg" className="min-w-0 flex-1 whitespace-nowrap sm:flex-none" variant="primary" disabled={pending || busy} onClick={() => doAction(act, i)}>
                 {busy ? "実行しています…" : act.label}
               </Button>
             ),
           )}
-          <span className="grid grid-cols-3 gap-2 sm:ml-auto sm:flex sm:flex-wrap">
-            <Button className="!px-1 text-sm whitespace-nowrap sm:!px-5 sm:text-base" disabled={pending} aria-expanded={panel === "assign"} onClick={() => setPanel(panel === "assign" ? null : "assign")}>担当者に回す</Button>
-            <Button className="!px-1 text-sm whitespace-nowrap sm:!px-5 sm:text-base" disabled={pending} aria-expanded={panel === "later"} onClick={() => setPanel(panel === "later" ? null : "later")}>あとで</Button>
-            <Button className="!px-1 text-sm whitespace-nowrap sm:!px-5 sm:text-base" disabled={pending} onClick={() => run(() => updateAlertAction(a.dedupeKey, { state: "done" }, who), `「${a.title}」を済みにしました`)}>済み</Button>
-          </span>
+          <Button size="lg" className="shrink-0 !px-3 whitespace-nowrap" disabled={pending} aria-expanded={panel === "later"} onClick={() => setPanel(panel === "later" ? null : "later")}>あとで</Button>
+          <Button size="lg" className="w-12 shrink-0 !px-0" aria-label="ほかの操作" aria-expanded={panel === "more"} onClick={() => setPanel(panel === "more" ? null : "more")}>⋯</Button>
         </div>
+        {panel === "more" && (
+          <div className="flex flex-wrap gap-2 rounded-lg border-2 border-ink bg-paper p-3">
+            {actions.slice(1).map((act, j) =>
+              !act.ask && !act.run && act.href ? (
+                <Link key={j} href={act.href} className={buttonClass("ghost", "md")}>{act.label}</Link>
+              ) : (
+                <Button key={j} disabled={pending || busy} onClick={() => doAction(act, j + 1)}>{act.label}</Button>
+              ),
+            )}
+            <Button disabled={pending} onClick={() => setPanel("assign")}>担当者に回す</Button>
+            <Button disabled={pending} onClick={() => run(() => updateAlertAction(a.dedupeKey, { state: "done" }, who), `「${a.title}」を済みにしました`)}>済み</Button>
+          </div>
+        )}
 
         {note && <Notice tone={note.ok ? "ok" : "alert"}>{note.text}</Notice>}
 

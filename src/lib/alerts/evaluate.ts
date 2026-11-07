@@ -69,6 +69,9 @@ const isLive = (o: Order) => o.status !== "cancelled" && (o.intent ?? "new") ===
  * 出すべきアラートの一覧（重いもの → 軽いものの順）。
  * now は今の時刻（ISO）。DEMO_NOW なら共通の時計の nowIso() を渡す。
  */
+/** 何分前 → 「45分前」「3時間前」「2日前」（分のままだと読めない） */
+export const agoText = (min: number) => (min < 60 ? `${Math.max(1, Math.round(min))}分前` : min < 1440 ? `${Math.round(min / 60)}時間前` : `${Math.round(min / 1440)}日前`);
+
 export function evaluateAlerts(db: Db, masters: Masters, now: string, opts: AlertOptions = {}): Alert[] {
   return withMasters(masters, () => {
     const on = opts.isOn ?? (() => true);
@@ -315,7 +318,7 @@ function reviewBacklog(db: Db, now: string): Alert[] {
   const oldest = old.reduce((a, b) => (a.at < b.at ? a : b));
   return [mk("review_backlog", `${jstDate(now)}|${oldest.id}`, items.length >= 10 || minutesBetween(oldest.at, now) >= 120 ? "danger" : "warn",
     `要確認が ${items.length}件たまっています`,
-    `いちばん古いものは ${Math.round(minutesBetween(oldest.at, now))}分前に届きました。確かめないと、製造と発注の数に入りません。`,
+    `いちばん古いものは ${agoText(minutesBetween(oldest.at, now))}に届きました。確かめないと、製造と発注の数に入りません。`,
     [{ label: "受信箱を開く", kind: "open_inbox", payload: {} }],
     old.map((x) => x.id))];
 }
