@@ -4,7 +4,8 @@
 //   E5 記録   … 衛生の記録の漏れが「1件だけ」になるように（ほかのシートのアラームは止め、原料保管庫の温度を1日だけ空ける）
 //   E6 分析   … 日ごとの売上・粗利が右肩上がりになるように、架空の確定した注文を足す（取引先ごとにも分かれる）
 // 使い方: HUB_DB_PATH=<撮影用の DB> npx tsx --conditions=react-server --tsconfig tsconfig.json scripts/demo-record/v8.ts [e3,e4,e5,e6]
-import { getDb, kvSet } from "@/lib/db/sqlite";
+import { getDb } from "@/lib/db/sqlite";
+import { oneRecordGap } from "./one-gap";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { upsertMasters } from "@/lib/db/masters";
 import { analyticsFrom } from "@/lib/analytics-core";
@@ -91,20 +92,9 @@ function putOrder(o: Order) {
     console.log(`E4: コース ${courses.length}・届け先 ${customers.length}`);
   }
 
-  // ── E5 ──
+  // ── E5 ──（漏れを1件だけに。中身は one-gap.ts。見本の規模を入れるときも同じものを使う）
   if (only.has("e5")) {
-    const ids = ["temp-storage", "temp-freezer-storage", "clean-storage", "clean-rice", "clean-mixing", "clean-shaping", "clean-baking", "clean-packing", "clean-shipping", "clean-fridge", "clean-pizza", "clean-pizza-oven", "check-tools", "check-last-out", "label-use-by"];
-    const sheets: Record<string, unknown> = Object.fromEntries(ids.map((id) => [id, { on: false }]));
-    sheets["temp-storage"] = { on: true, times: ["09:00"], graceMin: 60, submitDay: 0 };
-    kvSet("record_alarms", { sheets, cards: { on: false, doneBy: "17:00", graceMin: 60 } });
-    const month = todayJst.slice(0, 7);
-    const miss = addDays(todayJst, -1); // きのうの 9:00 の温度だけ空ける（いつ撮っても「1件」）
-    const temps: Record<string, { am: number }> = {};
-    for (let d = `${month}-01`; d <= todayJst; d = addDays(d, 1)) if (d !== miss) temps[d] = { am: 18 + (Number(d.slice(8)) % 4) };
-    db.prepare("DELETE FROM hygiene_records WHERE month = ?").run(month);
-    db.prepare("INSERT INTO hygiene_records (sheet_id, month, json, updated_at, updated_by) VALUES (?, ?, ?, ?, ?)").run("temp-storage", month, JSON.stringify({ temps }), new Date().toISOString(), WHO);
-    kvSet("record_alarms_since", `${month}-01`);
-    db.prepare("DELETE FROM alerts").run(); // 前の決まりで出たお知らせを消す（「いま調べ直す」で今の分だけ出す）
+    const miss = oneRecordGap(todayJst, { clearAllAlerts: true });
     console.log(`E5: 漏れは ${miss} の 9:00 の温度（原料保管庫）1件だけ`);
   }
 

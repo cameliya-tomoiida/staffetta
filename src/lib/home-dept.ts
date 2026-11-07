@@ -19,7 +19,7 @@ import { listAlerts } from "@/lib/db/alerts-store";
 import { nowMs } from "@/lib/clock";
 import { liveCustomers } from "@/lib/customers-live";
 import { packingDay } from "@/lib/packing-day";
-import { groupAlerts, type AlertGroup } from "@/lib/alert-groups";
+import type { AlertGroup } from "@/lib/alert-groups";
 import { alertForRole } from "@/lib/home";
 import { kvGet } from "@/lib/db/sqlite";
 import { listStaff } from "@/lib/staff";
@@ -42,7 +42,9 @@ export interface Progress {
   routes: { id: string; name: string; driver: string; done: number; total: number; next?: string; started: boolean; back: string }[];
   sales: { ordered: number; expected: number; changes: number };
 }
-export interface DeptHome { role: Role; date: string; tiles: Tile[]; table?: DeptTable; timetable?: Timetable; confirm: AlertGroup[]; progress?: Progress }
+/** 「確認が必要です」の1件（①がまとめたあとのお知らせ。「AI の判断：…よろしいですか？」＋［OK］［直す］） */
+export interface ConfirmItem { key: string; title: string; level: "danger" | "warn" | "info"; href: string; actions: { label: string; href: string; primary?: boolean }[] }
+export interface DeptHome { role: Role; date: string; tiles: Tile[]; table?: DeptTable; timetable?: Timetable; confirm: ConfirmItem[]; progress?: Progress }
 /** 時間割を手で動かした分（⑧ ホームの時間割。key ＝ 生地の key） */
 export const ttKey = (date: string) => `home_timetable_adjust:${date}`;
 export type TtAdjust = Record<string, { start: number; end: number }>;
@@ -112,9 +114,17 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   const next = rows.find((x) => x.start >= nowAbs);
   const money = withMasters(masters, () => dailyProfit(r.totals.products.map((p) => ({ productId: p.productId, pieces: p.pieces }))));
   // 確認が必要なもの（種類ごとにまとめる・その部署に要る種類だけ）
-  const confirm = [
-    ...(role === "事務" || role === "管理者" ? priceGroups(masters) : []),
-    ...groupAlerts(listAlerts().filter((a) => alertForRole(a.kind, role) && !(ON_TILE[role] ?? []).includes(a.kind)), { levels: ["danger", "warn"] }),
+  // 確認が必要なもの: ①がまとめたあとのお知らせを、そのまま（急ぎ → 注意、期限の早い順）。ホームでは上から3件まで
+  const LV = { danger: 0, warn: 1, info: 2 } as const;
+  const confirm: ConfirmItem[] = [
+    ...(role === "事務" || role === "管理者" ? priceGroups(masters) : []).map((g): ConfirmItem => ({ key: g.kind, title: `${g.label}：見直しが必要 ${g.count}${g.unit ?? "品"}`, level: g.level, href: g.href, actions: [{ label: "OK・見直す", href: g.href, primary: true }] })),
+    ...listAlerts()
+      .filter((a) => a.state !== "done" && a.state !== "snoozed" && a.level !== "info" && alertForRole(a.kind, role) && !(ON_TILE[role] ?? []).includes(a.kind))
+      .sort((x, y) => LV[x.level] - LV[y.level] || (x.dueAt ?? "9").localeCompare(y.dueAt ?? "9"))
+      .map((a): ConfirmItem => ({
+        key: a.dedupeKey, title: a.title, level: a.level, href: a.href ?? "/alerts",
+        actions: (a.actions ?? []).filter((x): x is typeof x & { href: string } => !!x.href).slice(0, 2).map((x) => ({ label: x.label, href: x.href, ...(x.primary ? { primary: true } : {}) })),
+      })),
   ];
 
   const open = pos.filter((p) => p.status !== "sent");
@@ -212,6 +222,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
 
   // 管理者: 赤いものだけ（お知らせは種類ごとにまとめた数）＋ 部署ごとの進み具合を図で
   const urgent = confirm.filter((g) => g.level === "danger");
+  const urgentLabel = (t: string) => t.replace(/^AI の判断：/, "").replace(/。.*$/, "").slice(0, 18);
   const lack = (r.shortages.length || summary.lowStock) + shortBands.length;
   const approve = summary.purchaseDraft + review.length;
   const wd = new Date(`${todayJ}T00:00:00Z`).getUTCDay();
@@ -238,7 +249,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   return {
     role, date, confirm,
     tiles: [
-      { label: "確認が必要", value: num(urgent.length), unit: "つ", note: urgent[0] ? `${urgent[0].label}${urgent.length > 1 ? ` ほか${urgent.length - 1}` : ""}` : undefined, href: "/alerts", tone: tone(urgent.length, true) },
+      { label: "確認が必要", value: num(urgent.length), unit: "つ", note: urgent[0] ? `${urgentLabel(urgent[0].title)}${urgent.length > 1 ? ` ほか${urgent.length - 1}` : ""}` : undefined, href: "/alerts", tone: tone(urgent.length, true) },
       { label: "足りない材料・人", value: num(lack), unit: "件", href: `/plan?date=${date}`, tone: tone(lack, true) },
       { label: "承認待ち", value: num(approve), unit: "件", note: approve ? `発注 ${summary.purchaseDraft}・注文 ${review.length}` : undefined, href: `/purchase?date=${date}`, tone: tone(approve, true) },
       { label: "売上の見込み", value: yen(money.sales), unit: "千円", note: `粗利 ${Math.round(money.grossRate * 100)}%`, href: "/analytics", tone: "plain" },

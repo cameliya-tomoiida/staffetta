@@ -9,6 +9,7 @@ import { loadMasters, toStoredRows } from "../src/lib/masters/seed-db";
 import { MASTER_ORDER } from "../src/lib/masters/defs";
 import { scaleMasters, scaleOrders } from "../src/lib/masters/scale";
 import { DEMO_DATE } from "../src/data/demo-orders";
+import { oneRecordGap } from "./demo-record/one-gap";
 
 async function main() {
   const db = process.env.HUB_DB_PATH ?? "";
@@ -34,6 +35,9 @@ async function main() {
   if (!hub.faxes.some((f) => f.id === "F011"))
     hub.faxes.push({ id: "F011", file: "/samples/fax11.pdf", via: "sample", receivedAt: "2026-11-07T09:12:00+09:00", label: "発信元: ﾖﾈﾀﾞｾｲﾌﾝ", status: "new" });
   await save();
+  // 記録の漏れは1件だけ（⑧・担当者「1件抜けています、アラーム」の形。13件は多すぎる）
+  const miss = oneRecordGap();
+  console.log(`記録の漏れ: ${miss} の 9:00 の温度（原料保管庫）1件だけ`);
   console.log(`本物の規模の見本を入れました: 生地 ${m.doughs.length} 種類・注文 ${add.length} 件（${date}）`);
 }
 

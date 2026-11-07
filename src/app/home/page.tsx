@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";
 import { deptName, type Role } from "@/lib/auth/roles";
 import { accountsExist } from "@/lib/staff";
-import { deptHome, type DeptTable, type Progress, type Tile } from "@/lib/home-dept";
-import type { AlertGroup } from "@/lib/alert-groups";
+import { deptHome, type ConfirmItem, type DeptTable, type Progress, type Tile } from "@/lib/home-dept";
+
 import { TimeBoard } from "./TimeBoard";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
@@ -53,25 +53,11 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         {h.tiles.map((t) => <TileCard key={t.label} t={t} />)}
       </div>
 
-      <Confirm groups={h.confirm} />
+      <Confirm items={h.confirm} />
       {h.progress && <ProgressView p={h.progress} date={h.date} />}
       {h.table && <Table t={h.table} />}
       {h.timetable && <TimeBoard t={h.timetable} />}
     </div>
-  );
-}
-
-/** 1行のお知らせ（押すとその画面へ）。ホームに黄色の箱を並べないため、1行だけにする */
-function Line({ href, tone, label, note, value, unit }: { href: string; tone: "alert" | "review"; label: string; note?: string; value?: number; unit?: string }) {
-  const cls = tone === "alert" ? "border-alert-line bg-alert-bg text-alert-ink" : "border-review-line bg-review-bg text-review-ink";
-  return (
-    <Link href={href} className={`flex min-h-12 items-center gap-2 rounded-xl border px-4 ${cls}`}>
-      <span className="min-w-0 truncate text-[15px] font-bold">{label}</span>
-      {note && <span className="text-[13px] opacity-80 max-md:hidden">{note}</span>}
-      {value != null && <b className="m-display ml-auto text-[22px] tabular-nums">{value}</b>}
-      {unit && <span className="text-[13px]">{unit}</span>}
-      <svg viewBox="0 0 24 24" className={`h-5 w-5 opacity-60 ${value == null ? "ml-auto" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
-    </Link>
   );
 }
 
@@ -121,16 +107,33 @@ function Table({ t }: { t: DeptTable }) {
   );
 }
 
-/** 確認が必要なもの（⑧・担当者「漏れがないように。漏れていたら 確認が必要です」）。同じ種類はまとめて、3つまで */
-function Confirm({ groups }: { groups: AlertGroup[] }) {
-  if (!groups.length) return null;
-  const top = groups.slice(0, 3);
+/** 確認が必要なもの（⑧・担当者「判断は AI。人は『こう判断してよろしいですか』を確かめるだけ」）。
+ *  ①がまとめたあとのお知らせを、上から3件まで（AI の判断の一言＋［OK］［直す］）。4件目からは「ほか ◯つ ›」でお知らせの画面へ */
+function Confirm({ items }: { items: ConfirmItem[] }) {
+  if (!items.length) return null;
+  const top = items.slice(0, 3);
   return (
     <section aria-label="確認が必要" className="space-y-2">
-      {top.map((g) => (
-        <Line key={g.kind} href={g.href} tone={g.level === "danger" ? "alert" : "review"} label={g.label} note={g.note ?? "確認が必要です"} value={g.count} unit={g.unit ?? "件"} />
-      ))}
-      {groups.length > 3 && <Link href="/alerts" className="block text-right text-[14px] font-bold text-crust-700">ほか {groups.length - 3}つ ›</Link>}
+      {top.map((c) => {
+        const red = c.level === "danger";
+        const ai = c.title.startsWith("AI の判断：");
+        const text = ai ? c.title.slice("AI の判断：".length) : c.title;
+        const acts = c.actions.length ? c.actions : [{ label: "見る", href: c.href, primary: true }];
+        return (
+          <div key={c.key} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border px-3 py-2 md:flex-nowrap ${red ? "border-alert-line bg-alert-bg" : "border-review-line bg-review-bg"}`}>
+            <p className={`min-w-0 flex-1 text-[15px] leading-snug ${red ? "text-alert-ink" : "text-review-ink"}`}>
+              {ai && <span className="mr-1.5 rounded bg-ink px-1.5 py-0.5 text-[11px] font-bold text-paper">AI の判断</span>}
+              <span className="font-bold">{text}</span>
+            </p>
+            <span className="flex shrink-0 gap-2 max-md:w-full max-md:justify-end">
+              {acts.map((a) => (
+                <Link key={a.label} href={a.href} className={`inline-flex min-h-10 items-center rounded-lg px-3 text-[14px] font-bold whitespace-nowrap ${a.primary ? "bg-crust-600 text-white" : "border border-rule-strong bg-sheet text-ink"}`}>{a.label}</Link>
+              ))}
+            </span>
+          </div>
+        );
+      })}
+      {items.length > 3 && <Link href="/alerts" className="block text-right text-[14px] font-bold text-crust-700">ほか {items.length - 3}つ ›</Link>}
     </section>
   );
 }
