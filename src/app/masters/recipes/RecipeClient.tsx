@@ -1,7 +1,7 @@
 "use client";
 // レシピの親子の編集（⑤）。生地を選ぶ → 材料の行を足す・％を入れる → 合計と粉の合計を見て保存。
 // 保存は /api/masters/recipeItems（action: saveRecipe）。CSV と同じ検証をサーバーでして、エラーがあれば何も保存しない。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Notice } from "@/components/ui";

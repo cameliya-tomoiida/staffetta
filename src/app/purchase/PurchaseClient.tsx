@@ -3,7 +3,7 @@ import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { splitWarnings } from "@/components/ui/wording";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import type { PurchaseMethod } from "@/data/types";
 import { approvePoAction, markSentAction } from "./actions";
 import { notifyHubChanged } from "@/components/ui/refresh";

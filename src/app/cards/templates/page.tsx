@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { listTemplates } from "@/lib/cards/store";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { TemplateEditor } from "./TemplateEditor";

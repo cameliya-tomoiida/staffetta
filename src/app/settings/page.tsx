@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { NoAdminNotice } from "@/components/ui/NoAdminNotice";
 
 export const metadata = { title: "設定｜STAFFETTA" };

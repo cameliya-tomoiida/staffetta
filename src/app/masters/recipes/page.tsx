@@ -1,7 +1,7 @@
 // レシピ（生地の配合）と工程を、生地ごとに見る・直す画面（⑤）。
 // 生地を選ぶ → 材料の行を足す・％を入れる → 合計と粉の合計を見て保存。保存先は recipeItems（③の列定義・①の保存の口）。
 // 1行ずつの一覧・CSV（生地ID・材料ID・％の縦持ち）は /masters/recipeItems、工程は /masters/steps。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/ui";
 import { list } from "@/lib/masters/service";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { addDays, choiceClass } from "@/components/ui";
 import { HelpTip } from "@/components/ui/HelpTip";
 import { todayJst } from "@/lib/clock";

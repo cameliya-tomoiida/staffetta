@@ -2,7 +2,7 @@
 // スマホ（幅 768px 未満）の枠（⑧）: 上の細い帯・下のタブ・全部の画面のメニュー（下から出るシート）。
 // 決まりは docs/mobile-rules.md。768px 以上では出さない（タブレット・パソコンは今の枠のまま）。
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useRouter } from "next/navigation";
 import { canOpen, type Role } from "@/lib/auth/roles";
 import { logoutAction } from "@/app/login/actions";

@@ -1,5 +1,5 @@
 // 共通の部品（②デザイン）。画面はなるべくここの部品だけで組む。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { todayJst as clockTodayJst } from "@/lib/clock";
 import type { OrderStatus } from "@/data/types";
 import { orderStatus, purchaseStatus, toneClass, type PurchaseStatus, type Tone } from "./tokens";

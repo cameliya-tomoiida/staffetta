@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { connection } from "next/server";
 import { readRecentDb } from "@/lib/store";
 import { listPriceChanges, marginLine } from "@/lib/price-change";

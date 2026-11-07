@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { analytics } from "@/lib/analytics";
 import { Bars, Channels, DayChart, Kpis, Losses, Weekdays } from "./Charts";
 import { AnTabs } from "./AnTabs";

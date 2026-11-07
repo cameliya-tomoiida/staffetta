@@ -1,7 +1,7 @@
 "use client";
 import { AutoTag, isAutoConfirmed, UndoAutoButton } from "@/components/ui/AutoConfirmed";
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useCustomers } from "@/components/CustomersContext";
 import { useProductLookup } from "@/components/ProductNamesContext";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";

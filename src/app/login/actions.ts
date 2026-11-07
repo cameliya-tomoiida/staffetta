@@ -2,7 +2,7 @@
 import { cookies, headers } from "next/headers";
 import { kvGet, kvSet } from "@/lib/db/sqlite";
 import { redirect } from "next/navigation";
-import { createUserSession, USER_COOKIE, userCookieOptions } from "@/lib/auth/user-session";
+import { createUserSession, isMobileAgent, MOBILE_SESSION_HOURS, USER_COOKIE, USER_SESSION_HOURS, userCookieOptions } from "@/lib/auth/user-session";
 import { homeOf } from "@/lib/auth/roles";
 import { checkLogin, createFirstAdmin } from "@/lib/staff";
 
@@ -16,7 +16,11 @@ const failsOf = () => kvGet<Record<string, number[]>>(FAILS) ?? {};
 async function cookieOpts() {
   const h = await headers();
   const https = h.get("x-forwarded-proto") === "https" || (await import("@/lib/tunnel-access")).fromOutside(h);
-  return { ...userCookieOptions, ...(https ? { secure: true } : {}) };
+  return { ...userCookieOptions, maxAge: (await sessionHours()) * 3600, ...(https ? { secure: true } : {}) };
+}
+/** ログインの持ち: スマホは 30日・パソコンは 12時間 */
+async function sessionHours() {
+  return isMobileAgent((await headers()).get("user-agent")) ? MOBILE_SESSION_HOURS : USER_SESSION_HOURS;
 }
 
 const safe = (to: unknown) => (typeof to === "string" && to.startsWith("/") && !to.startsWith("//") && !to.startsWith("/login") && !to.startsWith("/setup") ? to : "");
@@ -34,7 +38,7 @@ export async function loginAction(_: { error: string; username?: string } | null
     return { error: "ID かパスワードが違います", username };
   }
   if (all[key]) kvSet(FAILS, Object.fromEntries(Object.entries(all).filter(([k]) => k !== key)));
-  (await cookies()).set(USER_COOKIE, createUserSession({ id: s.id, name: s.name, role: s.role }, Date.now()), await cookieOpts());
+  (await cookies()).set(USER_COOKIE, createUserSession({ id: s.id, name: s.name, role: s.role }, Date.now(), undefined, await sessionHours()), await cookieOpts());
   redirect(safe(form.get("next")) || homeOf(s.role));
 }
 
@@ -50,7 +54,7 @@ export async function setupAction(_: { error: string } | null, form: FormData): 
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) };
   }
-  (await cookies()).set(USER_COOKIE, createUserSession({ id, name, role: "管理者" }, Date.now()), await cookieOpts());
+  (await cookies()).set(USER_COOKIE, createUserSession({ id, name, role: "管理者" }, Date.now(), undefined, await sessionHours()), await cookieOpts());
   redirect("/home");
 }
 

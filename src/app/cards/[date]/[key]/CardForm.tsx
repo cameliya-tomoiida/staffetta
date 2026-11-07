@@ -6,7 +6,7 @@
 //   4) 製品の表（この生地からとった製品ごと）
 //   5) メモと責任者の確認
 // アプリが入れた所は 青い地＋「自動」の印。人が書く所は白。目標から外れたら赤。基準は「どこで直せるか」を出す。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui";
 import {

@@ -1,5 +1,5 @@
 // 工場の休業日なら知らせる（製造計画・発注書の画面の上）。サーバーの部品。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { holidayReason } from "@/lib/holidays";
 
 const W = "日月火水木金土";

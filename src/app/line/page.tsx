@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { findProduct as productById } from "@/lib/catalog";
 import { isDemoLineUser, isLineLive } from "@/lib/channels/line/config";
 import { listCustomerSettings } from "@/lib/channels/line/customers";

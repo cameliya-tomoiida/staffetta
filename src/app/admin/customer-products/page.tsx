@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import type { CustomerProductMaster, ProductMaster } from "@/data/types";
 import { list } from "@/lib/masters/service";
 import { summarizeByCustomer, withMargin } from "@/lib/customer-products/summary";

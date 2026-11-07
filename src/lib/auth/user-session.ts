@@ -13,6 +13,9 @@ export const USER_SESSION_HOURS = 12;
 export interface UserSession { id: string; n: string; r: Role; exp: number }
 
 function secret(): string {
+  // Render の見本は起きるたびに DB を作り直すので、鍵は環境（HUB_USER_SESSION_SECRET）から（無ければ DB に作って残す）。11/8
+  const env = process.env.HUB_USER_SESSION_SECRET ?? "";
+  if (env.length >= 32) return env;
   let s = kvGet<string>("user_session_secret");
   if (!s) {
     s = randomBytes(32).toString("hex");
@@ -58,3 +61,6 @@ export function verifyPassword(password: string, stored: string | undefined): bo
 }
 
 export const userCookieOptions = { httpOnly: true, sameSite: "lax" as const, path: "/", maxAge: USER_SESSION_HOURS * 3600 };
+/** スマホ（LINE の中も）は 30日（11/8 担当者「しばらくすると勝手にログアウトされる」）。パソコンは 12時間のまま */
+export const MOBILE_SESSION_HOURS = 30 * 24;
+export const isMobileAgent = (ua: string | null | undefined) => /iPhone|iPad|Android|Mobile|Line\//i.test(ua ?? "");

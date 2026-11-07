@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import { DateNav } from "@/components/ui/DateNav";
 import { addDays, choiceClass, fmtDate } from "@/components/ui";

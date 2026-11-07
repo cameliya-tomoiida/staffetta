@@ -10,6 +10,7 @@ import { DEMO_DATE } from "@/data/demo-orders";
 import { oneRecordGap } from "./one-gap";
 import { assignSalesReps } from "./sales-rep";
 import { tidyRoutes } from "./tidy-routes";
+import { fillDemoCourses } from "./fill-courses";
 
 const addDay = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
 
@@ -20,7 +21,9 @@ const addDay = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) +
 export async function applyDemoScale(date?: string): Promise<string[]> {
   // ⑧ 見本の日は「流した日」を基準に（今日と明日の注文を入れる）。前は 11/6 固定で、製造のホームが「今日は終わり」になっていた。
   const todayJ = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
-  const dates = date === "--fixed" ? [DEMO_DATE] : date ? [date] : [todayJ, addDay(todayJ, 1)];
+  // 審査員向けの見本（HUB_DEMO=1）は 3日前〜3日後の7日分（前後の日を見られるように・過去の配送も残る。11/8 担当者）
+  const span = process.env.HUB_DEMO === "1" ? [-3, -2, -1, 0, 1, 2, 3] : [0, 1];
+  const dates = date === "--fixed" ? [DEMO_DATE] : date ? [date] : span.map((n) => addDay(todayJ, n));
   const base = await loadMasters();
   const m = scaleMasters(base);
   for (const name of MASTER_ORDER) {
@@ -47,6 +50,8 @@ export async function applyDemoScale(date?: string): Promise<string[]> {
   const out: string[] = [];
   // 営業の見本の人に、担当の取引先を 10社ずつ（営業のホームは担当の取引先だけを出す）
   out.push(`担当の営業: ${JSON.stringify(await assignSalesReps(10))}`);
+  // 見本の配送コースを 6〜8軒に（11/8 担当者「1コース1軒しかない」）。回る順を直す前に足す
+  out.push(await fillDemoCourses(dates));
   // コースの回る順を、効率よく回る順に（右へ左へ…にならない）
   out.push(`回る順を見直したコース: ${await tidyRoutes()}`);
   // 記録の漏れは1件だけ（⑧・担当者「1件抜けています、アラーム」の形。13件は多すぎる）

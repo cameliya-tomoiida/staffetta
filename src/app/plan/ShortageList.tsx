@@ -1,6 +1,6 @@
 "use client";
 // 足りない材料のリスト（行ごとに「発注」）。発注 → 仕入先の発注のしかたで下書き → 人が OK → 送り出しで送る
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useState, useTransition } from "react";
 import { useStaffNames } from "@/components/ui/staff";
 import type { ShortRow } from "@/lib/material-shortlist";

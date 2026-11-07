@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";

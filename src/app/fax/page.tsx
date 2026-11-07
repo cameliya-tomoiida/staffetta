@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { liveCustomers } from "@/lib/customers-live";
 import { searchFaxes, type FaxSearch, type Period } from "@/lib/db/search";
 import { InboxSearch } from "@/components/ui/InboxSearch";

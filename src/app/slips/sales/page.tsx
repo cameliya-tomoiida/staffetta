@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { choiceClass } from "@/components/ui";
 import { todayJst } from "@/lib/clock";
 import type { SalesBy } from "@/lib/slips/calc";

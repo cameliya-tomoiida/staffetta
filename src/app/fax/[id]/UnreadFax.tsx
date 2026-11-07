@@ -1,6 +1,6 @@
 "use client";
 // まだ読み取っていない FAX（⑧の見直し 2回目 #10: 白い箱1つだけだった）。最初から FAX の絵と、読むボタン2つを出す。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { readFaxAction } from "@/app/actions";

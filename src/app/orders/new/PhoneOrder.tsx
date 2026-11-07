@@ -2,7 +2,7 @@
 // 電話・ドライバーの注文を手で入れる（②）。文字はなるべく打たない: 選ぶ・＋−・テンキーだけ。
 // 1. 取引先 → 2. 納品日 → 3. 商品と数（前回と同じ・締めの判定はその場で）→ 4. 入口と受けた人 → 保存（要確認で入る）
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { NumPad } from "@/components/NumPad";
 import { Button, buttonClass, choiceClass, fmtDate, Icon, LinkButton, Notice } from "@/components/ui";
 import { notifyHubChanged } from "@/components/ui/refresh";

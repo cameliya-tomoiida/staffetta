@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { ProposalFix } from "@/components/ProposalFix";
 
 export const metadata = { title: "AI の案｜STAFFETTA" };

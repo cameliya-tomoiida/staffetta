@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import type { Order } from "@/data/types";
 import { demoOrders } from "@/demo/orders";
 import { countsAsProvisional, countsInTotals } from "@/lib/aggregate";

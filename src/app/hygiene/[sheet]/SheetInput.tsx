@@ -6,7 +6,7 @@
 //   log   … 1行ずつ足す（○×の欄は押して選ぶ）
 //   label … 使用可能日を入れて、ラベルを印刷
 // 押すたびに保存する（少し待ってまとめて）。月ごとに責任者が確認したら、外すまで直せない。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { buttonClass, choiceClass } from "@/components/ui";
 import { allVals, FREQ_LABEL, isPlanned, outOfRange, slotHum, slotVal, tempSlots, withSlot, WD, type Day, type Freq, type SheetDef, type SheetItem, type SheetRecord, type TempEntry } from "@/lib/hygiene/sheets";

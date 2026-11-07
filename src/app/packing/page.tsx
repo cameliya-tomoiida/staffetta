@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { connection } from "next/server";
 import { todaySummary } from "@/demo/today";
 import { packingDay } from "@/lib/packing-day";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { listManuals } from "@/lib/hygiene/store";
 import { ManualsClient } from "./ManualsClient";
 

@@ -3,7 +3,7 @@
 // ボタン: actions（①③⑤が用意）を並べる。無いものは action と href で1つ。
 //   ask があるボタンは、押すとその場で「はい／いいえ」→ はい で実行。
 //   run（実行の口）は①の runAlertActionAction(key, index, who) で実行し、返ってきた文を出す。開く画面（href）があれば開く。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button, buttonClass, Empty, fmtDateTime, Notice, Segmented } from "@/components/ui";

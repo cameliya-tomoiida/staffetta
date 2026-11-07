@@ -1,7 +1,7 @@
 "use client";
 // FAX の様式の一覧と1件の編集（②の画面）。保存・無効化・履歴は①の server action。
 import { useState, useTransition } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useRouter } from "next/navigation";
 import type { FormatDraft, FormatRow } from "@/lib/fax-formats";
 import type { FaxFormatKind } from "@/lib/types";

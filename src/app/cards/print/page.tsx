@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { fmtDate } from "@/components/ui";
 import { PrintButton } from "@/app/plan/PrintButton";
 import { bakeRule, fieldsOf, kneadRule, lossColumns, lossOf, mixesOf, processesOf, stepsOf, totalLoss, type CardBase, type CardInput, type Check } from "@/lib/cards/card";

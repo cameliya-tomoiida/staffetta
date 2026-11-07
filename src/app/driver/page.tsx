@@ -25,6 +25,8 @@ export default async function DriverPage() {
       customers={customers}
       today={todayJst()}
       staffName={user?.name ?? ""}
+      // 左上のロゴでホームへ戻れるのは、配送の人以外（管理者・事務など。ログインなしの社内 LAN も）。担当者 11/8
+      homeHref={user?.role === "配送" ? undefined : "/home"}
       staffNames={listStaff().map((s) => s.name)}
       depot={(({ lat, lng, name }) => ({ lat, lng, name }))(getDepot())}
     />

@@ -6,6 +6,7 @@ import "./globals.css";
 import "./print.css";
 import { getCompany } from "@/lib/company";
 import { AppShell } from "@/components/ui/AppShell";
+import { NavProgress } from "@/components/ui/NavProgress";
 import { canOpen, homeOf } from "@/lib/auth/roles";
 import { currentUser } from "@/lib/auth/current-user";
 import { accountsExist } from "@/lib/staff";
@@ -39,6 +40,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body className="min-h-full">
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
         {/* 左のサイドメニュー＋上の「今日やること」の帯（/liff・/driver・ログインでは出さない） */}
         <AppShell factory={getCompany().name} user={user ? { name: user.name, role: user.role, via: user.via } : null}>
           <Suspense fallback={<div className="text-ink-soft">読み込み中…</div>}>{children}</Suspense>

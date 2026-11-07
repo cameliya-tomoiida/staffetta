@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { notFound } from "next/navigation";
 import { fmtDate } from "@/components/ui";
 import { loadCard } from "@/lib/cards/store";

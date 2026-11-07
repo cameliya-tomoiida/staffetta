@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { PrintButton } from "@/app/plan/PrintButton";
 import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";

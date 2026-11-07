@@ -1,5 +1,5 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { DateNav } from "@/components/ui/DateNav";
 import { getCompany } from "@/lib/company";
 import { allOrders, pickDate, visibleDates } from "@/demo/all-orders";

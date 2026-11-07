@@ -1,13 +1,13 @@
 // スタッフの「LINE でログイン」の cookie（④）。トンネル経由（工場の外）からアプリの画面を開くときの本人確認。
 // - 中身は「LINE の userId・名前・期限」に HMAC-SHA256 の署名を付けたもの。秘密は .env.local の STAFF_SESSION_SECRET（32文字以上）。
 // - 秘密が無い・短いときは、cookie を作らない・どの cookie も通さない（外からは開けないまま）。
-// - 期限は 12時間。HttpOnly・Secure・SameSite=Lax。
+// - 期限は 30日（11/8 担当者「スマホでしばらくすると勝手にログアウトされる」。LINE のログインはスマホで使う）。HttpOnly・Secure・SameSite=Lax。
 // - proxy.ts（①）が verifyStaffSession で確かめる（Node.js で動くので node:crypto を使う。DB は読まない）。
-//   スタッフの登録を外した人は、cookie の期限（最長12時間）までは通る。すぐ止めたいときは秘密を変える（全員ログインし直し）。
+//   スタッフの登録を外した人は通さない（proxy.ts が、いまも登録されているかも見る）。全員を止めたいときは秘密を変える。
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const STAFF_COOKIE = "hub_staff";
-export const STAFF_SESSION_HOURS = 12;
+export const STAFF_SESSION_HOURS = 30 * 24;
 const MIN_SECRET = 32;
 
 export interface StaffSession {

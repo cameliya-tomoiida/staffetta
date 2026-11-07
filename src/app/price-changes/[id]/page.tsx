@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { loadMasters } from "@/lib/masters/seed-db";

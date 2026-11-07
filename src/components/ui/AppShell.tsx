@@ -5,7 +5,7 @@
 // - 上の帯（今日の仕事）は、ロゴ・メニューの行の下に、本文の幅いっぱいで出す。
 // - お客さん用の LINE 注文フォーム（/liff）では、メニューも帯も出さない。
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { usePathname, useRouter } from "next/navigation";
 import { TodayBar } from "./TodayBar";
 import { canOpen, homeOf, type Role } from "@/lib/auth/roles";

@@ -1,6 +1,6 @@
 "use client";
 // 値上げ1件: 材料 前 → 後 → OK で原価に反映 → 原価が上がる商品（粗利率 前 → 後・線を切る物は赤）→ 新しい卸価格 → 取引先へ知らせる
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { useStaffNames } from "@/components/ui/staff";

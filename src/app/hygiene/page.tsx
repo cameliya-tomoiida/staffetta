@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { alarmOf } from "@/lib/records/alarms";
 import { getAlarmSettings } from "@/lib/records/store";
 import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";

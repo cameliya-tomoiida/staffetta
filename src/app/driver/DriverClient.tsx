@@ -49,7 +49,9 @@ const remember = (k: string, v: string) => {
   }
 };
 
-export function DriverClient({ courses, myCourses, customers, today, staffName, staffNames, depot }: {
+export function DriverClient({ courses, myCourses, customers, today, staffName, staffNames, depot, homeHref }: {
+  /** 左上のロゴで戻る先（配送の人以外だけ） */
+  homeHref?: string;
   courses: { id: string; name: string; departTime: string; weekdays?: number[] }[];
   /** スタッフの登録の担当コース（ログインした人の） */
   myCourses: string[];
@@ -256,8 +258,16 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
     <div ref={top} className="mx-auto flex min-h-dvh max-w-[560px] flex-col bg-paper text-ink md:max-w-[1100px]" style={{ fontSize: 18 }}>
       {/* 上: ロゴ・自分の名前・未送信 */}
       <header className="sticky top-0 z-[1000] flex items-center gap-2 border-b border-[#c5cac5] bg-white px-4 py-2">
-        {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
-        <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="h-8 w-8" />
+        {homeHref ? (
+          <a href={homeHref} aria-label="ホームへ戻る" className="-ml-1 flex min-h-11 items-center gap-1 rounded-lg pr-1 pl-0.5">
+            <span aria-hidden className="text-[22px] font-black text-ink-soft">‹</span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
+            <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="h-8 w-8" />
+          </a>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ
+          <img src="/brand/staffetta-mark.svg" alt="" width={32} height={32} className="h-8 w-8" />
+        )}
         <span className="text-[20px] font-black">配送</span>
         <span className="ml-auto" />
         {staffName ? (

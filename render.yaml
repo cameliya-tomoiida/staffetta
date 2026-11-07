@@ -31,6 +31,8 @@ services:
         value: --max-old-space-size=400
       - key: HUB_PUBLIC_URL # Render の URL が決まったら画面で直す
         value: https://staffetta-demo.onrender.com
+      - key: HUB_USER_SESSION_SECRET # ログインの鍵。眠って起きても変わらないように Render が1回だけ作る（無いと起きるたびにログアウトされる）
+        generateValue: true
       - key: JUDGE_USER
         value: judge
       - key: JUDGE_PASSWORD # 審査員に知らせるパスワード（8文字以上）。Render の画面で入れる

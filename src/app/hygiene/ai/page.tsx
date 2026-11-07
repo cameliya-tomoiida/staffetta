@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { hasAiKey } from "@/lib/hygiene/ai-chat";
 import { getSheet } from "@/lib/hygiene/store";
 import { SheetChat } from "./SheetChat";

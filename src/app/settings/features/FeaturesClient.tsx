@@ -1,6 +1,6 @@
 "use client";
 // 機能の ON/OFF の画面（②）。値を変えるのは①の setFlagAction。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button, fmtDateTime, Notice } from "@/components/ui";

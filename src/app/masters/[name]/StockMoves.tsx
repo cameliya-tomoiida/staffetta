@@ -1,5 +1,5 @@
 // 在庫の動き（入荷・製造で使用・棚卸の差）を1件ずつ見る（⑤）。材料・包材のマスタ画面の下に出す。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { fmtDateTime, Notice } from "@/components/ui";
 import { listMoves, type StockMaster } from "@/lib/stock/store";
 

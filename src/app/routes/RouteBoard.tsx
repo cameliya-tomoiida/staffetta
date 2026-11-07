@@ -3,7 +3,7 @@
 // スマホは「地図｜リスト」を切りかえ。パソコン（768px 以上）は地図とリストを横に並べる。文は少なく。
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { applyOrderAction, proposeOrderAction, type OrderProposal } from "./actions";
 import { RouteMap, type MapLine, type MapPin } from "../admin/routes/RouteMap";
 

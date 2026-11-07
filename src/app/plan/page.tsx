@@ -1,7 +1,7 @@
 import { HolidayNotice } from "@/components/HolidayNotice";
 import { mixerText } from "@/lib/mixer-plan";
 import { PrintButton as FactoryPrint } from "@/components/ui/PrintButton";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { DateNav } from "@/components/ui/DateNav";
 import { splitWarnings } from "@/components/ui/wording";
 import { getCompany } from "@/lib/company";
@@ -19,6 +19,7 @@ import { isLang, LANG_COOKIE, langInfo, LANGS, type Lang } from "@/i18n/langs";
 import { isReviewed, tr, trUnit, type Key } from "@/i18n/dict";
 import { lookupTerms } from "@/i18n/translate";
 import { RefreshSoon } from "./RefreshSoon";
+import { PlanTabs } from "./PlanTabs";
 import { PrintButton } from "./PrintButton";
 import { ProductionDone } from "./ProductionDone";
 import { madeOf } from "./made";
@@ -243,27 +244,15 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       </div>
 
       {/* 上のタブ（スマホもパソコンも。押すとその中身が1画面目に出る） */}
-      <nav aria-label="製造の画面のタブ" data-screen-date={date} data-screen-tab={TABS.find((x) => x.key === tab)?.label ?? tab} className="no-print sticky top-0 z-20 -mx-1 mb-4 grid grid-cols-4 gap-1 bg-paper px-1 pt-1 pb-2" lang="ja">
-        {TABS.map((x) => (
-          <Link
-            key={x.key}
-            href={href({ tab: x.key })}
-            aria-current={tab === x.key ? "page" : undefined}
-            className={`relative flex min-h-12 items-center justify-center rounded-lg border-2 px-1 text-center text-[15px] leading-tight font-black whitespace-nowrap sm:text-lg ${
-              tab === x.key ? "border-crust-600 bg-crust-600 text-white" : "border-rule-strong bg-sheet text-ink-soft"
-            }`}
-          >
-            {x.label}
-            {x.key === "material" && shortRows.length > 0 && (
-              <span className={`num absolute -top-2 -right-1 min-w-6 rounded-full px-1.5 text-center text-xs leading-5 ${tab === x.key ? "bg-white text-crust-700 ring-2 ring-crust-600" : "bg-[#d64545] text-white"}`}>{shortRows.length}</span>
-            )}
-          </Link>
-        ))}
-      </nav>
+      <PlanTabs
+        date={date}
+        current={tab}
+        tabs={TABS.map((x) => ({ key: x.key, label: x.label, href: href({ tab: x.key }), badge: x.key === "material" ? shortRows.length : undefined }))}
+      />
 
-      {tab === "today" && <div className="md:hidden">{covPill("mb-3")}</div>}
+      <div data-tab-pane="today" className={`md:hidden ${vis("today")}`}>{covPill("mb-3")}</div>
       {/* 今日: ラインごとに「いくつ作るか・何時に始めるか・人は足りるか」（日本語・印刷しない） */}
-      <div className={`no-print mb-5 grid gap-3 md:grid-cols-2 ${vis("today")}`} lang="ja">
+      <div data-tab-pane="today" className={`no-print mb-5 grid gap-3 md:grid-cols-2 ${vis("today")}`} lang="ja">
         {summary.map((x) => (
           <div key={x.line} className={`rounded-lg border-2 bg-sheet px-4 py-3 ${x.over || x.shortAt ? "border-alert-line" : "border-rule-strong"}`}>
             <div className="mb-1 flex items-center gap-2 font-black" style={{ color: lineView[x.line].color }}>
@@ -306,7 +295,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
 
       {/* 計画のあとに増えた分: 1行だけ（押すと中身）。印刷し直しは「札・印刷」のタブの印で知らせる（管理役2 11/7） */}
       {inc && (
-        <details className={`no-print mb-4 rounded-lg border-2 border-alert-line bg-alert-bg text-alert-ink ${vis("today")}`} lang="ja">
+        <details data-tab-pane="today" className={`no-print mb-4 rounded-lg border-2 border-alert-line bg-alert-bg text-alert-ink ${vis("today")}`} lang="ja">
           <summary className="flex min-h-12 cursor-pointer items-center gap-2 px-4 font-black">
             計画のあとに増えた分 <span className="num">+{Math.round(inc.doughs.reduce((a, d) => a + d.plus, 0) * 10) / 10}kg</span>
             {inc.materials.length > 0 && <span className="text-base">・材料 <span className="num">{inc.materials.length}</span>品</span>}
@@ -319,12 +308,12 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </details>
       )}
       {/* 足りない材料（文ではなくリスト。行ごとに「発注」→ 人が OK → 発注の送信） */}
-      <div className={vis("material")}>
+      <div data-tab-pane="material" className={vis("material")}>
         {shortRows.length === 0 && <p className="no-print mb-4 rounded-lg bg-ok-bg px-4 py-3 text-lg font-bold text-ok-ink">発注が必要な材料はありません</p>}
         <ShortageList date={date} rows={shortRows} />
         <Link href={`/purchase?date=${date}`} className="no-print link mb-4 inline-block text-base font-bold">この日の発注書を見る →</Link>
       </div>
-      <div className={vis("today")}>
+      <div data-tab-pane="today" className={vis("today")}>
         {shortRows.length > 0 && (
           <Link href={href({ tab: "material" })} className="no-print mb-4 flex min-h-12 items-center gap-2 rounded-lg border-2 border-alert-line bg-sheet px-4 font-black text-alert-ink">
             <span className="inline-block h-3 w-3 rounded-full bg-[#d64545]" />発注が必要な材料 <span className="num">{shortRows.length}</span>
@@ -353,7 +342,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         <OrderProposal key={date} date={date} initial={getPlanOrder(date) ?? null} />
       </div>
       {bread.length > 0 && (
-        <section className={`no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3 ${vis("today")}`} lang="ja">
+        <section data-tab-pane="today" className={`no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3 ${vis("today")}`} lang="ja">
           <div className="mb-1 font-black">食パンのまとめ</div>
           {bread.map((b) => (
             <div key={b.loaf} className="space-y-1">
@@ -369,7 +358,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       )}
 
       {/* 印刷する紙をえらぶ（チェックしたものだけ印刷。プレビューで画面にも出す）。CSS の :has で切りかえる（print.css・globals.css） */}
-      <div className={`no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3 ${vis("print")}`} lang="ja">
+      <div data-tab-pane="print" className={`no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3 ${vis("print")}`} lang="ja">
         <div className="mb-2 font-black">印刷する紙をえらぶ</div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           {SHEETS.map((x) => (
@@ -390,7 +379,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       </div>
 
       {/* 紙のことば（ドロップダウン1つ）と印刷 */}
-      <div className={vis("print")}>
+      <div data-tab-pane="print" className={vis("print")}>
       <LangPicker
         lang={lang}
         hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))}
@@ -406,7 +395,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       </div>
 
       {/* ここから下が印刷する紙（選んだことば） */}
-      <div lang={langInfo(lang).htmlLang} className={`theme-paper rounded-lg border-2 border-rule-strong bg-sheet p-4 print:block print:border-0 print:p-0 sm:p-5 ${tab === "time" || tab === "print" ? "" : "hidden"}`}>
+      <div lang={langInfo(lang).htmlLang} data-tab-pane="time print" className={`theme-paper rounded-lg border-2 border-rule-strong bg-sheet p-4 print:block print:border-0 print:p-0 sm:p-5 ${tab === "time" || tab === "print" ? "" : "hidden"}`}>
         {/* 紙の頭（現場の製造計画書と同じ並び: 題・報告日・製造日・作った所・担当・確認の印） */}
         <div className="mb-4 hidden gap-3 border-b-2 border-ink pb-3 print:grid print:grid-cols-[1fr_auto]">
           <div>
@@ -531,7 +520,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
 
       </div>
       {/* 注意とお金は、畳んで件数だけ（押すと開く）。管理者向け・日本語・印刷しない */}
-      <div className={`no-print mt-6 space-y-2 ${vis("today")}`} lang="ja">
+      <div data-tab-pane="today" className={`no-print mt-6 space-y-2 ${vis("today")}`} lang="ja">
         {warn.incomplete.length > 0 && (
           <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
             <Link href="/orders?status=needs_review" className="flex items-center gap-2">

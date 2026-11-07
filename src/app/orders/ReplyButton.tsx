@@ -1,7 +1,7 @@
 "use client";
 // 確定・仮発注の注文に「返事を作る」（⑤）。取引先の入口に合わせて、返信用 FAX の PDF か返信メールの下書きを作り、
 // /outbound の「返事の送信待ち」に並べる。送るのは人。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { useState, useTransition } from "react";
 import { Button, Notice } from "@/components/ui";
 import { createReplyAction } from "./reply-actions";

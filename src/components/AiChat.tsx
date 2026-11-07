@@ -5,7 +5,7 @@
 import { AiThinking } from "@/components/ui/ComputeShow";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { usePathname, useRouter } from "next/navigation";
 import { askAiAction, chatLogAction, clearChatAction, confirmAgentAction } from "@/app/ai/actions";
 import type { AgentMessage } from "@/lib/ai/agent";

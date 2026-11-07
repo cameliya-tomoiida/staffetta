@@ -1,5 +1,5 @@
 // 自動化の設定（⑤）。スイッチ・時刻・上限と、自動で決めたことの記録。
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/ui";
 import { listAutoLog } from "@/lib/automation/log";

@@ -1,5 +1,5 @@
 import { LockBanner } from "./LockBanner";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { withMasters, allProducts } from "@/lib/catalog";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { NOTICE_KIND_LABEL } from "@/lib/notices/plan";

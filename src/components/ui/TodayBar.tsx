@@ -5,7 +5,7 @@
 // - 合計は出さない（項目の間で重なりがある）。未読の数はお知らせの画面の中に置く（帯の数と混ぜない）
 // - 数は /api/today から取る（お客さんの LINE 画面には出さない・取りに行かない）。取れないときは「—」と「更新できません」
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { usePathname } from "next/navigation";
 import type { TodaySummary } from "@/demo/today";
 import { HUB_CHANGED } from "./refresh";

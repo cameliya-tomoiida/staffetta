@@ -25,8 +25,11 @@ export function pickDate(q: unknown, dates: string[], today: string): string {
   const tomorrow = addDays(today, 1);
   return dates.includes(tomorrow) ? tomorrow : (dates.find((d) => d >= today) ?? tomorrow);
 }
-/** 日付ボタンに並べる日（今日以降＋デモの日） */
-export const visibleDates = (dates: string[], today: string) => [...new Set(dates.filter((d) => d >= today || (!!SHOW_DATE && d === SHOW_DATE)))].sort();
+/** 日付ボタンに並べる日（今日以降＋デモの日）。審査員向けの見本（HUB_DEMO=1）は過去7日も（11/8 担当者「カレンダーが2日分しかない」） */
+export const visibleDates = (dates: string[], today: string) => {
+  const from = process.env.HUB_DEMO === "1" ? addDays(today, -7) : today;
+  return [...new Set(dates.filter((d) => d >= from || (!!SHOW_DATE && d === SHOW_DATE)))].sort();
+};
 
 /**
  * デモで最初に開く納品日。ふだんは③の DEMO_DATE（11/6）。

@@ -2,7 +2,7 @@
 import { FaxReadShow } from "@/components/ui/FaxReadShow";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import type { Order } from "@/data/types";
 import type { FaxDoc, FaxTemplate } from "@/lib/types";
 import { AutoConfirmBadge } from "@/components/AutoConfirmBadge";

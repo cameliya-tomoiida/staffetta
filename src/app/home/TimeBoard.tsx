@@ -5,7 +5,7 @@
 // - 帯を引っ張って動かす・両はしを引いて伸ばす／縮める（5分きざみ）。帯を押すと時刻を入れて直せる。「計画に戻す」で元の時刻へ
 // 時刻は納品日の前日 0:00 からの分（前日の仕込みも同じ線に）。直した分はホームの時間割に覚える（工程表には、まだつなげていない）
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import type { Timetable, TimeRow } from "@/lib/home-dept";
 import { saveTimetableAdjust } from "./actions";
 

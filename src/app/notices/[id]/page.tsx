@@ -1,5 +1,5 @@
 import { LockBanner } from "../LockBanner";
-import Link from "next/link";
+import Link from "@/components/ui/Link";
 import { notFound } from "next/navigation";
 import { NOTICE_KIND_LABEL } from "@/lib/notices/plan";
 import { getNotice, sendUnlocked } from "@/lib/notices/store";
