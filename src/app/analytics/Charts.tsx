@@ -1,7 +1,7 @@
 "use client";
 // 動くグラフ（⑧ 近未来 ③）。SVG で自作（外の部品なし）。描かれるときに 線が引かれる・棒が伸びる・数字が数え上がる。押すとくわしく。
 // 動きを減らす設定（prefers-reduced-motion）なら、動かさずにすぐ出す。
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Analytics, Named } from "@/lib/analytics";
 
 const yen = (n: number) => `${Math.round(n).toLocaleString("ja-JP")}円`;
@@ -11,14 +11,31 @@ const COLORS = ["#ff6b5e", "#ffb199", "#f5c400", "#7fd1c7", "#9bb7ff", "#d9a2ff"
 
 const reduce = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** 画面に出たら true（数え上がり・伸びるのを始める合図） */
+/** 画面に出たら true（数え上がり・伸びるのを始める合図）。⑧ 11/7 担当者「グラフが動いてなかった」:
+ *  前は読み込んだときに1回だけ動いたので、下にあるグラフ・スマホの別のタブのグラフは、見る前に動き終わっていた。
+ *  見える所に来たとき（IntersectionObserver）に動かす */
 function useShown(delay = 0) {
+  const ref = useRef<HTMLElement>(null);
   const [on, setOn] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setOn(true), reduce() ? 0 : 80 + delay);
-    return () => clearTimeout(t);
+    const el = ref.current;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    if (!el || reduce() || typeof IntersectionObserver === "undefined") {
+      t = setTimeout(() => setOn(true), 0);
+      return () => clearTimeout(t);
+    }
+    const io = new IntersectionObserver((es) => {
+      if (!es.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      t = setTimeout(() => setOn(true), 80 + delay);
+    }, { threshold: 0.25 });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      clearTimeout(t);
+    };
   }, [delay]);
-  return on;
+  return [ref, on] as const;
 }
 
 function useCount(value: number, ms = 1200, delay = 0) {
@@ -41,9 +58,9 @@ function useCount(value: number, ms = 1200, delay = 0) {
   return v;
 }
 
-function Panel({ title, sub, children, className = "" }: { title: string; sub?: string; children: React.ReactNode; className?: string }) {
+function Panel({ title, sub, children, className = "", boxRef }: { title: string; sub?: string; children: React.ReactNode; className?: string; boxRef?: React.Ref<HTMLElement> }) {
   return (
-    <section className={`an-panel relative overflow-hidden rounded-2xl p-4 text-white ${className}`}>
+    <section ref={boxRef} className={`an-panel relative overflow-hidden rounded-2xl p-4 text-white ${className}`}>
       <div className="an-edge pointer-events-none absolute inset-x-0 top-0 h-px" aria-hidden />
       <h2 className="text-[19px] font-black">{title}</h2>
       {sub && <p className="text-[15px] text-white/75">{sub}</p>}
@@ -81,7 +98,7 @@ function Kpi({ label, value, fmt, i }: { label: string; value: number; fmt: (n: 
 
 /** 日ごとの売上と粗利（線が左から引かれ、下が塗られる）。押した日のくわしい数字 */
 export function DayChart({ days, today }: { days: Analytics["days"]; today: string }) {
-  const shown = useShown();
+  const [box, shown] = useShown();
   const [pick, setPick] = useState<number | null>(null);
   if (!days.length) return <Panel title="日ごとの売上と粗利"><p>まだ注文がありません</p></Panel>;
   const W = 760, H = 240, P = 28;
@@ -92,7 +109,7 @@ export function DayChart({ days, today }: { days: Analytics["days"]; today: stri
   const area = `${path("sales")} L${x(days.length - 1)},${H - P} L${x(0)},${H - P} Z`;
   const d = pick != null ? days[pick] : null;
   return (
-    <Panel title="日ごとの売上と粗利" sub="納品日ごと。点を押すと、その日の数字">
+    <Panel boxRef={box} title="日ごとの売上と粗利" sub="納品日ごと。点を押すと、その日の数字">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="日ごとの売上と粗利のグラフ">
         <defs>
           <linearGradient id="an-area" x1="0" x2="0" y1="0" y2="1">
@@ -138,11 +155,11 @@ export function DayChart({ days, today }: { days: Analytics["days"]; today: stri
 
 /** 横の棒（取引先・商品）。棒が伸びて、押すとくわしく */
 export function Bars({ title, sub, rows }: { title: string; sub?: string; rows: Named[] }) {
-  const shown = useShown();
+  const [box, shown] = useShown();
   const [pick, setPick] = useState<string | null>(null);
   const max = Math.max(...rows.map((r) => r.sales), 1);
   return (
-    <Panel title={title} sub={sub}>
+    <Panel boxRef={box} title={title} sub={sub}>
       <ul className="space-y-2">
         {rows.map((r, i) => (
           <li key={r.id}>
@@ -169,11 +186,11 @@ export function Bars({ title, sub, rows }: { title: string; sub?: string; rows: 
 
 /** 曜日ごと（縦の棒が下から伸びる） */
 export function Weekdays({ rows }: { rows: Analytics["weekdays"] }) {
-  const shown = useShown(200);
+  const [box, shown] = useShown(200);
   const order = [1, 2, 3, 4, 5, 6, 0];
   const max = Math.max(...rows.map((r) => r.sales), 1);
   return (
-    <Panel title="曜日ごとの売上" sub="納品する曜日">
+    <Panel boxRef={box} title="曜日ごとの売上" sub="納品する曜日">
       <div className="flex h-44 items-end gap-2">
         {order.map((wd, i) => {
           const r = rows[wd];
@@ -192,13 +209,13 @@ export function Weekdays({ rows }: { rows: Analytics["weekdays"] }) {
 
 /** 注文の入口の割合（輪が回りながら描かれる） */
 export function Channels({ rows }: { rows: Analytics["channels"] }) {
-  const shown = useShown(300);
+  const [box, shown] = useShown(300);
   const total = rows.reduce((a, r) => a + r.orders, 0) || 1;
   const R = 70, C = 2 * Math.PI * R;
   const lens = rows.map((r) => (r.orders / total) * C);
   const offs = lens.map((_, i) => lens.slice(0, i).reduce((a, b) => a + b, 0));
   return (
-    <Panel title="注文の入口" sub="FAX・LINE・電話…の割合">
+    <Panel boxRef={box} title="注文の入口" sub="FAX・LINE・電話…の割合">
       <div className="flex flex-wrap items-center gap-4">
         <svg viewBox="0 0 180 180" className="h-44 w-44 -rotate-90" role="img" aria-label="注文の入口の割合">
           <circle cx="90" cy="90" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="22" />
@@ -228,10 +245,10 @@ export function Channels({ rows }: { rows: Analytics["channels"] }) {
 
 /** ロス（製品カードに書いた分） */
 export function Losses({ rows }: { rows: Analytics["losses"] }) {
-  const shown = useShown(250);
+  const [box, shown] = useShown(250);
   const max = Math.max(...rows.map((r) => r.pieces), 1);
   return (
-    <Panel title="ロスの多い商品" sub="製品カードに書いた、工程ごとのロスの合計">
+    <Panel boxRef={box} title="ロスの多い商品" sub="製品カードに書いた、工程ごとのロスの合計">
       {rows.length === 0 ? (
         <p className="text-[16px]">まだロスの記録がありません。</p>
       ) : (

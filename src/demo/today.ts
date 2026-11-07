@@ -8,7 +8,8 @@ import { allOrders, pickDate, visibleDates } from "./all-orders";
 import { nowMs } from "@/lib/clock";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { lowStockItems } from "@/lib/stock/store";
-import { alertCounts } from "@/lib/db/alerts-store";
+import { alertCounts, listAlerts } from "@/lib/db/alerts-store";
+import { groupAlerts } from "@/lib/alert-groups";
 import { isOn } from "@/lib/settings/features";
 
 export interface TodaySummary {
@@ -30,6 +31,10 @@ export interface TodaySummary {
   overdue: number;
   /** 計算の注意（ピザの上限超えなど） */
   warnings: number;
+  /** ⑧ 計算の注意のいちばん上の一文（何の注意かを帯に小さく出す） */
+  warningTop?: string;
+  /** ⑧ 急ぎのお知らせを種類ごとにまとめたもの（帯の「急ぎ」は種類の数。何の確認かを小さく出す） */
+  urgentGroups?: { label: string; count: number; href: string }[];
   /** 安全在庫を下回っている材料・包材の数（⑤の lowStockItems）と、押したときの行き先 */
   lowStock: number;
   lowStockHref: string;
@@ -63,6 +68,15 @@ export async function todaySummary(now = nowMs()): Promise<TodaySummary> {
     nextCutoffSupplier: future[0]?.supplierName ?? "",
     overdue: open.filter((p) => Date.parse(p.cutoffAt) < now).length,
     warnings: r.warnings.length,
+    ...(r.warnings[0] ? { warningTop: r.warnings[0] } : {}),
+    urgentGroups: (() => {
+      try {
+        if (!isOn("alerts")) return [];
+        return groupAlerts(listAlerts(), { levels: ["danger"] }).map((g) => ({ label: g.label, count: g.count, href: g.href }));
+      } catch {
+        return [];
+      }
+    })(),
     lowStock: low.length,
     lowStockHref: `/masters/${low.every((x) => x.master === "packaging") && low.length ? "packaging" : "materials"}#stock-moves`,
     alerts: (() => {

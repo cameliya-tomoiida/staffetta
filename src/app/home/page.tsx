@@ -4,15 +4,17 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/current-user";
 import { deptName, type Role } from "@/lib/auth/roles";
 import { accountsExist } from "@/lib/staff";
-import { deptHome, type DeptTable, type Tile, type Timetable } from "@/lib/home-dept";
-import { getCompany } from "@/lib/company";
-import { currentGaps } from "@/lib/records/store";
-import type { Gap } from "@/lib/records/alarms";
+import { deptHome, type DeptTable, type Progress, type Tile } from "@/lib/home-dept";
+import type { AlertGroup } from "@/lib/alert-groups";
+import { TimeBoard } from "./TimeBoard";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
 
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}(${"日月火水木金土"[new Date(`${d}T00:00:00Z`).getUTCDay()]})`;
-const hhmm = (m: number) => `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, "0")}:${String(((m % 60) + 60) % 60).padStart(2, "0")}`;
+const hhmm = (x: number) => {
+  const m = Math.round(x);
+  return `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, "0")}:${String(((m % 60) + 60) % 60).padStart(2, "0")}`;
+};
 const ROLES: Role[] = ["管理者", "事務", "工場", "配送", "営業"];
 
 // 部署ごとのホーム（⑧・担当者 11/7「朝いちばんに、何をすればよいか」だけ）。
@@ -27,11 +29,6 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
   const role: Role = (canSwitch ? ROLES.find((r) => r === asked) : undefined) ?? user?.role ?? "管理者";
   if (role === "配送") redirect("/driver");
   const h = await deptHome(role);
-  // ①: 振込先がまだデモ（管理者だけ。設定 → 自社の情報で振込先を入れると消える）
-  const bankDemo = role === "管理者" && !getCompany().bank.trim();
-  // 記録の漏れ（製造と管理者）: 部署ごとのホームの決まりに合わせて 1行だけ
-  const gaps = role === "工場" || role === "管理者" ? await currentGaps().catch(() => [] as Gap[]) : [];
-  const late = gaps.filter((g) => g.state === "late").length;
 
   return (
     <div className="space-y-4">
@@ -55,15 +52,10 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         {h.tiles.map((t) => <TileCard key={t.label} t={t} />)}
       </div>
 
-      {(bankDemo || gaps.length > 0) && (
-        <div className="space-y-2">
-          {bankDemo && <Line href="/settings/company" tone="review" label="振込先がまだデモです" note="設定 → 自社の情報" />}
-          {gaps.length > 0 && <Line href="/hygiene/missing" tone={late ? "alert" : "review"} label={late ? "記録の漏れ" : "記録の時間"} value={late || gaps.length} unit="件" />}
-        </div>
-      )}
-
+      <Confirm groups={h.confirm} />
+      {h.progress && <ProgressView p={h.progress} date={h.date} />}
       {h.table && <Table t={h.table} />}
-      {h.timetable && <TimeTable t={h.timetable} date={h.date} />}
+      {h.timetable && <TimeBoard t={h.timetable} />}
     </div>
   );
 }
@@ -73,8 +65,8 @@ function Line({ href, tone, label, note, value, unit }: { href: string; tone: "a
   const cls = tone === "alert" ? "border-alert-line bg-alert-bg text-alert-ink" : "border-review-line bg-review-bg text-review-ink";
   return (
     <Link href={href} className={`flex min-h-12 items-center gap-2 rounded-xl border px-4 ${cls}`}>
-      <span className="text-[15px] font-bold">{label}</span>
-      {note && <span className="text-[13px] opacity-80">{note}</span>}
+      <span className="min-w-0 truncate text-[15px] font-bold">{label}</span>
+      {note && <span className="text-[13px] opacity-80 max-md:hidden">{note}</span>}
       {value != null && <b className="m-display ml-auto text-[22px] tabular-nums">{value}</b>}
       {unit && <span className="text-[13px]">{unit}</span>}
       <svg viewBox="0 0 24 24" className={`h-5 w-5 opacity-60 ${value == null ? "ml-auto" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="m9 6 6 6-6 6" /></svg>
@@ -128,50 +120,88 @@ function Table({ t }: { t: DeptTable }) {
   );
 }
 
-/** 製造の時間割: 生地ごとの横の帯（始め → 出来上がり）・焼成の印・今の時刻の線 */
-function TimeTable({ t, date }: { t: Timetable; date: string }) {
-  const from = Math.floor(t.from / 60) * 60;
-  const to = Math.ceil(t.to / 60) * 60;
-  const span = Math.max(60, to - from);
-  const pct = (m: number) => `${((m - from) / span) * 100}%`;
-  const step = span > 16 * 60 ? 240 : span > 8 * 60 ? 120 : 60;
-  const ticks: number[] = [];
-  for (let m = from; m <= to; m += step) ticks.push(m);
-  const nowIn = t.now >= from && t.now <= to;
+/** 確認が必要なもの（⑧・担当者「漏れがないように。漏れていたら 確認が必要です」）。同じ種類はまとめて、3つまで */
+function Confirm({ groups }: { groups: AlertGroup[] }) {
+  if (!groups.length) return null;
+  const top = groups.slice(0, 3);
   return (
-    <section aria-label="今日の時間割" className="overflow-hidden rounded-xl border border-rule-strong bg-sheet">
-      <h2 className="flex items-center gap-2 border-b border-rule bg-cream px-3 py-2 text-[15px] font-bold">
-        時間割 <span className="text-[13px] font-normal text-ink-soft">{md(date)} 納品</span>
-        <Link href={`/plan?date=${date}`} className="ml-auto text-[13px] font-bold text-crust-700">工程表 ›</Link>
-      </h2>
-      {t.rows.length === 0 ? <p className="px-3 py-3 text-[14px] text-ink-soft">作るものはありません</p> : (
-        <div className="px-3 py-2">
-          <div className="grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-x-2 text-[12px] text-ink-soft md:grid-cols-[minmax(0,14rem)_4rem_minmax(0,1fr)_4rem]">
-            <span>生地</span><span className="text-right">数</span>
-            <span className="relative h-4 max-md:hidden">{ticks.map((m, i) => <span key={m} className={`absolute tabular-nums ${i === 0 ? "" : i === ticks.length - 1 ? "-translate-x-full" : "-translate-x-1/2"}`} style={{ left: pct(m) }}>{hhmm(m).replace(/^0/, "")}</span>)}</span>
-            <span className="text-right">できる</span>
-          </div>
-          <div className="relative">
-            {t.rows.map((r, i) => {
-              const done = r.end <= t.now;
-              const doing = r.start <= t.now && t.now < r.end;
-              return (
-                <div key={i} className={`grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-x-2 border-t border-rule py-1.5 text-[14px] md:py-2 md:text-[16px] md:grid-cols-[minmax(0,14rem)_4rem_minmax(0,1fr)_4rem] ${done ? "opacity-50" : ""}`}>
-                  <span className={`truncate ${doing ? "font-bold" : ""}`}>{r.name}</span>
-                  <span className="text-right tabular-nums">{r.pieces.toLocaleString("ja-JP")}</span>
-                  <span className="relative h-5 max-md:hidden">
-                    <span className={`absolute top-1 h-3 rounded-full ${r.short ? "bg-alert-ink/70" : doing ? "bg-crust-600" : "bg-ink-soft/40"}`} style={{ left: pct(r.start), width: `calc(${pct(r.end)} - ${pct(r.start)})` }} />
-                    {r.bake != null && <span aria-hidden className="absolute top-0 h-5 w-0.5 bg-ink" style={{ left: pct(r.bake) }} title={`焼成 ${hhmm(r.bake)}`} />}
-                    {nowIn && <span aria-hidden className="absolute -top-1.5 -bottom-1.5 w-0.5 bg-sky-500" style={{ left: pct(t.now) }} />}
+    <section aria-label="確認が必要" className="space-y-2">
+      {top.map((g) => (
+        <Line key={g.kind} href={g.href} tone={g.level === "danger" ? "alert" : "review"} label={g.label} note="確認が必要です" value={g.count} unit="件" />
+      ))}
+      {groups.length > 3 && <Link href="/alerts" className="block text-right text-[14px] font-bold text-crust-700">ほか {groups.length - 3}つ ›</Link>}
+    </section>
+  );
+}
+
+const bar = (pct: number, color: string) => (
+  <span className="relative block h-3 overflow-hidden rounded-full bg-rule">
+    <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: color }} />
+  </span>
+);
+
+/** 部署ごとの進み具合（管理者）: 文字だけでなく図で。配送はコースごとに何か所まで回ったか、製造は生地ごとにどこまで進んだか */
+function ProgressView({ p, date }: { p: Progress; date: string }) {
+  const card = "min-w-0 rounded-xl border border-rule-strong bg-sheet p-3";
+  const head = "mb-2 flex items-baseline gap-2 text-[16px] font-black";
+  return (
+    <section aria-label="部署ごとの進み具合" className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className={card}>
+        <Link href="/routes" className={head}>配送 <span className="text-[13px] font-normal text-ink-soft">誰がどこまで回ったか</span><span className="ml-auto text-[13px] text-crust-700">ルート表 ›</span></Link>
+        {p.routes.length === 0 ? <p className="text-[14px] text-ink-soft">今日走るコースはありません</p> : (
+          <ul className="space-y-2">
+            {p.routes.map((r) => (
+              <li key={r.id}>
+                <Link href={`/routes?c=${encodeURIComponent(r.id)}`} className="block">
+                  <span className="flex items-baseline gap-2 text-[14px]">
+                    <b className="truncate">{r.name}</b>
+                    <span className="truncate text-ink-soft">{r.driver}</span>
+                    <span className="ml-auto shrink-0 tabular-nums"><b>{r.done}</b>/{r.total}か所</span>
                   </span>
-                  <b className="text-right tabular-nums">{hhmm(r.end)}</b>
-                </div>
-              );
-            })}
-          </div>
-          {nowIn && <p className="mt-1 text-right max-md:hidden text-[12px] text-sky-600">│ いま {hhmm(t.now)}</p>}
-        </div>
-      )}
+                  {/* 届け先の数だけ点を並べ、回った所を塗る */}
+                  <span className="mt-1 flex items-center gap-[3px]" aria-label={`${r.done}/${r.total}`}>
+                    <span aria-hidden className={`h-3 w-3 shrink-0 rounded-sm ${r.started ? "bg-ink" : "bg-rule-strong"}`} />
+                    {Array.from({ length: r.total }, (_, i) => (
+                      <span key={i} aria-hidden className={`h-3 min-w-[4px] flex-1 rounded-full ${i < r.done ? "bg-[#2f7d4a]" : i === r.done && r.started ? "bg-[#0ea5e9]" : "bg-rule"}`} />
+                    ))}
+                  </span>
+                  <span className="mt-0.5 flex justify-between text-[12px] text-ink-soft">
+                    <span className="truncate">{!r.started ? "出発前" : r.done >= r.total ? "回り終わり" : `次: ${r.next ?? ""}`}</span>
+                    <span className="shrink-0">戻り {r.back}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className={card}>
+        <Link href={`/plan?date=${date}`} className={head}>製造 <span className="text-[13px] font-normal text-ink-soft">生地ごとの進み</span><span className="ml-auto text-[13px] text-crust-700">工程表 ›</span></Link>
+        {p.make.length === 0 ? <p className="text-[14px] text-ink-soft">作るものはありません</p> : (
+          <ul className="space-y-2">
+            {p.make.map((m, i) => (
+              <li key={i}>
+                <span className="flex items-baseline gap-2 text-[14px]">
+                  <b className="truncate">{m.name}</b>
+                  <span className={`ml-auto shrink-0 ${m.pct >= 100 ? "text-ok-ink" : m.pct > 0 ? "font-bold" : "text-ink-soft"}`}>{m.step}</span>
+                  <span className="w-12 shrink-0 text-right tabular-nums">{hhmm(m.end)}</span>
+                </span>
+                {bar(m.pct, m.pct >= 100 ? "#2f7d4a" : "#c0392b")}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className={card}>
+        <Link href={`/purchase?date=${date}`} className={head}>事務 <span className="text-[13px] font-normal text-ink-soft">発注書を送った数</span></Link>
+        <span className="flex items-baseline gap-2 text-[14px]"><b className="tabular-nums">{p.office.sent}/{p.office.total}</b>送った{p.office.overdue > 0 && <span className="font-bold text-alert-ink">締め過ぎ {p.office.overdue}</span>}<span className="ml-auto">要確認の注文 <b className={p.office.review ? "text-alert-ink" : ""}>{p.office.review}</b></span></span>
+        {bar(p.office.total ? (p.office.sent / p.office.total) * 100 : 0, "#2563eb")}
+      </div>
+      <div className={card}>
+        <Link href="/orders" className={head}>営業 <span className="text-[13px] font-normal text-ink-soft">注文が来た取引先</span></Link>
+        <span className="flex items-baseline gap-2 text-[14px]"><b className="tabular-nums">{p.sales.ordered}/{p.sales.expected}</b>社<span className="ml-auto">変更 <b>{p.sales.changes}</b></span></span>
+        {bar(p.sales.expected ? (p.sales.ordered / p.sales.expected) * 100 : 0, "#2563eb")}
+      </div>
     </section>
   );
 }

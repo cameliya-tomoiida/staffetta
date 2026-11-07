@@ -19,16 +19,37 @@ import { listAlerts } from "@/lib/db/alerts-store";
 import { nowMs } from "@/lib/clock";
 import { liveCustomers } from "@/lib/customers-live";
 import { packingDay } from "@/lib/packing-day";
+import { groupAlerts, type AlertGroup } from "@/lib/alert-groups";
+import { alertForRole } from "@/lib/home";
+import { kvGet } from "@/lib/db/sqlite";
+import { listStaff } from "@/lib/staff";
+import { getDepot, getRouteSettings } from "@/lib/routes/store";
+import { buildTimeline, orderedStops, type Stop } from "@/lib/routes/plan";
+import { deliversOn } from "@/lib/routes/optimize";
 
 export type TileTone = "quiet" | "plain" | "red";
 export interface Tile { label: string; value: string; unit?: string; note?: string; href: string; tone: TileTone }
 export interface Cell { text: string; strong?: boolean; tone?: "red" | "ok" | "soft" }
 export interface DeptTable { title: string; head: string[]; /** スマホで出さない列の番号 */ wideCols?: number[]; rows: { cells: Cell[]; href?: string; now?: boolean; done?: boolean }[]; empty: string }
 /** 製造の時間割（横の帯と今の時刻の線） */
-export interface Timetable { from: number; to: number; now: number; rows: { name: string; pieces: number; start: number; end: number; bake?: number; short: boolean }[] }
-export interface DeptHome { role: Role; date: string; tiles: Tile[]; table?: DeptTable; timetable?: Timetable }
+export interface Timetable { date: string; from: number; to: number; now: number; rows: TimeRow[] }
+export interface TimeRow { key: string; name: string; pieces: number; start: number; end: number; bake?: number; short: boolean; step?: string; adjusted?: boolean; planStart: number; planEnd: number }
+/** 部署ごとの進み具合（管理者）: 図で見せる */
+export interface Progress {
+  office: { sent: number; total: number; review: number; overdue: number };
+  make: { name: string; pct: number; step: string; end: number }[];
+  routes: { id: string; name: string; driver: string; done: number; total: number; next?: string; started: boolean; back: string }[];
+  sales: { ordered: number; expected: number; changes: number };
+}
+export interface DeptHome { role: Role; date: string; tiles: Tile[]; table?: DeptTable; timetable?: Timetable; confirm: AlertGroup[]; progress?: Progress }
+/** 時間割を手で動かした分（⑧ ホームの時間割。key ＝ 生地の key） */
+export const ttKey = (date: string) => `home_timetable_adjust:${date}`;
+export type TtAdjust = Record<string, { start: number; end: number }>;
 
-const hhmm = (m: number) => `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, "0")}:${String(((m % 60) + 60) % 60).padStart(2, "0")}`;
+const hhmm = (x: number) => {
+  const m = Math.round(x);
+  return `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, "0")}:${String(((m % 60) + 60) % 60).padStart(2, "0")}`;
+};
 const jstParts = (ms: number) => {
   const d = new Date(ms + 9 * 3600_000);
   return { date: d.toISOString().slice(0, 10), min: d.getUTCHours() * 60 + d.getUTCMinutes() };
@@ -55,14 +76,24 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   // 製造の時間割: 納品日の前日 0:00 からの分にそろえる（前日の仕込みも同じ線に）
   const base = days(todayJ, date) - 1; // 今日が前日なら 0
   const nowAbs = -base * 1440 + nowMin;
-  const rows = r.schedule.map((s) => {
+  const adjust = kvGet<TtAdjust>(ttKey(date)) ?? {};
+  const rows: TimeRow[] = r.schedule.map((s) => {
     const abs = (st: { start: number; prevDay: boolean }) => st.start + (st.prevDay ? 0 : 1440);
     const steps = s.steps.map((st) => ({ ...st, a: abs(st), b: st.end + (st.prevDay ? 0 : 1440) }));
     const bake = steps.find((st) => st.key === "bake");
+    const planStart = Math.min(...steps.map((x) => x.a));
+    const planEnd = Math.max(...steps.map((x) => x.b));
+    const adj = adjust[s.key];
+    const start = adj?.start ?? planStart;
+    const end = adj?.end ?? planEnd;
+    const k = planEnd > planStart ? (end - start) / (planEnd - planStart) : 1; // 伸ばした分だけ工程も伸ばして見る
+    const at = (m: number) => start + (m - planStart) * k;
+    const cur = steps.find((x) => at(x.a) <= nowAbs && nowAbs < at(x.b));
     return {
-      name: s.waveName ? `${s.doughName}（${s.waveName}）` : s.doughName, pieces: s.pieces,
-      start: Math.min(...steps.map((x) => x.a)), end: Math.max(...steps.map((x) => x.b)), bake: bake?.a,
+      key: s.key, name: s.waveName ? `${s.doughName}（${s.waveName}）` : s.doughName, pieces: s.pieces,
+      start, end, planStart, planEnd, bake: bake ? at(bake.a) : undefined, adjusted: !!adj,
       short: (s.staff ?? []).some((b) => b.level === "short"),
+      ...(cur ? { step: cur.name } : {}),
     };
   }).filter((x) => Number.isFinite(x.start)).sort((a, b) => a.start - b.start);
   const shortBands = [...new Map(r.schedule.flatMap((s) => s.staff ?? []).filter((b) => b.level === "short").map((b) => [`${b.from}-${b.to}`, b])).values()].sort((a, b) => a.from - b.from);
@@ -72,6 +103,8 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   };
   const next = rows.find((x) => x.start >= nowAbs);
   const money = withMasters(masters, () => dailyProfit(r.totals.products.map((p) => ({ productId: p.productId, pieces: p.pieces }))));
+  // 確認が必要なもの（種類ごとにまとめる・その部署に要る種類だけ）
+  const confirm = groupAlerts(listAlerts().filter((a) => alertForRole(a.kind, role)), { levels: ["danger", "warn"] });
 
   const open = pos.filter((p) => p.status !== "sent");
   const nextPo = open.filter((p) => p.cutoffAt && Date.parse(p.cutoffAt) >= now).sort((a, b) => a.cutoffAt.localeCompare(b.cutoffAt))[0];
@@ -80,7 +113,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   if (role === "事務") {
     const poRows = [...pos].filter((p) => p.cutoffAt).sort((a, b) => a.cutoffAt.localeCompare(b.cutoffAt));
     return {
-      role, date,
+      role, date, confirm,
       tiles: [
         { label: "確かめる注文", value: num(review.length), unit: "件", href: "/orders?status=needs_review", tone: tone(review.length) },
         { label: "締めが近い発注", value: nextPo ? hhmm(isoMin(nextPo.cutoffAt).min) : "—", note: summary.overdue ? `過ぎた ${summary.overdue}枚` : nextPo?.supplierName, href: `/purchase?date=${date}`, tone: summary.overdue ? "red" : nextPo ? "plain" : "quiet" },
@@ -110,7 +143,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
     const to = rows.length ? Math.max(...rows.map((x) => x.end)) : 1440;
     const pack = await packingDay(date);
     return {
-      role, date,
+      role, date, confirm,
       tiles: [
         { label: "次に始める", value: next ? `${dayLabel(next.start)}${hhmm(next.start)}` : "—", note: next?.name ?? "今日は終わり", href: `/plan?date=${date}`, tone: next ? "plain" : "quiet" },
         // 包装（パートの人がシフトで見る）: 今日の包装の袋の数と、変更で減った個数
@@ -119,7 +152,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
         { label: "人が足りない", value: shortBands.length ? hhmm(shortBands[0].from) : "0", unit: shortBands.length ? "〜" : "件", note: shortBands.length ? `${shortBands.length}か所` : undefined, href: `/plan?date=${date}`, tone: shortBands.length ? "red" : "quiet" },
         { label: "指示書の印刷", value: num(rows.length), unit: "生地", href: `/plan?date=${date}`, tone: tone(rows.length) },
       ],
-      timetable: { from, to, now: nowAbs, rows },
+      timetable: { date, from, to, now: nowAbs, rows },
     };
   }
 
@@ -143,7 +176,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
     }
     const CH: Record<string, string> = { customer_site: "サイト", fax: "FAX", line: "LINE", phone: "電話", email: "メール", driver: "ドライバー", site: "サイト", csv: "CSV" };
     return {
-      role, date,
+      role, date, confirm,
       tiles: [
         { label: "今日の注文・変更", value: num(createdToday.length), unit: "件", note: changes.length ? `変更 ${changes.length}` : undefined, href: "/orders", tone: tone(createdToday.length) },
         { label: "締めが近い", value: near ? near.c.cutoff : "—", note: near ? `まだ ${nearCount}社` : "全部 来ています", href: "/orders", tone: near ? "plain" : "quiet" },
@@ -166,33 +199,43 @@ export async function deptHome(role: Role): Promise<DeptHome> {
     };
   }
 
-  // 管理者: 赤いものだけ
-  const alerts = listAlerts().filter((a) => a.state !== "done" && a.level === "danger");
-  const late = summary.overdue + alerts.length;
+  // 管理者: 赤いものだけ（お知らせは種類ごとにまとめた数）＋ 部署ごとの進み具合を図で
+  const urgent = confirm.filter((g) => g.level === "danger");
   const lack = (r.shortages.length || summary.lowStock) + shortBands.length;
   const approve = summary.purchaseDraft + review.length;
   const wd = new Date(`${todayJ}T00:00:00Z`).getUTCDay();
-  const courses = (masters.courses ?? []).filter((c) => c.active !== false && (!c.weekdays?.length || c.weekdays.includes(wd)));
-  const left = courses.filter((c) => c.departTime && Number(c.departTime.slice(0, 2)) * 60 + Number(c.departTime.slice(3, 5)) <= nowMin).length;
-  const doneDough = rows.filter((x) => x.end <= nowAbs).length;
+  const dateWd = new Date(`${date}T00:00:00Z`).getUTCDay();
   const sent = pos.filter((p) => p.status === "sent").length;
   const ordered = new Set(day.map((o) => o.customerId)).size;
+  // 配送: コースごとに、今の時刻で何か所まで回ったか（道の線は取らず、直線の見積もりで速く）
+  const depot = getDepot();
+  const settings = getRouteSettings();
+  const staff = listStaff();
+  const located = [...cust.values()].filter((c) => "lat" in c && c.lat != null && c.lng != null && (("deliveryMethod" in c ? c.deliveryMethod : undefined) ?? "own") === "own") as unknown as (Stop & { course?: string; active?: boolean; closedWeekdays?: number[] })[];
+  const routes = (masters.courses ?? []).filter((c) => c.active !== false && (!c.weekdays?.length || c.weekdays.includes(wd))).flatMap((course) => {
+    const stops = orderedStops(course, located as never[]).filter((c) => deliversOn(c as never, wd)) as Stop[];
+    if (!stops.length) return [];
+    const tl = buildTimeline(course, depot, stops, { settings });
+    const done = tl.rows.filter((x) => x.leave <= nowMin).length;
+    return [{
+      id: course.id, name: course.name, driver: staff.filter((x) => x.role === "配送" && x.courses.includes(course.id)).map((x) => x.name).join("・"),
+      done, total: tl.rows.length, next: tl.rows[done]?.name, started: nowMin >= tl.depart, back: hhmm(tl.back),
+    }];
+  });
+  const make = rows.map((x) => ({ name: x.name, pct: Math.max(0, Math.min(100, Math.round(((nowAbs - x.start) / Math.max(1, x.end - x.start)) * 100))), step: x.end <= nowAbs ? "できた" : x.start > nowAbs ? `${hhmm(x.start)} から` : x.step ?? "作っている", end: x.end }));
+  const expected = (masters.customers ?? []).filter((c) => c.active !== false && c.course && (!c.deliveryWeekdays?.length || c.deliveryWeekdays.includes(dateWd))).length;
   return {
-    role, date,
+    role, date, confirm,
     tiles: [
-      { label: "遅れ・入れ忘れ", value: num(late), unit: "件", href: "/alerts", tone: tone(late, true) },
+      { label: "確認が必要", value: num(urgent.length), unit: "つ", note: urgent[0] ? `${urgent[0].label}${urgent.length > 1 ? ` ほか${urgent.length - 1}` : ""}` : undefined, href: "/alerts", tone: tone(urgent.length, true) },
       { label: "足りない材料・人", value: num(lack), unit: "件", href: `/plan?date=${date}`, tone: tone(lack, true) },
       { label: "承認待ち", value: num(approve), unit: "件", note: approve ? `発注 ${summary.purchaseDraft}・注文 ${review.length}` : undefined, href: `/purchase?date=${date}`, tone: tone(approve, true) },
       { label: "売上の見込み", value: yen(money.sales), unit: "千円", note: `粗利 ${Math.round(money.grossRate * 100)}%`, href: "/analytics", tone: "plain" },
     ],
-    table: {
-      title: "部署ごとの進み具合", head: [], empty: "",
-      rows: [
-        { href: "/orders?status=needs_review", cells: [{ text: "事務", strong: true }, { text: `発注 ${sent}/${pos.length} 送った` }, { text: `要確認 ${review.length}`, tone: review.length ? "red" : "soft" }, { text: summary.overdue ? `締め過ぎ ${summary.overdue}` : "", tone: "red" }] },
-        { href: `/plan?date=${date}`, cells: [{ text: "製造", strong: true }, { text: `生地 ${doneDough}/${rows.length} できた` }, { text: next ? `次 ${hhmm(next.start)} ${next.name}` : "", tone: "soft" }, { text: shortBands.length ? `人 ${shortBands.length}か所 足りない` : "", tone: "red" }] },
-        { href: "/routes", cells: [{ text: "配送", strong: true }, { text: `コース ${left}/${courses.length} 出発` }, { text: "", tone: "soft" }, { text: "" }] },
-        { href: "/orders", cells: [{ text: "営業", strong: true }, { text: `注文 ${ordered}社` }, { text: `変更 ${changes.length}`, tone: "soft" }, { text: "" }] },
-      ],
+    progress: {
+      office: { sent, total: pos.length, review: review.length, overdue: summary.overdue },
+      make, routes,
+      sales: { ordered, expected: Math.max(expected, ordered), changes: changes.length },
     },
   };
 }
