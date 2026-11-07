@@ -36,7 +36,7 @@ export function DoughCards({ cards, editable = true, openId }: { cards: DoughCar
               </div>
               <dl className="grid grid-cols-3 border-b border-rule text-center">
                 <Mini label="粉の合計" value={`${pct(c.flourPercent)}%`} warn={Math.abs(c.flourPercent - 100) > 0.01} />
-                <Mini label="ロス率" value={`${lossPct(c.lossRate)}%`} />
+                <Mini label="生地のロス" value={`${lossPct(c.lossRate)}%`} />
                 <Mini label="使う商品" value={`${c.products.length}品`} />
               </dl>
               <RecipeTable card={c} small />
@@ -141,7 +141,7 @@ function DoughDialog({ card, editable, onClose }: { card: DoughCard; editable: b
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Big label="粉の合計（100 が基準）" value={pct(card.flourPercent)} unit="%" warn={Math.abs(card.flourPercent - 100) > 0.01} />
           <Big label="％の合計" value={pct(card.totalPercent)} unit="%" />
-          <Big label="ロス率" value={lossPct(card.lossRate)} unit="%" />
+          <Big label="生地のロス" value={lossPct(card.lossRate)} unit="%" />
           <Big label="ミキサー1回の上限" value={pct(card.mixerMaxKg)} unit="kg" />
         </dl>
         {card.warnings.map((w) => <Notice key={w} tone="alert">{w}</Notice>)}
