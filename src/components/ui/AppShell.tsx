@@ -31,6 +31,7 @@ export const MENU: Group[] = [
       { href: "/orders", label: "受注一覧", match: (p) => p === "/orders" },
       { href: "/plan", label: "製造計画・工程表" },
       { href: "/cards", label: "製品カード" },
+      { href: "/packing", label: "包装" },
       { href: "/hygiene", label: "衛生管理" },
       { href: "/purchase", label: "発注書" },
       { href: "/outbound", label: "送り出し（FAX・サイト）" },

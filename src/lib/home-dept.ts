@@ -18,6 +18,7 @@ import { listNotices } from "@/lib/notices/store";
 import { listAlerts } from "@/lib/db/alerts-store";
 import { nowMs } from "@/lib/clock";
 import { liveCustomers } from "@/lib/customers-live";
+import { packingDay } from "@/lib/packing-day";
 
 export type TileTone = "quiet" | "plain" | "red";
 export interface Tile { label: string; value: string; unit?: string; note?: string; href: string; tone: TileTone }
@@ -107,10 +108,13 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   if (role === "工場") {
     const from = rows.length ? Math.min(...rows.map((x) => x.start)) : 0;
     const to = rows.length ? Math.max(...rows.map((x) => x.end)) : 1440;
+    const pack = await packingDay(date);
     return {
       role, date,
       tiles: [
         { label: "次に始める", value: next ? `${dayLabel(next.start)}${hhmm(next.start)}` : "—", note: next?.name ?? "今日は終わり", href: `/plan?date=${date}`, tone: next ? "plain" : "quiet" },
+        // 包装（パートの人がシフトで見る）: 今日の包装の袋の数と、変更で減った個数
+        { label: "包装", value: num(pack.pieces), unit: "個", note: pack.reduced ? `変更 −${num(pack.reduced)}` : `${pack.rows.length}品`, href: `/packing?date=${date}`, tone: tone(pack.pieces) },
         { label: "足りない材料", value: num(r.shortages.length || summary.lowStock), unit: "件", href: summary.lowStockHref, tone: tone(r.shortages.length || summary.lowStock, true) },
         { label: "人が足りない", value: shortBands.length ? hhmm(shortBands[0].from) : "0", unit: shortBands.length ? "〜" : "件", note: shortBands.length ? `${shortBands.length}か所` : undefined, href: `/plan?date=${date}`, tone: shortBands.length ? "red" : "quiet" },
         { label: "指示書の印刷", value: num(rows.length), unit: "生地", href: `/plan?date=${date}`, tone: tone(rows.length) },

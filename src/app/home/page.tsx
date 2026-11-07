@@ -42,7 +42,8 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3" data-testid="dept-tiles">
+      {/* 5枚のとき（製造＋包装）は、スマホで先頭を横いっぱいに。タブレット（横）・パソコンは1列に5枚 */}
+      <div className={`grid grid-cols-2 gap-2 md:gap-3 ${h.tiles.length === 5 ? "md:grid-cols-5 max-md:[&>*:first-child]:col-span-2" : "md:grid-cols-4"}`} data-testid="dept-tiles">
         {h.tiles.map((t) => <TileCard key={t.label} t={t} />)}
       </div>
 
@@ -126,7 +127,7 @@ function TimeTable({ t, date }: { t: Timetable; date: string }) {
               const done = r.end <= t.now;
               const doing = r.start <= t.now && t.now < r.end;
               return (
-                <div key={i} className={`grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-x-2 border-t border-rule py-1.5 text-[14px] md:grid-cols-[minmax(0,14rem)_4rem_minmax(0,1fr)_4rem] ${done ? "opacity-50" : ""}`}>
+                <div key={i} className={`grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-x-2 border-t border-rule py-1.5 text-[14px] md:py-2 md:text-[16px] md:grid-cols-[minmax(0,14rem)_4rem_minmax(0,1fr)_4rem] ${done ? "opacity-50" : ""}`}>
                   <span className={`truncate ${doing ? "font-bold" : ""}`}>{r.name}</span>
                   <span className="text-right tabular-nums">{r.pieces.toLocaleString("ja-JP")}</span>
                   <span className="relative h-5 max-md:hidden">
