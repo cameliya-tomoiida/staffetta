@@ -13,6 +13,7 @@ import { briefingFor, type Briefing } from "@/lib/ai/briefing";
 import { todayJst } from "@/lib/clock";
 import { RefreshBriefing } from "./RefreshBriefing";
 import { currentGaps } from "@/lib/records/store";
+import { getCompany } from "@/lib/company";
 import type { Gap } from "@/lib/records/alarms";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
@@ -81,7 +82,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
       {role === "管理者" && <Admin d={d} />}
       {role === "事務" && <Office d={d} />}
       {role === "工場" && <Factory d={d} />}
-      <Alerts d={d} />
+      <Alerts d={d} bankDemo={role === "管理者" && !getCompany().bank.trim()} />
     </div>
   );
 }
@@ -271,11 +272,18 @@ function Factory({ d, compact = false }: { d: HomeData; compact?: boolean }) {
   return compact ? <><h3 className="mt-4 mb-2 text-[20px] font-bold">工場（{md(d.date)}）</h3>{body}</> : <Section title={`製造（${md(d.date)} 納品のぶん）`}>{body}</Section>;
 }
 
-function Alerts({ d }: { d: HomeData }) {
+function Alerts({ d, bankDemo }: { d: HomeData; bankDemo?: boolean }) {
   const list = d.alerts.slice(0, 6);
   return (
     <Section title="お知らせ">
-      {list.length === 0 ? <p className="text-[18px] text-ink-soft">いまは ありません</p> : (
+      {/* 振込先がまだデモ（消せない。設定 → 自社の情報で振込先を入れると消える） */}
+      {bankDemo && (
+        <Link href="/settings/company" className="mb-2 block rounded-xl border-2 border-[#b08210] bg-sheet px-4 py-3 hover:border-crust-500">
+          <span className="mr-2 rounded bg-[#fff3c4] px-2 py-0.5 text-[16px] font-black text-[#654700]">注意</span>
+          <span className="text-[19px] font-bold">振込先がまだデモです（本番の前に 設定 → 自社の情報 で入れてください）</span>
+        </Link>
+      )}
+      {list.length === 0 && !bankDemo ? <p className="text-[18px] text-ink-soft">いまは ありません</p> : (
         <ul className="space-y-2">
           {list.map((a) => (
             <li key={a.dedupeKey}>

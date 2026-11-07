@@ -106,7 +106,17 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const { map: mt, pending } = await lookupTerms(lang, jaNames);
   const name: NameFn = (ja) => ({ text: mt[ja] ?? ja, machine: !!mt[ja], ja });
   const t: T = (k) => tr(lang, k);
-  const href = (p: { lang?: Lang; date?: string }) => `/plan?${new URLSearchParams({ date: p.date ?? date, lang: p.lang ?? lang })}`;
+  // 上のタブ（担当者 11/7: 1つの画面に全部を並べない）。今日｜時間割｜材料・発注｜札・印刷
+  const TABS = [
+    { key: "today", label: "今日" },
+    { key: "time", label: "時間割" },
+    { key: "material", label: "材料・発注" },
+    { key: "print", label: "札・印刷" },
+  ] as const;
+  type Tab = (typeof TABS)[number]["key"];
+  const tab: Tab = TABS.some((x) => x.key === q.tab) ? (q.tab as Tab) : "today";
+  const vis = (k: Tab) => (tab === k ? "" : "hidden");
+  const href = (p: { lang?: Lang; date?: string; tab?: Tab }) => `/plan?${new URLSearchParams({ date: p.date ?? date, lang: p.lang ?? lang, ...((p.tab ?? tab) !== "today" ? { tab: p.tab ?? tab } : {}) })}`;
 
   const lineView: Record<Line, { title: string; color: string; icon: React.ReactNode }> = {
     bread: { title: t("line_bread"), color: "var(--color-bread)", icon: <Icon.bread className="h-7 w-7" /> },
@@ -201,11 +211,11 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
         <div>
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">製造計画・工程表</h1>
-          <p className="mt-1 text-ink-soft">納品日を選び、下のタブでことばを選んで印刷し、現場に渡します。</p>
+
           <p className={`no-print mt-2 inline-flex flex-wrap items-center gap-x-2 rounded-lg px-3 py-1.5 text-[17px] font-bold ${cov.missing.length || cov.afterPrepared.length ? "bg-alert-bg text-alert-ink" : "bg-ok-bg text-ok-ink"}`}>
-            確定した注文 {cov.confirmed}件 → 製造計画・発注に入った {cov.included}件
-            {cov.missing.length > 0 && <span>（入っていない明細 {cov.missing.length}行。<Link href={`/orders?date=${date}`} className="underline">注文を確かめる</Link>）</span>}
-            {cov.afterPrepared.length > 0 && <span>・計画を作ったあとに確定 {cov.afterPrepared.length}件（印刷し直してください）</span>}
+            注文 {cov.confirmed}件 → 計画に {cov.included}件
+            {cov.missing.length > 0 && <span>（入っていない {cov.missing.length}行。<Link href={`/orders?date=${date}`} className="underline">確かめる</Link>）</span>}
+            {cov.afterPrepared.length > 0 && <span>・あとから確定 {cov.afterPrepared.length}件（印刷し直す）</span>}
             {!cov.missing.length && !cov.afterPrepared.length && cov.confirmed > 0 && <span>✓</span>}
           </p>
         </div>
@@ -221,8 +231,27 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </div>
       </div>
 
-      {/* 最初の1画面: ラインごとに「いくつ作るか・何時に始めるか・人は足りるか」（日本語・印刷しない） */}
-      <div className="no-print mb-5 grid gap-3 md:grid-cols-2" lang="ja">
+      {/* 上のタブ（スマホもパソコンも。押すとその中身が1画面目に出る） */}
+      <nav aria-label="製造の画面のタブ" className="no-print sticky top-0 z-20 -mx-1 mb-4 grid grid-cols-4 gap-1 bg-paper px-1 pt-1 pb-2" lang="ja">
+        {TABS.map((x) => (
+          <Link
+            key={x.key}
+            href={href({ tab: x.key })}
+            aria-current={tab === x.key ? "page" : undefined}
+            className={`relative flex min-h-12 items-center justify-center rounded-lg border-2 px-1 text-center text-[15px] leading-tight font-black whitespace-nowrap sm:text-lg ${
+              tab === x.key ? "border-crust-600 bg-crust-600 text-white" : "border-rule-strong bg-sheet text-ink-soft"
+            }`}
+          >
+            {x.label}
+            {x.key === "material" && shortRows.length > 0 && (
+              <span className={`num absolute -top-2 -right-1 min-w-6 rounded-full px-1.5 text-center text-xs leading-5 ${tab === x.key ? "bg-white text-crust-700 ring-2 ring-crust-600" : "bg-[#d64545] text-white"}`}>{shortRows.length}</span>
+            )}
+          </Link>
+        ))}
+      </nav>
+
+      {/* 今日: ラインごとに「いくつ作るか・何時に始めるか・人は足りるか」（日本語・印刷しない） */}
+      <div className={`no-print mb-5 grid gap-3 md:grid-cols-2 ${vis("today")}`} lang="ja">
         {summary.map((x) => (
           <div key={x.line} className={`rounded-lg border-2 bg-sheet px-4 py-3 ${x.over || x.shortAt ? "border-alert-line" : "border-rule-strong"}`}>
             <div className="mb-1 flex items-center gap-2 font-black" style={{ color: lineView[x.line].color }}>
@@ -264,7 +293,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       </div>
 
       {inc && (
-        <section className="no-print mb-4 rounded-lg border-2 border-alert-line bg-alert-bg px-4 py-3 text-alert-ink" lang="ja">
+        <section className={`no-print mb-4 rounded-lg border-2 border-alert-line bg-alert-bg px-4 py-3 text-alert-ink ${vis("today")}`} lang="ja">
           <div className="text-[18px] font-black">計画を作ったあとに増えた分（{prepared?.at ? new Date(prepared.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""} より）</div>
           {inc.doughs.length > 0 && <div className="mt-1">計量: {inc.doughs.map((d) => `${d.name} +${d.plus}kg（${d.now}kg に）`).join("・")}</div>}
           {inc.materials.length > 0 && <div className="mt-1">材料: {inc.materials.slice(0, 8).map((m) => `${m.name} +${m.plus}kg`).join("・")}{inc.materials.length > 8 ? " …" : ""}</div>}
@@ -272,10 +301,22 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </section>
       )}
       {/* 足りない材料（文ではなくリスト。行ごとに「発注」→ 人が OK → 送り出し） */}
-      <ShortageList date={date} rows={shortRows} />
-      <OrderProposal key={date} date={date} initial={getPlanOrder(date) ?? null} />
+      <div className={vis("material")}>
+        {shortRows.length === 0 && <p className="no-print mb-4 rounded-lg bg-ok-bg px-4 py-3 text-lg font-bold text-ok-ink">足りない材料はありません</p>}
+        <ShortageList date={date} rows={shortRows} />
+        <Link href={`/purchase?date=${date}`} className="no-print link mb-4 inline-block text-base font-bold">この日の発注書を見る →</Link>
+      </div>
+      <div className={vis("today")}>
+        {shortRows.length > 0 && (
+          <Link href={href({ tab: "material" })} className="no-print mb-4 flex min-h-12 items-center gap-2 rounded-lg border-2 border-alert-line bg-sheet px-4 font-black text-alert-ink">
+            <span className="inline-block h-3 w-3 rounded-full bg-[#d64545]" />足りない材料 <span className="num">{shortRows.length}</span>
+            <span className="ml-auto">›</span>
+          </Link>
+        )}
+        <OrderProposal key={date} date={date} initial={getPlanOrder(date) ?? null} />
+      </div>
       {bread.length > 0 && (
-        <section className="no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3" lang="ja">
+        <section className={`no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3 ${vis("today")}`} lang="ja">
           <div className="mb-1 font-black">食パンのまとめ</div>
           {bread.map((b) => (
             <div key={b.loaf} className="space-y-1">
@@ -291,7 +332,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       )}
 
       {/* 印刷する紙をえらぶ（チェックしたものだけ印刷。プレビューで画面にも出す）。CSS の :has で切りかえる（print.css・globals.css） */}
-      <div className="no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3" lang="ja">
+      <div className={`no-print mb-4 rounded-lg border border-rule bg-sheet px-4 py-3 ${vis("print")}`} lang="ja">
         <div className="mb-2 font-black">印刷する紙をえらぶ</div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           {SHEETS.map((x) => (
@@ -311,7 +352,8 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         </div>
       </div>
 
-      {/* ことばのタブと印刷 */}
+      {/* 紙のことば（ドロップダウン1つ）と印刷 */}
+      <div className={vis("print")}>
       <LangPicker
         lang={lang}
         hrefFor={Object.fromEntries(LANGS.map((l) => [l.code, href({ lang: l.code })]))}
@@ -323,9 +365,10 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           </div>
         }
       />
+      </div>
 
       {/* ここから下が印刷する紙（選んだことば） */}
-      <div lang={langInfo(lang).htmlLang} className="theme-paper rounded-b-lg border-2 border-t-0 border-rule-strong bg-sheet p-4 print:border-0 print:p-0 sm:p-5">
+      <div lang={langInfo(lang).htmlLang} className={`theme-paper rounded-lg border-2 border-rule-strong bg-sheet p-4 print:block print:border-0 print:p-0 sm:p-5 ${tab === "time" || tab === "print" ? "" : "hidden"}`}>
         {/* 紙の頭（現場の製造計画書と同じ並び: 題・報告日・製造日・作った所・担当・確認の印） */}
         <div className="mb-4 hidden gap-3 border-b-2 border-ink pb-3 print:grid print:grid-cols-[1fr_auto]">
           <div>
@@ -450,7 +493,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
 
       </div>
       {/* 注意とお金は、畳んで件数だけ（押すと開く）。管理者向け・日本語・印刷しない */}
-      <div className="no-print mt-6 space-y-2" lang="ja">
+      <div className={`no-print mt-6 space-y-2 ${vis("today")}`} lang="ja">
         {warn.incomplete.length > 0 && (
           <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
             お店か商品が決まっていない注文が <span className="num">{warn.incomplete.length}</span> 件あります。この分は作る数に入っていません。
