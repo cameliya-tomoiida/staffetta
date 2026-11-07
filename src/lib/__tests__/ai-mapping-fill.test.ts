@@ -19,3 +19,15 @@ describe("fillRequired", () => {
     expect(out.filled).toEqual([]);
   });
 });
+
+describe("normalizeWeekdays", () => {
+  it("月水金・毎日・平日・土日 をそろえる", async () => {
+    const { normalizeWeekdays } = await import("../masters/ai-mapping");
+    expect(normalizeWeekdays("月水金")).toBe("月;水;金");
+    expect(normalizeWeekdays("月・水・金曜日")).toBe("月;水;金");
+    expect(normalizeWeekdays("毎日")).toBe("日;月;火;水;木;金;土");
+    expect(normalizeWeekdays("平日")).toBe("月;火;水;木;金");
+    expect(normalizeWeekdays("土日")).toBe("日;土");
+    expect(normalizeWeekdays("")).toBe("");
+  });
+});

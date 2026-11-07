@@ -243,7 +243,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       </div>
 
       {/* 上のタブ（スマホもパソコンも。押すとその中身が1画面目に出る） */}
-      <nav aria-label="製造の画面のタブ" className="no-print sticky top-0 z-20 -mx-1 mb-4 grid grid-cols-4 gap-1 bg-paper px-1 pt-1 pb-2" lang="ja">
+      <nav aria-label="製造の画面のタブ" data-screen-date={date} data-screen-tab={TABS.find((x) => x.key === tab)?.label ?? tab} className="no-print sticky top-0 z-20 -mx-1 mb-4 grid grid-cols-4 gap-1 bg-paper px-1 pt-1 pb-2" lang="ja">
         {TABS.map((x) => (
           <Link
             key={x.key}

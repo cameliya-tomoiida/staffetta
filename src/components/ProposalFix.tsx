@@ -112,6 +112,7 @@ export function ProposalFix({ proposalId, onClose }: { proposalId: string; onClo
           <button type="button" className="btn-primary text-lg" disabled={pending || !text.trim() || !who} onClick={fix}>
             {pending ? "AI が直しています…" : "AI に直してもらう"}
           </button>
+          {!who && <p className="text-[13px] text-ink-faint">先に上で「確かめる人」を選んでください</p>}
         </div>
       )}
       {done && <p className="font-bold text-ok-ink">この案は終わりました（{v.history.at(-1)?.who}）</p>}

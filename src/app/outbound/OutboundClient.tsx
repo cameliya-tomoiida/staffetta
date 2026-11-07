@@ -66,6 +66,7 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
             <option value="">えらんでください</option>
             {STAFF.map((s) => <option key={s}>{s}</option>)}
           </select>
+          {!who && <span className="text-[13px] font-normal text-ink-faint">先に名前を選んでください（「送った」が押せます）</span>}
         </label>
         <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
           納品日

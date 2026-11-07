@@ -4,6 +4,7 @@
 // いま見ている画面の中身（文字）も一緒に送るので、「この注文が要確認になった理由は？」のような頼み方もできる。
 import { AiThinking } from "@/components/ui/ComputeShow";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { askAiAction, chatLogAction, clearChatAction, confirmAgentAction } from "@/app/ai/actions";
@@ -61,9 +62,13 @@ export function AiChat({ floating = false }: { floating?: boolean } = {}) {
     setError("");
     setQ("");
     setList((l) => [...(l ?? []), { role: "user", text: question, at: new Date().toISOString(), path }]);
-    const pageText = (document.querySelector("main") as HTMLElement | null)?.innerText ?? "";
+    const main = document.querySelector("main") as HTMLElement | null;
+    // 画面が表示している日・タブ（管理役2 11/7: 画面は明日を出しているのに、AI が今日の数で答えて「差がある」と言った）
+    const shown = document.querySelector("[data-screen-date]");
+    const screen = shown ? `【画面が表示している日】${shown.getAttribute("data-screen-date")}${shown.getAttribute("data-screen-tab") ? `（タブ: ${shown.getAttribute("data-screen-tab")}）` : ""}\n` : "";
+    const pageText = screen + (main?.innerText ?? "");
     start(async () => {
-      const r = await askAiAction(question, path, pageText);
+      const r = await askAiAction(question, path + window.location.search, pageText);
       if (r.ok) {
         setList((l) => [...(l ?? []), r.message]);
         if (r.message.did?.length) router.refresh();
@@ -98,7 +103,7 @@ export function AiChat({ floating = false }: { floating?: boolean } = {}) {
         </button>
         )
       )}
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div role="dialog" aria-label="AI に頼む" className="m-sheet fixed right-4 bottom-4 z-50 flex h-[min(680px,calc(100dvh-2rem))] w-[min(460px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border-2 border-rule-strong bg-sheet shadow-2xl max-md:inset-0 max-md:h-dvh max-md:w-full max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]">
           <div className="flex items-center gap-2 border-b border-rule bg-[#8b1a1a] px-4 py-2 text-white">
             <span className="text-[19px] font-black">AI に頼む</span>
@@ -162,7 +167,8 @@ export function AiChat({ floating = false }: { floating?: boolean } = {}) {
               className="min-h-12 min-w-0 flex-1 rounded-lg border-2 border-rule-strong px-3 text-[17px]" />
             <button disabled={pending || !q.trim()} className="min-h-12 rounded-lg bg-[#8b1a1a] px-4 text-[17px] font-bold text-white disabled:bg-[#c5cac5]">頼む</button>
           </form>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

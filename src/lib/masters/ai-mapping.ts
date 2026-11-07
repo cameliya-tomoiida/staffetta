@@ -127,6 +127,22 @@ function toDate(s: string): string {
   return t;
 }
 
+/**
+ * 曜日の書き方をそろえる（「月水金」「月・水・金」「毎日」「平日」「土日」→「月;水;金」など）。管理役2 11/7: 得意先の AI 取り込みで
+ * 「配達曜日 月水金／毎日」が変換されず、試すと3行ともエラーだった
+ */
+export function normalizeWeekdays(v: string): string {
+  const s = String(v ?? "").normalize("NFKC").trim();
+  if (!s) return "";
+  const W = "日月火水木金土";
+  if (/毎日|全日|daily/i.test(s)) return [...W].join(";");
+  const out = new Set<string>();
+  if (/平日/.test(s)) for (const d of "月火水木金") out.add(d);
+  if (/土日|週末/.test(s)) ["土", "日"].forEach((d) => out.add(d));
+  for (const ch of s.replace(/平日|土日|週末|曜日?/g, "")) if (W.includes(ch)) out.add(ch);
+  return [...W].filter((d) => out.has(d)).join(";");
+}
+
 export function applyTransforms(v: string, c: Pick<ColumnMap, "transforms" | "prefix">): string {
   let s = String(v ?? "");
   for (const t of c.transforms ?? []) {
@@ -151,7 +167,13 @@ export function toMasterCsv(def: MasterDef, grid: string[][], m: Mapping): { csv
     const cells = cellsOf(r);
     if (!cells.some(Boolean)) continue;
     if (cells.some((x) => /^(合計|小計|総計)$/.test(x))) continue;
-    rows.push(cols.map((col) => m.columns.filter((c) => c.target === col.key).map((c) => applyTransforms(cells[c.source] ?? "", c)).filter(Boolean).join(" ")));
+    rows.push(
+      cols.map((col) => {
+        const v = m.columns.filter((c) => c.target === col.key).map((c) => applyTransforms(cells[c.source] ?? "", c)).filter(Boolean).join(" ");
+        // 曜日の列は、いつも「月;水;金」の形にそろえる
+        return col.type === "weekdays" ? normalizeWeekdays(v) : v;
+      }),
+    );
   }
   return { csv: tableToCsv([header, ...rows]), rows, header };
 }

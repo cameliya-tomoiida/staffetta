@@ -62,7 +62,7 @@ async function aiMapping(name: ScreenName, grid: string[][], rules: Mapping): Pr
     system:
       "パン工場の受発注システムに、ほかのソフト（弥生販売・会計ソフト・Excel の手づくりの表）から出したファイルを取り込む係です。" +
       "ファイルの先頭の行を見て、見出しの行（題の行が上にあれば飛ばす・2行の見出しもある）と、元の列ごとに、登録先のどの項目（key）に入れるかを決めます。" +
-      "使わない列は target を null。決めた理由を短い日本語で。自信は 0〜1（見出しと中身の両方が合えば高く）。" +
+      "使わない列は target を null。決めた理由と見立て（note）は短い日本語で、null・target などの英語の言葉は書かない（「使わない」と書く）。曜日の列（月水金・毎日・平日）は取り込むときに自動で「月;水;金」の形にそろえるので、変換が要るとは書かなくてよい。自信は 0〜1（見出しと中身の両方が合えば高く）。" +
       "直し方: nfkc（全角→半角）・digits（数字だけ残す）・number（¥・カンマを外す）・date（日付を YYYY-MM-DD に）・trim。" +
       "ID は今の登録の ID の形（頭に付く文字など）に合わせ、必要なら prefix に頭の文字を入れる。ID の列が無ければ target に入れなくてよい（取り込むときに続きの番号を自動で付ける）。同じ項目に2つの列（住所1・住所2）を入れてもよい（つないで1つにする）。",
     messages: [{
@@ -83,10 +83,15 @@ async function aiMapping(name: ScreenName, grid: string[][], rules: Mapping): Pr
   const columns: ColumnMap[] = headers.map((h, source) => {
     const a = p.columns.find((c) => c.source === source);
     const target = a?.target && keys.has(a.target) ? a.target : null;
-    return { source, header: h, target, reason: a?.reason ?? "AI が判断しなかった列", confidence: a ? a.confidence : 0, transforms: (a?.transforms ?? []) as Transform[], ...(a?.prefix ? { prefix: a.prefix } : {}) };
+    return { source, header: h, target, reason: plainJa(a?.reason ?? "AI が判断しなかった列"), confidence: a ? a.confidence : 0, transforms: (a?.transforms ?? []) as Transform[], ...(a?.prefix ? { prefix: a.prefix } : {}) };
   });
-  return { master: name, headerStart: p.headerStart, headerRows: p.headerRows, columns, note: p.note, source: "ai" };
+  // 説明の文に内部の言葉（null など）を出さない
+  const note = p.note.replace(/\bnull\b/gi, "「使わない」").replace(/\btarget\b/gi, "登録先");
+  return { master: name, headerStart: p.headerStart, headerRows: p.headerRows, columns, note, source: "ai" };
 }
+
+/** 説明の文から内部の言葉（null・target）を日本語に */
+const plainJa = (t: string) => t.replace(/null/gi, "「使わない」").replace(/target/gi, "登録先");
 
 export interface Suggestion {
   mapping: Mapping;

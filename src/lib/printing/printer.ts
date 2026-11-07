@@ -22,11 +22,11 @@ export interface PrinterInfo {
   driver: string;
 }
 
-/** プリンターの一覧（Windows）。取れなければ空 */
+/** プリンターの一覧（Windows）。取れなければ空。出力は UTF-8 に（既定の cp932 のままだと日本語の名前が化けた。管理役2 11/7） */
 export async function listPrinters(): Promise<PrinterInfo[]> {
   if (process.platform !== "win32") return [];
   try {
-    const { stdout } = await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "Get-Printer | Select-Object Name,PortName,DriverName | ConvertTo-Json -Compress"], 30_000);
+    const { stdout } = await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Printer | Select-Object Name,PortName,DriverName | ConvertTo-Json -Compress"], 30_000);
     const j = JSON.parse(stdout.trim() || "[]") as { Name: string; PortName: string; DriverName: string } | { Name: string; PortName: string; DriverName: string }[];
     return (Array.isArray(j) ? j : [j]).map((p) => ({ name: p.Name, port: p.PortName, driver: p.DriverName }));
   } catch {

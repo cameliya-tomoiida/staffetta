@@ -155,6 +155,10 @@ export async function reviseProposal(id: string, text: string, who: string): Pro
     note: `直した点：${message}`,
     history: [...p.history, { at: nowIso(), who, what: "直すように頼んだ", text }, { at: nowIso(), who: "AI", what: `直した: ${message}` }],
   };
+  // 直した結果、することが無くなった（全部いらない）案は閉じる（空の案に OK が押せないように。管理役2 11/7）
+  if (!(next.kind === "purchase" ? next.purchase ?? [] : next.schedule ?? []).length) {
+    next = { ...next, status: "dropped", note: `直した点：${message}（することが無くなったので、この案は閉じました）`, history: [...next.history, { at: nowIso(), who: "AI", what: "することが無くなったので閉じた" }] };
+  }
   save(next);
   return next;
 }
@@ -165,6 +169,7 @@ export async function approveProposal(id: string, who: string): Promise<{ messag
   const p = getProposal(id);
   if (!p) throw new Error("案が見つかりません");
   if (p.status !== "open") throw new Error("この案はもう終わっています");
+  if (!(p.kind === "purchase" ? p.purchase ?? [] : p.schedule ?? []).length) throw new Error("この案にはすることがありません");
   let message = "";
   let href = "/";
   if (p.kind === "purchase") {
