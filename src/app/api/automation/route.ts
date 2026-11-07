@@ -17,6 +17,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const b = (await req.json()) as { action: string; patch?: Partial<AutomationSettings>; who?: string; orderId?: string };
+    b.who = await (await import("@/lib/auth/acting-user")).actingUser(b.who);
     let result: unknown;
     if (b.action === "tick") result = await runDueAutomations();
     else if (b.action === "save") result = saveAutomationSettings(b.patch ?? {}, b.who ?? "");

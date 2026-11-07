@@ -34,6 +34,9 @@ const LABEL: Record<string, string> = {
   sheet_sources: "読みに行くシート", sheet_columns: "シートの列と商品", kirara_items: "専用サイトのコード表", infomart_headers: "インフォマートの列名",
 };
 
+/** 操作した人（ログインしている人。ログインを使っていない間は画面で選んだ名前） */
+const actingUserOf = async (v: unknown) => (await import("@/lib/auth/acting-user")).actingUser(typeof v === "string" ? v : "");
+
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/masters/[name]">) {
   const { name } = await ctx.params;
   if (!isScreenName(name)) return NextResponse.json({ error: "知らないマスタです" }, { status: 404 });
@@ -69,13 +72,13 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/masters/[na
         else if (!mapping) throw new Error("列の対応がありません");
         else if (action === "ai_reshape") result = await ai.reshape(name, buf, file.name, mapping);
         else if (action === "ai_try") result = await ai.tryMapped(name, buf, file.name, mapping);
-        else if (action === "ai_apply") result = await ai.applyMapped(name, buf, file.name, mapping, String(form.get("who") ?? ""));
+        else if (action === "ai_apply") result = await ai.applyMapped(name, buf, file.name, mapping, await actingUserOf(form.get("who")));
         else throw new Error(`知らない操作です: ${action}`);
-      } else if (action === "apply") result = await applyUpload(name, buf, file.name, String(form.get("who") ?? ""), String(form.get("hash") ?? "") || undefined);
+      } else if (action === "apply") result = await applyUpload(name, buf, file.name, await actingUserOf(form.get("who")), String(form.get("hash") ?? "") || undefined);
       else result = await previewUpload(name, buf, file.name);
     } else {
       const b = (await req.json()) as { action: string; id?: string; input?: Record<string, string>; who?: string; counted?: number; note?: string; doughId?: string; lines?: RecipeLineInput[]; customerId?: string; weekOf?: string };
-      const who = b.who ?? "";
+      const who = await actingUserOf(b.who);
       if (b.action === "save") result = await saveOne(name, b.id, b.input ?? {}, who);
       else if (b.action === "delete") result = await remove(name, b.id ?? "", who);
       else if (b.action === "restore") result = await restore(name, b.id ?? "", who);

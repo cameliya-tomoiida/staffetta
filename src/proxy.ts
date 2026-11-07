@@ -5,6 +5,7 @@ import { decideActionAccess } from "@/lib/auth/action-guard";
 import { userFromCookies } from "@/lib/auth/current-user";
 import { accountsExist } from "@/lib/staff";
 import { homeOf } from "@/lib/auth/roles";
+const ACTING_USER_HEADER = "x-hub-user"; // src/lib/auth/acting-user.ts と同じ
 
 // トンネル（Cloudflare）経由で外から来たアクセスの通し方（中身は src/lib/tunnel-access.ts）。
 // - 外部サービスの受け口・LINE のミニアプリ・画面の JS/CSS はログイン無しで通す
@@ -15,6 +16,10 @@ export function proxy(request: NextRequest) {
   // 画面の枠（layout）が、どの画面を開こうとしているか分かるように（役割で見られる画面を分けるため）
   const headers = new Headers(request.headers);
   headers.set("x-hub-path", request.nextUrl.pathname + request.nextUrl.search);
+  // 操作した人の名前は、ログインの cookie から（画面から送られた「who」でなりすませないように。外から来た同じ見出しは消す）
+  headers.delete(ACTING_USER_HEADER);
+  const me = userFromCookies((n) => request.cookies.get(n)?.value);
+  if (me) headers.set(ACTING_USER_HEADER, encodeURIComponent(me.name));
   // 印刷の PDF を作るブラウザ（⑧ src/lib/printing/pass.ts）: URL の __pt を、ログインの cookie として読む。社内からのときだけ
   const printPass = request.nextUrl.searchParams.get("__pt");
   if (printPass && !request.headers.has("cf-connecting-ip") && !request.headers.has("cf-ray")) {

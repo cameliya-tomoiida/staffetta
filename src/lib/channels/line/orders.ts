@@ -14,6 +14,7 @@ import { checkLeadTime, deliveryDayProblem, type LeadTimeCheck } from "@/lib/lea
 import { suggestAlternatives } from "@/lib/alternatives";
 import { addDays } from "@/lib/purchase";
 import { isOn } from "@/lib/settings/features";
+import { kvGet, kvSet } from "@/lib/db/sqlite";
 
 // LINEから来た注文を、共通の型の Order（channel: "line"、status: "needs_review"）にして store.ts に保存する。
 
@@ -492,15 +493,34 @@ export async function liffContext(userId: string) {
  * お客さま番号（取引先 ID か 外部コード）と、登録している FAX 番号の下4けたが合えば、その LINE の人を取引先にひも付ける。
  * 番号だけでは、ほかの会社の商品・価格が見えないように、下4けたで本人を確かめる。
  */
-export async function claimCustomerByCode(userId: string, code: string, last4: string): Promise<{ customerName: string }> {
+/** お客さま番号の失敗の記録（userId ごと・接続元ごと。1時間に5回まで。セキュリティの確認 11/7: 番号は連番・下4けたは1万通りで、試し続けられた） */
+const CLAIM_FAILS = "line_claim_fails";
+const CLAIM_LIMIT = 5;
+function claimFails(): Record<string, number[]> {
+  return kvGet<Record<string, number[]>>(CLAIM_FAILS) ?? {};
+}
+
+export async function claimCustomerByCode(userId: string, code: string, last4: string, ip = ""): Promise<{ customerName: string }> {
   if (!isOn("line_own_products")) throw new Error("いまは使えません。会社までご連絡ください");
+  const hour = Date.now() - 3600_000;
+  const keys = [`u:${userId}`, ...(ip ? [`ip:${ip}`] : [])];
+  const fails = Object.fromEntries(Object.entries(claimFails()).map(([k, v]) => [k, v.filter((t) => t > hour)]).filter(([, v]) => v.length));
+  if (keys.some((k) => (fails[k]?.length ?? 0) >= CLAIM_LIMIT)) throw new Error("続けて間違えたので、しばらく使えません。お手数ですが、会社までご連絡ください");
+  // 既につながっている人の付け替えは、会社の画面（事務）だけ
+  if (customerIdForUser(await readLineState(), userId)) throw new Error("この LINE は、もうつながっています。変えるときは会社までご連絡ください");
+  const fail = (msg: string): never => {
+    for (const k of keys) fails[k] = [...(fails[k] ?? []), Date.now()];
+    kvSet(CLAIM_FAILS, fails);
+    throw new Error(msg);
+  };
   const c4 = last4.replace(/\D/g, "");
   const key = code.trim().toUpperCase();
-  if (!key || c4.length !== 4) throw new Error("お客さま番号と、FAX 番号の下4けたを入れてください");
+  if (!key || c4.length !== 4) fail("お客さま番号と、FAX 番号の下4けたを入れてください");
   const m = await (await import("@/lib/masters/seed-db")).loadMasters();
   const c = m.customers.find((x) => x.active !== false && (x.id.toUpperCase() === key || x.externalCode?.toUpperCase() === key));
   const fax4 = (c?.fax ?? "").replace(/\D/g, "").slice(-4);
-  if (!c || fax4.length !== 4 || fax4 !== c4) throw new Error("番号が合いませんでした。お手数ですが、会社までご連絡ください");
+  if (!c || fax4.length !== 4 || fax4 !== c4) fail("番号が合いませんでした。お手数ですが、会社までご連絡ください");
+  if (!c) throw new Error("番号が合いませんでした");
   await linkUserToCustomer(userId, c.id, "お客さま番号");
   return { customerName: c.name };
 }

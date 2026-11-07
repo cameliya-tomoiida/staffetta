@@ -20,6 +20,7 @@ import { readNoteAndReceive } from "@/lib/automation/receipt";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { approvePo, listOutbound, markSent, receiveDrafts, sendPo, sendPreview } from "@/lib/channels/outbound/workflow";
 import type { PoLike } from "@/lib/channels/outbound/render";
+import { actingUser } from "@/lib/auth/acting-user";
 
 export async function GET() {
   return NextResponse.json({ records: await listOutbound() });
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(r);
     }
     const b = (await req.json()) as { action: string; poId?: string; who?: string; drafts?: PoLike[]; date?: string; lines?: ReceiptLine[]; note?: string; replyId?: string; draftId?: string };
+    b.who = await actingUser(b.who);
     let result: unknown;
     if (b.action === "load") {
       if (!b.date || !/^\d{4}-\d{2}-\d{2}$/.test(b.date)) throw new Error("納品日を選んでください");

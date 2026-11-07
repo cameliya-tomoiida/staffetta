@@ -41,7 +41,9 @@ export async function liffLoadAction(auth: LiffAuth) {
 export async function liffClaimAction(auth: LiffAuth, code: string, last4: string): Promise<{ ok: true; customerName: string } | { ok: false; error: string }> {
   try {
     const { userId } = await whoIsLiffUser(auth);
-    const r = await claimCustomerByCode(userId, code, last4);
+    const h = await headers();
+    const ip = h.get("cf-connecting-ip") || h.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
+    const r = await claimCustomerByCode(userId, code, last4, ip);
     return { ok: true, customerName: r.customerName };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
         name: String(fd.get("name") || file.name.replace(/\.[^.]+$/, "")), category: String(fd.get("category") || ""), version: String(fd.get("version") || ""),
         note: String(fd.get("note") || ""), fileName: file.name, mime: file.type, bytes: new Uint8Array(await file.arrayBuffer()),
       },
-      String(fd.get("who") || "事務"),
+      (await (await import("@/lib/auth/acting-user")).actingUser(String(fd.get("who") || ""))) || "事務",
     );
     revalidatePath("/hygiene/manuals");
     return Response.json({ ok: true, id: m.id });

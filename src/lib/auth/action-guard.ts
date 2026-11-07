@@ -10,6 +10,19 @@ import { PUBLIC_PATHS } from "../tunnel-access";
 export type ActionDecision = { kind: "next" } | { kind: "unauthorized" } | { kind: "forbid" };
 
 const OPEN_PAGES = ["/login", "/setup", "/liff"];
+
+/** API ごとに使える役割（セキュリティの確認 11/7: ログインさえあれば役割を見ていなかった）。ここに無い API はログインしていれば使える */
+export const API_ROLES: [string, Role[]][] = [
+  ["/api/backup", ["管理者"]],
+  ["/api/masters", ["管理者", "事務"]],
+  ["/api/automation", ["管理者", "事務"]],
+  ["/api/outbound", ["管理者", "事務"]],
+  ["/api/features", ["管理者", "事務"]],
+  ["/api/import", ["管理者", "事務"]],
+  ["/api/staff", ["管理者"]],
+  ["/api/mail", ["管理者", "事務"]],
+  ["/api/slips", ["管理者", "事務", "営業"]],
+];
 const under = (p: string, b: string) => p === b || p.startsWith(b.endsWith("/") ? b : `${b}/`);
 
 export function decideActionAccess(x: {
@@ -25,7 +38,8 @@ export function decideActionAccess(x: {
   if (isApi) {
     if (PUBLIC_PATHS.some((b) => (b.endsWith("/") ? pathname.startsWith(b) : under(pathname, b)))) return { kind: "next" };
     if (!role) return { kind: "unauthorized" };
-    if (under(pathname, "/api/backup") && role !== "管理者") return { kind: "forbid" };
+    const rule = API_ROLES.find(([b]) => under(pathname, b));
+    if (rule && !rule[1].includes(role)) return { kind: "forbid" };
     return { kind: "next" };
   }
   if (OPEN_PAGES.some((b) => under(pathname, b))) return { kind: "next" };

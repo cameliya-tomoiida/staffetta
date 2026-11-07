@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const b = (await req.json()) as { action: string; date?: string; made?: { productId: string; pieces: number }[]; who?: string };
+    b.who = await (await import("@/lib/auth/acting-user")).actingUser(b.who);
     if (b.action !== "produce") throw new Error(`知らない操作です: ${b.action}`);
     const r = await recordProduction(b.date ?? "", b.made ?? [], b.who ?? "");
     revalidatePath("/", "layout");

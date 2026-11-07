@@ -13,6 +13,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const b = (await req.json()) as AlertActionInput;
+    b.who = await (await import("@/lib/auth/acting-user")).actingUser(b.who);
     const r = await runAlertAction(b);
     revalidatePath("/", "layout");
     return NextResponse.json(r);

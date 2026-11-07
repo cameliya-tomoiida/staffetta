@@ -346,6 +346,13 @@ export async function addManualOrderAction(input: {
  * 画面で「消えることを確認しました」にチェックしたときだけ呼べる（2段の確認）。
  */
 export async function resetDemoAction(input?: { understood?: boolean }) {
+  // セキュリティの確認（11/7）: ボタンを隠すだけでは、ログインした誰でも本物のデータを全部消せた → サーバーで止める
+  if (process.env.NODE_ENV === "production" && process.env.HUB_DEMO !== "1") throw new Error("本番ではデモを最初からにできません（HUB_DEMO=1 の試しのサーバーだけ）");
+  const { accountsExist } = await import("@/lib/staff");
+  if (accountsExist()) {
+    const { currentUser } = await import("@/lib/auth/current-user");
+    if ((await currentUser())?.role !== "管理者") throw new Error("デモを最初からにできるのは管理者だけです");
+  }
   if (!input?.understood) throw new Error("「本物のデータも消えることを確認しました」にチェックを入れてください");
   await resetDb();
   revalidatePath("/", "layout");

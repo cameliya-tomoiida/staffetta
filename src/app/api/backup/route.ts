@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const who = new URL(req.url).searchParams.get("who") || "（不明）";
+  const who = (await (await import("@/lib/auth/acting-user")).actingUser(new URL(req.url).searchParams.get("who"))) || "（不明）";
   try {
     const report = await importAll(await req.json(), who);
     return Response.json({ ok: true, report });
