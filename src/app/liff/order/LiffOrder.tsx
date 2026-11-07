@@ -36,6 +36,10 @@ const fmtYmd = (ymd: string) => {
   const t = new Date(`${ymd}T00:00:00Z`);
   return `${t.getUTCMonth() + 1}月${t.getUTCDate()}日（${WD[t.getUTCDay()]}）`;
 };
+const fmtShort = (ymd: string) => {
+  const t = new Date(`${ymd}T00:00:00Z`);
+  return `${t.getUTCMonth() + 1}/${t.getUTCDate()}(${WD[t.getUTCDay()]})`;
+};
 const serif = { fontFamily: '"Yu Mincho","YuMincho","Hiragino Mincho ProN","Noto Serif JP",serif' };
 
 function Plus({ className = "h-5 w-5" }: { className?: string }) {
@@ -53,9 +57,11 @@ function Minus({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-/** 選べない理由（選べる日は ""）: 日曜・お届けのない曜日は「休み」、締めを過ぎたら「締切」 */
+/**
+ * 選べない理由（選べる日は ""）: 取引先ごとのお届けのない曜日・定休日は「休み」、締めを過ぎたら「締切」。
+ * 日曜・土曜を一律に休みにはしない（担当者 11/7「うちは定休日がほぼない。土日に納品している所もある」）
+ */
 function closedOf(ctx: Ctx | null, ymd: string, tomorrow: string): string {
-  if (new Date(`${ymd}T00:00:00Z`).getUTCDay() === 0) return "休み";
   const info = ctx?.days.find((d) => d.ymd === ymd);
   if (!info) return "";
   if (info.closed) return "休み";
@@ -67,8 +73,8 @@ function closedOf(ctx: Ctx | null, ymd: string, tomorrow: string): string {
 /** 上の「‹ もどる」（はっきり大きく。担当者 11/7「戻れない」） */
 function BackButton({ onClick, disabled, className = "" }: { onClick: () => void; disabled?: boolean; className?: string }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className={`flex h-12 items-center gap-1 rounded-xl px-2 text-[18px] font-bold text-crust-600 active:bg-crust-50 ${className}`}>
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <button type="button" onClick={onClick} disabled={disabled} className={`flex h-11 items-center gap-0.5 rounded-xl px-2 text-[16px] font-bold text-crust-600 active:bg-crust-50 ${className}`}>
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M15 5l-7 7 7 7" />
       </svg>
       もどる
@@ -77,7 +83,7 @@ function BackButton({ onClick, disabled, className = "" }: { onClick: () => void
 }
 
 const Arrow = ({ d }: { d: string }) => (
-  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d={d} />
   </svg>
 );
@@ -93,28 +99,28 @@ function Calendar({ days, value, onPick, closed }: { days: string[]; value: stri
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   const inRange = new Set(days);
   const cells: (string | null)[] = [...Array<null>(first).fill(null), ...Array.from({ length: last }, (_, i) => `${ym}-${String(i + 1).padStart(2, "0")}`)];
-  const arrow = "grid h-12 w-12 place-items-center rounded-full text-crust-600 ring-1 ring-rule active:scale-95 disabled:opacity-25";
+  const arrow = "grid h-10 w-10 place-items-center rounded-full text-crust-600 ring-1 ring-rule active:scale-95 disabled:opacity-25";
   return (
-    <div className="mx-5 mt-2 rounded-3xl bg-white p-3 ring-1 ring-rule">
+    <div className="mx-4 mt-1.5 rounded-2xl bg-white px-2 py-2 ring-1 ring-rule">
       <div className="flex items-center justify-between">
         <button type="button" aria-label="前の月" className={arrow} disabled={mi === 0} onClick={() => setMi(mi - 1)}>
           <Arrow d="M15 5l-7 7 7 7" />
         </button>
-        <span className="text-[22px] font-bold" style={serif}>
+        <span className="text-[17px] font-bold" style={serif}>
           {m}月
         </span>
         <button type="button" aria-label="次の月" className={arrow} disabled={mi >= months.length - 1} onClick={() => setMi(mi + 1)}>
           <Arrow d="M9 5l7 7-7 7" />
         </button>
       </div>
-      <div className="mt-2 grid grid-cols-7 text-center text-[14px] font-bold text-ink-faint">
+      <div className="mt-1 grid grid-cols-7 text-center text-[12px] font-bold text-ink-faint">
         {WD.map((w, i) => (
           <span key={w} className={i === 6 ? "text-info-ink" : ""}>
             {w}
           </span>
         ))}
       </div>
-      <div className="mt-1 grid grid-cols-7 gap-1">
+      <div className="mt-0.5 grid grid-cols-7 gap-0.5">
         {cells.map((ymd, i) => {
           if (!ymd) return <span key={`b${i}`} />;
           const d = Number(ymd.slice(8));
@@ -129,12 +135,12 @@ function Calendar({ days, value, onPick, closed }: { days: string[]; value: stri
               aria-pressed={on}
               aria-label={`${m}月${d}日${why ? `（${why}）` : ""}`}
               onClick={() => onPick(ymd)}
-              className={`flex h-14 flex-col items-center justify-center rounded-xl leading-none ${
-                on ? "bg-crust-600 text-white" : !range ? "text-ink-faint/40" : why ? "bg-off-bg text-off-ink" : "text-ink ring-1 ring-rule active:bg-crust-50"
+              className={`mx-auto flex h-10 w-10 flex-col items-center justify-center rounded-lg leading-none ${
+                on ? "bg-crust-600 text-white" : !range ? "text-ink-faint/40" : why ? "bg-off-bg text-off-ink" : "text-ink active:bg-crust-50"
               }`}
             >
-              <span className="text-[20px] font-bold tabular-nums">{d}</span>
-              {why && <span className="mt-0.5 text-[11px]">{why}</span>}
+              <span className="text-[16px] font-bold tabular-nums">{d}</span>
+              {why && <span className="mt-0.5 text-[9px]">{why}</span>}
             </button>
           );
         })}
@@ -165,6 +171,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const [code, setCode] = useState("");
   const [last4, setLast4] = useState("");
   const [claimErr, setClaimErr] = useState("");
+  const [claimOpen, setClaimOpen] = useState(false);
   const claim = async () => {
     if (!auth) return;
     setClaimErr("");
@@ -290,175 +297,123 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
       )}
 
       {view === "order" && ctx && (
-        <div className="pb-[calc(112px+env(safe-area-inset-bottom))]">
-          {/* あいさつ */}
-          <div className="px-5 pt-6 pb-1">
-            <p className="flex items-center gap-2 text-[16px] font-bold tracking-[.15em] text-crust-500">
-              {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
-              <img src="/brand/staffetta-mark.svg" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
-              ORDER
-            </p>
-            <h1 className="mt-1 text-[26px] font-bold leading-tight" style={serif}>
-              {ctx.customerName ? (
-                <>
-                  {ctx.customerName}
-                  <span className="ml-1 whitespace-nowrap text-[18px]">さま</span>
-                </>
-              ) : (
-                "パンのご注文"
-              )}
+        <div className="pb-[calc(84px+env(safe-area-inset-bottom))]">
+          {/* あいさつ（担当者 11/7 16:00: 英字の印はやめ、取引先名と題を小さく1行ずつ。締めは薄い1行） */}
+          <div className="px-4 pt-4">
+            {ctx.customerName && <p className="text-[14px] font-bold text-ink-soft">{ctx.customerName} さま</p>}
+            <h1 className="text-[24px] font-bold leading-tight" style={serif}>
+              パンのご注文
             </h1>
-            {/* まだ会社につながっていない人: お客さま番号＋FAX の下4けたでつなぐと、御社の商品と価格が出る */}
-            {!ctx.linked && ctx.canClaim && (
-              <div className="mt-3 space-y-2 rounded-2xl border border-rule bg-sheet p-3">
-                <div className="text-[16px] font-bold">お客さま番号でつなぐ</div>
-                <div className="flex gap-2">
-                  <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="お客さま番号" aria-label="お客さま番号" className="min-h-12 min-w-0 flex-1 rounded-xl border border-rule-strong px-3 text-[18px]" />
-                  <input value={last4} onChange={(e) => setLast4(e.target.value)} inputMode="numeric" maxLength={4} placeholder="FAX 下4けた" aria-label="FAX 番号の下4けた" className="min-h-12 w-28 rounded-xl border border-rule-strong px-3 text-[18px]" />
-                </div>
-                <button type="button" onClick={claim} disabled={!code.trim() || last4.length !== 4} className="min-h-12 w-full rounded-xl bg-crust-600 text-[18px] font-bold text-white disabled:opacity-40">
-                  つなぐ
-                </button>
-                {claimErr && <p className="text-[16px] font-bold text-alert-ink">{claimErr}</p>}
-              </div>
-            )}
-            <p className="mt-1 text-[16px] text-ink-faint">
-              {pastCutoff ? `本日の締め切り（${ctx.cutoff}）をすぎました。あさって以降をお選びください。` : `ご注文の締め切りは、前日の ${ctx.cutoff} です。`}
+            <p className="mt-0.5 text-[13px] text-ink-faint">
+              {pastCutoff ? `本日の締め切り（${ctx.cutoff}）をすぎました` : `締め切り：前日 ${ctx.cutoff}`}
             </p>
           </div>
 
           {/* お届け日 */}
-          <section className="pt-4">
-            <h2 className="px-5 text-[16px] font-bold text-ink-faint">お届け日</h2>
+          <section className="pt-3">
+            <h2 className="px-4 text-[13px] font-bold text-ink-faint">お届け日</h2>
             <Calendar days={ctx.days.map((d) => d.ymd)} value={date} onPick={setDate} closed={dayClosed} />
           </section>
 
-          {/* 前回と同じ */}
+          {/* 前回と同じ（押すと数が入るだけ） */}
           {ctx.lastOrder && (
-            <section className="px-5 pt-5">
-              <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-rule">
-                <div className="flex items-baseline justify-between gap-2 px-5 pt-4">
-                  <h2 className="text-[18px] font-bold" style={serif}>
-                    前回と同じ内容で
-                  </h2>
-                  <span className="text-[16px] text-ink-faint">前回 {fmtYmd(ctx.lastOrder.deliveryDate)}</span>
-                </div>
-                <ul className="flex flex-wrap gap-1.5 px-5 pt-3">
-                  {ctx.lastOrder.items.map((i) => (
-                    <li key={i.productId} className="rounded-full bg-cream px-3 py-1 text-[16px]">
-                      {byId[i.productId]?.name} <b className="tabular-nums">{i.quantity}</b>
-                      {byId[i.productId]?.unit}
-                    </li>
-                  ))}
-                </ul>
-                <div className="p-4">
-                  <button
-                    onClick={() => fillLast(ctx)}
-                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-crust-50 text-[17px] font-bold text-crust-600 active:scale-[.98]"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <section className="px-4 pt-3">
+              <div className="rounded-2xl bg-white p-3 ring-1 ring-rule">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[13px] text-ink-faint">前回 {fmtShort(ctx.lastOrder.deliveryDate)}</span>
+                  <button onClick={() => fillLast(ctx)} className="flex h-10 items-center gap-1.5 rounded-xl bg-crust-50 px-3 text-[15px] font-bold text-crust-600 active:scale-[.98]">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
                     </svg>
-                    前回と同じ数を入れる
+                    前回の数を入れる
                   </button>
                 </div>
+                <p className="mt-1 text-[13px] leading-snug text-ink-soft">
+                  {ctx.lastOrder.items.map((i) => `${byId[i.productId]?.name ?? ""} ${i.quantity}${byId[i.productId]?.unit ?? ""}`).join("、")}
+                </p>
               </div>
             </section>
           )}
 
-          {/* 商品 */}
+          {/* 商品（1行 64px。絵は 32px・数は行の右） */}
           {groups.map((g) => (
-            <section key={g.title} className="px-5 pt-6">
-              <h2 className="pb-2 text-[16px] font-bold text-ink-faint">{g.title}</h2>
-              <ul className="overflow-hidden rounded-3xl bg-white ring-1 ring-rule">
+            <section key={g.title} className="px-4 pt-4">
+              <h2 className="pb-1.5 text-[13px] font-bold text-ink-faint">{g.title}</h2>
+              <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-rule">
                 {g.ids.map((id) => {
                   const p = byId[id];
                   if (!p) return null;
                   const late = lateOn(id);
-                  if (late)
-                    return (
-                      <li key={id} className="flex items-center gap-3 border-b border-rule bg-off-bg/60 py-3.5 pr-3 pl-3.5 text-off-ink last:border-b-0">
-                        <div className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl bg-cream opacity-50">
-                          <BreadArt name={p.name} className="h-10 w-10" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[18px] font-bold leading-snug">{p.name}</div>
-                          <div className="text-[16px]">この日のお届けは締め切りました</div>
-                        </div>
-                      </li>
-                    );
                   const q = qty[id] ?? 0;
+                  const sub = ctx.items?.[id] ? [ctx.items[id].price ? `${ctx.items[id].price}円/${p.unit}` : "", ctx.items[id].pack ?? "", ctx.items[id].lead].filter(Boolean).join("・") : "";
                   return (
-                    <li key={id} className="flex items-start gap-3 border-b border-rule py-3.5 pr-3 pl-3.5 last:border-b-0">
-                      <div className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl transition ${q ? "bg-crust-50 text-crust-600" : "bg-cream text-crust-500"}`}>
-                        <BreadArt name={p.name} className="h-10 w-10" />
-                      </div>
+                    <li key={id} className={`flex min-h-16 items-center gap-2.5 border-b border-rule px-3 py-2 last:border-b-0 ${late ? "bg-off-bg/60 text-off-ink" : ""}`}>
+                      <BreadArt name={p.name} className={`h-8 w-8 shrink-0 ${late ? "opacity-40" : q ? "text-crust-600" : "text-crust-500"}`} />
                       <div className="min-w-0 flex-1">
-                        <div className="text-[18px] font-bold leading-snug">{p.name}</div>
-                        {/* 取引先ごとの卸価格・入数・締め */}
-                        {ctx.items?.[id] && (
-                          <div className="text-[15px] text-ink-soft">
-                            {[ctx.items[id].price ? `${ctx.items[id].price}円/${p.unit}` : "", ctx.items[id].pack ?? "", ctx.items[id].lead].filter(Boolean).join("・")}
-                          </div>
-                        )}
-                        {q === 0 ? (
-                          <div className="text-[16px] text-ink-faint">{p.unit}で注文</div>
-                        ) : (
-                          <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className="text-[16px] text-ink-faint">{p.unit}</span>
-                            <div className="flex items-center rounded-full bg-crust-600 text-white">
-                              <button aria-label={`${p.name}を1へらす`} onClick={() => set(id, q - 1)} className="grid h-12 w-12 place-items-center active:scale-90">
-                                <Minus />
-                              </button>
-                              <button
-                                aria-label={`${p.name}の数を入力`}
-                                onClick={() => setPad({ id, value: String(q) })}
-                                className="min-w-[48px] text-center text-[22px] font-bold tabular-nums underline decoration-white/40 decoration-dotted underline-offset-4"
-                              >
-                                {q}
-                              </button>
-                              <button aria-label={`${p.name}を1ふやす`} onClick={() => set(id, q + 1)} className="grid h-12 w-12 place-items-center active:scale-90">
-                                <Plus />
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                        <div className="text-[17px] font-bold leading-snug">{p.name}</div>
+                        {late ? <div className="text-[13px]">この日は締め切りました</div> : sub && <div className="truncate text-[13px] text-ink-faint">{sub}</div>}
                       </div>
-                      {q === 0 && (
-                        <button
-                          aria-label={`${p.name}を追加`}
-                          onClick={() => set(id, 1)}
-                          className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-crust-600 ring-2 ring-crust-600 active:scale-95"
-                        >
-                          <Plus className="h-6 w-6" />
-                        </button>
-                      )}
+                      {!late &&
+                        (q === 0 ? (
+                          <button aria-label={`${p.name}を追加`} onClick={() => set(id, 1)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-crust-600 ring-[1.5px] ring-crust-600 active:scale-95">
+                            <Plus />
+                          </button>
+                        ) : (
+                          <div className="flex shrink-0 items-center rounded-full bg-crust-600 text-white">
+                            <button aria-label={`${p.name}を1へらす`} onClick={() => set(id, q - 1)} className="grid h-10 w-10 place-items-center active:scale-90">
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <button aria-label={`${p.name}の数を入力`} onClick={() => setPad({ id, value: String(q) })} className="min-w-[44px] text-center text-[18px] font-bold tabular-nums">
+                              {q}
+                              <span className="ml-0.5 text-[12px] font-normal">{p.unit}</span>
+                            </button>
+                            <button aria-label={`${p.name}を1ふやす`} onClick={() => set(id, q + 1)} className="grid h-10 w-10 place-items-center active:scale-90">
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
                     </li>
                   );
                 })}
               </ul>
             </section>
           ))}
-          <p className="px-6 pt-4 text-center text-[16px] text-ink-faint">数字を押すと、まとめて数を入れられます。</p>
-          <button onClick={() => setView("history")} className="mx-auto mt-2 block px-4 py-3 text-[16px] font-bold text-crust-600 underline underline-offset-4">
-            ご注文の履歴を見る
-          </button>
+          <div className="flex flex-col items-center gap-1 pt-4 text-[14px] font-bold text-crust-600">
+            <button onClick={() => setView("history")} className="px-4 py-2">
+              ご注文の履歴 ›
+            </button>
+            {/* まだ会社につながっていない人: 下に小さく1行。押すと入力欄（担当者 11/7: いちばん上で大きすぎる） */}
+            {!ctx.linked && ctx.canClaim && !claimOpen && (
+              <button onClick={() => setClaimOpen(true)} className="px-4 py-2">
+                お客さま番号でつなぐ ›
+              </button>
+            )}
+          </div>
+          {!ctx.linked && ctx.canClaim && claimOpen && (
+            <div className="mx-4 mt-2 space-y-2 rounded-2xl bg-white p-3 ring-1 ring-rule">
+              <div className="flex gap-2">
+                <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="お客さま番号" aria-label="お客さま番号" className="h-11 min-w-0 flex-1 rounded-xl border border-rule-strong px-3 text-[16px]" />
+                <input value={last4} onChange={(e) => setLast4(e.target.value)} inputMode="numeric" maxLength={4} placeholder="FAX 下4けた" aria-label="FAX 番号の下4けた" className="h-11 w-28 rounded-xl border border-rule-strong px-3 text-[16px]" />
+              </div>
+              <button type="button" onClick={claim} disabled={!code.trim() || last4.length !== 4} className="h-11 w-full rounded-xl bg-crust-600 text-[16px] font-bold text-white disabled:opacity-40">
+                つなぐ
+              </button>
+              {claimErr && <p className="text-[14px] font-bold text-alert-ink">{claimErr}</p>}
+            </div>
+          )}
 
           {/* 下の固定バー */}
           <div className="fixed inset-x-0 bottom-0 z-20">
-            <div className="mx-auto max-w-[520px] bg-white/95 px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur">
+            <div className="mx-auto max-w-[520px] bg-cream/95 px-4 pt-2 pb-[calc(10px+env(safe-area-inset-bottom))] backdrop-blur">
               <button
                 disabled={!items.length || !date}
                 onClick={() => setSheet(true)}
-                className="flex h-[60px] w-full items-center justify-between rounded-2xl bg-crust-600 px-5 text-white transition active:scale-[.98] disabled:bg-off-bg disabled:text-off-ink"
+                className="flex h-14 w-full items-center justify-between gap-2 rounded-2xl bg-crust-600 px-4 text-white transition active:scale-[.98] disabled:bg-off-bg disabled:text-off-ink"
               >
-                <span className="text-left leading-tight">
-                  <span className="block text-[16px] opacity-80">{date ? `${fmtYmd(date)} お届け` : "お届け日をえらぶ"}</span>
-                  <span key={bump} className="block text-[17px] font-bold" style={{ animation: "liffPop .25s ease-out" }}>
-                    {items.length ? `${items.length}品 えらびました` : "数をえらんでください"}
-                  </span>
+                <span key={bump} className="truncate text-[15px] font-bold" style={{ animation: "liffPop .25s ease-out" }}>
+                  {date ? `${fmtShort(date)} お届け` : "お届け日をえらぶ"}・{items.length ? `${items.length}品` : "数をえらぶ"}
                 </span>
-                <span className="flex items-center gap-1 text-[17px] font-bold">
+                <span className="flex shrink-0 items-center gap-0.5 text-[16px] font-bold">
                   確認する
                   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M9 5l7 7-7 7" />
@@ -480,29 +435,29 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
           >
             <div className="relative flex min-h-12 items-center justify-center">
               <BackButton onClick={() => setSheet(false)} disabled={sending} className="absolute left-0" />
-              <h2 className="text-[22px] font-bold" style={serif}>
+              <h2 className="text-[18px] font-bold" style={serif}>
                 ご注文の確認
               </h2>
             </div>
-            <div className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-rule">
-              <div className="text-[16px] font-bold text-ink-faint">お届け日</div>
-              <div className="text-[26px] font-bold" style={serif}>
+            <div className="mt-2 rounded-2xl bg-white p-4 ring-1 ring-rule">
+              <div className="text-[13px] font-bold text-ink-faint">お届け日</div>
+              <div className="text-[20px] font-bold" style={serif}>
                 {fmtYmd(date)}
               </div>
               <ul className="mt-3 divide-y divide-rule border-t border-rule">
                 {items.map(([id, q]) => (
-                  <li key={id} className="flex items-center gap-3 py-3">
-                    <BreadArt name={byId[id]?.name ?? ""} className="h-8 w-8 shrink-0 text-crust-500" />
-                    <span className="flex-1 text-[18px]">{byId[id]?.name}</span>
-                    <span className="text-[24px] font-bold tabular-nums">
+                  <li key={id} className="flex items-center gap-2.5 py-2.5">
+                    <BreadArt name={byId[id]?.name ?? ""} className="h-7 w-7 shrink-0 text-crust-500" />
+                    <span className="flex-1 text-[16px]">{byId[id]?.name}</span>
+                    <span className="text-[18px] font-bold tabular-nums">
                       {q}
-                      <span className="ml-0.5 text-[16px] font-normal">{byId[id]?.unit}</span>
+                      <span className="ml-0.5 text-[13px] font-normal">{byId[id]?.unit}</span>
                     </span>
                   </li>
                 ))}
               </ul>
               {dropped.length > 0 && (
-                <p className="mt-3 rounded-xl bg-off-bg px-3 py-2 text-[16px] text-off-ink">
+                <p className="mt-2 rounded-xl bg-off-bg px-3 py-2 text-[13px] text-off-ink">
                   {dropped.join("・")}は、この日のお届けの締め切りを過ぎたので外しました。
                 </p>
               )}
@@ -510,7 +465,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
             <button
               onClick={send}
               disabled={sending || !items.length}
-              className="mt-5 h-[60px] w-full rounded-2xl bg-crust-600 text-[19px] font-bold text-white active:scale-[.98] disabled:opacity-60"
+              className="mt-4 h-14 w-full rounded-2xl bg-crust-600 text-[17px] font-bold text-white active:scale-[.98] disabled:opacity-60"
             >
               {sending ? "おくっています…" : "注文する"}
             </button>
@@ -561,32 +516,27 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
       {view === "history" && ctx && (
         <div className="px-5 pt-3 pb-10">
           <BackButton onClick={() => setView("order")} className="-ml-2 mb-2" />
-          <p className="flex items-center gap-2 text-[16px] font-bold tracking-[.15em] text-crust-500">
-            {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
-            <img src="/brand/staffetta-mark.svg" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
-            HISTORY
-          </p>
-          <h1 className="mt-1 text-[26px] font-bold" style={serif}>
+          <h1 className="text-[22px] font-bold" style={serif}>
             ご注文の履歴
           </h1>
-          {ctx.history.length === 0 && <p className="mt-6 text-[16px] text-ink-faint">まだご注文はありません。</p>}
-          <ul className="mt-4 space-y-3">
+          {ctx.history.length === 0 && <p className="mt-4 text-[14px] text-ink-faint">まだご注文はありません。</p>}
+          <ul className="mt-3 space-y-2">
             {ctx.history.map((h) => (
-              <li key={h.id} className="rounded-3xl bg-white p-4 ring-1 ring-rule">
+              <li key={h.id} className="rounded-2xl bg-white px-3 py-2.5 ring-1 ring-rule">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[18px] font-bold" style={serif}>
-                    {fmtYmd(h.deliveryDate)} お届け
+                  <span className="text-[16px] font-bold">
+                    {fmtShort(h.deliveryDate)} お届け
                   </span>
                   <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-[16px] font-bold ${
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-[13px] font-bold ${
                       h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
                     }`}
                   >
                     {h.state === "confirmed" ? "確定" : h.state === "cancelled" ? "取消" : "確認中"}
                   </span>
                 </div>
-                {h.intent !== "new" && <div className="mt-1 text-[16px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : "変更のご連絡"}</div>}
-                <div className="mt-2 text-[16px] leading-relaxed">{h.items.map((i) => `${i.name} ${i.quantity}${i.unit}`).join("、") || "（内容を確認中）"}</div>
+                {h.intent !== "new" && <div className="text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : "変更のご連絡"}</div>}
+                <div className="mt-1 text-[14px] leading-snug">{h.items.map((i) => `${i.name} ${i.quantity}${i.unit}`).join("、") || "（内容を確認中）"}</div>
               </li>
             ))}
           </ul>
