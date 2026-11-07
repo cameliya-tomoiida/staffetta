@@ -340,6 +340,7 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "cutoff", label: "注文の締め（前日）", type: "time", required: true, example: "15:00" },
     { key: "deliveryTime", label: "納品時刻", type: "time", example: "08:30", help: "工程表の逆算に使う。空なら 08:00" },
     { key: "course", label: "配送コース", type: "text", example: "東コース（朝便）", help: "便のマスタの便ID。便のマスタに無いコースは、納品時刻から工程を逆算する" },
+    { key: "salesRep", label: "担当の営業", type: "text", example: "SX80", help: "スタッフの登録の ID（営業の人）。営業のホームは、ログインした人の担当の取引先だけを出す（担当が1件も無ければ全部）" },
     { key: "deliveryWeekdays", label: "納品する曜日", type: "weekdays", example: "月;水;金", help: "空なら便の曜日（それも空なら毎日）" },
     { key: "slipFormat", label: "伝票の様式", type: "enum", options: SLIP_FORMAT_OPTIONS, example: "共通・1枚に納品書と受領書（2つ切り）", help: "納品書・受領書の形。空なら 1枚に2つ。取引先ごとの様式（発注書の原本に合わせた形）は、作ったらここに足す" },
     { key: "rebateRate", label: "割戻しの率（%）", type: "number", min: 0, max: 50, example: "5", help: "請求金額から引く割戻し（給食会社など）。引いたあとの額に消費税。空なら割戻しなし" },

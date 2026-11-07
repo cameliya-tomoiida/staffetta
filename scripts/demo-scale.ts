@@ -10,6 +10,7 @@ import { MASTER_ORDER } from "../src/lib/masters/defs";
 import { scaleMasters, scaleOrders } from "../src/lib/masters/scale";
 import { DEMO_DATE } from "../src/data/demo-orders";
 import { oneRecordGap } from "./demo-record/one-gap";
+import { assignSalesReps } from "./demo-record/sales-rep";
 
 async function main() {
   const db = process.env.HUB_DB_PATH ?? "";
@@ -39,6 +40,8 @@ async function main() {
   // LINE の注文で、取引先ごとの商品だけを出す（見本の DB だけ ON。3100 は登録がそろってから人が ON）
   (await import("../src/lib/settings/features")).setFlag("line_own_products", true, "本物の規模の見本");
   // 記録の漏れは1件だけ（⑧・担当者「1件抜けています、アラーム」の形。13件は多すぎる）
+  // 営業の見本の人に、担当の取引先を 10社ずつ（営業のホームは担当の取引先だけを出す）
+  console.log("担当の営業:", JSON.stringify(await assignSalesReps(10)));
   const miss = oneRecordGap();
   console.log(`記録の漏れ: ${miss} の 9:00 の温度（原料保管庫）1件だけ`);
   console.log(`本物の規模の見本を入れました: 生地 ${m.doughs.length} 種類・注文 ${add.length} 件（${date}）`);
