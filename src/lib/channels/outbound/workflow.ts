@@ -13,8 +13,10 @@ import {
 } from "@/lib/purchase-store";
 import { emailDraft, entryCsv, purchasePdf, type PoLike } from "./render";
 import { isSiteMethod } from "./sites";
+import { findSupplier } from "@/lib/catalog";
 
-const DIR = path.join(process.cwd(), "data", "outbound");
+// 試しのサーバー（見本の DB）では HUB_OUTBOUND_DIR で別の置き場に（本物の出力を上書きしないように。11/7）
+const DIR = process.env.HUB_OUTBOUND_DIR || path.join(process.cwd(), "data", "outbound");
 
 export type OutputKind = "fax_pdf" | "pdf" | "email_eml" | "site_csv";
 
@@ -72,7 +74,7 @@ async function outputsOf(po: PurchaseOrder): Promise<OutputFile[]> {
   });
 }
 
-/** 送り出しの一覧。承認済みなのに出力がないもの（/purchase で承認された等）は、ここで出力を作る */
+/** 発注の送信の一覧。承認済みなのに出力がないもの（/purchase で承認された等）は、ここで出力を作る */
 export async function listOutbound(): Promise<OutboundRecord[]> {
   const pos = (await listPurchaseOrders()).filter((p) => p.lines.some((l) => l.units > 0));
   const out: OutboundRecord[] = [];
@@ -98,6 +100,82 @@ export async function approvePo(poId: string, who: string) {
   const rec = await approvePurchaseOrder(poId, who);
   await writeOutputs(rec);
   return rec;
+}
+
+// ───────── 発注の送信（担当者 11/7「送った、ではなく送信する。押すと確認の画面、本当に送信するで初めて送る」） ─────────
+
+const METHOD: Record<string, string> = { fax: "FAX", email: "メール", phone: "電話" };
+
+export interface SendPreview {
+  poId: string;
+  supplierName: string;
+  method: string;
+  /** 宛先（メールアドレス・FAX 番号）。分からなければ "" */
+  to: string;
+  deliveryDate: string;
+  lines: { name: string; units: number; unitLabel: string }[];
+  /** system = 確認のあとシステムが送る／manual = 出力（PDF・下書き・CSV）を作るだけで、送るのは人 */
+  plan: "system" | "manual";
+  /** 確認の画面に出す一言 */
+  message: string;
+}
+
+/** システムが送れるか（メール: Microsoft のメールがつながっていて、送信の鍵が ON、宛先がある）。FAX の送信の口はまだ無い */
+async function systemSendable(po: PurchaseOrder): Promise<{ ok: boolean; to: string; why: string }> {
+  const sup = findSupplier(po.supplierId);
+  const contact = (sup as { contact?: string } | undefined)?.contact ?? "";
+  if (po.method === "email") {
+    const to = /@/.test(contact) ? contact : "";
+    const { mailStatus } = await import("@/lib/mail/graph");
+    const { isOn } = await import("@/lib/settings/features");
+    if (!to) return { ok: false, to, why: "メールアドレスが未登録" };
+    if (!mailStatus().connected) return { ok: false, to, why: "メールがつながっていない" };
+    if (!isOn("notice_send")) return { ok: false, to, why: "送信の鍵が OFF" };
+    return { ok: true, to, why: "" };
+  }
+  return { ok: false, to: contact, why: po.method === "fax" ? "FAX の送信の口がまだ無い" : "" };
+}
+
+export async function sendPreview(poId: string): Promise<SendPreview> {
+  const po = await getPurchaseOrder(poId);
+  if (!po) throw new Error("発注書が見つかりません");
+  if (po.status === "draft") throw new Error("先に承認してください");
+  if (po.status === "sent") throw new Error("この発注書はもう送信済みです");
+  const s = await systemSendable(po);
+  const name = String((po as PoLike).supplierName ?? findSupplier(po.supplierId)?.name ?? po.supplierId);
+  const method = isSiteMethod(po.method) ? "サイトに入力" : (METHOD[po.method] ?? po.method);
+  const message = s.ok
+    ? `「本当に送信する」を押すと、${s.to} にメールで送ります（発注書の PDF を添付）。`
+    : po.method === "email"
+      ? `この仕入先にはメールの下書きを作ります。送るのは人が行います（${s.why}）。`
+      : po.method === "fax"
+        ? "この仕入先には FAX 用 PDF を作ります。送るのは人が行います。"
+        : isSiteMethod(po.method)
+          ? "この仕入先には、サイトに入力する CSV（入力用リスト）を作ります。入力は人が行います。"
+          : "送るのは人が行います（電話など）。";
+  return { poId, supplierName: name, method, to: s.to, deliveryDate: po.deliveryDate, lines: po.lines.filter((l) => l.units > 0).map((l) => ({ name: l.name, units: l.units, unitLabel: l.unitLabel })), plan: s.ok ? "system" : "manual", message };
+}
+
+/** 「本当に送信する」。送れるならシステムが送って送信済みに。送れないなら出力を作って送信済み（手で送る）に。誰がいつ押したかを残す */
+export async function sendPo(poId: string, who: string): Promise<{ message: string }> {
+  if (!who.trim()) throw new Error("送信する人の名前を選んでください");
+  const po = await getPurchaseOrder(poId);
+  if (!po) throw new Error("発注書が見つかりません");
+  if (po.status !== "approved") throw new Error(po.status === "sent" ? "この発注書はもう送信済みです" : "先に承認してください");
+  await writeOutputs(po);
+  const s = await systemSendable(po);
+  if (s.ok) {
+    const pdf = await purchasePdf(po);
+    const mail = await emailDraft(po, pdf);
+    const { sendMail } = await import("@/lib/mail/send");
+    const r = await sendMail({ to: [s.to], subject: mail.subject, body: mail.text, attachments: [{ name: `発注書_${po.id}.pdf`, contentType: "application/pdf", base64: pdf.toString("base64") }] }, who);
+    if (!r.ok) throw new Error(`メールを送れませんでした（${r.error ?? "不明"}）。送信済みにはしていません`);
+    await markSentInStore(poId, who, `メールで送信（システム・${s.to}）`);
+    return { message: `${s.to} にメールで送信しました` };
+  }
+  const how = po.method === "fax" ? "FAX 用 PDF を作りました（送るのは人）" : po.method === "email" ? "メールの下書きを作りました（送るのは人）" : isSiteMethod(po.method) ? "入力用の CSV を作りました（入力は人）" : `${METHOD[po.method] ?? "人"}で送信（人）`;
+  await markSentInStore(poId, who, how);
+  return { message: `送信済みにしました（${how}）` };
 }
 
 /** 人が送ったあとに押す「送った」。③の markSent を呼ぶ。これを押すまで sent にはならない */

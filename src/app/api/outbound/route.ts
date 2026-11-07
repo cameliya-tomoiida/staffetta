@@ -1,11 +1,13 @@
-// 発注の送り出し。発注書の状態は③の purchase-store（data/db.json）に持つ。
+// 発注の送信。発注書の状態は③の purchase-store（data/db.json）に持つ。
+//   POST /api/outbound { action: "send_preview", poId }  … 送信の確認の画面の中身（宛先・送り方・内容・システムが送るか）
+//   POST /api/outbound { action: "send", poId, who }     … 「本当に送信する」。送れるならシステムが送る（メール＋送信の鍵 ON）、送れないなら出力を作って送信済み（手で送る）
 //   GET  /api/outbound                                  … 発注書の一覧と出力ファイル
 //   POST /api/outbound { action: "load", date }         … ③の計算で、その納品日の発注書の下書きを作って保存
 //   POST /api/outbound { action: "receive", drafts }    … 下書きをそのまま保存（承認済み・送信済みは上書きしない）
 //   POST /api/outbound { action: "approve", poId, who } … 人が承認 → 出力（PDF・入力リスト・CSV・メール下書き）を作る
 //   POST /api/outbound { action: "fax_send", poId }     … 「複合機から送信」（いまはダミー。何も送らない）
 //   POST /api/outbound { action: "sent", poId, who }    … 人が送ったあとに「送った」を記録
-// ここから外へ送信することはない。
+// 外へ送るのは「send」で、メールがつながっていて送信の鍵が ON のときだけ。
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { allOrders } from "@/demo/all-orders";
@@ -16,7 +18,7 @@ import { markDraftSent } from "@/lib/drafts/store";
 import { autoApprovePurchaseOrders } from "@/lib/automation/tasks";
 import { readNoteAndReceive } from "@/lib/automation/receipt";
 import { loadMasters } from "@/lib/masters/seed-db";
-import { approvePo, listOutbound, markSent, receiveDrafts } from "@/lib/channels/outbound/workflow";
+import { approvePo, listOutbound, markSent, receiveDrafts, sendPo, sendPreview } from "@/lib/channels/outbound/workflow";
 import type { PoLike } from "@/lib/channels/outbound/render";
 
 export async function GET() {
@@ -47,7 +49,9 @@ export async function POST(req: NextRequest) {
     else if (b.action === "fax_send") {
       // デモ用のダミー。複合機とはまだつないでいない（docs/fax-sending.md）。状態は変えない
       result = { dummy: true, message: "（デモ）複合機への送信はまだつないでいません。複合機から送ったら「送った」を押してください。" };
-    } else if (b.action === "sent") result = await markSent(b.poId ?? "", b.who ?? "");
+    } else if (b.action === "send_preview") result = await sendPreview(b.poId ?? "");
+    else if (b.action === "send") result = await sendPo(b.poId ?? "", b.who ?? "");
+    else if (b.action === "sent") result = await markSent(b.poId ?? "", b.who ?? "");
     else if (b.action === "draft_sent") result = { ...markDraftSent(b.draftId ?? "", b.who ?? ""), message: "送信済みにしました" };
     else if (b.action === "reply_sent") result = { ...markReplySent(b.replyId ?? "", b.who ?? ""), message: "返事を送信済みにしました" };
     else if (b.action === "arrived") {

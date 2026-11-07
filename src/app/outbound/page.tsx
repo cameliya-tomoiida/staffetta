@@ -40,8 +40,8 @@ export default async function OutboundPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="発注の送り出し"
-        lead="発注書の下書きを人が承認すると、送り先ごとに「FAX用PDF」「メール下書き」「サイトの入力用リスト・CSV」ができます。送信は人が行い、送ったあとに「送った」を押します（自動では送りません）。"
+        title="発注を送信する"
+        lead="承認した発注書を「送信する」で送ります。確認の画面で「本当に送信する」を押すまで送りません。メールがつながっていて送信の鍵が ON ならシステムが送り、そうでなければ FAX 用 PDF・メールの下書き・サイトの入力用 CSV を作ります（送るのは人）。"
       />
       <OutboundClient records={views} dates={dates} replies={replies} drafts={drafts} />
     </div>

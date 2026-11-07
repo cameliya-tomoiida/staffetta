@@ -163,7 +163,7 @@ export async function reviseProposal(id: string, text: string, who: string): Pro
   return next;
 }
 
-/** OK → そのまま実行（発注の案: 仕入先ごとの発注書を作って承認 → 送り出しへ。工程表の案: 時間割に書く） */
+/** OK → そのまま実行（発注の案: 仕入先ごとの発注書を作って承認 → 発注の送信へ。工程表の案: 時間割に書く） */
 export async function approveProposal(id: string, who: string): Promise<{ message: string; href: string }> {
   if (!who.trim()) throw new Error("OK する人を選んでください");
   const p = getProposal(id);
@@ -190,7 +190,7 @@ export async function approveProposal(id: string, who: string): Promise<{ messag
       await savePurchaseOrder(po, "AI の案");
       await approvePurchaseOrder(po.id, who);
     }
-    message = `発注書 ${(p.purchase ?? []).length}件を作って OK にしました（送るのは送り出しで）`;
+    message = `発注書 ${(p.purchase ?? []).length}件を作って OK にしました（送るのは「発注の送信」で）`;
     href = "/outbound";
   } else {
     const { ttKey } = await import("@/lib/home-dept");

@@ -98,7 +98,7 @@ export function ShortageList({ date, rows }: { date: string; rows: ShortRow[] })
                       メールで送る
                     </button>
                   )}
-                  <Link href="/outbound" className="btn-ghost text-base">送り出しへ ›</Link>
+                  <Link href="/outbound" className="btn-ghost text-base">発注の送信へ ›</Link>
                 </div>
               )}
               {err[x.materialId] && <p className="mt-1 text-sm font-bold text-alert-ink">{err[x.materialId]}</p>}
@@ -122,8 +122,8 @@ export function ShortageList({ date, rows }: { date: string; rows: ShortRow[] })
                       <pre className="max-h-40 overflow-auto font-sans whitespace-pre-wrap">{p.mail.body}</pre>
                     </div>
                   )}
-                  {(p.method === "infomart" || p.method.endsWith("_site") || p.method === "aspit") && <div className="text-sm">OK のあと「送り出し」に、{p.siteName ?? "サイト"}に入れる数が出ます。</div>}
-                  {p.method === "fax" && <div className="text-sm">OK のあと「送り出し」に、FAX の発注書（PDF）が出ます。</div>}
+                  {(p.method === "infomart" || p.method.endsWith("_site") || p.method === "aspit") && <div className="text-sm">OK のあと「発注の送信」に、{p.siteName ?? "サイト"}に入れる数が出ます。</div>}
+                  {p.method === "fax" && <div className="text-sm">OK のあと「発注の送信」に、FAX の発注書（PDF）が出ます。</div>}
                   {p.method === "phone" && <div className="text-sm">電話 <b className="num">{p.contact}</b></div>}
                   <div className="flex flex-wrap items-center gap-2">
                     <select value={who} onChange={(e) => setWho(e.target.value)} className="min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-base" aria-label="OK する人">
@@ -131,10 +131,10 @@ export function ShortageList({ date, rows }: { date: string; rows: ShortRow[] })
                       {staff.map((s) => <option key={s}>{s}</option>)}
                     </select>
                     <button type="button" className="btn-primary text-base" disabled={pending || !who || p.status !== "draft"} onClick={() => approve(x.materialId, p.poId)}>
-                      OK（送り出しへ）
+                      OK（発注の送信へ）
                     </button>
                   </div>
-                  {p.status !== "draft" && <p className="text-sm font-bold text-ok-ink">この発注書は OK 済みです（{p.status === "sent" ? "送った" : "送り出し待ち"}）。</p>}
+                  {p.status !== "draft" && <p className="text-sm font-bold text-ok-ink">この発注書は OK 済みです（{p.status === "sent" ? "送信済み" : "送信待ち"}）。</p>}
                 </div>
               )}
             </li>

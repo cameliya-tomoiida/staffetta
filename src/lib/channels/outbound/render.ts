@@ -140,7 +140,7 @@ export function purchasePdf(po: PoLike): Promise<Buffer> {
 }
 
 /** メールの下書き（.eml）。To は仕入先の連絡先がメールアドレスならそれ。送信は人が行う */
-export async function emailDraft(po: PoLike, pdf: Buffer): Promise<{ fileName: string; content: string; to: string; subject: string }> {
+export async function emailDraft(po: PoLike, pdf: Buffer): Promise<{ fileName: string; content: string; to: string; subject: string; text: string }> {
   const sup = findSupplier(po.supplierId) ?? supplierById(po.supplierId);
   const to = sup?.contact && /@/.test(sup.contact) ? sup.contact : "（宛先を入れてください）";
   const subject = `【発注】${fmtDate(po.deliveryDate)}納品分（${po.id}）`;
@@ -170,5 +170,5 @@ export async function emailDraft(po: PoLike, pdf: Buffer): Promise<{ fileName: s
     draft: true,
     attachments: [{ filename: `発注書_${po.id}.pdf`, contentType: "application/pdf", content: pdf }],
   });
-  return { fileName: `${po.id}_メール下書き.eml`, content, to, subject };
+  return { fileName: `${po.id}_メール下書き.eml`, content, to, subject, text };
 }

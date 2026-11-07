@@ -54,6 +54,28 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
     }
   }
 
+  // 「送信する」→ 確認の画面（宛先・送り方・内容）→「本当に送信する」で初めて送る（担当者 11/7）
+  const [confirm, setConfirm] = useState<null | {
+    poId: string; supplierName: string; method: string; to: string; deliveryDate: string;
+    lines: { name: string; units: number; unitLabel: string }[]; plan: "system" | "manual"; message: string;
+  }>(null);
+  async function openSend(poId: string) {
+    setMsg(null);
+    try {
+      const res = await fetch("/api/outbound", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "send_preview", poId }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setConfirm(d);
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  const sendButton = (poId: string, big = false) => (
+    <Button variant="primary" size={big ? "lg" : undefined} className={big ? "w-full" : ""} disabled={busy || !who} onClick={() => openSend(poId)}>
+      送信する
+    </Button>
+  );
+
   const faxQueue = records.filter((r) => r.faxWaiting);
   const field = "min-h-12 rounded-lg border border-rule-strong bg-sheet px-3 text-base text-ink";
 
@@ -66,7 +88,7 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
             <option value="">えらんでください</option>
             {STAFF.map((s) => <option key={s}>{s}</option>)}
           </select>
-          {!who && <span className="text-[13px] font-normal text-ink-faint">先に名前を選んでください（「送った」が押せます）</span>}
+          {!who && <span className="text-[13px] font-normal text-ink-faint">先に名前を選んでください（「送信する」が押せます）</span>}
         </label>
         <label className="flex items-center gap-2 text-sm font-bold text-ink-soft">
           納品日
@@ -94,8 +116,7 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
             {r.outputs.map((o) => (
               <a key={o.fileName} className={buttonClass("ghost", "md", "text-sm")} href={file(r.po.id, o.fileName)} target="_blank" rel="noreferrer">{o.label}</a>
             ))}
-            <Button variant="primary" disabled={busy} onClick={() => act({ action: "fax_send", poId: r.po.id })}>複合機から送信（デモ）</Button>
-            <Button variant="ok" disabled={busy || !who} onClick={() => act({ action: "sent", poId: r.po.id }, "送信済みにしました")}>送った</Button>
+            {sendButton(r.po.id)}
           </div>
         ))}
       </section>
@@ -211,12 +232,7 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
                     </div>
                   </div>
                 )}
-                {po.status === "approved" && po.method !== "fax" && (
-                  <Button variant="primary" size="lg" className="w-full" disabled={busy || !who} onClick={() => act({ action: "sent", poId: po.id }, "送信済みにしました")}>
-                    送った（人が送信したあとに押す）
-                  </Button>
-                )}
-                {po.status === "approved" && po.method === "fax" && <Notice tone="review">上の「FAX 送信待ち」から送ってください</Notice>}
+                {po.status === "approved" && sendButton(po.id, true)}
                 {po.status === "sent" && r.receipt && (
                   <ReceivePanel
                     poId={po.id}
@@ -232,6 +248,64 @@ export function OutboundClient({ records, dates, replies = [], drafts = [] }: { 
           </section>
         );
       })}
+      {confirm && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50 sm:items-center" role="dialog" aria-label="送信の確認" onClick={() => !busy && setConfirm(null)}>
+          <div className="max-h-[90dvh] w-full max-w-[560px] space-y-3 overflow-y-auto rounded-t-2xl bg-sheet p-4 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-black">送信の確認</h2>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[15px]">
+              <dt className="text-ink-soft">宛先</dt>
+              <dd className="font-bold">{confirm.supplierName} 御中</dd>
+              <dt className="text-ink-soft">送り方</dt>
+              <dd className="font-bold">
+                {confirm.method}
+                {confirm.to && <span className="ml-2 font-normal text-ink-soft">{confirm.to}</span>}
+              </dd>
+              <dt className="text-ink-soft">納品</dt>
+              <dd className="font-bold">{fmtDate(confirm.deliveryDate)}</dd>
+            </dl>
+            <table className="m-keep w-full border-collapse text-[15px]">
+              <thead>
+                <tr className="border-y border-rule-strong">
+                  <th className="!bg-cream py-1.5 pl-2 !text-left text-[13px] text-ink-faint">品名</th>
+                  <th className="bg-cream pr-2 text-right text-[13px] text-ink-faint">数</th>
+                </tr>
+              </thead>
+              <tbody>
+                {confirm.lines.map((l, i) => (
+                  <tr key={i} className="border-b border-rule">
+                    <td className="bg-sheet py-1.5 pl-2 text-left">{l.name}</td>
+                    <td className="pr-2 text-right whitespace-nowrap">
+                      <Qty units={l.units} unit={l.unitLabel} />
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="bg-sheet py-1.5 pl-2 text-left font-bold">合計</td>
+                  <td className="pr-2 text-right font-bold">{confirm.lines.length} 品</td>
+                </tr>
+              </tbody>
+            </table>
+            <Notice tone={confirm.plan === "system" ? "alert" : "review"}>{confirm.message}</Notice>
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                disabled={busy || !who}
+                onClick={async () => {
+                  await act({ action: "send", poId: confirm.poId });
+                  setConfirm(null);
+                }}
+              >
+                {busy ? "送信しています…" : "本当に送信する"}
+              </Button>
+              <Button size="lg" disabled={busy} onClick={() => setConfirm(null)}>
+                やめる
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

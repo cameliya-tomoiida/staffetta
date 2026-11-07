@@ -61,7 +61,7 @@ export async function prepareShortageOrderAction(date: string, materialId: strin
   }
 }
 
-/** OK（承認）。送るのは「送り出し」で人が行う */
+/** OK（承認）。送るのは「発注の送信」で行う */
 export async function approveShortageOrderAction(poId: string, who: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     if (!who.trim()) throw new Error("OK する人を選んでください");

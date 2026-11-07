@@ -12,7 +12,7 @@ export const SCREENS: ScreenGuide[] = [
   { href: "/cards", name: "製品カード", what: "生地ごとの製品カード。分かっていることは自動で入り、現場で測った所だけ書く。A4 横で印刷" },
   { href: "/hygiene", name: "衛生管理", what: "衛生のチェックシートの記入と印刷" },
   { href: "/purchase", name: "発注書", what: "仕入先 × 便ごとの発注書の下書き。承認してから送る。締めの時刻つき" },
-  { href: "/outbound", name: "送り出し", what: "承認した発注書を FAX・メール・受発注サイトで送る。受付の返事の送信" },
+  { href: "/outbound", name: "発注の送信", what: "承認した発注書を FAX・メール・受発注サイトで送る。受付の返事の送信" },
   { href: "/alerts", name: "お知らせ", what: "急ぎ・注意・お知らせの一覧。担当者に回す・あとで・済み" },
   { href: "/line", name: "LINE受付", what: "LINE のお客さんを取引先にひも付ける。確定の連絡と送信の記録" },
   { href: "/import", name: "取り込み", what: "メール・CSV・スプレッドシートの注文を取り込む" },

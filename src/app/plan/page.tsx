@@ -318,7 +318,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
           </div>
         </details>
       )}
-      {/* 足りない材料（文ではなくリスト。行ごとに「発注」→ 人が OK → 送り出し） */}
+      {/* 足りない材料（文ではなくリスト。行ごとに「発注」→ 人が OK → 発注の送信） */}
       <div className={vis("material")}>
         {shortRows.length === 0 && <p className="no-print mb-4 rounded-lg bg-ok-bg px-4 py-3 text-lg font-bold text-ok-ink">発注が必要な材料はありません</p>}
         <ShortageList date={date} rows={shortRows} />

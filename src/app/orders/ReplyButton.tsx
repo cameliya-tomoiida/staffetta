@@ -27,7 +27,7 @@ export function ReplyButton({ orderId, who }: { orderId: string; who: string }) 
       {msg && (
         <Notice tone={msg.ok ? "ok" : "alert"} className="text-sm">
           {msg.text}
-          {msg.ok && <> <Link className="underline" href="/outbound#replies">送り出しで確かめて送る</Link></>}
+          {msg.ok && <> <Link className="underline" href="/outbound#replies">発注の送信の画面で確かめて送る</Link></>}
         </Notice>
       )}
     </div>

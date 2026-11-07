@@ -21,7 +21,7 @@ export function StockMoves({ master, item, rows }: { master: StockMaster; item?:
       <div className="flex flex-wrap items-baseline gap-3">
         <h2 className="text-xl font-black">在庫の動き{item ? `：${nameOf(item)}` : ""}</h2>
         {item && <Link className="text-sm underline" href={`${base}#stock-moves`}>全部を見る</Link>}
-        <span className="text-sm text-ink-soft">入荷は「送り出し」、使用は「生産計画」の作り終えた、棚卸は上の一覧から。</span>
+        <span className="text-sm text-ink-soft">入荷は「発注の送信」、使用は「生産計画」の作り終えた、棚卸は上の一覧から。</span>
       </div>
       {moves.length === 0 ? (
         <p className="text-ink-soft">まだ動きはありません。</p>

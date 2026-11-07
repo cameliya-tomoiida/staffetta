@@ -261,8 +261,8 @@ export function PurchaseClient({
       {shown.length === 0 ? (
         <Empty>
           {pos.length === 0 ? "今は発注するものがありません。" : "この状態の発注書はありません。"}
-          {/* 材料の発注書（AI の案から作った分など）は送り出しの画面にある（管理役2 11/7） */}
-          <Link href="/outbound" className="mt-1 block text-[15px] font-bold underline">材料の発注書は「送り出し」にあります ›</Link>
+          {/* 材料の発注書（AI の案から作った分など）は発注の送信の画面にある（管理役2 11/7） */}
+          <Link href="/outbound" className="mt-1 block text-[15px] font-bold underline">材料の発注書は「発注の送信」にあります ›</Link>
         </Empty>
       ) : (
         <>
@@ -401,7 +401,7 @@ function PoSheet({
             </div>
             <div className="flex flex-wrap gap-2">
               <Link href="/outbound" className={buttonClass("ghost", "lg", "w-full sm:w-auto")}>
-                送り出しの準備（PDF・メール・入力リスト）
+                発注の送信へ（PDF・メール・入力リスト）
               </Link>
               <Button variant="primary" size="lg" className="w-full whitespace-nowrap sm:w-auto sm:flex-1" disabled={busy} onClick={onSend}>
                 <Icon.send className="h-6 w-6" />

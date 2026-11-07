@@ -75,12 +75,12 @@ export const FEATURES = [
   { key: "purchase_auto_approve", group: "発注", kind: "auto", default: false, owner: "③", dependsOn: "purchase_orders",
     label: "発注書の自動承認", description: "発注書を、人の承認なしで承認済みにします。OFF だと、人が中身を見て承認します。" },
   { key: "outbound", group: "発注", kind: "feature", default: true, owner: "⑤", menu: ["/outbound"],
-    label: "送り出し（FAX・サイト）", description: "承認した発注書を、仕入先へ FAX・メール・サイトで送る画面を使います。" },
+    label: "発注の送信", description: "承認した発注書を、仕入先へ FAX・メール・サイトで送る画面を使います。" },
   // ───── 在庫 ─────
   { key: "stock", group: "在庫", kind: "feature", default: true, owner: "⑤",
     label: "在庫の出入り", description: "入荷・製造で使った分・棚卸を記録し、材料と包材の在庫の数を足し引きします。使わないと、在庫の数は変わりません。" },
   { key: "receipt_auto_receive", group: "在庫", kind: "auto", default: false, owner: "⑤", dependsOn: "stock",
-    label: "納品書を読んで自動で入荷", description: "送り出しの「入荷」に納品書の写真・PDF を入れると Claude が読み、発注書と全部の数が合えば入荷にします。OFF だと、読んだ数を案として出し、人が「入荷した」を押します。" },
+    label: "納品書を読んで自動で入荷", description: "発注の送信の「入荷」に納品書の写真・PDF を入れると Claude が読み、発注書と全部の数が合えば入荷にします。OFF だと、読んだ数を案として出し、人が「入荷した」を押します。" },
   // ───── アラート ─────
   { key: "alerts", group: "アラート", kind: "feature", default: true, owner: "①",
     label: "お知らせ（アラート）", description: "締めが近い・届いていない・在庫が少ないなどを、お知らせとして出します。" },

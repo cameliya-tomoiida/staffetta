@@ -21,7 +21,7 @@ const SWITCHES: Sw[] = [
   { key: "poAutoApprove", title: "ふだんどおりの発注書を自動で承認", detail: "過去4週の同じ曜日の平均から下の幅に入る量で、初めての品が無く、金額が上限以下の発注書。送るのは人。" },
   { key: "productionAutoDone", title: "夜に「計画どおり作った」で製造の実績を確定", detail: "下の時刻を過ぎて、まだ記録が無い日だけ。違った品は生産計画の「実績の数を直す」で人が直す。" },
   { key: "replyAutoQueue", title: "返事が要る先の返事を自動で送信待ちに入れる", detail: "全行そのまま受けられる返事は「そのまま送れます」、変更・受けられない品があるものは「人が見てから送る」。送るのは人。" },
-  { key: "receiptAutoReceive", title: "納品書を読んで、発注書と合えば自動で入荷", detail: "送り出しの「入荷」に納品書の写真・PDF を入れると Claude が読み、全部の数が合えば入荷にする。差がある行は人。" },
+  { key: "receiptAutoReceive", title: "納品書を読んで、発注書と合えば自動で入荷", detail: "発注の送信の「入荷」に納品書の写真・PDF を入れると Claude が読み、全部の数が合えば入荷にする。差がある行は人。" },
 ];
 
 export function AutomationClient({ settings, changed, log }: { settings: AutomationSettings; changed: { at: string; who: string } | null; log: AutoLog[] }) {
