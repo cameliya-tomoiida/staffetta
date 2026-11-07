@@ -77,6 +77,8 @@ export function proxy(request: NextRequest) {
     accept: request.headers.get("accept"),
     isServerAction: request.headers.has("next-action"),
     staffOk: Boolean(verifyStaffSession(request.cookies.get(STAFF_COOKIE)?.value, Date.now())),
+    demo: process.env.HUB_DEMO === "1",
+    loggedIn: Boolean(me),
   });
   if (d.kind === "next") return pass();
   if (d.kind === "login") return NextResponse.redirect(new URL(d.location, request.url));

@@ -1,4 +1,5 @@
 import "server-only";
+import { DATA_DIR } from "@/lib/data-dir";
 // 外部の入口（メール・スプレッドシート・専用サイトCSV・インフォマートCSV）で共通に使う部品。
 // どの入口でも「届いたものを、そのまま読み取って、要確認(needs_review)の Order として入れる」だけ。
 // 値を直すのは人。元の値は line.read に残す。
@@ -175,7 +176,7 @@ export function normalize(s: string) {
 }
 
 /** 外部の入口のための小さな保存先（スプレッドシートの前回値など）。db.json とは別ファイル */
-const CH_FILE = path.join(process.cwd(), "data", "channels.json");
+const CH_FILE = path.join(DATA_DIR, "channels.json");
 type ChannelState = Record<string, unknown>;
 let chQueue: Promise<unknown> = Promise.resolve();
 

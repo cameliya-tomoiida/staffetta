@@ -1,4 +1,5 @@
 import "server-only";
+import { DATA_DIR } from "@/lib/data-dir";
 import { existsSync, promises as fs } from "node:fs";
 import path from "node:path";
 import { customers } from "@/data/master";
@@ -92,7 +93,7 @@ let migrated = false;
 async function migrateFromJson() {
   if (migrated) return;
   migrated = true;
-  const file = path.join(process.cwd(), "data", "line.json");
+  const file = path.join(DATA_DIR, "line.json");
   if (!existsSync(file)) return;
   const old = JSON.parse(await fs.readFile(file, "utf8")) as Partial<LineState>;
   const users = Object.values(old.users ?? {});

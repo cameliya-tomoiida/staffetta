@@ -4,12 +4,17 @@
 //  - 原料保管庫の温度は、今月の1日から今日まで、きのうの分だけ空ける → 漏れはいつ見ても1件
 //  - 前の決まりで出た記録のお知らせは消す（次の見直しで、今の分だけ出る）
 import { getDb, kvSet } from "@/lib/db/sqlite";
+import { getRecord } from "@/lib/hygiene/store";
+import { listAlerts } from "@/lib/db/alerts-store";
 
 const WHO = "見本の準備（⑧）";
 const SHEETS = ["temp-storage", "temp-freezer-storage", "clean-storage", "clean-rice", "clean-mixing", "clean-shaping", "clean-baking", "clean-packing", "clean-shipping", "clean-fridge", "clean-pizza", "clean-pizza-oven", "check-tools", "check-last-out", "label-use-by"];
 const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
 
 export function oneRecordGap(today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10), opts: { clearAllAlerts?: boolean } = {}): string {
+  // 作りたての見本の DB には、衛生の記録・お知らせの表がまだ無い（審査員向けの見本を毎日作り直すとき。11/8）
+  getRecord("temp-storage", today.slice(0, 7));
+  listAlerts();
   const db = getDb();
   const sheets: Record<string, unknown> = Object.fromEntries(SHEETS.map((id) => [id, { on: false }]));
   sheets["temp-storage"] = { on: true, times: ["09:00"], graceMin: 60, submitDay: 0 };

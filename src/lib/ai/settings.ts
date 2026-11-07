@@ -26,7 +26,12 @@ export const PRICES: Record<string, { input: number; output: number }> = {
 };
 const priceOf = (model: string) => PRICES[model] ?? PRICES[Object.keys(PRICES).find((k) => model.startsWith(k)) ?? ""] ?? PRICES["claude-opus-5-5"];
 
-export const getAiSettings = (): AiSettings => ({ ...DEFAULT, ...(kvGet<Partial<AiSettings>>(KEY) ?? {}) });
+export const getAiSettings = (): AiSettings => {
+  const s = { ...DEFAULT, ...(kvGet<Partial<AiSettings>>(KEY) ?? {}) };
+  // 審査員向けの見本（HUB_DEMO=1）: 月の上限は起動のときの値（HUB_DEMO_AI_LIMIT_YEN・既定 3000円＝約20ドル）で固定。画面で入れたキーは使わない
+  if (process.env.HUB_DEMO === "1") return { yenPerDollar: s.yenPerDollar, monthlyLimitYen: Number(process.env.HUB_DEMO_AI_LIMIT_YEN) || 3000 };
+  return s;
+};
 
 /** 使う API キー（画面で入れたもの → .env.local） */
 export const apiKey = () => getAiSettings().apiKey || process.env.ANTHROPIC_API_KEY || "";
@@ -44,6 +49,7 @@ export function publicAiSettings() {
 }
 
 export function setAiSettings(input: { apiKey?: string | null; monthlyLimitYen?: number | null; yenPerDollar?: number }, who: string) {
+  if (process.env.HUB_DEMO === "1") throw new Error("見本では AI の設定は変えられません（月の上限は決まっています）");
   if (!who.trim()) throw new Error("変える人を選んでください");
   const cur = getAiSettings();
   const next: AiSettings = { ...cur };

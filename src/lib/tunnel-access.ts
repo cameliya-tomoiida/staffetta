@@ -51,11 +51,26 @@ export function decideTunnelAccess(x: {
   isServerAction?: boolean;
   /** スタッフのログインを確かめた結果（署名と期限が正しいか） */
   staffOk: boolean;
+  /**
+   * 審査員向けの見本（HUB_DEMO=1・11/8 管理役2）: 審査員は LINE のスタッフ登録が無いので、外からでも ID・パスワードのログイン（/login）を通す。
+   * ログインの画面の絵（ロゴなど）も通す。ログインしたら（loggedIn）全部の画面を通す（全データの書き出し・戻しは外からは閉じたまま）
+   */
+  demo?: boolean;
+  /** ID・パスワードでログインしている（見本のときだけ見る） */
+  loggedIn?: boolean;
 }): TunnelDecision {
   if (!x.viaTunnel) return { kind: "next" };
   if (PUBLIC_PATHS.some((p) => x.pathname === p || x.pathname.startsWith(p.endsWith("/") ? p : `${p}/`))) return { kind: "next" };
   if (LAN_ONLY_PATHS.some((p) => x.pathname === p || x.pathname.startsWith(`${p}/`))) return { kind: "forbid" };
   if (x.staffOk) return { kind: "next" };
+  if (x.demo) {
+    if (x.loggedIn) return { kind: "next" };
+    if (x.pathname === "/login") return { kind: "next" };
+    if (x.method === "GET" && /^\/(brand\/|favicon|icon|apple-icon|manifest)[\w./-]*\.(svg|png|ico|webmanifest|json)$/.test(x.pathname)) return { kind: "next" };
+    const opens = x.method === "GET" && !x.isServerAction && !x.pathname.startsWith("/api/") && (x.accept ?? "").includes("text/html");
+    if (opens) return { kind: "login", location: `/login?next=${encodeURIComponent(`${x.pathname}${x.search ?? ""}`)}` };
+    return { kind: "forbid" };
+  }
   const opensPage = x.method === "GET" && !x.isServerAction && !x.pathname.startsWith("/api/") && (x.accept ?? "").includes("text/html");
   if (opensPage) return { kind: "login", location: `${STAFF_LOGIN_PATH}?next=${encodeURIComponent(`${x.pathname}${x.search ?? ""}`)}` };
   return { kind: "forbid" };

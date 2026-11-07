@@ -1,4 +1,5 @@
 import "server-only";
+import { DATA_DIR } from "@/lib/data-dir";
 // 辞書に無い言葉（商品名・生地名・工程名・設備名など）を Claude API で訳して、使い回す。
 //
 // 訳の置き場所は2つ:
@@ -19,7 +20,7 @@ import type { Masters } from "@/data/types";
 
 export const TRANSLATE_MODEL = "claude-sonnet-5-5";
 const SEED_FILE = path.join(process.cwd(), "src", "i18n", "machine.json");
-const RUNTIME_FILE = path.join(process.cwd(), "data", "i18n-machine.json");
+const RUNTIME_FILE = path.join(DATA_DIR, "i18n-machine.json");
 
 type Cache = Partial<Record<Lang, Record<string, string>>>;
 

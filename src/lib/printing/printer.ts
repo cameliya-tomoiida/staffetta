@@ -64,6 +64,8 @@ export async function renderPdf(url: string, fileBase: string): Promise<string> 
 
 /** PDF をプリンターへ（Acrobat の /t: 開いて印刷して閉じる）。copies 回送る */
 export async function sendToPrinter(pdf: string, printer: string, copies = 1): Promise<void> {
+  // 審査員向けの見本（HUB_DEMO=1）では、工場のプリンターに紙を出さない（PDF は作る）
+  if (process.env.HUB_DEMO === "1") return;
   const acro = findAcrobat();
   if (!acro) throw new Error("印刷に使う Adobe Acrobat が見つかりません（「PDF だけ作る」にするか、Acrobat を入れてください）");
   for (let i = 0; i < Math.max(1, copies); i++) {

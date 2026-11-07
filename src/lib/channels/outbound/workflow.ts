@@ -14,9 +14,10 @@ import {
 import { emailDraft, entryCsv, purchasePdf, type PoLike } from "./render";
 import { isSiteMethod } from "./sites";
 import { findSupplier } from "@/lib/catalog";
+import { DATA_DIR } from "@/lib/data-dir";
 
 // 試しのサーバー（見本の DB）では HUB_OUTBOUND_DIR で別の置き場に（本物の出力を上書きしないように。11/7）
-const DIR = process.env.HUB_OUTBOUND_DIR || path.join(process.cwd(), "data", "outbound");
+const DIR = process.env.HUB_OUTBOUND_DIR || path.join(DATA_DIR, "outbound");
 
 export type OutputKind = "fax_pdf" | "pdf" | "email_eml" | "site_csv";
 

@@ -11,7 +11,8 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { migrateRenamedNames } from "./rename-migration";
 
-export const DATA_DIR = path.join(process.cwd(), "data");
+export { DATA_DIR } from "../data-dir";
+import { DATA_DIR } from "../data-dir";
 const DB_PATH = process.env.HUB_DB_PATH ?? path.join(DATA_DIR, "hub.sqlite");
 
 // 開発サーバーの作り直し（HMR）でも接続を使い回すため globalThis に置く

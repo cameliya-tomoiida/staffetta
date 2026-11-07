@@ -4,6 +4,7 @@
 // data/channels.json（取り込みの前回値）も同じく書き換える。
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { DATA_DIR } from "../data-dir";
 import type { DatabaseSync } from "node:sqlite";
 
 /** 古い名前（実在の社名なので、ソースには base64 で置く。公開するファイルに社名を書かないため）→ 新しい名前 */
@@ -64,7 +65,7 @@ function renameOnce(db: DatabaseSync, mark: string, renames: [string, string][],
     throw e;
   }
   // 取り込みの前回値（DB の外のファイル）
-  const ch = path.join(dataDir ?? path.join(process.cwd(), "data"), "channels.json");
+  const ch = path.join(dataDir ?? DATA_DIR, "channels.json");
   if (existsSync(ch)) {
     const s = readFileSync(ch, "utf8");
     const t = renameText(s);

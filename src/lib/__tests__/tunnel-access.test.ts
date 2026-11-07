@@ -55,3 +55,28 @@ describe("fromOutside", () => {
     expect(fromOutside(H({ host: "localhost:3100" }), "https://demo-pc.tailnet-example.ts.net")).toBe(false);
   });
 });
+
+// 審査員向けの見本（HUB_DEMO=1・11/8）: 外からでも ID・パスワードのログインを通す。書き出し・戻しは閉じたまま
+describe("decideTunnelAccess（見本）", () => {
+  const d = { ...base, demo: true };
+  it("ログインの画面・ログインのボタン（Server Action）・ロゴは通す", () => {
+    expect(decideTunnelAccess({ ...d, pathname: "/login" }).kind).toBe("next");
+    expect(decideTunnelAccess({ ...d, pathname: "/login", method: "POST", isServerAction: true, accept: "text/x-component" }).kind).toBe("next");
+    expect(decideTunnelAccess({ ...d, pathname: "/brand/staffetta-logo-dark.svg", accept: "image/*" }).kind).toBe("next");
+  });
+  it("ログイン前のほかの画面は /login へ、API は 403", () => {
+    expect(decideTunnelAccess({ ...d, pathname: "/orders" })).toEqual({ kind: "login", location: "/login?next=%2Forders" });
+    expect(decideTunnelAccess({ ...d, pathname: "/api/stock", method: "POST", accept: "application/json" }).kind).toBe("forbid");
+    expect(decideTunnelAccess({ ...d, pathname: "/setup" }).kind).toBe("login");
+    expect(decideTunnelAccess({ ...d, pathname: "/samples/fax1.pdf", accept: "application/pdf" }).kind).toBe("forbid");
+  });
+  it("ログインしたら通す。ただし書き出し・戻しは外からは閉じたまま", () => {
+    expect(decideTunnelAccess({ ...d, loggedIn: true, pathname: "/orders" }).kind).toBe("next");
+    expect(decideTunnelAccess({ ...d, loggedIn: true, pathname: "/settings/backup" }).kind).toBe("forbid");
+    expect(decideTunnelAccess({ ...d, loggedIn: true, pathname: "/api/backup" }).kind).toBe("forbid");
+  });
+  it("本番（demo なし）では、ID・パスワードのログインがあっても外からは通さない（今までどおり）", () => {
+    expect(decideTunnelAccess({ ...base, loggedIn: true, pathname: "/orders" }).kind).toBe("login");
+    expect(decideTunnelAccess({ ...base, pathname: "/login" }).kind).toBe("login");
+  });
+});
