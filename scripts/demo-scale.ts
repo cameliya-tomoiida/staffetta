@@ -15,7 +15,12 @@ import { assignSalesReps } from "./demo-record/sales-rep";
 async function main() {
   const db = process.env.HUB_DB_PATH ?? "";
   if (!db || path.resolve(db) === path.resolve("data/hub.sqlite")) throw new Error("HUB_DB_PATH にデモの DB を指定してください（data/hub.sqlite には入れません）");
-  const date = process.argv[2] ?? DEMO_DATE;
+  // ⑧ 見本の日は「流した日」を基準に（今日と明日の注文を入れる）。前は 11/6 固定で、製造のホームが「今日は終わり」になっていた。
+  // 日付を渡せば、その日だけ（前と同じ）。「--fixed」なら前の決まった日（DEMO_DATE）
+  const todayJ = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  const addDay = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
+  const arg = process.argv[2];
+  const dates = arg === "--fixed" ? [DEMO_DATE] : arg ? [arg] : [todayJ, addDay(todayJ, 1)];
   const base = await loadMasters();
   const m = scaleMasters(base);
   for (const name of MASTER_ORDER) {
@@ -31,7 +36,7 @@ async function main() {
   const customers = m.customers.filter((c) => c.active !== false).map((c) => c.id).slice(0, 8);
   const { db: hub, save } = await loadForUpdate();
   // 見本の日（11/6）のあとの日は「次の日の見本」: ピザを多めにして、人が足りない時間ができる（AI の工程表の案）
-  const add = scaleOrders(date, customers, undefined, date !== DEMO_DATE).filter((o) => !hub.orders.some((x) => x.id === o.id));
+  const add = dates.flatMap((d) => scaleOrders(d, customers, `${addDay(d, -1)}T15:00:00+09:00`, d !== DEMO_DATE)).filter((o) => !hub.orders.some((x) => x.id === o.id));
   hub.orders.push(...add);
   // 値上げの流れの見本: 仕入先（米田製粉（デモ））からの「価格改定のお願い」の FAX（強力粉・中力粉 12月1日から）
   if (!hub.faxes.some((f) => f.id === "F011"))
@@ -44,7 +49,7 @@ async function main() {
   console.log("担当の営業:", JSON.stringify(await assignSalesReps(10)));
   const miss = oneRecordGap();
   console.log(`記録の漏れ: ${miss} の 9:00 の温度（原料保管庫）1件だけ`);
-  console.log(`本物の規模の見本を入れました: 生地 ${m.doughs.length} 種類・注文 ${add.length} 件（${date}）`);
+  console.log(`本物の規模の見本を入れました: 生地 ${m.doughs.length} 種類・注文 ${add.length} 件（${dates.join("・")}）`);
 }
 
 main().catch((e) => {

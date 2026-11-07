@@ -2,7 +2,6 @@ import "server-only";
 import type { Order } from "@/data/types";
 import { readRecentDb } from "@/lib/store";
 import { addDays, todayJst } from "@/components/ui";
-import { DEMO_DATE } from "@/data/demo-orders";
 import { demoOrders } from "./orders";
 
 /** 画面に出す全部の注文 = 保存してある注文（FAXなど）＋見本の注文 */
@@ -22,15 +21,17 @@ export async function allOrders(): Promise<{ orders: Order[]; today: string }> {
  */
 export function pickDate(q: unknown, dates: string[], today: string): string {
   if (typeof q === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
-  if (dates.includes(SHOW_DATE)) return SHOW_DATE;
+  if (SHOW_DATE && dates.includes(SHOW_DATE)) return SHOW_DATE;
   const tomorrow = addDays(today, 1);
   return dates.includes(tomorrow) ? tomorrow : (dates.find((d) => d >= today) ?? tomorrow);
 }
 /** 日付ボタンに並べる日（今日以降＋デモの日） */
-export const visibleDates = (dates: string[], today: string) => [...new Set(dates.filter((d) => d >= today || d === SHOW_DATE))].sort();
+export const visibleDates = (dates: string[], today: string) => [...new Set(dates.filter((d) => d >= today || (!!SHOW_DATE && d === SHOW_DATE)))].sort();
 
 /**
  * デモで最初に開く納品日。ふだんは③の DEMO_DATE（11/6）。
  * 撮影で別の日（例 11/9 の材料の発注書）から始めたいときは、.env.local に DEMO_SHOW_DATE=2026-11-09 と書いて起動し直す。
  */
-const SHOW_DATE = /^\d{4}-\d{2}-\d{2}$/.test(process.env.DEMO_SHOW_DATE ?? "") ? process.env.DEMO_SHOW_DATE! : DEMO_DATE;
+// ⑧ 11/7: 見本の日は demo:scale を流した日（今日・明日）を基準にするので、決まった日（11/6）に寄せるのは DEMO_SHOW_DATE を書いたときだけ。
+// 書いていなければ、ふだんどおり明日（無ければ今日以降でいちばん近い日）を開く
+const SHOW_DATE = /^\d{4}-\d{2}-\d{2}$/.test(process.env.DEMO_SHOW_DATE ?? "") ? process.env.DEMO_SHOW_DATE! : "";

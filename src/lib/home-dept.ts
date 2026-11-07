@@ -25,7 +25,7 @@ import type { Order } from "@/data/types";
 import type { AlertGroup } from "@/lib/alert-groups";
 import { alertForRole } from "@/lib/home";
 import { kvGet } from "@/lib/db/sqlite";
-import { listStaff } from "@/lib/staff";
+import { accountsExist, listStaff } from "@/lib/staff";
 import { getDepot, getRouteSettings } from "@/lib/routes/store";
 import { buildTimeline, orderedStops, type Stop } from "@/lib/routes/plan";
 import { deliversOn } from "@/lib/routes/optimize";
@@ -57,7 +57,7 @@ export interface ConfirmItem {
   /** ［直す］で開く画面（①の /proposals/<id>）。無ければ「AI に頼む」をこの案を題にして開く */
   fixHref?: string;
 }
-export interface DeptHome { role: Role; date: string; tiles: Tile[]; table?: DeptTable; timetable?: Timetable; confirm: ConfirmItem[]; progress?: Progress }
+export interface DeptHome { /** ログインなしの見本のとき、だれの目で出しているか（営業） */ viewAs?: string; role: Role; date: string; tiles: Tile[]; table?: DeptTable; timetable?: Timetable; confirm: ConfirmItem[]; progress?: Progress }
 /** 時間割を手で動かした分（⑧ ホームの時間割。key ＝ 生地の key） */
 export const ttKey = (date: string) => `home_timetable_adjust:${date}`;
 export type TtAdjust = Record<string, { start: number; end: number }>;
@@ -210,7 +210,10 @@ export async function deptHome(role: Role): Promise<DeptHome> {
 
   if (role === "営業") {
     // 担当の取引先だけ（ログインした営業の人の ID が「担当の営業」に入っている取引先）。担当が1件も無ければ全部
-    const me = await currentUser().catch(() => undefined);
+    // ログインなし（見本）のときは、担当の取引先がある営業の見本の人（すずき など）の目で出す
+    const login = await currentUser().catch(() => undefined);
+    const sample = !login && !accountsExist() ? listStaff().find((x) => x.role === "営業" && [...cust.values()].some((c) => c.salesRep === x.id)) : undefined;
+    const me = login ?? (sample ? { id: sample.id, name: sample.name } : undefined);
     const mine = new Set([...cust.values()].filter((c) => c.salesRep && me && c.salesRep === me.id).map((c) => c.id));
     const isMine = (id: string) => !mine.size || mine.has(id);
     // 締めが近い先: 次の納品日の注文がまだ来ていない取引先で、今日の締めがこれから
@@ -234,6 +237,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
     }
     const CH: Record<string, string> = { customer_site: "サイト", infomart: "インフォマート", fax: "FAX", line: "LINE", phone: "電話", email: "メール", driver: "ドライバー", site: "サイト", csv: "CSV" };
     return {
+      ...(sample ? { viewAs: sample.name } : {}),
       role, date, confirm,
       tiles: [
         { label: "今日の注文・変更", value: num(createdToday.length), unit: "件", note: changes.length ? `変更 ${changes.length}` : undefined, href: "/orders", tone: tone(createdToday.length) },

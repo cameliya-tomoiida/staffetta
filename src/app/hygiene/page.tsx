@@ -32,14 +32,9 @@ export default async function HygienePage(props: PageProps<"/hygiene">) {
 
   return (
     <main className="space-y-6 p-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold">衛生管理</h1>
-        <p className="text-xl text-ink-soft">
-          毎月現場に渡しているチェックシートです。月を選ぶと、日付・曜日・点検の計画（○）をアプリが入れて印刷できます。タブレットで入れると、記録が残ります。
-        </p>
-        <p className="text-lg">
-          焼成温度・急速冷凍の温度・金属検査・包装・ミキサー・製造日報のように<b>製品が通る道のチェック</b>は、<Link href="/cards">製品カード</Link>に入れました（紙を1枚にまとめるため）。ここは製品にひも付かないもの（保管庫の温度・点検清掃・備品・最終退社者・ラベル）です。
-        </p>
+      {/* ⑧ 11/7 説明の文は出さない（題に重ねると出る）。スマホは題も出さない */}
+      <header className="max-md:hidden">
+        <h1 className="text-3xl font-bold" title="毎月現場に渡しているチェックシート。製品が通る道のチェック（焼成温度・急速冷凍・金属検査など）は製品カードに入れています">衛生管理</h1>
       </header>
 
       <nav aria-label="月" className="flex flex-wrap items-center gap-3">
