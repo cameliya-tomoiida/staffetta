@@ -317,6 +317,12 @@ function OrderRow({
               );
             })}
           </ul>
+          {/* ⑧ 11/7 パソコンも文字を減らす: 締めの文は「くわしく」を押したときだけ（上の札「締めに間に合いません」で分かる） */}
+          {!off && (lead.length > 0 || (alt && alt.length > 0)) && (
+          <details className="mt-1 max-md:hidden">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[14px] font-bold text-review-ink after:!hidden [&::-webkit-details-marker]:hidden">
+              <Icon.clock className="h-4 w-4 shrink-0" />締めの くわしく ›
+            </summary>
           {!off &&
             // 商品名だけが違う同じ文（「○○の締め 11/5 11:00 を過ぎています…」）は、商品名を「・」でつないで1行にまとめる
             (() => {
@@ -352,6 +358,8 @@ function OrderRow({
                 ))}
               </ul>
             </div>
+          )}
+          </details>
           )}
           {typeof x.notes === "string" && x.notes && <div className="mt-1 text-sm text-ink-soft">メモ：{x.notes}</div>}
           {typeof x.readError === "string" && x.readError && (
