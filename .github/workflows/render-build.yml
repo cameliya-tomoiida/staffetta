@@ -1,6 +1,7 @@
 # 審査員向けの見本（Render の無料枠）のための、ビルド済みの枝 render-build を作る（11/8）。
 # Render の無料枠はメモリ 512MB で、next build（Turbopack）が 1.7GB ほど使うため、Render の上ではビルドしない。
 # ここ（GitHub の Linux・メモリ 7GB）でビルドし、.next を入れた写しを render-build の枝に置く。Render はその枝を起動するだけ（docs/render.md）。
+# .next に入るのは見本のビルドだけ。GitHub には .env.local が無いので、秘密も LIFF の ID も焼き込まれない（NEXT_PUBLIC_… は下で空にしている）。
 name: render-build
 on:
   push:
@@ -13,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    # 見本のリポジトリ（staffetta-demo）だけで動かす（公開の staffetta では動かさない）
-    if: github.event.repository.name == 'staffetta-demo'
+    # 見本を出すリポジトリだけで動かす: 公開の staffetta（名前を置きかえた写し）か、非公開の staffetta-demo（11/8 管理役2）
+    if: github.repository == 'cameliya-tomoiida/staffetta' || github.event.repository.name == 'staffetta-demo'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

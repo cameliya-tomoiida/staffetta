@@ -7,7 +7,7 @@
 | もの | 中身 |
 |---|---|
 | `render.yaml` | Render の Blueprint。Web Service・無料枠・シンガポール（東京は無い）・枝 `render-build` |
-| `.github/workflows/render-build.yml` | master に push すると、GitHub の上でビルドし、`.next` 入りの写しを枝 `render-build` に置く（リポジトリの名前が `staffetta-demo` のときだけ動く） |
+| `.github/workflows/render-build.yml` | master に push すると、GitHub の上でビルドし、`.next` 入りの写しを枝 `render-build` に置く（公開の `cameliya-tomoiida/staffetta` か、名前が `staffetta-demo` のリポジトリだけで動く） |
 | `scripts/start-demo-render.mjs` | 起動のたびに `/tmp` に見本を作り（demo:reset ＋ demo:scale）、`JUDGE_USER`・`JUDGE_PASSWORD` から管理者を作って `next start -p $PORT` |
 | `scripts/demo-judge.ts` | 審査員の管理者を作る（パスワードは画面・ログに出さない） |
 
@@ -20,10 +20,10 @@
 
 ## 手順（管理役2）
 
-1. GitHub に非公開のリポジトリ `staffetta-demo` を作り、master を push する（本物の取引先名などが入っていない写しを使う）。
+1. 公開のリポジトリ `staffetta`（名前を置きかえた写し）を最新の master から作り直して push する。`render-build` の枝も公開になるが、中は見本のビルドだけ（秘密は入らない。GitHub には `.env.local` が無い）。
 2. GitHub の Actions で「render-build」が動き、枝 `render-build` ができるのを待つ（数分。Actions の画面で緑になる）。
    - リポジトリの Settings → Actions → General → Workflow permissions を「Read and write」にしておく（枝に push するため）。
-3. Render: New → Blueprint → `staffetta-demo` を選ぶ。`render.yaml` が読まれる。
+3. Render: New → Blueprint → 公開の `staffetta` を選ぶ（サービスの名前は render.yaml の `staffetta-demo`）。`render.yaml` が読まれる。
 4. 画面で2つ入れる: `JUDGE_PASSWORD`（審査員に知らせるパスワード・8文字以上）・`ANTHROPIC_API_KEY`。
 5. デプロイが終わったら `https://staffetta-demo.onrender.com/login` を開き、`judge` と上のパスワードで入れることを確かめる。URL が違ったら `HUB_PUBLIC_URL` を直す。
 6. 新しくしたいときは、master に push するだけ（Actions がビルド → `render-build` が変わる → Render が自動でデプロイ）。
