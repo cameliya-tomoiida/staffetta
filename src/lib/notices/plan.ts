@@ -47,11 +47,12 @@ export function pickRecipients(
   return [...new Set(ids)].sort();
 }
 
-export type NoticeChannel = "line" | "fax" | "none";
+export type NoticeChannel = "line" | "email" | "fax" | "none";
 
 /** 送る手段（LINE があれば LINE、無ければ FAX、どちらも無ければ手渡し） */
-export function channelFor(c: Pick<CustomerMaster, "fax"> | undefined, lineUserIds: string[]): { channel: NoticeChannel; to: string[] } {
+export function channelFor(c: Pick<CustomerMaster, "fax" | "email"> | undefined, lineUserIds: string[]): { channel: NoticeChannel; to: string[] } {
   if (lineUserIds.length) return { channel: "line", to: lineUserIds };
+  if (c?.email?.trim()) return { channel: "email", to: [c.email.trim()] };
   if (c?.fax?.trim()) return { channel: "fax", to: [c.fax.trim()] };
   return { channel: "none", to: [] };
 }

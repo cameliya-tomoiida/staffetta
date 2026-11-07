@@ -333,6 +333,8 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "name", label: "名前", type: "text", required: true, example: "ひまわり保育園" },
     { key: "channel", label: "主な注文の入口", type: "enum", options: CHANNEL_OPTIONS, required: true, example: "FAX" },
     { key: "fax", label: "FAX番号", type: "text" },
+    { key: "contactName", label: "担当者", type: "text", example: "山田" },
+    { key: "email", label: "メールアドレス", type: "text", example: "order@example.com" },
     { key: "externalCode", label: "外部サイトの取引先コード", type: "text" },
     { key: "cutoff", label: "注文の締め（前日）", type: "time", required: true, example: "15:00" },
     { key: "deliveryTime", label: "納品時刻", type: "time", example: "08:30", help: "工程表の逆算に使う。空なら 08:00" },

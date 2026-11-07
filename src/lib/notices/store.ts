@@ -159,9 +159,10 @@ export async function sendNotice(id: string, who: string): Promise<CustomerNotic
   const now = nowIso();
   const recipients: NoticeRecipient[] = [];
   const unlocked = sendUnlocked();
+  const mail = await import("@/lib/mail/send");
   for (const r of n.recipients) {
-    // 鍵が OFF: 本物のお客さんには送らない（見本の取引先の LINE だけ、試しに送る）
-    if (!unlocked && !(r.channel === "line" && isDemoCustomerName(r.name))) {
+    // 鍵が OFF: 本物のお客さんには送らない（見本の取引先の LINE と、試しに送れる宛先へのメールだけ）
+    if (!unlocked && !(r.channel === "line" && isDemoCustomerName(r.name)) && !(r.channel === "email" && mail.canSendTo(r.to).ok)) {
       recipients.push({ ...r, status: "held", at: now, by: who });
       continue;
     }
@@ -176,6 +177,9 @@ export async function sendNotice(id: string, who: string): Promise<CustomerNotic
         if (!rec.ok) error = rec.error;
       }
       recipients.push({ ...r, status: ok ? "sent" : "failed", at: now, by: who, ...(demo ? { demo } : {}), ...(error ? { error } : {}) });
+    } else if (r.channel === "email") {
+      const m = await mail.sendMail({ to: r.to, subject: n.draft.title, body: n.draft.body }, who);
+      recipients.push({ ...r, status: m.ok ? "sent" : "failed", at: now, by: who, ...(m.error ? { error: m.error } : {}) });
     } else if (r.channel === "fax") {
       recipients.push({ ...r, status: "fax_ready" });
     } else {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useStaffNames } from "@/components/ui/staff";
 import type { ShortRow } from "@/lib/material-shortlist";
-import { approveShortageOrderAction, prepareShortageOrderAction, type PreparedOrder } from "./shortage-actions";
+import { approveShortageOrderAction, prepareShortageOrderAction, sendOrderMailAction, type PreparedOrder } from "./shortage-actions";
 
 const METHOD: Record<string, string> = {
   fax: "FAX",
@@ -82,6 +82,21 @@ export function ShortageList({ date, rows }: { date: string; rows: ShortRow[] })
                   {/* メールは OK のあとにだけ開ける（送るのは人） */}
                   {p?.method === "email" && p.mail?.to && (
                     <a className="btn-primary text-base" href={`mailto:${p.mail.to}?subject=${encodeURIComponent(p.mail.subject)}&body=${encodeURIComponent(p.mail.body)}`}>メールを開く</a>
+                  )}
+                  {p?.method === "email" && p.mail?.to && (
+                    <button
+                      type="button"
+                      className="btn-primary text-base"
+                      disabled={pending}
+                      onClick={() =>
+                        start(async () => {
+                          const r = await sendOrderMailAction(p.poId, who);
+                          setErr((e) => ({ ...e, [x.materialId]: r.ok ? r.message : r.error }));
+                        })
+                      }
+                    >
+                      メールで送る
+                    </button>
                   )}
                   <Link href="/outbound" className="btn-ghost text-base">送り出しへ ›</Link>
                 </div>

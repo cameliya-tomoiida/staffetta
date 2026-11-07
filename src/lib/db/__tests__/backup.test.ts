@@ -46,3 +46,24 @@ describe("backup", () => {
     await expect(bk.exportAll({ includeFiles: true, month: "2026/11" })).rejects.toThrow();
   });
 });
+
+describe("backup の秘密", () => {
+  it("書き出しに秘密（ログインの鍵・メールのトークン・AI のキー・パスワードの印）を入れない。取り込んでも、この機械の秘密は残る", async () => {
+    const { kvSet, kvGet } = await import("../sqlite");
+    const bk = await import("../backup");
+    kvSet("user_session_secret", "SECRET-SESSION");
+    kvSet("mail_graph", { access: "A", refresh: "R", expiresAt: 0, account: "x" });
+    kvSet("ai_settings", { apiKey: "sk-ant-SECRET", monthlyLimitYen: 3000 });
+    kvSet("staff_members", [{ id: "S1", name: "たなか", role: "管理者", passwordHash: "HASH1", active: true }]);
+    const data = await bk.exportAll();
+    const text = JSON.stringify(data);
+    for (const s of ["SECRET-SESSION", "sk-ant-SECRET", "HASH1", '"refresh"']) expect(text).not.toContain(s);
+    expect(text).toContain("monthlyLimitYen");
+    // 取り込み: バックアップに秘密は無いが、この機械の秘密は消えない
+    await bk.importAll(JSON.parse(text), "テスト");
+    expect(kvGet<string>("user_session_secret")).toBe("SECRET-SESSION");
+    expect(kvGet<{ refresh: string }>("mail_graph")?.refresh).toBe("R");
+    expect(kvGet<{ apiKey: string; monthlyLimitYen: number }>("ai_settings")).toMatchObject({ apiKey: "sk-ant-SECRET", monthlyLimitYen: 3000 });
+    expect(kvGet<{ passwordHash?: string }[]>("staff_members")?.[0].passwordHash).toBe("HASH1");
+  });
+});

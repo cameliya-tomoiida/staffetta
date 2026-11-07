@@ -1,3 +1,4 @@
+import { NoAdminNotice } from "@/components/ui/NoAdminNotice";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/ui";
 import { getCompany } from "@/lib/company";
@@ -10,6 +11,7 @@ export default async function CompanyPage() {
   await connection();
   return (
     <div className="space-y-5">
+      <NoAdminNotice />
       <PageHeader title="自社の情報" lead="発注書・受付の返事（FAX・メール）・PDF の差出人と、画面の左上に出る工場名です。変えると、次に作る書類から新しい値になります。" />
       <CompanyClient initial={getCompany()} />
     </div>

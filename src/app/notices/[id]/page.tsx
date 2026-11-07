@@ -7,7 +7,7 @@ import { NoticeSend } from "./NoticeSend";
 
 export const dynamic = "force-dynamic";
 
-const CH: Record<string, string> = { line: "LINE", fax: "FAX", none: "手渡し" };
+const CH: Record<string, string> = { line: "LINE", email: "メール", fax: "FAX", none: "手渡し" };
 const ST: Record<string, string> = { waiting: "まだ", sent: "送った", fax_ready: "FAX を送る用意", failed: "送れなかった", hand: "手渡しする", held: "送っていない（送信の鍵が OFF）" };
 const dt = (iso?: string) => (iso ? new Date(iso).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 
@@ -43,7 +43,7 @@ export default async function NoticePage(props: PageProps<"/notices/[id]">) {
         </div>
       </section>
 
-      <NoticeSend locked={!sendUnlocked()} id={n.id} status={n.status} counts={{ line: count("line"), fax: count("fax"), none: count("none") }} faxLeft={faxLeft} />
+      <NoticeSend locked={!sendUnlocked()} id={n.id} status={n.status} counts={{ line: count("line"), email: count("email"), fax: count("fax"), none: count("none") }} faxLeft={faxLeft} />
 
       <section className="card p-0">
         <h2 className="border-b-2 border-rule-strong px-4 py-3 text-2xl font-bold">送る先（{n.recipients.length}件）</h2>

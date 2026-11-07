@@ -506,6 +506,9 @@ export interface CustomerMaster {
   name: string;
   channel: OrderChannel;
   fax?: string;
+  /** 担当者とメールアドレス（お知らせ・連絡をメールで送るとき。11/7） */
+  contactName?: string;
+  email?: string;
   externalCode?: string;
   lineUserId?: string;
   /** 前日の何時までに注文が必要か "HH:MM" */

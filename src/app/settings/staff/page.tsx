@@ -1,3 +1,4 @@
+import { NoAdminNotice } from "@/components/ui/NoAdminNotice";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/ui";
 import { accountsExist, publicStaff, STAFF_ROLES } from "@/lib/staff";
@@ -12,6 +13,7 @@ export default async function StaffPage() {
   const masters = await loadMasters();
   return (
     <div className="space-y-5">
+      <NoAdminNotice />
       <PageHeader
         title="スタッフの登録"
         lead="名前・役割・担当のコースを入れます。配送の人は、配送の画面（スマホ）を開くと担当のコースが最初に出ます。やめた人は「無効」にすると、選ぶ所に出なくなります。"
