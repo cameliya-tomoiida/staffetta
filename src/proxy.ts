@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { STAFF_COOKIE, verifyStaffSession } from "@/lib/auth/staff-session";
 import { decideTunnelAccess, fromOutside } from "@/lib/tunnel-access";
+import { demoPublicClosed } from "@/lib/data-dir";
 import { decideActionAccess } from "@/lib/auth/action-guard";
 import { userFromCookies } from "@/lib/auth/current-user";
 import { accountsExist } from "@/lib/staff";
@@ -13,6 +14,15 @@ const ACTING_USER_HEADER = "x-hub-user"; // src/lib/auth/acting-user.ts と同�
 // - ログインしていなければ、画面はログインの入口（/liff/staff）へ。API・ボタン（Server Actions）は 403
 // 社内 PC（トンネルを通らない）は、今までどおり全部通す。
 export function proxy(request: NextRequest) {
+  // 審査員向けの見本（HUB_DEMO=1）: 公開の期限（DEMO_PUBLIC_UNTIL）を過ぎたら、どの画面も「終了しました」の1画面だけ（11/8 担当者）
+  if (demoPublicClosed()) {
+    return new NextResponse(
+      '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>公開は終了しました</title></head>' +
+        '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff;color:#222;font-family:sans-serif">' +
+        '<p style="font-size:20px;font-weight:bold;padding:24px;text-align:center">審査用の見本の公開は終了しました</p></body></html>',
+      { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff" } },
+    );
+  }
   // 画面の枠（layout）が、どの画面を開こうとしているか分かるように（役割で見られる画面を分けるため）
   const headers = new Headers(request.headers);
   headers.set("x-hub-path", request.nextUrl.pathname + request.nextUrl.search);
