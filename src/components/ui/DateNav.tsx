@@ -34,7 +34,7 @@ export function DateNav({ date, today, pattern, label = "納品日", marks = [] 
         </button>
         <button
           type="button"
-          className="relative flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-2 border-crust-600 bg-crust-50 px-2 active:bg-crust-100"
+          className="relative flex min-h-12 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden rounded-xl border-2 border-crust-600 bg-crust-50 px-1.5 active:bg-crust-100"
           onClick={() => {
             const el = pick.current;
             if (!el) return;
@@ -46,13 +46,14 @@ export function DateNav({ date, today, pattern, label = "納品日", marks = [] 
           }}
           aria-label={`${label}を選ぶ（カレンダー）`}
         >
-          <span className="num text-[21px] font-black whitespace-nowrap">
+          {/* ⑧ 11/7 担当者「日付と『きのう』の位置が合っていない」: 幅に収まる大きさに（はみ出して左の数字が切れていた） */}
+          <span className="num text-[19px] leading-none font-black whitespace-nowrap">
             {m}/{dd}
-            <span className="ml-1 text-[18px]">({WD[wd]})</span>
+            <span className="ml-0.5 text-[15px]">({WD[wd]})</span>
           </span>
           {marks.includes(date) && <span aria-label="注文あり" className="h-2 w-2 shrink-0 rounded-full bg-crust-600" />}
-          {rel && <span className="shrink-0 rounded-full bg-crust-600 px-2 py-0.5 text-[14px] font-bold whitespace-nowrap text-white">{rel}</span>}
-          <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0 text-crust-700" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          {rel && <span className="shrink-0 rounded-full bg-crust-600 px-1.5 py-0.5 text-[12px] leading-none font-bold whitespace-nowrap text-white">{rel}</span>}
+          <svg viewBox="0 0 24 24" className={`h-5 w-5 shrink-0 text-crust-700 ${rel && date !== today ? "max-[420px]:hidden" : ""}`} fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <rect x="3.5" y="5" width="17" height="15" rx="2" />
             <path d="M3.5 9.5h17M8 3v4M16 3v4" />
           </svg>

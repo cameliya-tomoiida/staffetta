@@ -29,6 +29,9 @@ const barColor: Record<OrderStatus, string> = {
 /** 締めに間に合うか（③の checkLeadTime の結果のうち、画面に出すもの） */
 export type LeadView = { lineId: string; status: "late" | "warn"; reason: string };
 
+/** AI がお店を決められなかった注文（人が選ぶ） */
+const UNKNOWN_SHOP = "（お店が 分かりません）";
+
 export function OrdersClient({
   orders, today, storedIds, linePreviews, initialStatus = "all", lead = {}, alt = {},
 }: { orders: Order[]; today: string; storedIds: string[]; linePreviews: Record<string, string>; initialStatus?: StatusFilter; lead?: Record<string, LeadView[]>; alt?: Record<string, string[]> }) {
@@ -51,7 +54,7 @@ export function OrdersClient({
   // 取引先はマスタ（DB）から（orders/page.tsx の CustomersProvider）
   const customers = useCustomers();
   const custMap = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers]);
-  const custName = (id: string) => custMap.get(id) ?? "（お店が 分かりません）";
+  const custName = (id: string) => custMap.get(id) ?? UNKNOWN_SHOP;
 
   const base = orders.filter(
     (o) => (!range || (o.deliveryDate >= range[0] && o.deliveryDate <= range[1])) && (customer === "all" || o.customerId === customer) && (channel === "all" || o.source.channel === channel),
@@ -63,6 +66,10 @@ export function OrdersClient({
       // 要確認はいつも上
       const r = orderStatusRank[a.status] - orderStatusRank[b.status];
       if (r) return r;
+      // ⑧ 11/7 担当者「基本はできている状態を見せたい。分からないものは下の方で、人がチェック」:
+      // 同じ状態の中では、お店が分かった注文を先に、AI がお店を決められなかった注文をあとに
+      const ua = Number(!custMap.has(a.customerId)), ub = Number(!custMap.has(b.customerId));
+      if (ua !== ub) return ua - ub;
       if (sort === "customer") return custName(a.customerId).localeCompare(custName(b.customerId), "ja") || a.deliveryDate.localeCompare(b.deliveryDate);
       if (sort === "received") return b.source.receivedAt.localeCompare(a.source.receivedAt);
       return a.deliveryDate.localeCompare(b.deliveryDate) || custName(a.customerId).localeCompare(custName(b.customerId), "ja");
@@ -288,7 +295,9 @@ function OrderRow({
             </span>
           </div>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <span className={`text-xl font-black ${off ? "line-through decoration-2" : ""}`}>{custName}</span>
+            {custName === UNKNOWN_SHOP
+              ? <span className="inline-flex items-center gap-2 text-xl font-black text-review-ink"><span className="rounded bg-review-bg px-2 py-0.5 text-[13px] font-bold">確認</span>お店を選んでください</span>
+              : <span className={`text-xl font-black ${off ? "line-through decoration-2" : ""}`}>{custName}</span>}
             <span className="font-bold">
               納品 <span className="num text-lg">{fmtDate(o.deliveryDate)}</span>
               {dayName && <span className="ml-1 text-sm text-ink-soft">{dayName}</span>}
