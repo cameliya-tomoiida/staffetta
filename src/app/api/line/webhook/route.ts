@@ -2,11 +2,15 @@ import { after } from "next/server";
 import { nowIso } from "@/lib/clock";
 import { isLineLive, lineConfig, liffUrl } from "@/lib/channels/line/config";
 import { getDisplayName, replyText, verifySignature } from "@/lib/channels/line/client";
-import { ingestTalkMessage } from "@/lib/channels/line/orders";
+import { ingestTalkMessage, talkReplyText } from "@/lib/channels/line/orders";
+import { getCompany } from "@/lib/company";
 import { touchUser } from "@/lib/channels/line/state";
 
 // LINE公式アカウントの Webhook。LINE Developers の「Webhook URL」に https://（公開URL）/api/line/webhook を入れる。
-// 受け取ったらすぐ「受け付けました（確認中）」と返し、Claude の読み取りと保存は応答のあとで行う。
+// 受け取ったら（応答のあとで）Claude で読み取り、その結果で返事を決める（担当者 11/7）:
+//   注文 → 「ご注文を受け付けました。内容を確認してからご連絡します」＋読み取った品と数・お届け日
+//   注文ではない（あいさつ・テスト・質問）→ 「メッセージありがとうございます。ご注文は下の…」（注文として保存しない。お知らせに1件）
+//   読み取りに失敗・10秒を超えた → 今までの「受け付けました（確認中）」
 
 export const maxDuration = 120;
 
@@ -83,10 +87,15 @@ export async function POST(request: Request) {
     // 受信日時は共通の時計（撮影日は DEMO_NOW）。LINE の timestamp との差は数秒
     const receivedAt = nowIso();
     after(async () => {
-      // お客さんへは「受け付けました（確認中）」だけを返す（読み取り結果は伝えない）
-      if (ev.replyToken && !ev.deliveryContext?.isRedelivery) await replyText(ev.replyToken, userId, ACK);
-      if (isLineLive()) await touchUser(userId, { displayName: await getDisplayName(userId) });
-      await ingestTalkMessage({ messageId: message.id, userId, text: message.text, receivedAt });
+      if (isLineLive()) await touchUser(userId, { displayName: await getDisplayName(userId) }).catch(() => undefined);
+      const work = ingestTalkMessage({ messageId: message.id, userId, text: message.text, receivedAt });
+      // 返事の期限（reply token）に間に合うように、10秒を超えたら今までの短い返事にする（読み取りと保存はそのまま続ける）
+      const r = await Promise.race([
+        work.catch(() => "error" as const),
+        new Promise<"timeout">((ok) => setTimeout(() => ok("timeout"), 10_000)),
+      ]);
+      if (ev.replyToken && !ev.deliveryContext?.isRedelivery) await replyText(ev.replyToken, userId, r === "timeout" || r === "error" ? ACK : talkReplyText(r, getCompany().tel));
+      if (r === "timeout") await work.catch(() => undefined);
     });
   }
   return Response.json({ ok: true });

@@ -1,6 +1,6 @@
 import "server-only";
 import { now as clockNow, nowIso, todayJst } from "@/lib/clock";
-import { allProducts, findProduct as productById } from "@/lib/catalog";
+import { allProducts, findCustomer as findCustomerFromCatalog, findProduct as productById } from "@/lib/catalog";
 import type { Order, OrderLine, SourceRef } from "@/data/types";
 import { readDb, updateDb } from "@/lib/store";
 import { pushText } from "./client";
@@ -83,6 +83,11 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
       }),
     );
     const extra = { readModel: model, ...(attempts > 1 ? { readAttempts: attempts } : {}), isOrder: read.is_order, ...(read.notes ? { notes: read.notes } : {}) };
+    // 注文ではない（あいさつ・テスト・質問・お礼）: 注文として保存しない。お知らせに1件出して、人が LINE 公式アカウントから返す（担当者 11/7）
+    if (!read.is_order && !read.orders.some((g) => g.lines.length)) {
+      await notifyNonOrder({ messageId: input.messageId, userId: input.userId, customerId, text: input.text, at: input.receivedAt });
+      return { duplicated: false, nonOrder: true as const, orders: [] as Order[] };
+    }
     const groups = read.orders.length
       ? read.orders
       : [{ intent: "new" as const, change_of_order_id: "", delivery_date: jstDate(new Date(input.receivedAt), 1), date_written: "", lines: [] }];
@@ -147,6 +152,51 @@ export async function ingestTalkMessage(input: { messageId: string; userId: stri
   const { autoConfirmLineOrders } = await import("./auto");
   const auto = await autoConfirmLineOrders(orders.map((o) => o.id), { dictHit });
   return { duplicated: false, orders, auto };
+}
+
+/** 注文ではない LINE のメッセージを、お知らせに出す（いま出ている分に足して出し直す。人が済みにした分は出さない） */
+async function notifyNonOrder(x: { messageId: string; userId: string; customerId: string; text: string; at: string }) {
+  const { listAlerts, syncAlerts } = await import("@/lib/db/alerts-store");
+  const state = await readLineState();
+  const who = (x.customerId && findCustomerName(x.customerId)) || state.users[x.userId]?.claimedName || state.users[x.userId]?.displayName || "お客さん";
+  const short = x.text.replace(/\s+/g, " ").slice(0, 30);
+  const keep = listAlerts({ source: "line_message" }).map((r) => ({ dedupeKey: r.dedupeKey, kind: r.kind, level: r.level, title: r.title, detail: r.detail, action: r.action, href: r.href }));
+  syncAlerts(
+    "line_message",
+    [
+      ...keep,
+      {
+        dedupeKey: `line_message:${x.messageId}`,
+        kind: "line_message",
+        level: "info" as const,
+        title: `LINE にメッセージ（注文ではない）：${who}「${short}」`,
+        detail: "LINE 公式アカウントのアプリ（LINE Official Account Manager）のチャットから返事できます",
+        action: "LINE の受付を見る",
+        href: "/line",
+      },
+    ],
+    x.at,
+  );
+}
+
+const findCustomerName = (id: string) => findCustomerFromCatalog(id)?.name;
+
+/** トークの返事の文（読み取りのあと。担当者 11/7「テストと送ったら『受け付けました（確認中）』が返ってきて変」） */
+export function talkReplyText(r: Awaited<ReturnType<typeof ingestTalkMessage>> | "timeout" | "error", tel: string): string {
+  const ACK = "受け付けました（確認中）。";
+  if (r === "timeout" || r === "error" || !("orders" in r) || r.duplicated) return ACK;
+  if ("nonOrder" in r && r.nonOrder) {
+    return `メッセージありがとうございます。\nご注文は、下の「パンを注文する」からお願いします。${tel ? `\nお急ぎのご用件は、工場へお電話ください（${tel}）。` : ""}`;
+  }
+  const orders = r.orders ?? [];
+  if (!orders.length || orders.some((o) => typeof o.source.extra?.readError === "string")) return ACK;
+  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}(${"日月火水木金土"[new Date(`${d}T00:00:00Z`).getUTCDay()]})`;
+  const lines = orders.flatMap((o) => {
+    const head = o.intent === "cancel" ? `取消のご連絡（${md(o.deliveryDate)} お届け分）` : o.intent === "change" ? `変更のご連絡（${md(o.deliveryDate)} お届け分）` : `${md(o.deliveryDate)} お届け`;
+    const items = o.lines.filter((l) => l.quantity > 0).map((l) => `・${productById(l.productId)?.name ?? l.read?.writtenName ?? "商品"} ${l.quantity}${l.unit}`);
+    return [head, ...items];
+  });
+  return `ご注文を受け付けました。内容を確認してからご連絡します。\n\n${lines.join("\n")}`;
 }
 
 // ───────── 締め・配送曜日（③の checkLeadTime） ─────────
