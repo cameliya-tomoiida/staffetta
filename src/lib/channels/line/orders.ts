@@ -186,7 +186,7 @@ export function talkReplyText(r: Awaited<ReturnType<typeof ingestTalkMessage>> |
   const ACK = "受け付けました（確認中）。";
   if (r === "timeout" || r === "error" || !("orders" in r) || r.duplicated) return ACK;
   if ("nonOrder" in r && r.nonOrder) {
-    return `メッセージありがとうございます。\nご注文は、下の「パンを注文する」からお願いします。${tel ? `\nお急ぎのご用件は、工場へお電話ください（${tel}）。` : ""}`;
+    return `メッセージありがとうございます。\nご注文は、下の「パンを注文する」からお願いします。${tel ? `\nお急ぎの場合は、会社までご連絡ください（${tel}）。` : ""}`;
   }
   const orders = r.orders ?? [];
   if (!orders.length || orders.some((o) => typeof o.source.extra?.readError === "string")) return ACK;
@@ -493,14 +493,14 @@ export async function liffContext(userId: string) {
  * 番号だけでは、ほかの会社の商品・価格が見えないように、下4けたで本人を確かめる。
  */
 export async function claimCustomerByCode(userId: string, code: string, last4: string): Promise<{ customerName: string }> {
-  if (!isOn("line_own_products")) throw new Error("いまは使えません。工場にお電話ください");
+  if (!isOn("line_own_products")) throw new Error("いまは使えません。会社までご連絡ください");
   const c4 = last4.replace(/\D/g, "");
   const key = code.trim().toUpperCase();
   if (!key || c4.length !== 4) throw new Error("お客さま番号と、FAX 番号の下4けたを入れてください");
   const m = await (await import("@/lib/masters/seed-db")).loadMasters();
   const c = m.customers.find((x) => x.active !== false && (x.id.toUpperCase() === key || x.externalCode?.toUpperCase() === key));
   const fax4 = (c?.fax ?? "").replace(/\D/g, "").slice(-4);
-  if (!c || fax4.length !== 4 || fax4 !== c4) throw new Error("番号が合いませんでした。お手数ですが、工場にお電話ください");
+  if (!c || fax4.length !== 4 || fax4 !== c4) throw new Error("番号が合いませんでした。お手数ですが、会社までご連絡ください");
   await linkUserToCustomer(userId, c.id, "お客さま番号");
   return { customerName: c.name };
 }
