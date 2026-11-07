@@ -3,12 +3,15 @@
 // スマホは「地図｜リスト」を切りかえ。パソコン（768px 以上）は地図とリストを横に並べる。文は少なく。
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { applyOrderAction, proposeOrderAction, type OrderProposal } from "./actions";
 import { RouteMap, type MapLine, type MapPin } from "../admin/routes/RouteMap";
 
 export interface BoardStop {
   id: string; no: number; name: string; lat: number; lng: number;
   arrive: string; arriveMin: number; leaveMin: number; late: boolean; badges: string[];
+  /** その日だけ足した届け先（ふだんはその曜日に来ない・注文がある） */
+  added?: boolean;
 }
 export interface BoardCourse {
   id: string; name: string; color: string;
@@ -72,7 +75,7 @@ function whereNow(c: BoardCourse, depot: Depot, t: number): { pos: [number, numb
   return undefined;
 }
 
-export function RouteBoard({ courses, depot, weekday, initial, demoNow, play = false }: { courses: BoardCourse[]; depot: Depot; weekday: string; initial: string; demoNow?: string; play?: boolean }) {
+export function RouteBoard({ courses, depot, weekday, date, today, initial, demoNow, play = false }: { courses: BoardCourse[]; depot: Depot; weekday: string; date: string; today: string; initial: string; demoNow?: string; play?: boolean }) {
   const [sel, setSel] = useState(initial === "all" || courses.some((c) => c.id === initial) ? initial : courses[0]?.id ?? "all");
   const [view, setView] = useState<"map" | "list">("map");
   const [picked, setPicked] = useState<string | undefined>();
@@ -106,16 +109,13 @@ export function RouteBoard({ courses, depot, weekday, initial, demoNow, play = f
   );
 
   if (!courses.length) {
-    return <main className="mx-auto max-w-3xl p-4"><h1 className="m-display text-xl font-bold">ルート表</h1><p className="mt-4 text-ink-soft">{weekday}曜日に走るコースがありません。</p></main>;
+    return <main className="mx-auto max-w-3xl p-4"><DayNav date={date} today={today} sel="all" weekday={weekday} /><p className="mt-4 text-ink-soft">この日に走るコースがありません。</p></main>;
   }
 
   const tabs = [...courses.map((c) => ({ id: c.id, name: c.name, color: c.color })), { id: "all", name: "全部", color: "" }];
   return (
     <main className="mx-auto max-w-[1400px] px-3 pb-24 md:px-6">
-      <div className="flex items-baseline gap-3 pt-3 max-md:hidden">
-        <h1 className="m-display text-2xl font-bold">ルート表</h1>
-        <span className="text-sm text-ink-soft">{weekday}曜日</span>
-      </div>
+      <DayNav date={date} today={today} sel={sel} weekday={weekday} />
 
       {/* コースの切りかえ */}
       <nav aria-label="コースの切りかえ" className="sticky top-14 z-[500] -mx-3 mt-1 flex gap-1.5 overflow-x-auto border-b border-rule-strong bg-paper/95 px-3 py-2 backdrop-blur md:static md:mx-0 md:flex-wrap md:border-0 md:bg-transparent md:px-0">
@@ -192,8 +192,9 @@ export function RouteBoard({ courses, depot, weekday, initial, demoNow, play = f
                       <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold text-white" style={{ background: s.late ? "#7a2a1c" : course.color }}>{s.no}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px] font-bold">{s.name}</span>
-                        {(s.badges.length > 0 || cur) && (
+                        {(s.badges.length > 0 || cur || s.added) && (
                           <span className="mt-1 flex flex-wrap gap-1">
+                            {s.added && <span className="rounded bg-ok-bg px-1.5 text-[13px] font-bold text-ok-ink">追加</span>}
                             {cur && <span className="rounded border border-info-line px-1.5 text-[13px] font-bold text-info-ink">{here?.at ? "いまここ" : "向かっている"}</span>}
                             {s.badges.map((b) => <span key={b} className="rounded bg-review-bg px-1.5 text-[13px] text-review-ink">{b}</span>)}
                           </span>
@@ -222,5 +223,23 @@ export function RouteBoard({ courses, depot, weekday, initial, demoNow, play = f
         </div>
       </div>
     </main>
+  );
+}
+
+const addD = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
+/** 日付の切りかえ（⑧ 11/7「日付を変えたらコースが変わる」）: ‹ 11/7(土) › と 今日・明日 */
+function DayNav({ date, today, sel, weekday }: { date: string; today: string; sel: string; weekday: string }) {
+  const href = (d: string) => `/routes?d=${d}${sel && sel !== "all" ? `&c=${encodeURIComponent(sel)}` : sel === "all" ? "&c=all" : ""}`;
+  const rel = date === today ? "今日" : date === addD(today, 1) ? "明日" : "";
+  const chip = "inline-flex min-h-10 shrink-0 items-center rounded-lg border px-3 text-[14px] font-bold max-md:px-2.5";
+  return (
+    <div className="flex items-center gap-2 pt-3 max-md:gap-1.5">
+      <h1 className="m-display mr-2 text-2xl font-bold max-md:hidden">ルート表</h1>
+      <Link href={href(addD(date, -1))} aria-label="前の日" className={`${chip} border-rule-strong`}>‹</Link>
+      <b className="min-w-0 flex-1 text-center text-[18px] whitespace-nowrap tabular-nums md:min-w-[7.5em] md:flex-none max-md:text-[16px]">{Number(date.slice(5, 7))}/{Number(date.slice(8))}（{weekday}）{rel && <span className="ml-1 rounded-full bg-crust-600 px-1.5 text-[12px] text-white">{rel}</span>}</b>
+      <Link href={href(addD(date, 1))} aria-label="次の日" className={`${chip} border-rule-strong`}>›</Link>
+      {date !== today && <Link href={href(today)} className={`${chip} border-rule-strong`}>今日</Link>}
+      {date !== addD(today, 1) && <Link href={href(addD(today, 1))} className={`${chip} border-rule-strong`}>明日</Link>}
+    </div>
   );
 }

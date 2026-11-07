@@ -4,7 +4,7 @@
 // - 各先に渡す商品と数は、その日の注文（確定・要確認・仮発注。変更・取消の連絡そのものは数えない）
 import type { CourseMaster, CustomerMaster, CustomerProductMaster, Order } from "@/data/types";
 import { deliversOn } from "@/lib/routes/optimize";
-import { buildTimeline, orderedStops, toHHMM, type LatLng, type RouteSettings } from "@/lib/routes/plan";
+import { bestSlot, buildTimeline, orderedStops, serviceForPieces, toHHMM, type LatLng, type RouteSettings } from "@/lib/routes/plan";
 
 import { deliveryRules, type DeliveryRule } from "./rules";
 export interface DriverDayItem {
@@ -19,6 +19,8 @@ export interface DriverDayItem {
 export interface DriverDayStop {
   id: string;
   name: string;
+  /** その日だけ足した届け先（ふだんその曜日に来ない・注文がある） */
+  added?: boolean;
   /** 回る順（1から）。お休みの先は 0 */
   no: number;
   off: boolean;
@@ -68,9 +70,24 @@ export function driverDay(input: {
 }): DriverDay {
   const { course, date } = input;
   const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
-  const all = orderedStops(course, input.customers);
+  // 納品にかかる時間: その日に届ける数で 5〜20分（⑧ 11/7。取引先に時間が入っていればそちら）
+  const dayOrders = input.orders.filter((o) => o.deliveryDate === date && (o.intent ?? "new") === "new" && o.status !== "cancelled");
+  const piecesOf = (id: string) => dayOrders.filter((o) => o.customerId === id).reduce((a, o) => a + o.lines.reduce((b, l) => b + (l.pieces || l.quantity), 0), 0);
+  const all = orderedStops(course, input.customers).map((c) => ({ ...c, serviceMinutes: c.serviceMinutes ?? serviceForPieces(dayOrders.length ? piecesOf(c.id) : undefined) }));
   const on = all.filter((c) => deliversOn(c, wd));
-  const off = all.filter((c) => !deliversOn(c, wd));
+  // ⑧ 11/7「基準のコースに、その日の追加の届け先を入れてコースができる」: ふだんその曜日に来ない先でも、その日に注文があれば、走る距離がいちばん増えない所に入れる
+  const hasOrder = (id: string) => input.orders.some((o) => o.customerId === id && o.deliveryDate === date && (o.intent ?? "new") === "new" && o.status !== "cancelled");
+  const extra = all.filter((c) => !deliversOn(c, wd) && hasOrder(c.id));
+  for (const x of extra) {
+    const located = on.filter((c) => c.lat != null && c.lng != null);
+    if (x.lat == null || x.lng == null) on.push(x);
+    else {
+      const k = bestSlot(input.depot, located, x); // 位置のある先の中での場所 → on の中の場所へ
+      on.splice(k < located.length ? on.indexOf(located[k]) : on.length, 0, x);
+    }
+  }
+  const added = new Set(extra.map((x) => x.id));
+  const off = all.filter((c) => !deliversOn(c, wd) && !added.has(c.id));
   const tl = buildTimeline(course, input.depot, on, { settings: input.settings });
   const row = new Map(tl.rows.map((r) => [r.id, r]));
 
@@ -106,6 +123,7 @@ export function driverDay(input: {
       name: c.name,
       no,
       off: isOff,
+      ...(added.has(c.id) ? { added: true } : {}),
       ...(r && !r.noPosition && !isOff ? { arrive: toHHMM(r.start) } : {}),
       late: r && !isOff ? Math.round(r.late) : 0,
       ...(window ? { window } : {}),

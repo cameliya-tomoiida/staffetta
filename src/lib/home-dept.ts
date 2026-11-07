@@ -200,7 +200,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
         { label: "次に始める", value: next ? `${dayLabel(next.start)}${hhmm(next.start)}` : "—", note: next?.name ?? "今日は終わり", href: `/plan?date=${date}`, tone: next ? "plain" : "quiet" },
         // 包装（パートの人がシフトで見る）: 今日の包装の袋の数と、変更で減った個数
         { label: "包装", value: num(pack.pieces), unit: "個", note: pack.changes ? `変更 ${num(pack.changes)}件` : `${pack.rows.length}品`, href: `/packing?date=${date}`, tone: tone(pack.pieces) },
-        { label: "足りない材料", value: num(r.shortages.length || summary.lowStock), unit: "件", href: summary.lowStockHref, tone: tone(r.shortages.length || summary.lowStock, true) },
+        { label: "発注が必要な材料", value: num(r.shortages.length || summary.lowStock), unit: "件", href: summary.lowStockHref, tone: tone(r.shortages.length || summary.lowStock, true) },
         { label: "人が足りない", value: shortBands.length ? hhmm(shortBands[0].from) : "0", unit: shortBands.length ? "〜" : "件", note: shortBands.length ? `${shortBands.length}か所` : undefined, href: `/plan?date=${date}`, tone: shortBands.length ? "red" : "quiet" },
         { label: "指示書の印刷", value: num(rows.length), unit: "生地", href: `/plan?date=${date}`, tone: tone(rows.length) },
       ],
@@ -291,7 +291,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
     role, date, confirm,
     tiles: [
       { label: "確認が必要", value: num(urgent.length), unit: "件", note: urgent[0] ? `${urgentLabel(urgent[0].title)}${urgent.length > 1 ? ` ほか${urgent.length - 1}` : ""}` : undefined, href: "/alerts", tone: tone(urgent.length, true) },
-      { label: "足りない材料・人", value: num(lack), unit: "件", href: `/plan?date=${date}`, tone: tone(lack, true) },
+      { label: "発注が必要な材料・人", value: num(lack), unit: "件", href: `/plan?date=${date}`, tone: tone(lack, true) },
       { label: "承認待ち", value: num(approve), unit: "件", note: approve ? `発注 ${summary.purchaseDraft}・注文 ${review.length}` : undefined, href: `/purchase?date=${date}`, tone: tone(approve, true) },
       { label: "売上の見込み", value: yen(money.sales), unit: "千円", note: `粗利 ${Math.round(money.grossRate * 100)}%`, href: "/analytics", tone: "plain" },
     ],

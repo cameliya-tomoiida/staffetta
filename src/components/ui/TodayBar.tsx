@@ -157,7 +157,7 @@ export function TodayBar({ role, variant = "grid" }: { role?: Role; variant?: "g
     { href: "/orders?status=needs_review", label: "要確認", count: n(s?.ordersToReview), review: true, icon: "review", active: path === "/orders" },
     { href: "/fax", label: "FAX", count: s ? s.faxToReview + s.faxUnread : null, unit: "枚", review: true, icon: "fax", active: path.startsWith("/fax") },
     { href: purchaseHref, label: "発注書", count: s ? s.purchaseDraft + s.purchaseApproved : null, unit: "枚", icon: "purchase", active: path.startsWith("/purchase") },
-    { href: s?.lowStockHref || "/masters/materials", label: "材料不足", count: n(s?.lowStock), icon: "stock", active: false },
+    { href: s?.lowStockHref || "/masters/materials", label: "発注が必要", count: n(s?.lowStock), icon: "stock", active: false },
     { href: s ? `/plan?date=${s.purchaseDate}` : "/plan", label: "注意", count: n(s?.warnings), icon: "warn", active: path.startsWith("/plan"), sub: s?.warningTop },
   ];
 
@@ -168,7 +168,7 @@ export function TodayBar({ role, variant = "grid" }: { role?: Role; variant?: "g
     // 順番はいつも同じ（急ぎ → 要確認 → FAX → 発注書 → 材料不足 → 注意）。2列のタイル
     return (
       <nav aria-label="今日やること" data-guide="cards" className="grid grid-cols-2 gap-2.5">
-        {shown.map((it) => <WorkCard key={it.label} {...it} label={it.label === "材料不足" ? "材料" : it.label} />)}
+        {shown.map((it) => <WorkCard key={it.label} {...it} label={it.label === "発注が必要" ? "要発注" : it.label} />)}
         {failed && <p className="col-span-2 text-[13px] font-bold text-alert-ink">{s ? "数を更新できません" : "数を取得できません"}</p>}
       </nav>
     );

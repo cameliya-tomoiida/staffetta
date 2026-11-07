@@ -107,6 +107,7 @@ export default async function PurchasePage(props: PageProps<"/purchase">) {
         warnings={r.warnings}
         serverNow={nowMs()}
         lateMaterials={r.materialPlan.lateItems.map((x) => x.message)}
+        needOrder={new Set(r.materialPurchaseOrders.flatMap((p) => p.lines.map((l) => l.itemId))).size}
         unconfirmed={orders.filter((o) => o.deliveryDate === date && (o.status === "needs_review" || o.status === "provisional")).length}
         costBox={
           <>

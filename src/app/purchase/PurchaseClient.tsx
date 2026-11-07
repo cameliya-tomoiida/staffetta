@@ -57,13 +57,15 @@ function minutesLeft(cutoffAt: string, now: number) {
 }
 
 export function PurchaseClient({
-  pos, date, factory, warnings, dateNav, costBox, unconfirmed = 0, serverNow, lateMaterials = [],
+  pos, date, factory, warnings, dateNav, costBox, unconfirmed = 0, serverNow, lateMaterials = [], needOrder = 0,
 }: {
   pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode; unconfirmed?: number;
   /** サーバーの「いま」（ミリ秒） */
   serverNow: number;
   /** 締めを過ぎて、もう発注書では頼めない材料（③の materialPlan.lateItems の文） */
   lateMaterials?: string[];
+  /** 発注が必要な材料の数（材料の発注書に入っている材料） */
+  needOrder?: number;
 }) {
   const STAFF = useStaffNames(); // スタッフの登録から（ログインしている人が先頭）
   const router = useRouter();
@@ -146,10 +148,16 @@ export function PurchaseClient({
         </Notice>
       )}
       {/* ⑧ 11/7 パソコンも文字を減らす: 注意は短い1行（押すと中身）。くわしい文は出さない */}
+      {/* ⑧ 11/7 担当者「『間に合わない材料』ではなく『発注が必要な材料』。絶対に間に合わないものは仕入先に確認（要確認）」 */}
+      {needOrder > 0 && (
+        <Notice tone="info" icon={<Icon.alert className="h-6 w-6" />} className="mb-2 py-2">
+          <Link href={`/plan?date=${date}&tab=material`}>発注が必要な材料 <span className="num text-xl">{needOrder}</span> ›</Link>
+        </Notice>
+      )}
       {lateMaterials.length > 0 && (
         <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-2 py-2">
           <details>
-            <summary className="cursor-pointer list-none !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 after:!hidden [&::-webkit-details-marker]:hidden">間に合わない材料 <span className="num text-xl">{lateMaterials.length}</span> ›</summary>
+            <summary className="cursor-pointer list-none !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 after:!hidden [&::-webkit-details-marker]:hidden"><span className="mr-1.5 rounded bg-review-line/40 px-1.5 text-[12px]">要確認</span>間に合わない材料 <span className="num text-xl">{lateMaterials.length}</span>（仕入先に確認） ›</summary>
             <ul className="mt-1 list-disc pl-5 font-normal">
               {lateMaterials.map((w, i) => (
                 <li key={i}>{w}</li>

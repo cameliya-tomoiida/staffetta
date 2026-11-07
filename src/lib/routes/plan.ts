@@ -276,3 +276,28 @@ export function orderedStops<T extends Pick<CustomerMaster, "id" | "course" | "a
   }
   return [...out, ...[...byId.values()].sort((a, b) => a.id.localeCompare(b.id))];
 }
+
+/** 追加の届け先を入れる場所（走る距離がいちばん増えない所）。工場 → 先 … → 工場 の輪で考える */
+export function bestSlot(depot: LatLng, stops: { lat?: number | null; lng?: number | null }[], x: { lat?: number | null; lng?: number | null }): number {
+  const p = (s: { lat?: number | null; lng?: number | null }): LatLng => ({ lat: s.lat!, lng: s.lng! });
+  const pts = [depot, ...stops.map(p), depot];
+  let best = stops.length;
+  let bestAdd = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const add = distanceKm(pts[i], p(x)) + distanceKm(p(x), pts[i + 1]) - distanceKm(pts[i], pts[i + 1]);
+    if (add < bestAdd) [best, bestAdd] = [i, add];
+  }
+  return best;
+}
+
+/**
+ * 1か所の納品にかかる時間（⑧・担当者 11/7「短くて5分・長くて20分ぐらいで計算」）。その日に届ける数で決める。
+ * 取引先に「納品にかかる時間」が入っていればそちらが先。注文が分からない日（先の日）は真ん中の 10分。
+ */
+export function serviceForPieces(pieces: number | undefined): number {
+  if (pieces == null) return 10;
+  if (pieces <= 50) return 5;
+  if (pieces <= 200) return 10;
+  if (pieces <= 500) return 15;
+  return 20;
+}

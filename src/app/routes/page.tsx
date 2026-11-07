@@ -1,7 +1,8 @@
 import { connection } from "next/server";
 import { loadMasters } from "@/lib/masters/seed-db";
 import { getDepot, getRouteSettings, roadRoute } from "@/lib/routes/store";
-import { buildTimeline, orderedStops, toHHMM, type Stop } from "@/lib/routes/plan";
+import { bestSlot, buildTimeline, orderedStops, serviceForPieces, toHHMM, type Stop } from "@/lib/routes/plan";
+import { allOrders } from "@/demo/all-orders";
 import { deliversOn } from "@/lib/routes/optimize";
 import { deliveryRules } from "@/lib/driver/rules";
 import { todayJst } from "@/lib/clock";
@@ -19,7 +20,16 @@ export default async function RoutesPage(props: { searchParams: Promise<Record<s
   await connection();
   const q = await props.searchParams;
   const today = todayJst();
-  const wd = typeof q.wd === "string" && /^[0-6]$/.test(q.wd) ? Number(q.wd) : new Date(`${today}T00:00:00Z`).getUTCDay();
+  // ⑧ 11/7 担当者「日付を変えたら A コースが変わる。基準があって、追加があれば追加の届け先を入れてコースができる」
+  const date = typeof q.d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.d) ? q.d : today;
+  const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
+  const { orders } = await allOrders();
+  const dayOrders = orders.filter((o) => o.deliveryDate === date && o.status !== "cancelled" && (o.intent ?? "new") === "new");
+  const ordered = new Set(dayOrders.map((o) => o.customerId));
+  // 納品にかかる時間: その日に届ける数で 5〜20分（取引先に時間が入っていればそちら）
+  const pieces = new Map<string, number>();
+  for (const o of dayOrders) pieces.set(o.customerId, (pieces.get(o.customerId) ?? 0) + o.lines.reduce((a, l) => a + (l.pieces || l.quantity), 0));
+  const withService = <T extends { id: string; serviceMinutes?: number }>(c: T): T => ({ ...c, serviceMinutes: c.serviceMinutes ?? serviceForPieces(ordered.size ? pieces.get(c.id) ?? 0 : undefined) });
   const masters = await loadMasters();
   const depot = getDepot();
   const settings = getRouteSettings();
@@ -28,7 +38,14 @@ export default async function RoutesPage(props: { searchParams: Promise<Record<s
   const courses: BoardCourse[] = [];
   let ci = 0;
   for (const course of (masters.courses ?? []).filter((c) => c.active !== false && (!c.weekdays?.length || c.weekdays.includes(wd)))) {
-    const stops = orderedStops(course, customers).filter((c) => deliversOn(c, wd));
+    // その日のコース: 基準（便の回る順・その曜日に届ける先）→ その日に注文がある日は、注文のある先だけ＋ふだん来ない先は「追加」で、いちばん増えない所に入れる
+    const all = orderedStops(course, customers).map(withService);
+    const base = all.filter((c) => deliversOn(c, wd));
+    const anyOrder = all.some((c) => ordered.has(c.id));
+    const extra = anyOrder ? all.filter((c) => ordered.has(c.id) && !base.includes(c)) : [];
+    const stops = anyOrder ? base.filter((c) => ordered.has(c.id)) : [...base];
+    for (const x of extra) stops.splice(bestSlot(depot, stops, x), 0, x);
+    const added = new Set(extra.map((x) => x.id));
     if (!stops.length) continue;
     const pts = [depot, ...stops.map((s) => ({ lat: s.lat!, lng: s.lng! })), depot];
     const road = await roadRoute(pts).catch(() => undefined);
@@ -41,11 +58,13 @@ export default async function RoutesPage(props: { searchParams: Promise<Record<s
       stops: tl.rows.map((r, i) => {
         const c = stops[i];
         return {
+          ...(added.has(r.id) ? { added: true } : {}),
           id: r.id, no: r.no, name: r.name, lat: c.lat!, lng: c.lng!, arrive: toHHMM(r.arrive), arriveMin: r.arrive, leaveMin: r.leave, late: r.late > 0,
           badges: deliveryRules(c).filter((b) => b.kind !== "dest").map((b) => b.text),
         };
       }),
     });
   }
-  return <RouteBoard courses={courses} depot={depot} weekday={WD[wd]} initial={typeof q.c === "string" ? q.c : courses[0]?.id ?? "all"} demoNow={typeof q.t === "string" && /^\d{2}:\d{2}$/.test(q.t) ? q.t : undefined} play={q.play === "1"} />;
+  return <RouteBoard key={date} courses={courses} depot={depot} weekday={WD[wd]} date={date} today={today} initial={typeof q.c === "string" ? q.c : courses[0]?.id ?? "all"} demoNow={typeof q.t === "string" && /^\d{2}:\d{2}$/.test(q.t) ? q.t : undefined} play={q.play === "1"} />;
 }
+

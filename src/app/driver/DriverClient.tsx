@@ -339,8 +339,9 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                           ) : (
                             <>
                               {/* 納品の決まり（⑧）: 時間・検品・サインを大きな印で */}
-                              {badgeRules(s.rules).length > 0 && (
+                              {(badgeRules(s.rules).length > 0 || s.added) && (
                                 <span className="mt-1 flex flex-wrap gap-1.5">
+                                  {s.added && <span className="rounded-lg bg-ok-bg px-2 py-0.5 text-[17px] font-black text-ok-ink">今日だけ追加</span>}
                                   {badgeRules(s.rules).map((r) => (
                                     <span key={r.kind} className={`rounded-lg px-2 py-0.5 text-[17px] font-black ${r.kind === "time" ? "bg-[#fff3c4] text-[#654700]" : "bg-[#8b1a1a] text-white"}`}>{r.text}</span>
                                   ))}
