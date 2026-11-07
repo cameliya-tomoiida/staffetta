@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { addDays, choiceClass } from "@/components/ui";
+import { HelpTip } from "@/components/ui/HelpTip";
 import { todayJst } from "@/lib/clock";
 import { getCompany } from "@/lib/company";
 import { closingLabel } from "@/lib/slips/calc";
@@ -29,14 +30,16 @@ export default async function SlipsPage(props: PageProps<"/slips">) {
 
   return (
     <main className="space-y-5">
-      <header className="space-y-2">
+      <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-bold">伝票</h1>
-        <p className="text-lg text-ink-soft">確定した注文から、納品書・受領書と請求書を作って印刷します。単価は取引先の卸価格（無ければ商品の売価）、消費税は食品 8%・それ以外 10% です。</p>
-        {!company.invoiceNo && (
-          <p className="rounded-xl border-2 border-[#8b1a1a] bg-alert-bg px-4 py-3 text-lg font-bold text-alert-ink">
-            インボイスの登録番号がまだです。<Link href="/settings/company">設定 → 自社の情報</Link> で入れてください。
-          </p>
-        )}
+        <HelpTip alert={!company.invoiceNo}>
+          {!company.invoiceNo && (
+            <p className="font-bold text-alert-ink">
+              インボイスの登録番号がまだです。<Link href="/settings/company" className="underline">設定 → 自社の情報</Link> で入れてください。
+            </p>
+          )}
+          <p>単価は取引先の卸価格（無ければ商品の売価）。消費税は食品 8%・それ以外 10%。</p>
+        </HelpTip>
       </header>
       <nav aria-label="伝票の種類" className="grid grid-cols-3 gap-2 sm:flex">
         <Link href={`/slips?date=${date}`} className={choiceClass(tab === "delivery", "flex min-h-14 items-center justify-center px-4 text-lg")}>納品書・受領書</Link>

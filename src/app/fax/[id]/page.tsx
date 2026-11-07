@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ReadFaxButton } from "@/app/price-changes/ReadFaxButton";
 import { notFound } from "next/navigation";
 import { liveCustomerLite } from "@/lib/customers-live";
@@ -8,6 +7,7 @@ import { aliasMapFor, confidenceLevel } from "@/lib/aliases";
 import { checkLeadTime } from "@/lib/leadtime";
 import { nowIso } from "@/lib/clock";
 import { ReviewClient } from "./ReviewClient";
+import { UnreadFax } from "./UnreadFax";
 
 
 export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) {
@@ -15,13 +15,7 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
   const db = await readDb();
   const fax = db.faxes.find((f) => f.id === id);
   if (!fax) notFound();
-  if (!fax.read)
-    return (
-      <div className="card p-6">
-        まだ読み取っていません。<Link href="/fax" className="underline">受信箱</Link>から「Claudeで読み取る」を押してください。
-        <div className="mt-3 flex"><ReadFaxButton faxId={fax.id} label="値上げのお知らせとして読む" /></div>
-      </div>
-    );
+  if (!fax.read) return <UnreadFax faxId={fax.id} file={fax.file} rotation={fax.rotation ?? 0} />;
   const mine = (o: (typeof db.orders)[number]) => o.id.startsWith(`${fax.id}-`);
   const orders = db.orders.filter(mine);
   const others = db.orders.filter((o) => !mine(o));
