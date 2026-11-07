@@ -752,7 +752,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                         </span>
                       ))}
                     </p>
-                    <p className="mt-2 text-[14px]">下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。</p>
+                    <p className="mt-2 text-[14px]">下記のとおり納品いたします。商品がお手元に届きましたら、右の「検品」の欄でご確認ください。</p>
                     <table className="m-keep mt-2 w-full border-collapse text-[14px]">
                       <thead>
                         <tr>

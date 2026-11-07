@@ -138,7 +138,7 @@ export async function importCustomersAction(fd: FormData): Promise<{ added: numb
 
 /**
  * お客さんがその日の納品書（PDF）を受け取る（担当者 11/7「納品される日・何が届くかを確かめて、納品書をダウンロードして、それを見ながら検品できるように」）。
- * つながっている取引先の、その日の確定した注文だけ。右の「検品」の欄に、届いた物から印を付けられる。
+ * つながっている取引先の、その日の確定した注文だけ。右の「検品」の欄で、届いた商品を確かめてもらう。
  */
 /** 画面に出す納品書（PDF と同じ中身。担当者 11/7「控えの検品票なので、どう見えるかをその場で見せる」） */
 export interface SlipView {
@@ -179,7 +179,7 @@ export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok
       headerRight: [`伝票番号 ${slip.no}`, ...(c.invoiceNo ? [`登録番号 ${c.invoiceNo}`] : [])],
       to: [`${slip.customerName} 御中`],
       from: [c.name, c.address ? `${c.postalCode ? `〒${c.postalCode} ` : ""}${c.address}` : "", c.tel ? `TEL ${c.tel}` : "", c.fax ? `FAX ${c.fax}` : ""].filter(Boolean),
-      lead: ["下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。"],
+      lead: ["下記のとおり納品いたします。商品がお手元に届きましたら、右の「検品」の欄でご確認ください。"],
       table: {
         columns: [
           { label: "品名", width: 360 },
