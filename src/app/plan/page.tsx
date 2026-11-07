@@ -502,15 +502,17 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       <div className={`no-print mt-6 space-y-2 ${vis("today")}`} lang="ja">
         {warn.incomplete.length > 0 && (
           <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />}>
-            お店か商品が決まっていない注文が <span className="num">{warn.incomplete.length}</span> 件あります。この分は作る数に入っていません。
-            <Link href="/orders?status=needs_review" className="ml-2 underline underline-offset-4">受注一覧で直す</Link>
+            <Link href="/orders?status=needs_review" className="flex items-center gap-2">
+              作る数に入っていない注文 <span className="num">{warn.incomplete.length}</span>
+              <span className="ml-auto">›</span>
+            </Link>
           </Notice>
         )}
         {otherWarnings.length > 0 && (
           <Notice tone="alert" icon={<Icon.alert className="h-6 w-6" />}>
             <details>
               <summary className="cursor-pointer">
-                製造の注意が <span className="num">{otherWarnings.length}</span> 件あります（ピザの上限・始める時刻など）。押すと出します。
+                製造の注意 <span className="num">{otherWarnings.length}</span>
               </summary>
               <ul className="mt-1 list-disc pl-5 font-normal">
                 {otherWarnings.map((w, i) => (
