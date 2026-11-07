@@ -174,7 +174,9 @@ export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok
     const pdf = await makeSimplePdf({
       title: "納品書",
       landscape: true,
-      headerRight: [`納品日 ${md}`, `伝票番号 ${slip.no}`, ...(c.invoiceNo ? [`登録番号 ${c.invoiceNo}`] : [])],
+      // 担当者 11/7「納品日は出すときに分かっている。宛先の下に今より大きく」「検品した人の欄はいらない」
+      toSub: `納品日　${md}（${"日月火水木金土"[new Date(`${date}T00:00:00Z`).getUTCDay()]}）`,
+      headerRight: [`伝票番号 ${slip.no}`, ...(c.invoiceNo ? [`登録番号 ${c.invoiceNo}`] : [])],
       to: [`${slip.customerName} 御中`],
       from: [c.name, c.address ? `${c.postalCode ? `〒${c.postalCode} ` : ""}${c.address}` : "", c.tel ? `TEL ${c.tel}` : "", c.fax ? `FAX ${c.fax}` : ""].filter(Boolean),
       lead: ["下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。"],
@@ -194,7 +196,6 @@ export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok
         ...slip.totals.byRate.map((r) => `消費税（${r.rate}%） ${yen(r.tax)} 円`),
         `合計（税込） ${yen(slip.totals.total)} 円`,
       ],
-      footer: ["検品した人 ＿＿＿＿＿＿＿＿　　検品の日時 ＿＿月＿＿日 ＿＿:＿＿"],
     });
     const view: SlipView = {
       title: "納品書",

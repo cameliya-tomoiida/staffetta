@@ -730,10 +730,11 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   >
                     <h2 className="text-center text-[26px] font-bold tracking-[.5em]">納品書</h2>
                     <div className="mt-3 flex items-start justify-between gap-6">
-                      <p className="border-b-2 border-[#111] pb-0.5 text-[20px] font-bold whitespace-nowrap">{v.to} 御中</p>
+                      <div>
+                        <p className="border-b-2 border-[#111] pb-0.5 text-[20px] font-bold whitespace-nowrap">{v.to} 御中</p>
+                        <p className="mt-2 text-[18px] font-bold tabular-nums">納品日　{`${v.date.slice(0, 4)}年${mdLong(v.date)}`}</p>
+                      </div>
                       <p className="shrink-0 text-right text-[13px] leading-snug tabular-nums">
-                        納品日 {mdLong(v.date)}
-                        <br />
                         伝票番号 {v.no}
                         {v.invoiceNo && (
                           <>
@@ -791,7 +792,6 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                       ))}
                       <div className="text-[17px] font-bold">合計（税込） {num(v.total)} 円</div>
                     </div>
-                    <p className="mt-8 text-[13px]">検品した人 ＿＿＿＿＿＿＿＿＿＿　　検品の日時 ＿＿月＿＿日 ＿＿:＿＿</p>
                   </div>
                 </div>
               </div>

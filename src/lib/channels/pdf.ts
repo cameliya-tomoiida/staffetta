@@ -27,6 +27,8 @@ export interface SimpleDoc {
   notes?: string[];
   /** ページ下の欄（承認・送信の記録など） */
   footer?: string[];
+  /** 宛先のすぐ下に大きめに出す1行（納品書の納品日。11/7） */
+  toSub?: string;
   /** A4 横（納品書・検品票。品名が長くても入るように。11/7） */
   landscape?: boolean;
 }
@@ -68,13 +70,14 @@ export function makeSimplePdf(doc: SimpleDoc): Promise<Buffer> {
       pdf.fontSize(size).text(s, M, y + 6 + i * 22, { width: toW, lineBreak: false });
       if (i === 0) pdf.moveTo(M, y + 26).lineTo(M + Math.min(toW - 10, pdf.widthOfString(s) + 20), y + 26).lineWidth(0.8).stroke();
     });
+    if (doc.toSub) pdf.font("bold").fontSize(14).text(doc.toSub, M, y + 36, { width: W / 2, lineBreak: false });
     const fromTop = y + 14 * (doc.headerRight?.length ?? 0) + 8;
     (doc.from ?? []).forEach((s, i) => {
       pdf.font(i === 0 ? "bold" : "reg").fontSize(10);
       const fx = doc.landscape ? M + W * 0.68 : M + W / 2 + 40;
       pdf.text(s, fx, fromTop + i * 14, { width: M + W - fx });
     });
-    y = Math.max(y + 10 + (doc.to?.length ?? 0) * 22, fromTop + (doc.from?.length ?? 0) * 14) + 14;
+    y = Math.max(y + 10 + (doc.to?.length ?? 0) * 22 + (doc.toSub ? 24 : 0), fromTop + (doc.from?.length ?? 0) * 14) + 14;
     pdf.font("reg").fontSize(11);
     for (const s of doc.lead ?? []) {
       pdf.text(s, M, y, { width: W });
