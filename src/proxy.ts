@@ -25,11 +25,36 @@ export function proxy(request: NextRequest) {
   if (printPass && !request.headers.has("cf-connecting-ip") && !request.headers.has("cf-ray")) {
     headers.set("cookie", [request.headers.get("cookie"), `hub_user=${printPass}`].filter(Boolean).join("; "));
   }
-  const pass = () => NextResponse.next({ request: { headers } });
+  // セキュリティの見出し（セキュリティの確認 11/7）: よそのページの枠に入れない・中身の種類を推測させない・よそへ URL を渡しすぎない
+  const pass = () => {
+    const res = NextResponse.next({ request: { headers } });
+    res.headers.set("X-Frame-Options", "DENY");
+    res.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+    res.headers.set("X-Content-Type-Options", "nosniff");
+    res.headers.set("Referrer-Policy", "same-origin");
+    return res;
+  };
   // ⑧ 最初の画面: 「/」はその人の部署のホームへ（FAX 受信箱は /fax）。画面を描く前に送る
   if (request.nextUrl.pathname === "/" && request.method === "GET") {
     const role = userFromCookies((n) => request.cookies.get(n)?.value)?.role;
     return NextResponse.redirect(new URL(role ? homeOf(role) : "/home", request.url));
+  }
+  // よそのサイトから送らせる書き込み（CSRF）を止める（セキュリティの確認 11/7）: API の POST などは、同じサイトからだけ。
+  // 外部サービスの受け口（FAX の GAS・LINE の Webhook）は除く（署名・トークンで確かめている）
+  const pathname0 = request.nextUrl.pathname;
+  if (pathname0.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method) && !pathname0.startsWith("/api/line/") && !pathname0.startsWith("/api/fax/inbound")) {
+    const site = request.headers.get("sec-fetch-site");
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    let crossOrigin = site === "cross-site";
+    if (origin && host) {
+      try {
+        crossOrigin ||= new URL(origin).host !== host;
+      } catch {
+        crossOrigin = true;
+      }
+    }
+    if (crossOrigin) return new NextResponse("よそのサイトからは使えません", { status: 403 });
   }
   // ボタンの処理（Server Actions）と API は、サーバー側でも役割で止める（ログインを使っているときだけ）
   const isServerAction = request.method === "POST" && request.headers.has("next-action");

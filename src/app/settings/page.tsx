@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NoAdminNotice } from "@/components/ui/NoAdminNotice";
 
 export const metadata = { title: "設定｜STAFFETTA" };
 
@@ -21,6 +22,7 @@ export default function SettingsIndex() {
   return (
     <div className="space-y-4">
       <h1 className="m-display text-[22px] font-black max-md:hidden">設定</h1>
+      <NoAdminNotice />
       <nav aria-label="設定" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
         {ITEMS.map(([href, label]) => (
           <Link key={href} href={href} className="flex min-h-16 items-center justify-between gap-2 rounded-xl border border-rule-strong bg-sheet px-4 text-[16px] font-bold hover:border-crust-500">

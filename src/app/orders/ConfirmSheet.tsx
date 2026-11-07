@@ -8,7 +8,7 @@ import { useCustomers } from "@/components/CustomersContext";
 import { useProductLookup } from "@/components/ProductNamesContext";
 import { NumPad } from "@/components/NumPad";
 import { Button, Icon, Notice, choiceClass } from "@/components/ui";
-import { notifyLineConfirmedAction } from "@/lib/channels/line/actions";
+import { notifyLineConfirmedAction } from "@/lib/channels/line/staff-actions";
 import { confirmOrderAction } from "./actions";
 import { notifyHubChanged } from "@/components/ui/refresh";
 import { easyReasons } from "@/components/ui/wording";

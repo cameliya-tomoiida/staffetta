@@ -3,7 +3,7 @@ import type { ColumnDef, Row } from "@/components/admin/types";
 import { CustomerOrderSettings } from "@/components/line/CustomerOrderSettings";
 import { LineLinkPanel } from "@/components/line/LineLinkPanel";
 import { listCustomerSettings } from "@/lib/channels/line/customers";
-import { importCustomersAction, saveCustomerRowAction } from "@/lib/channels/line/actions";
+import { importCustomersAction, saveCustomerRowAction } from "@/lib/channels/line/staff-actions";
 import { adminCustomerColumns } from "@/lib/masters/customers";
 
 export const metadata = { title: "取引先｜マスタ管理" };

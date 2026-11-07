@@ -105,11 +105,16 @@ export async function autoConfirmLineOrders(orderIds: string[], opts: { dictHit?
 
 /** 確定した LINE の注文に、確定の連絡を自動で送る（設定が「する」・全部受けられる・まだ送っていないときだけ）。送ったら true */
 export async function autoNotifyIfAllowed(orderId: string): Promise<boolean> {
+  // 送信の鍵（notice_send）が OFF のあいだは自動では送らない（セキュリティの確認 11/7: line_auto_send だけを見ていた）
+  // 架空のお客さん（U_demo_…）は本物の LINE に送らない（記録だけ）ので、鍵が OFF でも通す
   if (!getLineAutoSettings().autoNotify) return false;
   const { alternativeOffers, notifyOrderConfirmed } = await import("./orders");
   const db = await readDb();
   const o = db.orders.find((x) => x.id === orderId);
   if (!o || o.source.channel !== "line" || o.status !== "confirmed" || o.source.extra?.lineNotifiedAt) return false;
+  const userId = o.source.refs.find((r) => r.kind === "line_message")?.userId ?? "";
+  const { isDemoLineUser } = await import("./config");
+  if (!isOn("notice_send") && !isDemoLineUser(userId)) return false;
   // 受けられない行がある連絡は、人が見て送る
   if (alternativeOffers(o, db.orders).length) return false;
   try {

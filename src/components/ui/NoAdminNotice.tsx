@@ -5,7 +5,7 @@ export function NoAdminNotice() {
   if (accountsExist()) return null;
   return (
     <p className="rounded-lg border-2 border-[#d8bb5c] bg-[#fff3c4] px-4 py-2 text-lg font-bold text-[#654700]">
-      ログインを使い始めるまで、社内専用です（<a href="/settings/staff" className="underline">スタッフの登録</a>で管理者のパスワードを作ると、ログインが始まります）
+      必ず管理者を作ってください。いまはログインが無いので、社内の LAN の誰でも全部の操作ができます（<a href="/settings/staff" className="underline">スタッフの登録</a>で管理者のパスワードを作ると、役割ごとのログインが始まります）
     </p>
   );
 }

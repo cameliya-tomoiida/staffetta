@@ -2,7 +2,7 @@
 // 取引先マスタの管理画面に置く、LINE のひも付けと注文方法の入力部品（画面側）。
 import { useState, useTransition } from "react";
 import type { OrderChannel } from "@/data/types";
-import { addCustomerAndLinkAction, linkLineUserAction, saveCustomerSettingsAction, unlinkLineUserAction } from "@/lib/channels/line/actions";
+import { addCustomerAndLinkAction, linkLineUserAction, saveCustomerSettingsAction, unlinkLineUserAction } from "@/lib/channels/line/staff-actions";
 import { Button, Notice } from "@/components/ui";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
 

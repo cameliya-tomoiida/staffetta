@@ -1,7 +1,7 @@
 "use client";
 // 大事なアラートをスタッフの LINE に送る設定（④）。お客さんには送らない。
 import { useState, useTransition } from "react";
-import { addStaffLineAction, removeStaffLineAction } from "@/lib/channels/line/actions";
+import { addStaffLineAction, removeStaffLineAction } from "@/lib/channels/line/staff-actions";
 import type { StaffLine } from "@/lib/channels/line/staff-alerts";
 
 const WHO = "事務"; // ログインの仕組みができたら、その人の名前にする

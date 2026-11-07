@@ -1,6 +1,6 @@
 "use client";
 // LINE受付のボタン。確認はブラウザの confirm() ではなく、画面の中の「はい／いいえ」で聞く。
-import { notifyLineConfirmedAction } from "@/lib/channels/line/actions";
+import { notifyLineConfirmedAction } from "@/lib/channels/line/staff-actions";
 import { ConfirmInline } from "@/components/ui/ConfirmInline";
 
 const WHO = "事務"; // ログインの仕組みができたら、その人の名前にする
