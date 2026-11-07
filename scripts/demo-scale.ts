@@ -30,6 +30,9 @@ async function main() {
   const { db: hub, save } = await loadForUpdate();
   const add = scaleOrders(date, customers).filter((o) => !hub.orders.some((x) => x.id === o.id));
   hub.orders.push(...add);
+  // 値上げの流れの見本: 仕入先（米田製粉（デモ））からの「価格改定のお願い」の FAX（強力粉・中力粉 12月1日から）
+  if (!hub.faxes.some((f) => f.id === "F011"))
+    hub.faxes.push({ id: "F011", file: "/samples/fax11.pdf", via: "sample", receivedAt: "2026-11-07T09:12:00+09:00", label: "発信元: ﾖﾈﾀﾞｾｲﾌﾝ", status: "new" });
   await save();
   console.log(`本物の規模の見本を入れました: 生地 ${m.doughs.length} 種類・注文 ${add.length} 件（${date}）`);
 }

@@ -14,6 +14,8 @@ import { todayJst } from "@/lib/clock";
 import { RefreshBriefing } from "./RefreshBriefing";
 import { currentGaps } from "@/lib/records/store";
 import { getCompany } from "@/lib/company";
+import { listPriceChanges, marginLine, priceImpact } from "@/lib/price-change";
+import { loadMasters } from "@/lib/masters/seed-db";
 import type { Gap } from "@/lib/records/alarms";
 
 export const metadata = { title: "ホーム｜STAFFETTA" };
@@ -82,7 +84,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
       {role === "管理者" && <Admin d={d} />}
       {role === "事務" && <Office d={d} />}
       {role === "工場" && <Factory d={d} />}
-      <Alerts d={d} bankDemo={role === "管理者" && !getCompany().bank.trim()} />
+      <Alerts d={d} bankDemo={role === "管理者" && !getCompany().bank.trim()} price={role === "事務" || role === "管理者" ? await pricePending() : []} />
     </div>
   );
 }
@@ -272,7 +274,21 @@ function Factory({ d, compact = false }: { d: HomeData; compact?: boolean }) {
   return compact ? <><h3 className="mt-4 mb-2 text-[20px] font-bold">工場（{md(d.date)}）</h3>{body}</> : <Section title={`製造（${md(d.date)} 納品のぶん）`}>{body}</Section>;
 }
 
-function Alerts({ d, bankDemo }: { d: HomeData; bankDemo?: boolean }) {
+/** 材料の値上げで、まだ終わっていない物（原価に反映していない・取引先へ知らせていない）。1件＝1行 */
+async function pricePending(): Promise<{ id: string; text: string; urgent: boolean }[]> {
+  const open = listPriceChanges().filter((c) => c.status === "draft" || !c.noticeId);
+  if (!open.length) return [];
+  const m = await loadMasters();
+  const line = marginLine();
+  return open.slice(0, 2).map((c) => {
+    const imp = priceImpact(c.items, m, line, c.status === "applied");
+    const below = imp.filter((p) => p.belowLine).length;
+    const what = `材料の値上げ：${c.items.map((i) => i.name).join("・")}（${Number(c.effectiveDate.slice(5, 7))}月${Number(c.effectiveDate.slice(8, 10))}日から）`;
+    return { id: c.id, text: c.status === "draft" ? `${what}。原価に反映しますか？` : `${what}。見直しが必要 ${below}品`, urgent: below > 0 };
+  });
+}
+
+function Alerts({ d, bankDemo, price = [] }: { d: HomeData; bankDemo?: boolean; price?: { id: string; text: string; urgent: boolean }[] }) {
   const list = d.alerts.slice(0, 6);
   return (
     <Section title="お知らせ">
@@ -283,7 +299,13 @@ function Alerts({ d, bankDemo }: { d: HomeData; bankDemo?: boolean }) {
           <span className="text-[19px] font-bold">振込先がまだデモです（本番の前に 設定 → 自社の情報 で入れてください）</span>
         </Link>
       )}
-      {list.length === 0 && !bankDemo ? <p className="text-[18px] text-ink-soft">いまは ありません</p> : (
+      {price.map((x) => (
+        <Link key={x.id} href={`/price-changes/${x.id}`} className={`mb-2 block rounded-xl border-2 bg-sheet px-4 py-3 hover:border-crust-500 ${x.urgent ? "border-[#8b1a1a]" : "border-[#b08210]"}`}>
+          <span className={`mr-2 rounded px-2 py-0.5 text-[16px] font-black ${x.urgent ? "bg-[#fff0f1] text-[#a51e28]" : "bg-[#fff3c4] text-[#654700]"}`}>値上げ</span>
+          <span className="text-[19px] font-bold">{x.text}</span>
+        </Link>
+      ))}
+      {list.length === 0 && !bankDemo && !price.length ? <p className="text-[18px] text-ink-soft">いまは ありません</p> : (
         <ul className="space-y-2">
           {list.map((a) => (
             <li key={a.dedupeKey}>

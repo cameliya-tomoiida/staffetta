@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReadFaxButton } from "@/app/price-changes/ReadFaxButton";
 import { notFound } from "next/navigation";
 import { liveCustomerLite } from "@/lib/customers-live";
 import { allProducts } from "@/lib/catalog";
@@ -18,6 +19,7 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
     return (
       <div className="card p-6">
         まだ読み取っていません。<Link href="/" className="underline">受信箱</Link>から「Claudeで読み取る」を押してください。
+        <div className="mt-3 flex"><ReadFaxButton faxId={fax.id} label="値上げのお知らせとして読む" /></div>
       </div>
     );
   const mine = (o: (typeof db.orders)[number]) => o.id.startsWith(`${fax.id}-`);
@@ -43,6 +45,9 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
     }
   }
   return (
+    <>
+    {/* 注文が1つも無い FAX（仕入先からの値上げのお知らせなど）は、値上げとして読める */}
+    {read.orders.length === 0 && <div className="mb-3 flex"><ReadFaxButton faxId={fax.id} label="値上げのお知らせとして読む" /></div>}
     <ReviewClient
       fax={fax}
       orders={orders}
@@ -55,5 +60,6 @@ export default async function FaxReviewPage({ params }: PageProps<"/fax/[id]">) 
       leadTimes={leadTimes}
       unreadFaxes={db.faxes.filter((f) => f.status === "new" || f.status === "reading").length}
     />
+    </>
   );
 }

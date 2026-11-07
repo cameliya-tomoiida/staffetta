@@ -1,6 +1,8 @@
 // 本物の規模の見本（作者 11/6 深夜 担当者「1日に生地は 10〜20 種類。ピザは 5回仕込む・食パンも 5回回す。食パンの中にライ麦・湯種など」）。
 // 見本のマスタ（seed.ts）に、生地・商品・材料を足し、注文を本物の量にする。
 // 計算のテスト（scale.test.ts）と、デモの DB（scripts/demo-scale.ts。3100 の DB には入れない）に使う。どれも架空。
+import { withMasters } from "@/lib/catalog";
+import { productCost } from "@/lib/cost";
 import type { DoughMaster, Masters, MaterialMaster, Order, ProcessStepMaster, ProductMaster, RecipeItemMaster } from "@/data/types";
 
 interface NewDough {
@@ -128,6 +130,15 @@ export function scaleMasters(base: Masters): Masters {
   }
   // 多めに作る率の初期値（自社で作る商品はぜんぶ。ふつう 2%・バンズ 5%）
   for (const p of m.products) if (p.kind === "make" && p.overRate == null) p.overRate = overRateOf(p.name);
+  // 原価をふつうの値に（担当者 11/7: 粗利率 15〜35% くらい）。材料費・包材費のほかを人件費として足す。
+  // 食パン 8枚切・6枚切は 11%（小麦粉の値上げで、線 10% を切る見本）
+  const target = (id: string, i: number) => (id === "P03" || id === "P04" ? 11 : [18, 22, 25, 28, 32][i % 5]);
+  m.products.forEach((p, i) => {
+    if (p.kind !== "make" || !(p.price > 0)) return;
+    const c = withMasters(m, () => productCost(p.id));
+    const labor = Math.round((p.price * (1 - target(p.id, i) / 100) - c.materialCost - c.packagingCost) * 10) / 10;
+    if (labor > 0) p.laborCost = labor;
+  });
   // 湯種は前の日に仕込む（工程の名前で分かるように）
   for (const s of m.steps) if (s.doughId === "DG12" && s.key === "weigh") s.name = "計量・湯種（前日に仕込んだ湯種を入れる）";
   return m;

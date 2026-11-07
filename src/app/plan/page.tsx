@@ -204,21 +204,25 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   });
   const showMt = lang !== "ja" && (!isReviewed(lang) || Object.keys(mt).length > 0);
 
+  const covPill = (cls: string) => (
+      <p className={`no-print ${cls} inline-flex flex-wrap items-center gap-x-2 rounded-lg px-3 py-1.5 text-[17px] font-bold ${cov.missing.length || cov.afterPrepared.length ? "bg-alert-bg text-alert-ink" : "bg-ok-bg text-ok-ink"}`}>
+        注文 {cov.confirmed}件 → 計画に {cov.included}件
+        {cov.missing.length > 0 && <span>（入っていない {cov.missing.length}行。<Link href={`/orders?date=${date}`} className="underline">確かめる</Link>）</span>}
+        {cov.afterPrepared.length > 0 && <span>・あとから確定 {cov.afterPrepared.length}件（印刷し直す）</span>}
+        {!cov.missing.length && !cov.afterPrepared.length && cov.confirmed > 0 && <span>✓</span>}
+      </p>
+  );
   const jaLabel = langInfo(lang).ja;
   return (
     <div>
       <HolidayNotice dates={[{ date, label: "納品日" }, ...(r.productionDate !== date ? [{ date: r.productionDate, label: "製造日" }] : [])]} what="注文と製造の日を確かめてください。" />
       {/* 画面の上（見るのは日本人なので日本語） */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b-2 border-crust-600 pb-3">
-        <div>
+        {/* スマホは上の帯に題があるので、大きな題と注文の帯は出さない（注文の帯は「今日」のタブの中に） */}
+        <div className="max-md:hidden">
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">製造計画・工程表</h1>
 
-          <p className={`no-print mt-2 inline-flex flex-wrap items-center gap-x-2 rounded-lg px-3 py-1.5 text-[17px] font-bold ${cov.missing.length || cov.afterPrepared.length ? "bg-alert-bg text-alert-ink" : "bg-ok-bg text-ok-ink"}`}>
-            注文 {cov.confirmed}件 → 計画に {cov.included}件
-            {cov.missing.length > 0 && <span>（入っていない {cov.missing.length}行。<Link href={`/orders?date=${date}`} className="underline">確かめる</Link>）</span>}
-            {cov.afterPrepared.length > 0 && <span>・あとから確定 {cov.afterPrepared.length}件（印刷し直す）</span>}
-            {!cov.missing.length && !cov.afterPrepared.length && cov.confirmed > 0 && <span>✓</span>}
-          </p>
+          {covPill("mt-2")}
         </div>
         <DateNav date={date} today={today} pattern={href({ date: "__DATE__" })} marks={dates} />
         <div className="no-print flex flex-wrap items-center gap-2 max-md:hidden">
@@ -251,6 +255,7 @@ export default async function PlanPage(props: PageProps<"/plan">) {
         ))}
       </nav>
 
+      {tab === "today" && <div className="md:hidden">{covPill("mb-3")}</div>}
       {/* 今日: ラインごとに「いくつ作るか・何時に始めるか・人は足りるか」（日本語・印刷しない） */}
       <div className={`no-print mb-5 grid gap-3 md:grid-cols-2 ${vis("today")}`} lang="ja">
         {summary.map((x) => (
