@@ -173,18 +173,19 @@ export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok
     const md = `${Number(date.slice(0, 4))}年${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日`;
     const pdf = await makeSimplePdf({
       title: "納品書",
+      landscape: true,
       headerRight: [`納品日 ${md}`, `伝票番号 ${slip.no}`, ...(c.invoiceNo ? [`登録番号 ${c.invoiceNo}`] : [])],
       to: [`${slip.customerName} 御中`],
       from: [c.name, c.address ? `${c.postalCode ? `〒${c.postalCode} ` : ""}${c.address}` : "", c.tel ? `TEL ${c.tel}` : "", c.fax ? `FAX ${c.fax}` : ""].filter(Boolean),
       lead: ["下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。"],
       table: {
         columns: [
-          { label: "品名", width: 215 },
-          { label: "数量", width: 55, align: "right" },
-          { label: "単位", width: 40, align: "center" },
-          { label: "単価", width: 60, align: "right" },
-          { label: "金額", width: 75, align: "right" },
-          { label: "検品", width: 70, align: "center" },
+          { label: "品名", width: 360 },
+          { label: "数量", width: 60, align: "right" },
+          { label: "単位", width: 45, align: "center" },
+          { label: "単価", width: 70, align: "right" },
+          { label: "金額", width: 85, align: "right" },
+          { label: "検品", width: 60, align: "center" },
         ],
         rows: slip.lines.map((l) => [l.name, yen(l.quantity), l.unit, yen(l.unitPrice), yen(l.amount), "□"]),
       },

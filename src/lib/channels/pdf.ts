@@ -27,6 +27,8 @@ export interface SimpleDoc {
   notes?: string[];
   /** ページ下の欄（承認・送信の記録など） */
   footer?: string[];
+  /** A4 横（納品書・検品票。品名が長くても入るように。11/7） */
+  landscape?: boolean;
 }
 
 const A4 = { w: 595.28, h: 841.89 };
@@ -35,19 +37,20 @@ const M = 40;
 /** 枠線付きの表がある A4 縦の書類を1つ作る（行が多ければ改ページ） */
 export function makeSimplePdf(doc: SimpleDoc): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const pdf = new PDFDocument({ size: "A4", margin: M, info: { Title: doc.title, Creator: "STAFFETTA（デモ）" } });
+    const pdf = new PDFDocument({ size: "A4", layout: doc.landscape ? "landscape" : "portrait", margin: M, info: { Title: doc.title, Creator: "STAFFETTA（デモ）" } });
+    const PAGE = doc.landscape ? { w: A4.h, h: A4.w } : A4;
     const chunks: Buffer[] = [];
     pdf.on("data", (c: Buffer) => chunks.push(c));
     pdf.on("end", () => resolve(Buffer.concat(chunks)));
     pdf.on("error", reject);
     pdf.registerFont("reg", FONT_REG);
     pdf.registerFont("bold", FONT_BOLD);
-    const W = A4.w - M * 2;
+    const W = PAGE.w - M * 2;
 
     const footer = () => {
       if (!doc.footer?.length) return;
       pdf.font("reg").fontSize(8);
-      doc.footer.forEach((s, i) => pdf.text(s, M, A4.h - M - (doc.footer!.length - i) * 12, { width: W, lineBreak: false }));
+      doc.footer.forEach((s, i) => pdf.text(s, M, PAGE.h - M - (doc.footer!.length - i) * 12, { width: W, lineBreak: false }));
     };
 
     // タイトル・右上
@@ -58,13 +61,18 @@ export function makeSimplePdf(doc: SimpleDoc): Promise<Buffer> {
     // 宛先（左）・差出人（右）
     (doc.to ?? []).forEach((s, i) => {
       pdf.font(i === 0 ? "bold" : "reg").fontSize(i === 0 ? 15 : 11);
-      pdf.text(s, M, y + 6 + i * 22, { width: W / 2 });
-      if (i === 0) pdf.moveTo(M, y + 26).lineTo(M + W / 2 - 10, y + 26).lineWidth(0.8).stroke();
+      // 宛先は1行で（横向きは広く取る。担当者 11/7「お客さんの名前が変に改行される」）
+      const toW = doc.landscape ? W * 0.62 : W / 2;
+      let size = i === 0 ? 15 : 11;
+      while (size > 9 && pdf.fontSize(size).widthOfString(s) > toW - 10) size -= 0.5;
+      pdf.fontSize(size).text(s, M, y + 6 + i * 22, { width: toW, lineBreak: false });
+      if (i === 0) pdf.moveTo(M, y + 26).lineTo(M + Math.min(toW - 10, pdf.widthOfString(s) + 20), y + 26).lineWidth(0.8).stroke();
     });
     const fromTop = y + 14 * (doc.headerRight?.length ?? 0) + 8;
     (doc.from ?? []).forEach((s, i) => {
       pdf.font(i === 0 ? "bold" : "reg").fontSize(10);
-      pdf.text(s, M + W / 2 + 40, fromTop + i * 14, { width: W / 2 - 40 });
+      const fx = doc.landscape ? M + W * 0.68 : M + W / 2 + 40;
+      pdf.text(s, fx, fromTop + i * 14, { width: M + W - fx });
     });
     y = Math.max(y + 10 + (doc.to?.length ?? 0) * 22, fromTop + (doc.from?.length ?? 0) * 14) + 14;
     pdf.font("reg").fontSize(11);
@@ -99,7 +107,7 @@ export function makeSimplePdf(doc: SimpleDoc): Promise<Buffer> {
     const head = doc.table.columns.map((c) => c.label);
     drawRow(head, true);
     for (const r of doc.table.rows) {
-      if (y + rowH > A4.h - M - 70) {
+      if (y + rowH > PAGE.h - M - 70) {
         footer();
         pdf.addPage();
         y = M;

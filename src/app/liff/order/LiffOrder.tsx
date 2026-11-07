@@ -131,12 +131,21 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const [slip, setSlip] = useState<{ busy: boolean; error?: string }>({ busy: false });
   // 納品書のプレビュー（その場で紙の形で見せる。LINE の中ではダウンロードが見えないことがあるため・担当者 11/7）
   const [preview, setPreview] = useState<null | { view: SlipView; fileName: string; base64: string }>(null);
+  const [zoom, setZoom] = useState(false);
+  const [vw, setVw] = useState(390);
+  useEffect(() => {
+    const f = () => setVw(window.innerWidth);
+    f();
+    window.addEventListener("resize", f);
+    return () => window.removeEventListener("resize", f);
+  }, []);
   const getSlip = async (ymd: string) => {
     if (!auth || slip.busy) return;
     setSlip({ busy: true });
     const r = await liffSlipAction(auth, ymd);
     if (!r.ok) return setSlip({ busy: false, error: r.error });
     setPreview({ view: r.view, fileName: r.fileName, base64: r.base64 });
+    setZoom(false);
     setSlip({ busy: false });
   };
   /** PDF で保存（端末の PDF の画面で開く） */
@@ -529,19 +538,12 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   </button>
                 </div>
               )}
-              <button type="button" onClick={() => go("history")} className="mx-auto mt-3 block px-4 py-2 text-[14px] font-bold text-crust-600">
-                これまでの注文 ›
-              </button>
             </main>
           )}
 
           {tab === "history" && (
             <main className="px-4 pt-2">
-              <button type="button" onClick={() => go("cart")} className="-ml-2 flex h-11 items-center gap-0.5 rounded-[10px] px-2 text-[15px] font-bold text-crust-600">
-                <Svg d="M15 5l-7 7 7 7" w={2.6} />
-                もどる
-              </button>
-              <h1 className="mt-1 mb-2 text-[20px] font-bold">これまでの注文</h1>
+              <h1 className="mt-2 mb-2 text-[20px] font-bold">これまでの注文</h1>
               {ctx.history.length === 0 ? (
                 <p className="mt-3 text-[14px] text-ink-faint">まだご注文はありません</p>
               ) : (
@@ -647,28 +649,35 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 </div>
               </div>
               {orderTable(sent.lines, false)}
-              <button
-                type="button"
-                onClick={() => (inClient ? window.liff?.closeWindow() : go("home"))}
-                className="mx-4 mt-4 block h-[52px] w-[calc(100%-32px)] rounded-xl bg-crust-600 text-[16px] font-bold text-white"
-              >
-                {inClient ? "トークにもどる" : "ホームへ"}
+              <button type="button" onClick={() => go("home")} className="mx-4 mt-4 block h-[52px] w-[calc(100%-32px)] rounded-xl bg-crust-600 text-[16px] font-bold text-white active:scale-[.98]">
+                ホームへ
               </button>
+              <div className="mt-2 flex justify-center gap-2">
+                <button type="button" onClick={() => go("history")} className="h-11 px-3 text-[14px] font-bold text-crust-600">
+                  履歴を見る
+                </button>
+                {inClient && (
+                  <button type="button" onClick={() => window.liff?.closeWindow()} className="h-11 px-3 text-[14px] font-bold text-ink-soft">
+                    トークにもどる
+                  </button>
+                )}
+              </div>
             </main>
           )}
 
           {/* 下のタブ（ホーム／商品／注文） */}
-          {tab !== "done" && (
+          {(
             <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-sheet pb-[env(safe-area-inset-bottom)]" aria-label="メニュー">
-              <div className="mx-auto grid h-14 max-w-[520px] grid-cols-3">
+              <div className="mx-auto grid h-14 max-w-[520px] grid-cols-4">
                 {(
                   [
                     ["home", "ホーム", "M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"],
                     ["items", "商品", "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"],
                     ["cart", "注文", "M7 4h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM9 4V3h6v1M9 10h6M9 14h6M9 18h3"],
+                    ["history", "履歴", "M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM4 10h16M8 3v4M16 3v4M8 14h2M12 14h2M8 17h2"],
                   ] as const
                 ).map(([t, label, d]) => {
-                  const on = tab === t || (t === "cart" && tab === "history");
+                  const on = tab === t;
                   return (
                     <button
                       key={t}
@@ -693,7 +702,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
       {/* 納品書のプレビュー（紙の形・検品の □ 付き） */}
       {preview && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/50" role="dialog" aria-label="納品書">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#2a2d33]/95" role="dialog" aria-label="納品書">
           <div className="flex items-center justify-between bg-sheet px-2 py-1.5 pt-[calc(6px+env(safe-area-inset-top))]">
             <button type="button" onClick={() => setPreview(null)} className="flex h-11 items-center gap-0.5 rounded-[10px] px-2 text-[15px] font-bold text-crust-600">
               <Svg d="M15 5l-7 7 7 7" w={2.6} />
@@ -705,69 +714,89 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
               PDF で保存
             </button>
           </div>
-          <div className="flex-1 overflow-auto p-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
-            <div className="theme-paper mx-auto max-w-[520px] rounded-md bg-white px-4 py-5 text-[#111] shadow-xl" style={{ animation: "liffRise .25s ease-out" }}>
-              <h2 className="text-center text-[22px] font-bold tracking-[.4em]">納品書</h2>
-              <div className="mt-3 flex items-start justify-between gap-3">
-                <p className="border-b-2 border-[#111] pb-0.5 text-[16px] font-bold">{preview.view.to} 御中</p>
-                <p className="shrink-0 text-right text-[11px] leading-snug tabular-nums">
-                  納品日 {mdLong(preview.view.date)}
-                  <br />
-                  伝票番号 {preview.view.no}
-                  {preview.view.invoiceNo && (
-                    <>
-                      <br />
-                      登録番号 {preview.view.invoiceNo}
-                    </>
-                  )}
-                </p>
-              </div>
-              <p className="mt-2 text-right text-[11px] leading-snug">
-                <b className="text-[12px]">{preview.view.from[0]}</b>
-                {preview.view.from.slice(1).map((x) => (
-                  <span key={x} className="block">
-                    {x}
-                  </span>
-                ))}
-              </p>
-              <p className="mt-2 text-[12px]">下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。</p>
-              <table className="m-keep mt-2 w-full border-collapse text-[12px]">
-                <thead>
-                  <tr>
-                    {["品名", "数量", "単価", "金額", "検品"].map((h) => (
-                      <th key={h} className="!border !border-[#111] !bg-[#eee] px-1 py-1 text-center font-bold !text-[#111]">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.view.lines.map((l, i) => (
-                    <tr key={i}>
-                      <td className="!border !border-[#111] !bg-white px-1.5 py-1.5 text-left !text-[#111]">{l.name}</td>
-                      <td className="border border-[#111] px-1 text-right whitespace-nowrap tabular-nums">
-                        {num(l.quantity)}
-                        <small className="ml-0.5">{l.unit}</small>
-                      </td>
-                      <td className="border border-[#111] px-1 text-right tabular-nums">{num(l.unitPrice)}</td>
-                      <td className="border border-[#111] px-1 text-right tabular-nums">{num(l.amount)}</td>
-                      <td className="border border-[#111] text-center text-[16px]">□</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-2 ml-auto w-fit text-right text-[12px] leading-relaxed tabular-nums">
-                <div>小計（税抜） {num(preview.view.net)} 円</div>
-                {preview.view.taxes.map((t) => (
-                  <div key={t.rate}>
-                    消費税（{t.rate}%） {num(t.tax)} 円
+          {(() => {
+            // A4 横（297×210）の紙を 842px の幅で組んで、画面の幅に合わせて縮める。押すと実寸（横に動かして見る）
+            const PW = 842;
+            const PH = Math.round((PW * 210) / 297);
+            const sc = zoom ? 1 : Math.min(1, (vw - 24) / PW);
+            const v = preview.view;
+            return (
+              <div className="flex-1 overflow-auto p-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
+                <p className="mb-2 text-center text-[12px] text-white/80">{zoom ? "もう一度押すと全体" : "押すと大きく見られます"}</p>
+                <div style={{ width: PW * sc, height: PH * sc }} className="mx-auto" onClick={() => setZoom(!zoom)}>
+                  <div
+                    className="theme-paper origin-top-left bg-white px-10 py-8 text-[#111] shadow-xl"
+                    style={{ width: PW, minHeight: PH, transform: `scale(${sc})`, animation: "liffRise .25s ease-out" }}
+                  >
+                    <h2 className="text-center text-[26px] font-bold tracking-[.5em]">納品書</h2>
+                    <div className="mt-3 flex items-start justify-between gap-6">
+                      <p className="border-b-2 border-[#111] pb-0.5 text-[20px] font-bold whitespace-nowrap">{v.to} 御中</p>
+                      <p className="shrink-0 text-right text-[13px] leading-snug tabular-nums">
+                        納品日 {mdLong(v.date)}
+                        <br />
+                        伝票番号 {v.no}
+                        {v.invoiceNo && (
+                          <>
+                            <br />
+                            登録番号 {v.invoiceNo}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-right text-[13px] leading-snug">
+                      <b className="text-[14px]">{v.from[0]}</b>
+                      {v.from.slice(1).map((x) => (
+                        <span key={x} className="block">
+                          {x}
+                        </span>
+                      ))}
+                    </p>
+                    <p className="mt-2 text-[14px]">下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。</p>
+                    <table className="m-keep mt-2 w-full border-collapse text-[14px]">
+                      <thead>
+                        <tr>
+                          {[
+                            ["品名", "w-auto"],
+                            ["数量", "w-[80px]"],
+                            ["単位", "w-[60px]"],
+                            ["単価", "w-[90px]"],
+                            ["金額", "w-[110px]"],
+                            ["検品", "w-[70px]"],
+                          ].map(([h, w]) => (
+                            <th key={h} className={`${w} !border !border-[#111] !bg-[#eee] px-2 py-1.5 text-center font-bold !text-[#111]`}>
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {v.lines.map((l, i) => (
+                          <tr key={i}>
+                            <td className="!border !border-[#111] !bg-white px-2 py-2 text-left !text-[#111]">{l.name}</td>
+                            <td className="border border-[#111] px-2 text-right tabular-nums">{num(l.quantity)}</td>
+                            <td className="border border-[#111] px-1 text-center">{l.unit}</td>
+                            <td className="border border-[#111] px-2 text-right tabular-nums">{num(l.unitPrice)}</td>
+                            <td className="border border-[#111] px-2 text-right tabular-nums">{num(l.amount)}</td>
+                            <td className="border border-[#111] text-center text-[18px]">□</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="mt-3 ml-auto w-fit text-right text-[14px] leading-relaxed tabular-nums">
+                      <div>小計（税抜） {num(v.net)} 円</div>
+                      {v.taxes.map((t) => (
+                        <div key={t.rate}>
+                          消費税（{t.rate}%） {num(t.tax)} 円
+                        </div>
+                      ))}
+                      <div className="text-[17px] font-bold">合計（税込） {num(v.total)} 円</div>
+                    </div>
+                    <p className="mt-8 text-[13px]">検品した人 ＿＿＿＿＿＿＿＿＿＿　　検品の日時 ＿＿月＿＿日 ＿＿:＿＿</p>
                   </div>
-                ))}
-                <div className="text-[14px] font-bold">合計（税込） {num(preview.view.total)} 円</div>
+                </div>
               </div>
-              <p className="mt-6 text-[11px]">検品した人 ＿＿＿＿＿＿＿＿　検品の日時 ＿＿月＿＿日 ＿＿:＿＿</p>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       )}
 
