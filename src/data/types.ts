@@ -509,6 +509,8 @@ export interface CustomerMaster {
   /** 担当者とメールアドレス（お知らせ・連絡をメールで送るとき。11/7） */
   contactName?: string;
   email?: string;
+  /** 変更の見込み（%）: 長い付き合いで、あとから増やす変更がよく来る取引先は、その分を多めに作る（ロスとは別。11/7） */
+  changeAllowance?: number;
   externalCode?: string;
   lineUserId?: string;
   /** 前日の何時までに注文が必要か "HH:MM" */

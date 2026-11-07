@@ -137,7 +137,13 @@ export function makeCount(ordered: number, overRate?: number, overPieces?: numbe
 /** 商品の「多めに作る」を足す（足したときは ordered に注文の数を残す） */
 function withOver(it: DoughItem): DoughItem {
   const p = currentMasters().products.find((x) => x.id === it.productId);
-  const made = makeCount(it.pieces, p?.overRate, p?.overPieces);
+  // 取引先ごとの「変更の見込み（%）」も足す（あとから増やす変更がよく来る取引先の分。ロスとは別）
+  const cs = currentMasters().customers ?? [];
+  const allow = (it.customerPieces ?? []).reduce((s, c) => {
+    const a = cs.find((x) => x.id === c.customerId)?.changeAllowance ?? 0;
+    return s + (a > 0 ? Math.ceil((c.pieces * a) / 100) : 0);
+  }, 0);
+  const made = makeCount(it.pieces, p?.overRate, p?.overPieces) + allow;
   const rate = p?.overRate != null ? { overRate: p.overRate } : {};
   return made > it.pieces ? { ...it, ...rate, ordered: it.pieces, pieces: made } : { ...it, ...rate };
 }

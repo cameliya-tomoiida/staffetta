@@ -235,3 +235,13 @@ describe("多めに作る（商品の率・数）", () => {
     expect(after.doughKg).toBeGreaterThan(before.doughKg);
   });
 });
+
+describe("取引先ごとの変更の見込み（%）", () => {
+  it("取引先に 10% を入れると、その取引先の注文の分だけ多めに作る（ロスとは別）", () => {
+    const before = runPipeline(demoOrders, DEMO_DATE, { masters: base }).production.doughs.flatMap((d) => d.items).filter((i) => i.productId === "P01").reduce((s, i) => s + i.pieces, 0);
+    const c = demoOrders.find((o) => o.deliveryDate === DEMO_DATE && o.lines.some((l) => l.productId === "P01") && o.status === "confirmed")!.customerId;
+    const m = patch((m) => (m.customers.find((x) => x.id === c)!.changeAllowance = 10));
+    const after = runPipeline(demoOrders, DEMO_DATE, { masters: m }).production.doughs.flatMap((d) => d.items).filter((i) => i.productId === "P01").reduce((s, i) => s + i.pieces, 0);
+    expect(after).toBeGreaterThan(before);
+  });
+});

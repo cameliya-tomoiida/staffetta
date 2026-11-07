@@ -335,6 +335,7 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "fax", label: "FAX番号", type: "text" },
     { key: "contactName", label: "担当者", type: "text", example: "山田" },
     { key: "email", label: "メールアドレス", type: "text", example: "order@example.com" },
+    { key: "changeAllowance", label: "変更の見込み（%）", type: "number", min: 0, max: 50, example: "5" },
     { key: "externalCode", label: "外部サイトの取引先コード", type: "text" },
     { key: "cutoff", label: "注文の締め（前日）", type: "time", required: true, example: "15:00" },
     { key: "deliveryTime", label: "納品時刻", type: "time", example: "08:30", help: "工程表の逆算に使う。空なら 08:00" },

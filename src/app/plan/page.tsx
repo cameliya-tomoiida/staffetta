@@ -34,6 +34,7 @@ import { OrderProposal } from "./OrderProposal";
 import { ShortageList } from "./ShortageList";
 import { LossChip } from "./LossChip";
 import { materialShortList } from "@/lib/material-shortlist";
+import { changesByProduct, orderChanges } from "@/lib/order-changes";
 import { kvGet } from "@/lib/db/sqlite";
 import { doughCards, type DoughCard } from "@/components/recipe/cards";
 import { DoughDetailButton } from "@/components/recipe/DoughCards";
@@ -86,11 +87,16 @@ export default async function PlanPage(props: PageProps<"/plan">) {
   const cost = withMasters(masters, () => dayCostSummary(r));
   const units = new Map(withMasters(masters, () => allProducts()).map((p) => [p.id, p.unit]));
   const unitOf = (productId: string) => units.get(productId) ?? "個";
+  const pnames = new Map(withMasters(masters, () => allProducts()).map((p) => [p.id, p.name]));
+  const unitName = (productId: string) => pnames.get(productId) ?? productId;
   // 「作るもの」の生地名を押すと、その生地のレシピのカード（配合の％と g・この日の量・工程）が開く
   const cards = doughCards(masters, { date: r.productionDate, doughs: r.production.doughs });
   // 材料の締めに間に合わないもの（③の materialPlan.lateItems）は黄色で別に出す
   const lateMaterials = r.materialPlan.lateItems.map((x) => x.message);
   const shortRows = materialShortList(r, masters);
+  // 確定したあとの注文の変更（変更の FAX・LINE。計画はもう計算し直してある）
+  const changes = changesByProduct(orderChanges(orders, date));
+  const custName = (id: string) => masters.customers.find((c) => c.id === id)?.name.replace(/（[^）]*）/g, "") ?? id;
   const warn = splitWarnings(r.warnings.filter((w) => !lateMaterials.includes(w)));
   const otherWarnings = warn.others;
 
@@ -318,6 +324,24 @@ export default async function PlanPage(props: PageProps<"/plan">) {
             <span className="inline-block h-3 w-3 rounded-full bg-[#d64545]" />足りない材料 <span className="num">{shortRows.length}</span>
             <span className="ml-auto">›</span>
           </Link>
+        )}
+        {changes.length > 0 && (
+          <details className="no-print mb-4 rounded-lg border-2 border-review-line bg-sheet">
+            <summary className="flex min-h-12 cursor-pointer items-center gap-2 px-4 font-black">
+              変更 <span className="num">{changes.length}</span>
+              <span className="text-sm font-bold text-ink-soft">（計画に入っています）</span>
+            </summary>
+            <ul className="space-y-1 px-4 pb-3 text-[17px]">
+              {changes.map((c) => (
+                <li key={c.productId}>
+                  <b>{unitName(c.productId)}</b>
+                  {c.plus > 0 && <span className="num ml-2 font-black text-ok-ink">+{c.plus}</span>}
+                  {c.minus > 0 && <span className="num ml-2 font-black text-alert-ink">−{c.minus}</span>}
+                  <span className="ml-2 text-sm text-ink-soft">{c.customers.map(custName).join("・")}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
         <OrderProposal key={date} date={date} initial={getPlanOrder(date) ?? null} />
       </div>
