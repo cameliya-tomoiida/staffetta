@@ -307,6 +307,20 @@ export async function createLiffOrder(input: LiffOrderInput) {
   return auto.confirmed.length ? { ...order, status: "confirmed" as const, confirmedBy: "自動" } : order;
 }
 
+/** LIFF の商品の1行に出すもの */
+export interface LiffItem {
+  name: string;
+  unit: string;
+  /** 卸価格（basis が piece なら1個あたり、pack なら1袋あたり） */
+  price?: number;
+  /** 入数 */
+  pack: number;
+  basis: "piece" | "pack";
+  /** 分類（食パン・ロール・ピザ・菓子・惣菜・その他） */
+  category: string;
+  lead: string;
+}
+
 /** LIFFの画面に出す内容: いつもの商品・前回の注文・お店の名前 */
 export async function liffContext(userId: string) {
   const [db, state] = await Promise.all([readDb(), readLineState()]);
@@ -328,21 +342,35 @@ export async function liffContext(userId: string) {
   // 登録した商品だけを、その取引先の名前・単位・卸価格・入数・締めで出す。登録が無ければ今までどおり
   const m = await (await import("@/lib/masters/seed-db")).loadMasters();
   const cps = customerId && isOn("line_own_products") ? (m.customerProducts ?? []).filter((cp) => cp.customerId === customerId && cp.productId && cp.active !== false && productById(cp.productId)) : [];
-  const items: Record<string, { name: string; unit: string; price?: number; pack?: string; lead: string }> = {};
+  // 商品ごとに出すもの（作り直し 11/7）: 名前・入数・卸価格と基準（1個／1袋あたり）・分類
+  const { basisOf, categoryOf, packSizeOf } = await import("./liff-price");
+  const items: Record<string, LiffItem> = {};
   for (const cp of cps) {
     const p = m.products.find((x) => x.id === cp.productId);
     const cut = p?.cutoffTime ?? customer?.cutoff ?? "17:00";
+    const name = cp.name || p?.name || cp.productId!;
     items[cp.productId!] = {
-      name: cp.name || p?.name || cp.productId!,
+      name,
       unit: cp.unit || p?.unit || "個",
       ...(cp.price ? { price: cp.price } : {}),
-      ...(p?.bagSize && p.bagSize > 1 ? { pack: `${p.bagSize}個入` } : {}),
+      pack: packSizeOf(name, p?.bagSize),
+      basis: basisOf(cp.unit || p?.unit, cp.priceBasis),
+      category: categoryOf(name, p?.category),
       lead: p?.leadDays && p.leadDays > 1 ? `${p.leadDays}日前の${cut}まで` : `前日${cut}まで`,
     };
   }
   const own = cps.length > 0;
   const ownIds = Object.keys(items);
   const ownUsual = usual.filter((id) => items[id]);
+  const productIds = own ? [...ownUsual, ...ownIds.filter((id) => !ownUsual.includes(id))] : usual.length ? [...usual, ...defaults.filter((id) => !usual.includes(id))] : defaults;
+  // 取引先の商品が無いとき（見本の商品で出すとき）: 価格は出さず、入数と分類だけ
+  for (const id of productIds) {
+    if (items[id]) continue;
+    const p = m.products.find((x) => x.id === id) ?? productById(id);
+    if (!p) continue;
+    items[id] = { name: p.name, unit: p.unit, pack: packSizeOf(p.name, (p as { bagSize?: number }).bagSize), basis: basisOf(p.unit), category: categoryOf(p.name, (p as { category?: string }).category), lead: "" };
+  }
+  const cm = customerId ? m.customers.find((c) => c.id === customerId) : undefined;
   return {
     /** 取引先ごとの商品を出している（マスタに登録がある） */
     own,
@@ -354,7 +382,9 @@ export async function liffContext(userId: string) {
     cutoff: customer?.cutoff ?? "17:00",
     /** お届け日ごとの「選べない日・選べない商品」（③の締め・配送曜日） */
     days: liffDays(customerId ?? "", allProducts().map((p) => p.id), LIFF_SPAN),
-    productIds: own ? [...ownUsual, ...ownIds.filter((id) => !ownUsual.includes(id))] : usual.length ? [...usual, ...defaults.filter((id) => !usual.includes(id))] : defaults,
+    productIds,
+    /** 送料（税抜・1回の納品ごと）と、送料がかからない金額 */
+    shipping: cm?.shippingFee ? { fee: cm.shippingFee, ...(cm.shippingFreeOver ? { freeOver: cm.shippingFreeOver } : {}) } : null,
     usualCount: own ? ownUsual.length : usual.length,
     lastOrder: last
       ? {

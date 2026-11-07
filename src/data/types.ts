@@ -356,6 +356,8 @@ export interface ProductMaster {
   line?: ProductionLineId;
   /** 1袋（P）・1ケース（c/s）の入数 */
   bagSize?: number;
+  /** LINE の注文フォームの分類（食パン・ロール・ピザ・菓子・惣菜・その他）。空なら名前から決める */
+  category?: string;
   caseSize?: number;
   /** 注文のリードタイム（日）と締め時刻 "HH:MM" */
   leadDays?: number;
@@ -531,6 +533,10 @@ export interface CustomerMaster {
   slipFormat?: string;
   /** 割戻しの率（%）。請求金額から引いてから消費税（給食会社など） */
   rebateRate?: number;
+  /** 送料（円・1回の納品ごと。税抜）。遠方などで別にかかる取引先（担当者 11/7） */
+  shippingFee?: number;
+  /** この金額（税抜）以上の注文なら送料なし。空ならいつも送料 */
+  shippingFreeOver?: number;
   /** 請求書を事業所（納品場所）ごとに分けて小計を出す */
   invoiceByPlace?: boolean;
   note?: string;
@@ -678,6 +684,8 @@ export interface CustomerProductMaster {
   unit?: string;
   /** 卸価格（円/単位）。期間の中でいちばん新しい単価 */
   price?: number;
+  /** 卸価格の基準: piece = 1個（1枚）あたり → 金額 = 入数 × 数 × 単価／pack = 1袋（P・箱・ケース）あたり → 金額 = 数 × 単価。空なら単位から決める */
+  priceBasis?: "piece" | "pack";
   /** 原価（円/単位）。仕入れて売る商品は仕入れ価格 */
   cost?: number;
   /** 期間の中で単価がちがう日があった（要確認）。"152/150" のように並べる */

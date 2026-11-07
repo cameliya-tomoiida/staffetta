@@ -28,6 +28,10 @@ export const PURCHASE_METHOD_OPTIONS = opts({
   fax: "FAX", email: "メール", infomart: "インフォマート", aspit: "アスピット", hinode_site: "メーカーの発注サイト",
   kirara_site: "取引先の発注サイト", fujimi_site: "仕入先の受発注サイト", kogane_site: "仕入先の発注サイト（食品）", phone: "電話",
 });
+/** LINE の注文フォームの分類（商品のタブ） */
+export const CATEGORY_OPTIONS = opts({ bread: "食パン", roll: "ロール", pizza: "ピザ", deli: "菓子・惣菜", other: "その他" });
+/** 卸価格の基準 */
+export const PRICE_BASIS_OPTIONS = opts({ piece: "1個あたり", pack: "1袋あたり" });
 export const CHANNEL_OPTIONS = opts({
   fax: "FAX", line: "LINE", infomart: "インフォマート", customer_site: "取引先の発注サイト", email: "メール",
   google_sheet: "スプレッドシート", phone: "電話", driver: "ドライバー",
@@ -187,6 +191,7 @@ export const productDef: MasterDef<ProductMaster> = {
     { key: "taxRate", label: "消費税率（%）", type: "integer", min: 8, max: 10, example: "8", help: "食品は 8（軽減税率）。容器・雑貨など食品でないものは 10。空なら 8（納品書・請求書に使う）" },
     { key: "line", label: "ライン", type: "enum", options: LINE_OPTIONS, example: "パン", requiredWhen: (r) => kind("make")(r) && "自社製造は「ライン」が必須です" },
     { key: "bagSize", label: "袋の入数", type: "integer", min: 1, example: "10" },
+    { key: "category", label: "分類（LINE の注文）", type: "enum", options: CATEGORY_OPTIONS, example: "ロール", help: "LINE の注文フォームの分類のタブ。空なら商品名から決める" },
     { key: "caseSize", label: "ケースの入数", type: "integer", min: 1, example: "100" },
     { key: "leadDays", label: "注文のリードタイム（日）", type: "integer", min: 0, example: "1" },
     { key: "cutoffTime", label: "注文の締め時刻", type: "time", example: "12:00" },
@@ -343,6 +348,8 @@ export const customerDef: MasterDef<CustomerMaster> = {
     { key: "salesRep", label: "担当の営業", type: "text", example: "SX80", help: "スタッフの登録の ID（営業の人）。営業のホームは、ログインした人の担当の取引先だけを出す（担当が1件も無ければ全部）" },
     { key: "deliveryWeekdays", label: "納品する曜日", type: "weekdays", example: "月;水;金", help: "空なら便の曜日（それも空なら毎日）" },
     { key: "slipFormat", label: "伝票の様式", type: "enum", options: SLIP_FORMAT_OPTIONS, example: "共通・1枚に納品書と受領書（2つ切り）", help: "納品書・受領書の形。空なら 1枚に2つ。取引先ごとの様式（発注書の原本に合わせた形）は、作ったらここに足す" },
+    { key: "shippingFee", label: "送料（円）", type: "number", min: 0, example: "800", help: "1回の納品ごとにかかる送料（税抜）。遠方など。空なら送料なし" },
+    { key: "shippingFreeOver", label: "送料がかからない金額（円）", type: "number", min: 0, example: "10000", help: "注文の合計（税抜）がこの金額以上なら送料なし。空ならいつも送料" },
     { key: "rebateRate", label: "割戻しの率（%）", type: "number", min: 0, max: 50, example: "5", help: "請求金額から引く割戻し（給食会社など）。引いたあとの額に消費税。空なら割戻しなし" },
     { key: "invoiceByPlace", label: "請求書を事業所ごとに分ける", type: "boolean", default: false, example: "いいえ", help: "はい なら、請求書の明細を納品場所（事業所）ごとに分けて小計を出す" },
     { key: "closingDay", label: "請求の締め日", type: "integer", min: 1, max: 31, example: "31", help: "毎月この日で締めて請求書を作る。月末は 31（空も月末）" },
@@ -436,6 +443,7 @@ export const customerProductDef: MasterDef<CustomerProductMaster> = {
     { key: "productId", label: "STAFFETTA の商品ID", type: "text", ref: "products", example: "P01", help: "製造計画・注文とひも付ける商品（空でもよい）" },
     { key: "unit", label: "単位", type: "text", example: "個" },
     { key: "price", label: "卸価格（円）", type: "number", min: 0, example: "38", help: "この取引先に売る値段（1単位あたり）" },
+    { key: "priceBasis", label: "卸価格の基準", type: "enum", options: PRICE_BASIS_OPTIONS, example: "1袋あたり", help: "空なら単位から決める（P・袋・箱・ケース・セットは1袋あたり、ほかは1個あたり）。1個あたりなら 金額＝入数×数×単価" },
     { key: "cost", label: "原価（円）", type: "number", min: 0, example: "21.5", help: "仕入れて売る商品は仕入れ価格" },
     { key: "priceNote", label: "単価の要確認", type: "text", example: "", help: "期間の中で単価がちがった日があれば、ここに並べる" },
     { key: "source", label: "仕入れ元の目安", type: "text", example: "自社" },
