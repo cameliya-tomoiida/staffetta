@@ -23,7 +23,7 @@ export default async function PackingPage({ searchParams }: PageProps<"/packing"
         <span className="ml-auto flex flex-wrap items-baseline gap-x-4 text-[16px] [&>span]:whitespace-nowrap">
           <span><b className="m-display text-[30px] tabular-nums">{num(p.rows.length)}</b> 品</span>
           <span><b className="m-display text-[30px] tabular-nums">{num(p.pieces)}</b> 個</span>
-          {p.reduced > 0 && <span className="text-alert-ink">変更で <b className="m-display text-[30px] tabular-nums">−{num(p.reduced)}</b> 個</span>}
+          {p.changes > 0 && <span className="text-alert-ink">変更 <b className="m-display text-[30px] tabular-nums">{num(p.changes)}</b> 件{p.plus ? `（+${num(p.plus)}` : "（"}{p.plus && p.minus ? " " : ""}{p.minus ? `−${num(p.minus)}` : ""}）</span>}
         </span>
       </div>
       {p.rows.length === 0 ? <p className="rounded-xl border border-rule bg-sheet px-4 py-4 text-[18px] text-ink-soft">包装するものはありません</p> : (
@@ -42,7 +42,7 @@ export default async function PackingPage({ searchParams }: PageProps<"/packing"
                 <td className="px-3 py-3 whitespace-nowrap text-ink-soft max-md:hidden">{r.per > 1 ? `${r.per}個入` : "—"}</td>
                 <td className="px-3 py-3 text-right whitespace-nowrap"><b className="m-display text-[30px] tabular-nums max-md:text-[24px]">{num(r.quantity)}</b><span className="ml-1 text-[15px] text-ink-soft">{r.unit}</span></td>
                 <td className="px-3 py-3 text-right tabular-nums text-ink-soft max-md:hidden">{num(r.pieces)}</td>
-                <td className={`px-4 py-3 text-right whitespace-nowrap tabular-nums max-md:px-2 ${r.reduced ? "font-bold text-alert-ink" : "text-ink-faint"}`}>{r.reduced ? `−${num(r.reduced)}` : "—"}</td>
+                <td className={`px-4 py-3 text-right whitespace-nowrap tabular-nums max-md:px-2 ${r.plus || r.minus ? "font-bold text-alert-ink" : "text-ink-faint"}`}>{r.plus || r.minus ? [r.plus ? `+${num(r.plus)}` : "", r.minus ? `−${num(r.minus)}` : ""].filter(Boolean).join(" ") : "—"}</td>
               </tr>
             ))}
           </tbody>
