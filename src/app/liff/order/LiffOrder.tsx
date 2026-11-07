@@ -1,7 +1,7 @@
 "use client";
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { liffClaimAction, liffLoadAction, liffOrderAction, liffSlipAction, type LiffAuth } from "@/lib/channels/line/actions";
+import { liffClaimAction, liffLoadAction, liffOrderAction, liffSlipAction, type LiffAuth, type SlipView } from "@/lib/channels/line/actions";
 import { lineAmount, shippingOf } from "@/lib/channels/line/liff-price";
 import { nowMs } from "@/lib/clock";
 
@@ -129,21 +129,27 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const [sending, setSending] = useState(false);
   const [histDay, setHistDay] = useState("");
   const [slip, setSlip] = useState<{ busy: boolean; error?: string }>({ busy: false });
-  /** その日の納品書（PDF）を受け取って開く（検品に使う） */
+  // 納品書のプレビュー（その場で紙の形で見せる。LINE の中ではダウンロードが見えないことがあるため・担当者 11/7）
+  const [preview, setPreview] = useState<null | { view: SlipView; fileName: string; base64: string }>(null);
   const getSlip = async (ymd: string) => {
     if (!auth || slip.busy) return;
     setSlip({ busy: true });
     const r = await liffSlipAction(auth, ymd);
     if (!r.ok) return setSlip({ busy: false, error: r.error });
-    const bin = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
+    setPreview({ view: r.view, fileName: r.fileName, base64: r.base64 });
+    setSlip({ busy: false });
+  };
+  /** PDF で保存（端末の PDF の画面で開く） */
+  const savePdf = () => {
+    if (!preview) return;
+    const bin = Uint8Array.from(atob(preview.base64), (ch) => ch.charCodeAt(0));
     const url = URL.createObjectURL(new Blob([bin], { type: "application/pdf" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = r.fileName;
+    a.download = preview.fileName;
     a.target = "_blank";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    setSlip({ busy: false });
   };
   const [sent, setSent] = useState<null | { date: string; lines: [string, number][] }>(null);
   const [sdkReady, setSdkReady] = useState(!liffId);
@@ -336,7 +342,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
 
   return (
     <div className="mx-auto min-h-dvh max-w-[520px] bg-cream text-[15px] leading-[1.45] text-ink [-webkit-tap-highlight-color:transparent]">
-      <style>{`@keyframes liffPop { 0% { transform: scale(.4); opacity: 0 } 70% { transform: scale(1.12); opacity: 1 } 100% { transform: scale(1) } }`}</style>
+      <style>{`@keyframes liffPop { 0% { transform: scale(.4); opacity: 0 } 70% { transform: scale(1.12); opacity: 1 } 100% { transform: scale(1) } } @keyframes liffRise { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }`}</style>
       {liffId && <Script src="https://static.line-scdn.net/liff/edge/2/sdk.js" onLoad={() => setSdkReady(true)} />}
 
       {view === "loading" && (
@@ -561,7 +567,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                             ) : (
                               <Svg d="M12 4v11M7 10l5 5 5-5M5 20h14" className="h-[18px] w-[18px]" />
                             )}
-                            {slip.busy ? "納品書を作っています…" : "納品書（PDF）を受け取る"}
+                            {slip.busy ? "納品書を作っています…" : "納品書を見る"}
                           </button>
                           {slip.error && <p className="mt-1.5 text-[13px] font-bold text-alert-ink">{slip.error}</p>}
                         </div>
@@ -682,6 +688,86 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
               </div>
             </nav>
           )}
+        </div>
+      )}
+
+      {/* 納品書のプレビュー（紙の形・検品の □ 付き） */}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/50" role="dialog" aria-label="納品書">
+          <div className="flex items-center justify-between bg-sheet px-2 py-1.5 pt-[calc(6px+env(safe-area-inset-top))]">
+            <button type="button" onClick={() => setPreview(null)} className="flex h-11 items-center gap-0.5 rounded-[10px] px-2 text-[15px] font-bold text-crust-600">
+              <Svg d="M15 5l-7 7 7 7" w={2.6} />
+              もどる
+            </button>
+            <b className="text-[15px]">納品書</b>
+            <button type="button" onClick={savePdf} className="flex h-11 items-center gap-1 rounded-[10px] px-2 text-[14px] font-bold text-crust-600">
+              <Svg d="M12 4v11M7 10l5 5 5-5M5 20h14" className="h-[18px] w-[18px]" />
+              PDF で保存
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
+            <div className="theme-paper mx-auto max-w-[520px] rounded-md bg-white px-4 py-5 text-[#111] shadow-xl" style={{ animation: "liffRise .25s ease-out" }}>
+              <h2 className="text-center text-[22px] font-bold tracking-[.4em]">納品書</h2>
+              <div className="mt-3 flex items-start justify-between gap-3">
+                <p className="border-b-2 border-[#111] pb-0.5 text-[16px] font-bold">{preview.view.to} 御中</p>
+                <p className="shrink-0 text-right text-[11px] leading-snug tabular-nums">
+                  納品日 {mdLong(preview.view.date)}
+                  <br />
+                  伝票番号 {preview.view.no}
+                  {preview.view.invoiceNo && (
+                    <>
+                      <br />
+                      登録番号 {preview.view.invoiceNo}
+                    </>
+                  )}
+                </p>
+              </div>
+              <p className="mt-2 text-right text-[11px] leading-snug">
+                <b className="text-[12px]">{preview.view.from[0]}</b>
+                {preview.view.from.slice(1).map((x) => (
+                  <span key={x} className="block">
+                    {x}
+                  </span>
+                ))}
+              </p>
+              <p className="mt-2 text-[12px]">下記のとおり納品いたします。届いた物から、右の「検品」の欄に印を付けてください。</p>
+              <table className="m-keep mt-2 w-full border-collapse text-[12px]">
+                <thead>
+                  <tr>
+                    {["品名", "数量", "単価", "金額", "検品"].map((h) => (
+                      <th key={h} className="!border !border-[#111] !bg-[#eee] px-1 py-1 text-center font-bold !text-[#111]">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.view.lines.map((l, i) => (
+                    <tr key={i}>
+                      <td className="!border !border-[#111] !bg-white px-1.5 py-1.5 text-left !text-[#111]">{l.name}</td>
+                      <td className="border border-[#111] px-1 text-right whitespace-nowrap tabular-nums">
+                        {num(l.quantity)}
+                        <small className="ml-0.5">{l.unit}</small>
+                      </td>
+                      <td className="border border-[#111] px-1 text-right tabular-nums">{num(l.unitPrice)}</td>
+                      <td className="border border-[#111] px-1 text-right tabular-nums">{num(l.amount)}</td>
+                      <td className="border border-[#111] text-center text-[16px]">□</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mt-2 ml-auto w-fit text-right text-[12px] leading-relaxed tabular-nums">
+                <div>小計（税抜） {num(preview.view.net)} 円</div>
+                {preview.view.taxes.map((t) => (
+                  <div key={t.rate}>
+                    消費税（{t.rate}%） {num(t.tax)} 円
+                  </div>
+                ))}
+                <div className="text-[14px] font-bold">合計（税込） {num(preview.view.total)} 円</div>
+              </div>
+              <p className="mt-6 text-[11px]">検品した人 ＿＿＿＿＿＿＿＿　検品の日時 ＿＿月＿＿日 ＿＿:＿＿</p>
+            </div>
+          </div>
         </div>
       )}
 

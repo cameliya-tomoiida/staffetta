@@ -140,7 +140,21 @@ export async function importCustomersAction(fd: FormData): Promise<{ added: numb
  * お客さんがその日の納品書（PDF）を受け取る（担当者 11/7「納品される日・何が届くかを確かめて、納品書をダウンロードして、それを見ながら検品できるように」）。
  * つながっている取引先の、その日の確定した注文だけ。右の「検品」の欄に、届いた物から印を付けられる。
  */
-export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok: true; fileName: string; base64: string } | { ok: false; error: string }> {
+/** 画面に出す納品書（PDF と同じ中身。担当者 11/7「控えの検品票なので、どう見えるかをその場で見せる」） */
+export interface SlipView {
+  title: string;
+  no: string;
+  date: string;
+  to: string;
+  from: string[];
+  invoiceNo?: string;
+  lines: { name: string; quantity: number; unit: string; unitPrice: number; amount: number }[];
+  net: number;
+  taxes: { rate: number; tax: number }[];
+  total: number;
+}
+
+export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok: true; fileName: string; base64: string; view: SlipView } | { ok: false; error: string }> {
   try {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("日付が正しくありません");
     const { userId } = await whoIsLiffUser(auth);
@@ -181,7 +195,19 @@ export async function liffSlipAction(auth: LiffAuth, date: string): Promise<{ ok
       ],
       footer: ["検品した人 ＿＿＿＿＿＿＿＿　　検品の日時 ＿＿月＿＿日 ＿＿:＿＿"],
     });
-    return { ok: true, fileName: `納品書_${date}.pdf`, base64: pdf.toString("base64") };
+    const view: SlipView = {
+      title: "納品書",
+      no: slip.no,
+      date,
+      to: slip.customerName,
+      from: [c.name, c.tel ? `TEL ${c.tel}` : "", c.fax ? `FAX ${c.fax}` : ""].filter(Boolean),
+      ...(c.invoiceNo ? { invoiceNo: c.invoiceNo } : {}),
+      lines: slip.lines.map((l) => ({ name: l.name, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice, amount: l.amount })),
+      net: slip.totals.net,
+      taxes: slip.totals.byRate.map((r) => ({ rate: r.rate, tax: r.tax })),
+      total: slip.totals.total,
+    };
+    return { ok: true, fileName: `納品書_${date}.pdf`, base64: pdf.toString("base64"), view };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
