@@ -49,7 +49,8 @@ export default async function DailyPage({ searchParams }: PageProps<"/daily">) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h1 className="m-display text-[22px] font-black max-md:hidden">日ごとの実績</h1>
-        {canSwitch && (
+        {/* 部署の切りかえは管理者の画面だけ（担当者「入口（ログイン）で部署が決まる。クリックで切りかえない」）。見本の状態でも、ほかの部署の画面には出さない */}
+        {canSwitch && role === "管理者" && (
           <nav aria-label="部署" className="flex rounded-full border border-rule bg-paper p-0.5 md:ml-auto max-md:w-full">
             {ROLES.map((r) => (
               <Link key={r} href={`/daily?as=${encodeURIComponent(r)}&date=${date}`} aria-current={r === role ? "page" : undefined}
