@@ -1,3 +1,4 @@
+import { LockBanner } from "./LockBanner";
 import Link from "next/link";
 import { withMasters, allProducts } from "@/lib/catalog";
 import { loadMasters } from "@/lib/masters/seed-db";
@@ -22,12 +23,8 @@ export default async function NoticesPage() {
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">お客さんへのお知らせ</h1>
         {!sendUnlocked() && (
-          <p className="rounded-xl border-2 border-[#8b1a1a] bg-alert-bg px-4 py-3 text-lg font-bold text-alert-ink">
-            いまは送りません（試しの状態）。OK を押しても本物のお客さんには届かず、下書きと印刷だけです。見本の取引先「（デモ）」の LINE にだけ、試しに送ります。
-            本当に送るときは、管理者が <a href="/settings/features" className="underline">設定 → 機能の ON/OFF</a> の「送信の鍵」を ON にします。
-          </p>
+          <LockBanner />
         )}
-        <p className="text-lg text-ink-soft">値上げ・商品の変更・終売を、取引先に知らせます。AI が文を下書きし、人が直して OK を押したときだけ送ります（LINE がつながっている所は LINE、ほかは FAX を印刷して送る）。送った記録が残ります。</p>
       </header>
       {list.length > 0 && (
         <section className="card p-0">

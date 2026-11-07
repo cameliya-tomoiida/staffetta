@@ -1,3 +1,4 @@
+import { LockBanner } from "../LockBanner";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { NOTICE_KIND_LABEL } from "@/lib/notices/plan";
@@ -22,10 +23,7 @@ export default async function NoticePage(props: PageProps<"/notices/[id]">) {
       <header className="space-y-2">
         <p><Link href="/notices" className="text-lg">← お知らせにもどる</Link></p>
         {!sendUnlocked() && (
-          <p className="rounded-xl border-2 border-[#8b1a1a] bg-alert-bg px-4 py-3 text-lg font-bold text-alert-ink">
-            いまは送りません（試しの状態）。OK を押しても本物のお客さんには届かず、下書きと印刷だけです。見本の取引先「（デモ）」の LINE にだけ、試しに送ります。
-            本当に送るときは、管理者が <a href="/settings/features" className="underline">設定 → 機能の ON/OFF</a> の「送信の鍵」を ON にします。
-          </p>
+          <LockBanner />
         )}
         <h1 className="text-3xl font-bold">{n.draft.title}</h1>
         <p className="text-lg text-ink-soft">
