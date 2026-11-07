@@ -150,7 +150,7 @@ export function TodayBar({ role, variant = "grid" }: { role?: Role; variant?: "g
   const purchaseHref = s ? `/purchase?date=${s.purchaseDate}` : "/purchase";
   const items: Parameters<typeof WorkItem>[0][] = [
     // 急ぎ: 同じ種類はまとめて「種類の数」（⑧ 急ぎ 28件では何か分からない）。いちばん上の種類を小さく
-    { href: "/alerts", label: "急ぎ", count: s ? (s.alerts ? (s.urgentGroups ? s.urgentGroups.length : s.alerts.danger) : null) : null, unit: s?.urgentGroups ? "つ" : "件", urgent: true, icon: "urgent", active: path.startsWith("/alerts"),
+    { href: "/alerts", label: "急ぎ", count: s ? (s.alerts ? (s.urgentGroups ? s.urgentGroups.length : s.alerts.danger) : null) : null, unit: "件", urgent: true, icon: "urgent", active: path.startsWith("/alerts"),
       sub: s?.urgentGroups?.length ? `${s.urgentGroups[0].label}${s.urgentGroups.length > 1 ? ` ほか${s.urgentGroups.length - 1}` : ""}` : undefined },
     { href: "/orders?status=needs_review", label: "要確認", count: n(s?.ordersToReview), review: true, icon: "review", active: path === "/orders" },
     { href: "/fax", label: "FAX", count: s ? s.faxToReview + s.faxUnread : null, unit: "枚", review: true, icon: "fax", active: path.startsWith("/fax") },

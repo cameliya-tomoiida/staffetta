@@ -383,6 +383,10 @@ a, button, input, select, textarea, label, summary, [role="button"] {
   animation: cs-in 0.25s ease-out;
 }
 .leaflet-tooltip.rm-eta::before { display: none; }
+/* ⑧ スマホの小さな地図では、着く時刻の札を出さない（重なって読めない。時刻は地図の下のリストに出ている） */
+@media (max-width: 767px) {
+  .leaflet-tooltip.rm-eta { display: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .rm-drop { opacity: 1; animation: none; }
 }

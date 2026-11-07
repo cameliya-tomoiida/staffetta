@@ -162,6 +162,11 @@ export function RouteMap({
       };
       timers.current.push(window.setTimeout(step, start));
     };
+    // ⑧ 11/7 担当者「スマホの小さな地図にピンが大きすぎる」: 地図の幅でピンの大きさを変える（スマホ 24px・タブレット 30px・広い地図 34px）
+    const width = box.current?.clientWidth ?? 800;
+    const small = width < 600;
+    const PS = small ? 24 : width < 900 ? 30 : 34;
+    const DS = small ? 30 : 40;
     const pts: [number, number][] = [[depot.lat, depot.lng], ...pins.map((p) => [p.lat, p.lng] as [number, number]), [depot.lat, depot.lng]];
     if (lines) {
       lines.forEach((l, i) => {
@@ -179,9 +184,9 @@ export function RouteMap({
     L.marker([depot.lat, depot.lng], {
       icon: L.divIcon({
         className: "",
-        html: `<div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:6px;background:#1f2328;color:#fff;font:700 15px/1 'BIZ UDPGothic',sans-serif;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">工場</div>`,
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:${DS}px;height:${DS}px;border-radius:6px;background:#1f2328;color:#fff;font:700 ${small ? 11 : 14}px/1 'BIZ UDPGothic',sans-serif;border:${small ? 2 : 3}px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">工場</div>`,
+        iconSize: [DS, DS],
+        iconAnchor: [DS / 2, DS / 2],
       }),
       title: depot.name,
     })
@@ -193,9 +198,9 @@ export function RouteMap({
       const mk = L.marker([p.lat, p.lng], {
         icon: L.divIcon({
           className: "",
-          html: `<div class="${move ? "rm-drop" : ""}" style="animation-delay:${move ? Math.round(delayOf(p)) : 0}ms;display:flex;align-items:center;justify-content:center;width:${on ? 46 : 38}px;height:${on ? 46 : 38}px;border-radius:50%;background:${bg};color:#fff;font:700 ${on ? 22 : 19}px/1 'BIZ UDPGothic',sans-serif;border:3px solid ${on ? "#f5c400" : "#fff"};box-shadow:0 1px 4px rgba(0,0,0,.45)">${p.no}</div>`,
-          iconSize: [on ? 46 : 38, on ? 46 : 38],
-          iconAnchor: [on ? 23 : 19, on ? 23 : 19],
+          html: `<div class="${move ? "rm-drop" : ""}" style="animation-delay:${move ? Math.round(delayOf(p)) : 0}ms;display:flex;align-items:center;justify-content:center;width:${on ? PS + 6 : PS}px;height:${on ? PS + 6 : PS}px;border-radius:50%;background:${bg};color:#fff;font:700 ${Math.round((on ? PS + 6 : PS) * 0.5)}px/1 'BIZ UDPGothic',sans-serif;border:${small ? 2 : 3}px solid ${on ? "#f5c400" : "#fff"};box-shadow:0 1px 4px rgba(0,0,0,.45)">${p.no}</div>`,
+          iconSize: [on ? PS + 6 : PS, on ? PS + 6 : PS],
+          iconAnchor: [(on ? PS + 6 : PS) / 2, (on ? PS + 6 : PS) / 2],
         }),
         title: `${p.no}. ${p.name}`,
         zIndexOffset: on ? 1000 : 0,
@@ -206,7 +211,7 @@ export function RouteMap({
       if (on) mk.openPopup();
       // 着く時刻（動かすときは、ピンが落ちたあとに順に出す）
       if (p.eta && animate) {
-        const tip = () => L.tooltip({ permanent: true, direction: "right", offset: [16, 0], className: "rm-eta" }).setLatLng([p.lat, p.lng]).setContent(esc(p.eta!)).addTo(g);
+        const tip = () => L.tooltip({ permanent: true, direction: "right", offset: [PS / 2 + 2, 0], className: "rm-eta" }).setLatLng([p.lat, p.lng]).setContent(esc(p.eta!)).addTo(g);
         if (move) timers.current.push(window.setTimeout(tip, delayOf(p) + 250));
         else tip();
       }

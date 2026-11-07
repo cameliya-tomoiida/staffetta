@@ -28,6 +28,16 @@ export function AiChat({ floating = false }: { floating?: boolean } = {}) {
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
   }, [list, pending, open]);
+  // ⑧ ホームの確認の行の［直す］: 「hub:ai-ask」（detail: { text }）で窓を開き、文を入れておく（送るのは人）
+  useEffect(() => {
+    const on = (e: Event) => {
+      const text = (e as CustomEvent<{ text?: string }>).detail?.text ?? "";
+      setOpen(true);
+      if (text) setQ(text);
+    };
+    window.addEventListener("hub:ai-ask", on);
+    return () => window.removeEventListener("hub:ai-ask", on);
+  }, []);
 
   const ask = (text: string) => {
     const question = text.trim();

@@ -43,7 +43,17 @@ export interface Progress {
   sales: { ordered: number; expected: number; changes: number };
 }
 /** 「確認が必要です」の1件（①がまとめたあとのお知らせ。「AI の判断：…よろしいですか？」＋［OK］［直す］） */
-export interface ConfirmItem { key: string; title: string; level: "danger" | "warn" | "info"; href: string; actions: { label: string; href: string; primary?: boolean }[] }
+export interface ConfirmItem {
+  key: string; title: string; level: "danger" | "warn" | "info"; href: string;
+  /** 押すと開く「案の中身」（①のお知らせの detail。改行で区切った行） */
+  plan: string[];
+  /** ［OK］: お知らせのボタンの何番目か（run があれば①の口で実行）。無ければ href を開く */
+  ok: { label: string; index?: number; run?: boolean; href?: string };
+  /** お知らせ（①）か、値上げ（①の /price-changes）か */
+  source: "alert" | "price";
+  /** ［直す］で開く画面（①の /proposals/<id>）。無ければ「AI に頼む」をこの案を題にして開く */
+  fixHref?: string;
+}
 export interface DeptHome { role: Role; date: string; tiles: Tile[]; table?: DeptTable; timetable?: Timetable; confirm: ConfirmItem[]; progress?: Progress }
 /** 時間割を手で動かした分（⑧ ホームの時間割。key ＝ 生地の key） */
 export const ttKey = (date: string) => `home_timetable_adjust:${date}`;
@@ -117,14 +127,23 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   // 確認が必要なもの: ①がまとめたあとのお知らせを、そのまま（急ぎ → 注意、期限の早い順）。ホームでは上から3件まで
   const LV = { danger: 0, warn: 1, info: 2 } as const;
   const confirm: ConfirmItem[] = [
-    ...(role === "事務" || role === "管理者" ? priceGroups(masters) : []).map((g): ConfirmItem => ({ key: g.kind, title: `${g.label}：見直しが必要 ${g.count}${g.unit ?? "品"}`, level: g.level, href: g.href, actions: [{ label: "OK・見直す", href: g.href, primary: true }] })),
+    ...(role === "事務" || role === "管理者" ? priceGroups(masters) : []).map((g): ConfirmItem => ({ key: g.kind, title: `${g.label}：見直しが必要 ${g.count}${g.unit ?? "品"}`, level: g.level, href: g.href, plan: [], ok: { label: "OK・見直す", href: g.href }, source: "price" })),
     ...listAlerts()
       .filter((a) => a.state !== "done" && a.state !== "snoozed" && a.level !== "info" && alertForRole(a.kind, role) && !(ON_TILE[role] ?? []).includes(a.kind))
       .sort((x, y) => LV[x.level] - LV[y.level] || (x.dueAt ?? "9").localeCompare(y.dueAt ?? "9"))
-      .map((a): ConfirmItem => ({
-        key: a.dedupeKey, title: a.title, level: a.level, href: a.href ?? "/alerts",
-        actions: (a.actions ?? []).filter((x): x is typeof x & { href: string } => !!x.href).slice(0, 2).map((x) => ({ label: x.label, href: x.href, ...(x.primary ? { primary: true } : {}) })),
-      })),
+      .map((a): ConfirmItem => {
+        const acts = a.actions ?? [];
+        const i = Math.max(0, acts.findIndex((x) => x.primary));
+        const okAct = acts[i];
+        return {
+          key: a.dedupeKey, title: a.title, level: a.level, href: a.href ?? "/alerts", source: "alert",
+          // 案の中身: ①の plan.lines（仕入先ごとの品と数・生地を何分ずらすか）。無ければ detail の行
+          plan: (a as { plan?: { lines?: string[] } }).plan?.lines ?? (a.detail ?? "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
+          // ［直す］: ①の直す画面（/proposals/<id>）があればそれ。無ければ「AI に頼む」を開く
+          ...((() => { const f = acts.find((x, k) => k !== i && x.href && /直す/.test(x.label)); return f?.href ? { fixHref: f.href } : {}; })()),
+          ok: okAct ? { label: okAct.label, index: i, ...(okAct.run ? { run: true } : {}), ...(okAct.href ? { href: okAct.href } : {}) } : { label: a.action ?? "見る", href: a.href ?? "/alerts" },
+        };
+      }),
   ];
 
   const open = pos.filter((p) => p.status !== "sent");
@@ -249,7 +268,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   return {
     role, date, confirm,
     tiles: [
-      { label: "確認が必要", value: num(urgent.length), unit: "つ", note: urgent[0] ? `${urgentLabel(urgent[0].title)}${urgent.length > 1 ? ` ほか${urgent.length - 1}` : ""}` : undefined, href: "/alerts", tone: tone(urgent.length, true) },
+      { label: "確認が必要", value: num(urgent.length), unit: "件", note: urgent[0] ? `${urgentLabel(urgent[0].title)}${urgent.length > 1 ? ` ほか${urgent.length - 1}` : ""}` : undefined, href: "/alerts", tone: tone(urgent.length, true) },
       { label: "足りない材料・人", value: num(lack), unit: "件", href: `/plan?date=${date}`, tone: tone(lack, true) },
       { label: "承認待ち", value: num(approve), unit: "件", note: approve ? `発注 ${summary.purchaseDraft}・注文 ${review.length}` : undefined, href: `/purchase?date=${date}`, tone: tone(approve, true) },
       { label: "売上の見込み", value: yen(money.sales), unit: "千円", note: `粗利 ${Math.round(money.grossRate * 100)}%`, href: "/analytics", tone: "plain" },
