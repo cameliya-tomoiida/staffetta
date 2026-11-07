@@ -32,6 +32,7 @@ import { breadSummary } from "@/lib/bread-cuts";
 import { getPlanOrder } from "@/lib/plan-order";
 import { OrderProposal } from "./OrderProposal";
 import { ShortageList } from "./ShortageList";
+import { LossChip } from "./LossChip";
 import { materialShortList } from "@/lib/material-shortlist";
 import { kvGet } from "@/lib/db/sqlite";
 import { doughCards, type DoughCard } from "@/components/recipe/cards";
@@ -644,9 +645,8 @@ function MakeTable({ bs, lang, t, name, unitOf, cards }: { bs: DoughBatchPlan[];
                     )}
                     <span className="num text-[1.7rem] leading-none font-black">{fmtNum(i.pieces)}</span>
                     <span className="ml-1 text-sm">{trUnit(lang, unitOf(i.productId))}</span>
-                    {i.ordered != null && i.ordered < i.pieces && (
-                      <span className="num ml-1.5 rounded bg-prov-bg px-1.5 py-0.5 text-xs font-bold text-prov-ink">+{fmtNum(i.pieces - i.ordered)}（{Math.round(((i.pieces - i.ordered) / i.ordered) * 100)}%）</span>
-                    )}
+                    {/* ロス率（押すと直せる。印刷には出さない） */}
+                    <LossChip productId={i.productId} rate={i.overRate} plus={i.ordered != null ? i.pieces - i.ordered : 0} />
                   </td>
                 </tr>
               ))}

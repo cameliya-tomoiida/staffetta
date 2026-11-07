@@ -91,15 +91,18 @@ export function scaleMasters(base: Masters): Masters {
         loafName: p.loafName, cutLabel: p.cutLabel, loavesPerUnit: p.loavesPerUnit, sliceMm: undefined, toppingId: undefined, dailyCap: undefined,
       } as ProductMaster);
   }
-  // 本物の規模の工場: パンの設備は2組（窯と大きいミキサーは3台）・前日 13:00 から仕込む・人も多い（見本の小さな工場のままだと入りきらない）
+  // 本物の規模の工場: パンの設備は2組（窯と大きいミキサーは3台）・前日 11:00 から仕込む・人も多い（見本の小さな工場のままだと入りきらない）
   const BREAD_EQ = ["EQ-B-MIX1", "EQ-B-DIV", "EQ-B-OVN", "EQ-B-SLC", "EQ-B-PACK"];
-  for (const e of m.equipment) if (e.line === "bread" && (e.availableFrom === "21:00" || e.availableFrom === "00:00")) e.availableFrom = "13:00";
+  for (const e of m.equipment) if (e.line === "bread" && (e.availableFrom === "21:00" || e.availableFrom === "00:00")) Object.assign(e, { availableFrom: "11:00", availableTo: "10:00" });
   for (const id of [...BREAD_EQ, "EQ-B-OVN", "EQ-B-MIX1"]) {
     const e = m.equipment.find((x) => x.id === id);
     if (!e) continue;
     const nid = m.equipment.some((x) => x.id === `${id}-2`) ? `${id}-3` : `${id}-2`;
-    m.equipment.push({ ...e, id: nid, name: `${e.name.replace(/）$/, "")}${e.name.endsWith("）") ? "・" : "（"}${nid.endsWith("3") ? "3号" : "2号"}）`, availableFrom: "13:00", ...(e.exclusiveGroup ? { exclusiveGroup: `${e.exclusiveGroup}-${nid.slice(-1)}` } : {}) });
+    m.equipment.push({ ...e, id: nid, name: `${e.name.replace(/）$/, "")}${e.name.endsWith("）") ? "・" : "（"}${nid.endsWith("3") ? "3号" : "2号"}）`, availableFrom: "11:00", availableTo: "10:00", ...(e.exclusiveGroup ? { exclusiveGroup: `${e.exclusiveGroup}-${nid.slice(-1)}` } : {}) });
   }
+  // 2号の分割丸め機は、フランス（300g）まで分けられる大きい型
+  const div2 = m.equipment.find((e) => e.id === "EQ-B-DIV-2");
+  if (div2) div2.maxPieceGram = 350;
   const NEW_BREAD = new Set(DOUGHS.filter((d) => d.like !== "DG04").map((d) => d.id));
   const NEW_ORDER = [...NEW_BREAD];
   for (const s of m.steps) {
@@ -109,14 +112,15 @@ export function scaleMasters(base: Masters): Masters {
     const alt = NEW_ORDER.indexOf(s.doughId) % 2 ? "-3" : "-2";
     s.equipmentId = s.equipmentId === "EQ-B-OVN" || s.equipmentId === "EQ-B-MIX1" ? `${s.equipmentId}${alt}` : `${s.equipmentId}-2`;
   }
-  for (const l of m.lines) if (l.id === "bread") l.earliestStartMinute = -660; // 前日 13:00 から
+  for (const l of m.lines) if (l.id === "bread") l.earliestStartMinute = -780; // 前日 11:00 から
+  for (const l of m.lines) if (l.id === "pizza") l.dailyCap = 4000; // 本物の規模のピザライン（1日 4,000枚まで）
   for (const sh of m.shifts) {
     if (sh.id === "SH-BN") sh.headcount = 12;
     if (sh.id === "SH-BM") sh.headcount = 8;
     if (sh.id === "SH-PA" || sh.id === "SH-PN") sh.headcount = 5;
     if (sh.id === "SH-PT") sh.headcount = 14;
   }
-  if (!m.shifts.some((x) => x.id === "SH-BE")) m.shifts.push({ ...m.shifts.find((x) => x.id === "SH-BN")!, id: "SH-BE", name: "夕方班（パン）", from: "13:00", to: "23:00", headcount: 12 });
+  if (!m.shifts.some((x) => x.id === "SH-BE")) m.shifts.push({ ...m.shifts.find((x) => x.id === "SH-BN")!, id: "SH-BE", name: "夕方班（パン）", from: "11:00", to: "23:00", headcount: 12 });
   for (const x of EXTRA_PRODUCTS) {
     if (m.products.some((p) => p.id === x.id)) continue;
     const tpl = m.products.find((p) => p.doughId === x.dough && p.kind === "make")!;

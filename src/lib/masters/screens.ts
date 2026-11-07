@@ -31,7 +31,7 @@ export const ID_PREFIX: Partial<Record<ScreenName, string>> = {
 
 /** 一覧に出す列（多いと読めないので選ぶ）。前の5つがいつも出る大事な列、6つめからは「くわしく」で出す（②） */
 export const LIST_KEYS: Record<ScreenName, string[]> = {
-  products: ["name", "kind", "line", "doughId", "doughGram", "id", "lastCostReviewAt", "costReviewOwner", "packStyle", "sliceMm", "metalCheck", "leadDays", "cutoffTime", "price", "active"],
+  products: ["name", "kind", "line", "doughId", "doughGram", "overRate", "id", "lastCostReviewAt", "costReviewOwner", "packStyle", "sliceMm", "metalCheck", "leadDays", "cutoffTime", "price", "active"],
   doughs: ["name", "line", "lossRate", "mixerMaxKg", "id", "note"],
   recipeItems: ["doughId", "materialId", "percent", "id"],
   steps: ["doughId", "seq", "name", "equipmentId", "people", "id", "key", "setupMinutes", "waitMinutes", "minutesPerBatch", "secondsPerPiece", "prevDay", "ccp", "note"],
