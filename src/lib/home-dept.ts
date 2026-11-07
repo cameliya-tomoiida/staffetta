@@ -61,6 +61,13 @@ const yen = (n: number) => `${Math.round(n / 1000).toLocaleString("ja-JP")}`;
 const num = (n: number) => n.toLocaleString("ja-JP");
 const tone = (n: number, red = false): TileTone => (n ? (red ? "red" : "plain") : "quiet");
 
+/** タイルに同じ数が出ている種類は、下の「確認が必要です」の行に出さない（⑧ 管理役2 11/7「同じ数は1か所に」） */
+const ON_TILE: Partial<Record<Role, string[]>> = {
+  工場: ["stock_shortage"],
+  事務: ["review_backlog", "po_not_sent"],
+  管理者: ["stock_shortage"],
+};
+
 export async function deptHome(role: Role): Promise<DeptHome> {
   const now = nowMs();
   const [summary, { orders, today }, masters, stored] = await Promise.all([todaySummary(now), allOrders(), loadMasters(), listPurchaseOrders()]);
@@ -107,7 +114,7 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   // 確認が必要なもの（種類ごとにまとめる・その部署に要る種類だけ）
   const confirm = [
     ...(role === "事務" || role === "管理者" ? priceGroups(masters) : []),
-    ...groupAlerts(listAlerts().filter((a) => alertForRole(a.kind, role)), { levels: ["danger", "warn"] }),
+    ...groupAlerts(listAlerts().filter((a) => alertForRole(a.kind, role) && !(ON_TILE[role] ?? []).includes(a.kind)), { levels: ["danger", "warn"] }),
   ];
 
   const open = pos.filter((p) => p.status !== "sent");
