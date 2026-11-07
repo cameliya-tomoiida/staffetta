@@ -151,7 +151,18 @@ LINE_TEST_URL=http://localhost:3100/api/line/webhook node scripts/line-webhook-t
                          # LINE の注文を再現する（LINE 未設定でも可）
 ```
 
-**使い始める前に、必ず「設定 → スタッフの登録」で管理者のパスワードを作ってください。** パスワードのある管理者が1人もいない間は、ログインなしで全部の画面が動き、社内の LAN の誰でも全部の操作ができます。`next start` は LAN のほかの PC からも使うので全部の宛先（0.0.0.0）で待ちます。3100 番は Windows のファイアウォールで社内の LAN の中だけに開けてください（外からはトンネル〔cloudflared〕経由だけ。トンネルは localhost に向けるので、ほかのネットワークには開けなくてよい）。作ると、役割（管理者・事務・工場・配送）ごとのログインになります。管理者がいない間は、設定の画面に黄色の1行「ログインを使い始めるまで、社内専用です」が出ます。バックアップのファイルには、AI のキー・メールのつなぎ・パスワードの印は入りません。
+**使い始める前に、必ず「設定 → スタッフの登録」で管理者のパスワードを作ってください。** パスワードのある管理者が1人もいない間は、ログインなしで全部の画面が動き、社内の LAN の誰でも全部の操作ができます。`next start` は LAN のほかの PC からも使うので全部の宛先（0.0.0.0）で待ちます。3100 番は Windows のファイアウォールで社内の LAN の中だけに開けてください（外からは下の「外からの入口」の2つだけ。どちらも localhost に向けるので、ほかのネットワークには開けなくてよい）。作ると、役割（管理者・事務・工場・配送）ごとのログインになります。管理者がいない間は、設定の画面に黄色の1行「ログインを使い始めるまで、社内専用です」が出ます。バックアップのファイルには、AI のキー・メールのつなぎ・パスワードの印は入りません。
+### 外からの入口
+
+| 入口 | 使う所 | URL |
+|---|---|---|
+| Tailscale Funnel（固定 URL `https://<PC の名前>.<tailnet>.ts.net`） | LINE の注文フォーム（LIFF）・スタッフのログイン・外からの画面 | 変わらない。`.env.local` の `HUB_PUBLIC_URL` に書く |
+| cloudflared の quick tunnel（`https://xxxx.trycloudflare.com`） | LINE の Webhook だけ（LINE は Funnel の証明書と TLS の交渉ができないため） | 起動のたびに変わる → 自動で LINE に登録し直す |
+
+- 起動は `scripts/start-3100.ps1`（cloudflared → 3100 → 30秒待って `scripts/line-webhook-sync.mjs`）。PC を立ち上げたときに自動で動かすには、`scripts/register-startup-task.ps1` を1回だけ実行して、Windows のタスク スケジューラ（ログオン時）に登録します。
+- `line-webhook-sync.mjs` は、cloudflared の管理口（`127.0.0.1:20241`〜`20245` の `/quicktunnel`）から今の URL を読み、LINE に登録してある URL と違えば付け替えて、LINE からの確かめ（webhook/test）まで行います。結果は `data/line-webhook-sync.log`。付け替えたらお知らせ（info）、失敗したらお知らせ（danger）が1件出ます。`--dry-run` で、何も変えずに今の URL だけ見られます。
+- 外から来たアクセスは、どちらの入口でも見分けます（`src/lib/tunnel-access.ts` の `fromOutside`）。全データの書き出し・戻し（`/api/backup`・`/settings/backup`）は、ログインしていても外からは使えません。
+
 接続の手順は `docs/` にあります（`line-setup.md`・`gmail-setup.md`・`google-sheet-auth.md`・`fax-sending.md`・`tunnel.md`・`prod-3100.md`）。
 
 ## これから

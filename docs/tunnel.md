@@ -1,5 +1,7 @@
 # ローカルのハブを外から届くようにする（Cloudflare クイックトンネル）
 
+> いまの使い分け（11/7〜）: LIFF・外からの画面は Tailscale Funnel（固定 URL）、LINE の Webhook だけ quick tunnel。quick tunnel の URL は `scripts/start-3100.ps1` → `scripts/line-webhook-sync.mjs` が自動で LINE に登録し直す（README の「外からの入口」）。
+
 GAS（FAX転送）や LINE の Webhook は、インターネットからハブに届く URL が必要。
 開発中は cloudflared のクイックトンネルを使う（アカウント不要・無料）。
 
