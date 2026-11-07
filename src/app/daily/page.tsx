@@ -153,7 +153,7 @@ function Sales({ s }: { s: { net: number; courses: SalesCourse[] } }) {
   );
 }
 
-function Make({ m }: { m: { pieces: number; sales: number; doughs: MakeDough[] } }) {
+function Make({ m }: { m: { pieces: number; sales: number; doughs: MakeDough[]; recorded?: { at: string; who: string } } }) {
   if (!m.doughs.length) return <p className="rounded-xl border border-rule bg-sheet px-3 py-3 text-[14px] text-ink-soft">この日に作るものはありません</p>;
   return (
     <>
@@ -162,7 +162,7 @@ function Make({ m }: { m: { pieces: number; sales: number; doughs: MakeDough[] }
         <b className="m-display text-[24px] tabular-nums">{num(m.pieces)}</b>
         <span className="text-[14px] font-bold">売上</span>
         <b className="m-display text-[20px] tabular-nums">{yen(m.sales)}</b>
-        <span className="ml-auto text-[13px] text-ink-soft">{m.doughs.length}生地</span>
+        <span className={`ml-auto text-[13px] ${m.recorded ? "text-ok-ink" : "text-ink-soft"}`}>{m.recorded ? "実績を記録済み" : "予定の数"}・{m.doughs.length}生地</span>
       </div>
       {m.doughs.map((d) => (
         <details key={d.key} className="group overflow-hidden rounded-xl border border-rule-strong bg-sheet">
@@ -185,7 +185,7 @@ function Make({ m }: { m: { pieces: number; sales: number; doughs: MakeDough[] }
                     {it.name}
                     {it.customers.length > 0 && <span className="block truncate text-[12px] text-ink-soft md:hidden">{it.customers.slice(0, 2).join("・")}{it.customers.length > 2 ? ` ほか${it.customers.length - 2}` : ""}</span>}
                   </td>
-                  <td className="px-2 py-1 text-right align-top tabular-nums">{num(it.pieces)}</td>
+                  <td className="px-2 py-1 text-right align-top tabular-nums">{num(it.pieces)}{it.plan != null && <span className="block text-[11px] text-ink-soft">予定 {num(it.plan)}</span>}</td>
                   <td className="px-2 py-1 text-right tabular-nums max-md:hidden">{num(it.sales)}</td>
                   <td className="max-w-[16rem] truncate px-3 py-1 text-[13px] text-ink-soft max-md:hidden" title={it.customers.join("・")}>{it.customers.slice(0, 3).join("・")}{it.customers.length > 3 ? ` ほか${it.customers.length - 3}` : ""}</td>
                 </tr>
