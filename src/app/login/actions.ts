@@ -15,7 +15,7 @@ const failsOf = () => kvGet<Record<string, number[]>>(FAILS) ?? {};
 /** https で来たとき（トンネル経由）は cookie を secure に。社内の LAN は http なので付けない（付けるとログインできない） */
 async function cookieOpts() {
   const h = await headers();
-  const https = h.get("x-forwarded-proto") === "https" || h.has("cf-ray") || h.has("cf-connecting-ip");
+  const https = h.get("x-forwarded-proto") === "https" || (await import("@/lib/tunnel-access")).fromOutside(h);
   return { ...userCookieOptions, ...(https ? { secure: true } : {}) };
 }
 

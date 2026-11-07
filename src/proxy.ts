@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { STAFF_COOKIE, verifyStaffSession } from "@/lib/auth/staff-session";
-import { decideTunnelAccess } from "@/lib/tunnel-access";
+import { decideTunnelAccess, fromOutside } from "@/lib/tunnel-access";
 import { decideActionAccess } from "@/lib/auth/action-guard";
 import { userFromCookies } from "@/lib/auth/current-user";
 import { accountsExist } from "@/lib/staff";
@@ -22,7 +22,8 @@ export function proxy(request: NextRequest) {
   if (me) headers.set(ACTING_USER_HEADER, encodeURIComponent(me.name));
   // 印刷の PDF を作るブラウザ（⑧ src/lib/printing/pass.ts）: URL の __pt を、ログインの cookie として読む。社内からのときだけ
   const printPass = request.nextUrl.searchParams.get("__pt");
-  if (printPass && !request.headers.has("cf-connecting-ip") && !request.headers.has("cf-ray")) {
+  const viaTunnel = fromOutside(request.headers); // Cloudflare でも Tailscale Funnel でも
+  if (printPass && !viaTunnel) {
     headers.set("cookie", [request.headers.get("cookie"), `hub_user=${printPass}`].filter(Boolean).join("; "));
   }
   // セキュリティの見出し（セキュリティの確認 11/7）: よそのページの枠に入れない・中身の種類を推測させない・よそへ URL を渡しすぎない
@@ -66,7 +67,6 @@ export function proxy(request: NextRequest) {
       if (a.kind === "forbid") return new NextResponse("この役割では使えません", { status: 403 });
     }
   }
-  const viaTunnel = request.headers.has("cf-connecting-ip") || request.headers.has("cf-ray");
   if (!viaTunnel) return pass();
   const { pathname, search } = request.nextUrl;
   const d = decideTunnelAccess({

@@ -16,7 +16,7 @@ async function whoIsLiffUser(auth: { idToken?: string; demoUserId?: string }) {
   // 社内PC（localhost・トンネルを通らない）からのデモは、架空のお客さん（U_demo_…）だけ受ける
   if (auth.demoUserId && !auth.idToken) {
     const h = await headers();
-    const local = !h.has("cf-ray") && !h.has("cf-connecting-ip") && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h.get("host") ?? "");
+    const local = !(await import("@/lib/tunnel-access")).fromOutside(h) && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h.get("host") ?? "");
     if (local && auth.demoUserId.startsWith("U_demo_")) return { userId: auth.demoUserId, displayName: undefined };
   }
   if (lineConfig.loginChannelId) {

@@ -36,3 +36,22 @@ describe("トンネル経由のアクセス", () => {
     expect(decideTunnelAccess({ ...base, pathname: "/settings/backup", method: "POST", isServerAction: true, staffOk: true }).kind).toBe("forbid");
   });
 });
+
+// 外からの判定（管理役2 11/7: 入口を Tailscale Funnel に切りかえた。Cloudflare の見出しだけでは、外からでも「社内」になっていた）
+import { fromOutside } from "../tunnel-access";
+describe("fromOutside", () => {
+  const H = (o: Record<string, string>) => new Headers(o);
+  it("Tailscale Funnel・Cloudflare の見出しは外", () => {
+    expect(fromOutside(H({ host: "127.0.0.1:3100", "tailscale-funnel-request": "?1" }), "")).toBe(true);
+    expect(fromOutside(H({ host: "localhost:3100", "cf-ray": "x" }), "")).toBe(true);
+  });
+  it("宛先の名前が ts.net・公開の URL なら外", () => {
+    expect(fromOutside(H({ host: "demo-pc.tailnet-example.ts.net" }), "")).toBe(true);
+    expect(fromOutside(H({ host: "127.0.0.1:3100", "x-forwarded-host": "demo-pc.tailnet-example.ts.net" }), "")).toBe(true);
+    expect(fromOutside(H({ host: "hub.example.jp" }), "https://hub.example.jp")).toBe(true);
+  });
+  it("社内の LAN・localhost は外ではない", () => {
+    expect(fromOutside(H({ host: "192.0.2.34:3100", "x-forwarded-for": "192.168.1.20" }), "https://demo-pc.tailnet-example.ts.net")).toBe(false);
+    expect(fromOutside(H({ host: "localhost:3100" }), "https://demo-pc.tailnet-example.ts.net")).toBe(false);
+  });
+});

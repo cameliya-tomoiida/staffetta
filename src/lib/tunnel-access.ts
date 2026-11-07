@@ -17,6 +17,27 @@ export const LAN_ONLY_PATHS = ["/api/backup", "/settings/backup"]; // 画面の�
 /** ログインしていない人を送る先（④のスタッフのログイン） */
 export const STAFF_LOGIN_PATH = "/liff/staff";
 
+/**
+ * 外（インターネット）から来たアクセスか（管理役2 11/7: 入口を Cloudflare の quick tunnel から Tailscale Funnel に切りかえた）。
+ * どちらも 127.0.0.1:3100 へ中継するので、つないできた相手の IP では分からない。中継が付ける見出しで見る:
+ *   - Cloudflare: cf-ray・cf-connecting-ip
+ *   - Tailscale Funnel: Tailscale-Funnel-Request（tailscaled が付ける。外の人は消せない）
+ *   - 念のため、宛先の名前が *.ts.net・*.trycloudflare.com・HUB_PUBLIC_URL のもの
+ */
+export function fromOutside(h: { get(name: string): string | null }, publicUrl = process.env.HUB_PUBLIC_URL ?? ""): boolean {
+  if (h.get("cf-ray") !== null || h.get("cf-connecting-ip") !== null || h.get("tailscale-funnel-request") !== null) return true;
+  let pub = "";
+  try {
+    pub = publicUrl ? new URL(publicUrl).hostname.toLowerCase() : "";
+  } catch {
+    /* 壊れた値は見ない */
+  }
+  return [h.get("x-forwarded-host"), h.get("host")].some((v) => {
+    const host = (v ?? "").split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
+    return Boolean(host) && (host.endsWith(".ts.net") || host.endsWith(".trycloudflare.com") || host === pub);
+  });
+}
+
 export type TunnelDecision = { kind: "next" } | { kind: "login"; location: string } | { kind: "forbid" };
 
 export function decideTunnelAccess(x: {
