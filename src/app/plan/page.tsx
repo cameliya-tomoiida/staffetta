@@ -499,7 +499,7 @@ function WaveTag({ w }: { w: string }) {
   return <span className="mt-0.5 inline-block rounded border border-ink px-1.5 text-xs font-bold">{w}</span>;
 }
 type NameFn = (ja: string) => { text: string; machine: boolean; ja: string };
-const stepName = (lang: Lang, key: ProcessKey, ja: string) => (key in stepColor ? tr(lang, key as Key) : ja);
+const stepName = (lang: Lang, key: ProcessKey | string, ja: string) => (key in stepColor || key === "slice" ? tr(lang, key as Key) : ja);
 
 function Stat({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -624,7 +624,9 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
   const end = Math.ceil(Math.max(...todaySteps.map((s) => s.end), ...deadlines) / 60) * 60;
   // 人の足りなさは文にせず、帯の色で出す（担当者 11/6 深夜）。ほかの注意だけ文で
   const STAFF_RE = /は人が\s*\d+人\s*たりません/;
-  const rowWarnings = rows.flatMap((r) => r.warnings).filter((w) => !STAFF_RE.test(w));
+  // ほかの注意（始める時刻・設備の時間）は文の行にせず、その生地の帯の上の ⚠（押したときだけ一言）
+  const noteOf = (r: ScheduleRow) =>
+    r.warnings.filter((w) => !STAFF_RE.test(w)).map((w) => (w.startsWith(r.doughName) && w.includes(": ") ? w.slice(w.indexOf(": ") + 2) : w));
   const staff = (rows.find((r) => r.staff)?.staff ?? []).filter((b) => b.to > b.from);
   const span = Math.max(60, end - start);
   const hours = Array.from({ length: span / 60 + 1 }, (_, i) => start + i * 60);
@@ -640,20 +642,16 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
   // 「翌1:00」「前日23:52」の「翌」「前日」は日本語なので、辞書の言葉に置きかえる
   const ft = (m: number) =>
     lang === "ja" ? fmtTime(m) : fmtTime(m).replace("翌", `${t("next_day")} `).replace("前日", `${t("prev_day_time")} `);
+  // 「前日13:33–前日13:53」は「前日13:33–13:53」に（同じ日なら2つ目の「前日・翌」を出さない）
+  const day = (m: number) => (m < 0 ? -1 : m >= 1440 ? 1 : 0);
+  const span2 = (a: number, b: number) => (day(a) === day(b) ? `${ft(a)}–${axis(b)}` : `${ft(a)}–${ft(b)}`);
   return (
     <div className="min-w-0 rounded-sm border border-rule-strong bg-sheet">
       <div className="border-b border-rule-strong bg-paper px-4 py-2 font-black">{t("timetable")}</div>
-      {rowWarnings.length > 0 && (
-        <div className="border-b border-alert-line bg-alert-bg px-4 py-2 text-sm font-bold text-alert-ink" lang="ja">
-          {rowWarnings.map((w, i) => (
-            <div key={i}>{w}</div>
-          ))}
-        </div>
-      )}
 
       {/* 帯グラフ（せまい画面では横にすべらせる） */}
       <div className="overflow-x-auto px-4 pt-3 pb-2">
-        <div className={`pr-5 ${span > 600 ? "min-w-[860px]" : "min-w-[600px]"}`}>
+        <div className={`pr-5 min-w-[600px]`}>
           <div className="relative ml-36 h-6 text-xs text-ink-soft">
             {/* 長い日（生地が多い・前日から）は、時刻の字を 2〜3時間ごとにして重ならないように（線は1時間ごと） */}
             {hours.filter((_, i) => i % (hours.length > 16 ? 3 : hours.length > 10 ? 2 : 1) === 0).map((h) => (
@@ -696,6 +694,21 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
                   )}
                 </div>
                 <div className="relative h-10 flex-1">
+                  {noteOf(r).length > 0 && (
+                    <details className="absolute -top-2 z-20" style={{ left: pct(Math.max(start, Math.min(...r.steps.filter((x) => !x.prevDay).map((x) => x.start), end))) }} lang="ja">
+                      <summary
+                        aria-label="注意"
+                        className="flex h-6 w-6 -translate-x-1/2 cursor-pointer list-none items-center justify-center rounded-full bg-[#e9b949] text-sm font-black text-ink shadow [&::-webkit-details-marker]:hidden"
+                      >
+                        !
+                      </summary>
+                      <div className="absolute top-7 left-0 w-72 rounded-lg border-2 border-review-line bg-sheet p-2 text-xs font-bold text-ink shadow-lg">
+                        {noteOf(r).map((w, i) => (
+                          <div key={i}>{w}</div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                   {staff.map((sb, i) => (
                     <span
                       key={`sb${i}`}
@@ -757,7 +770,7 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
       >
         工程ごとの時刻を見る（計量 5分…）
       </label>
-      <div className="hidden gap-px border-t border-rule-strong bg-rule peer-checked:grid print:grid sm:grid-cols-2">
+      <div className="hidden gap-px border-t border-rule-strong bg-rule peer-checked:grid print:grid print:grid-cols-2">
         {rows.map((r) => (
           <div key={r.key} className="bg-sheet px-4 py-2.5">
             <Name n={name(r.doughName)} lang={lang} />
@@ -778,7 +791,7 @@ function Timetable({ rows, bs, lang, t, name, id }: { rows: ScheduleRow[]; bs: D
                       {stepName(lang, s.key, s.name)}
                     </td>
                     <td className="num py-1 text-right font-bold whitespace-nowrap">
-                      {ft(s.start)}–{ft(s.end)}
+                      {span2(s.start, s.end)}
                     </td>
                     <td className="num py-1 pl-2 text-right whitespace-nowrap text-ink-faint">
                       {s.end - s.start}
