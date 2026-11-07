@@ -3,7 +3,7 @@
 //  1) ③の注文に、入口らしい「元の資料」（LINEの文面・メール件名など）を付ける
 //  2) ③に無い「要確認」の例（メール・シート・LINE・電話・取引先サイト）を足す（要確認なので集計には入らない）
 // だけを行う。数量を二重に数えないよう、ここで足すのは要確認だけ。
-// TODO(④⑤): 各入口の取り込みが store に注文を入れるようになったら、このファイルは消す。
+// TODO: すべての入口の取り込みが保存先に注文を入れるようになったら、このファイルは消す。
 import type { Order, OrderLine, SourceRef } from "@/data/types";
 import { demoOrders as coreDemo, DEMO_DATE } from "@/data/demo-orders";
 import { findProduct } from "@/lib/catalog";

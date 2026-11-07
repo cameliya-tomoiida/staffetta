@@ -145,7 +145,7 @@ npm install
 ```bash
 npm run dev -- -p 3100   # 開発サーバー（http://localhost:3100）
 npm run build && npx next start -p 3100   # 本番モード（ふだんはこちら）
-npm test                 # テスト（vitest・674件）
+npm test                 # テスト（vitest・718件）
 npm run demo:reset       # デモを最初の状態に戻す
 npm run fax:simulate     # 「FAX が届いた」を再現する（変更 → 仮発注 → 本発注の FAX を1枚ずつ）
 LINE_TEST_URL=http://localhost:3100/api/line/webhook node scripts/line-webhook-test.mjs "明日 ロール 20個"
@@ -192,10 +192,10 @@ LINE_TEST_URL=http://localhost:3100/api/line/webhook node scripts/line-webhook-t
 
 | | |
 |---|---|
-| 期間 | 2026-11-04 21:04 の最初のコミットから約 3 日 |
-| コミット | 539 件（うちマージ 170 件。11/4 140件・11/5 271件・11/6 128件。11/6 夜の時点） |
-| コード | TypeScript 496 ファイル・約 5.6 万行（`src/`） |
-| テスト | 674 件（105 ファイル）。計算・税・権限・アラーム・AI の道具の呼び方など |
+| 期間 | 2026-11-04 21:04 の最初のコミットから約 4 日 |
+| コミット | 654 件（うちマージ 183 件。11/4 140件・11/5 271件・11/6 134件・11/7 96件・11/8 13件。11/8 時点） |
+| コード | TypeScript 578 ファイル・約 6.3 万行（`src/`） |
+| テスト | 718 件（119 ファイル）。計算・税・権限・アラーム・AI の道具の呼び方など |
 | 速さ | 注文の明細 **100万行の集計を 0.95 秒**（測って見つけて直す前は 23〜40 秒。約 30 倍速く。[docs/benchmark.md](docs/benchmark.md)） |
 | FAX の読み取り | 架空の FAX 11枚・39 行を全部正しく読み、確かめる行（黄色）を 67% → 約 10% に（[docs/fax-accuracy.md](docs/fax-accuracy.md)） |
 

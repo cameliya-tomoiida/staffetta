@@ -6,7 +6,7 @@ import { findMaterial } from "@/lib/catalog";
 
 export const metadata = { title: "レシピと工程｜マスタ管理" };
 
-// TODO(③): 生地ごとの配合（材料と％）と工程（時間・人数・設備・CCP）を編集できる形に。TODO(①⑤): onSave・onImport
+// TODO: 生地ごとの配合（材料と％）と工程（時間・人数・設備・CCP）を編集できる形に。保存（onSave）と取り込み（onImport）もつなぐ
 export default function RecipesAdmin() {
   toMastersIfReady(["recipes", "doughs"]); // ⑤の /masters に画面ができたら、そちらへ
   const columns: ColumnDef[] = [

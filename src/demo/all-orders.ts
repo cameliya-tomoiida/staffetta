@@ -5,7 +5,7 @@ import { addDays, todayJst } from "@/components/ui";
 import { demoOrders } from "./orders";
 
 /** 画面に出す全部の注文 = 保存してある注文（FAXなど）＋見本の注文 */
-// TODO(④⑤): 各入口の取り込みが store に入るようになったら readDb().orders だけにする
+// TODO: すべての入口の取り込みが保存先に入るようになったら readDb().orders だけにする
 export async function allOrders(): Promise<{ orders: Order[]; today: string }> {
   const db = await readRecentDb(); // 画面用: 最近の分＋要確認・仮発注（古い注文は検索で見る）
   const today = todayJst();
@@ -17,7 +17,7 @@ export async function allOrders(): Promise<{ orders: Order[]; today: string }> {
 /**
  * 画面で最初に見せる納品日。URL の ?date= があればそれ。
  * なければデモの日（③の DEMO_DATE、11/6）があればその日、無ければ明日、明日も無ければ次の納品日。
- * TODO(デモ後): 見本の注文を消したら DEMO_DATE の扱いを外す
+ * TODO: 見本の注文を消したら DEMO_DATE の扱いを外す
  */
 export function pickDate(q: unknown, dates: string[], today: string): string {
   if (typeof q === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;

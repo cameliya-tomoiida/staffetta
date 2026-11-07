@@ -6,7 +6,7 @@ import { doughRecipes } from "@/data/production";
 
 export const metadata = { title: "商品｜マスタ管理" };
 
-// TODO(③): 列の定義と検証は③の決まりに置き換える。TODO(①⑤): onSave・onImport をつなぐ
+// TODO: 列の定義と検証を、マスタの決まりにそろえる。保存（onSave）と取り込み（onImport）をつなぐ
 export default function ProductsAdmin() {
   toMastersIfReady(["products"]); // ⑤の /masters に画面ができたら、そちらへ
   const columns: ColumnDef[] = [
