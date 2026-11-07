@@ -1,7 +1,7 @@
 "use client";
 // FAX を AI が読んだところを見せる（⑧ 近未来・⑥の動画で一番使う場面）。
 // 確認の画面を開くと 1.6 秒ほど: 読んだ行・照らし合わせた取引先・商品・様式 の数字が回り、FAX の行が上から流れ、
-// 迷った行（確からしさが低い・注意がある）だけが黄色く光って残る。終わったら小さなまとめの帯になる（迷った行の一覧は残る）。
+// 迷った行（確からしさが低い・注意がある）だけが黄色く光って残る。終わったら1行の帯「照らし合わせました。確認してください」になる（迷った行の中身は出さない・担当者 11/7）。
 // 同じ FAX では、このブラウザで最初の1回だけ再生する。「飛ばす」で止められる。動きを減らす設定なら、まとめの帯だけ。
 import { useEffect, useRef, useState } from "react";
 
@@ -50,7 +50,6 @@ export function FaxReadShow({ faxId, lines, customers, products, formats, model 
   const [phase, setPhase] = useState<"idle" | "play" | "done">("idle");
   const [shown, setShown] = useState(0);
   const timer = useRef<number[]>([]);
-  const unsure = lines.filter((l) => l.level !== "high");
   useEffect(() => {
     // 「見た」の印は、再生が終わったとき（飛ばしたとき）に付ける
     const seen = sessionStorage.getItem(key) === "1";
@@ -94,17 +93,8 @@ export function FaxReadShow({ faxId, lines, customers, products, formats, model 
     return (
       <section aria-label="AI の読み取り" className="cs-wrap no-print relative flex flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden rounded-xl px-4 py-2 text-white">
         <span className="cs-orb relative inline-block h-3.5 w-3.5 shrink-0 rounded-full [animation:none]" aria-hidden />
-        <p className="text-[16px] font-bold">
-          AI が {lines.length}行を読み、取引先 {customers}件・商品 {products}種類・様式 {formats}つと照らし合わせました
-        </p>
-        {unsure.length ? (
-          <p className="min-w-0 text-[16px] font-bold text-[#ffe27a]">
-            迷った行 {unsure.length}行：{unsure.slice(0, 3).map((l) => `${l.text}${l.note ? `（${l.note}）` : ""}`).join("・")}
-            {unsure.length > 3 ? " ほか" : ""}
-          </p>
-        ) : (
-          <p className="text-[16px] font-bold text-[#93e0b0]">迷った行はありません</p>
-        )}
+        {/* 担当者 11/7:「照らし合わせました。確認してください」でよい。迷った行の中身（長い文）は出さない */}
+        <p className="text-[16px] font-bold">照らし合わせました。確認してください</p>
       </section>
     );
   }
@@ -137,14 +127,11 @@ export function FaxReadShow({ faxId, lines, customers, products, formats, model 
             <div key={l.key} className={`cs-row flex gap-3 ${l.level === "high" ? "text-white/60" : "cs-hit rounded bg-[#f5c400]/20 font-bold text-[#ffe27a]"}`}>
               <span className="w-8 shrink-0 text-right text-white/40">{String(n + 1).padStart(2, "0")}</span>
               <span className="min-w-0 flex-1 truncate">{l.text}</span>
-              <span className="shrink-0">{l.level === "high" ? "OK" : `確認${l.note ? `：${l.note}` : ""}`}</span>
+              <span className="shrink-0">{l.level === "high" ? "OK" : "確認"}</span>
             </div>
           ))}
           <div className="cs-scan pointer-events-none absolute inset-x-0 h-6" />
         </div>
-        {unsure.length > 0 && shown >= lines.length && (
-          <p className="relative mt-2 text-[17px] font-bold text-[#ffe27a]">迷った行 {unsure.length}行 — ここだけ元の FAX と見比べてください</p>
-        )}
       </section>
     </>
   );
