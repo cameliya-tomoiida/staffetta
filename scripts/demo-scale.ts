@@ -23,7 +23,7 @@ async function main() {
     const ids = new Set(before.map((r) => r.id));
     const stored = toStoredRows(name, rows);
     // 足した行と、規模に合わせて変えた行（設備・班・ライン・生地の粉の上限）
-    const changed = stored.filter((r) => !ids.has(r.id) || ["equipment", "shifts", "lines", "doughs", "products"].includes(name));
+    const changed = stored.filter((r) => !ids.has(r.id) || ["equipment", "shifts", "lines", "doughs", "products", "materials"].includes(name));
     if (changed.length) await upsertMasters(name, changed, "本物の規模の見本");
   }
   const customers = m.customers.filter((c) => c.active !== false).map((c) => c.id).slice(0, 8);

@@ -8,6 +8,7 @@
 // 出来事のあと（確定・承認・入荷など）は checkAlertsSoon() を呼ぶと、数秒後に1回だけアラートを見直す。
 import type { PurchaseOrder } from "@/data/types";
 import { nowIso } from "./clock";
+import { kvGet, kvSet } from "./db/sqlite";
 import { listAlerts, syncAlerts, tickAlerts, type AlertCandidate, type AlertRow } from "./db/alerts-store";
 import { isOn, type FeatureKey } from "./settings/features";
 import { gatherSystem } from "./system-watch";
@@ -123,6 +124,14 @@ export interface TickResult {
   errors: string[];
 }
 
+/** 自動で片づけたお知らせの記録（同じ物は1回だけ・新しい 200件） */
+function logAuto(at: string, source: string, titles: string[]) {
+  const log = kvGet<{ at: string; source: string; title: string }[]>("alerts_auto_log") ?? [];
+  const seen = new Set(log.map((x) => `${x.source}|${x.title}`));
+  const add = titles.filter((t) => !seen.has(`${source}|${t}`)).map((title) => ({ at, source, title }));
+  if (add.length) kvSet("alerts_auto_log", [...log, ...add].slice(-200));
+}
+
 /** アラートを見直す（判定・保存・期限の段上げ・スタッフの LINE） */
 export async function runAlertCheck(now = nowIso(), sources: AlertSource[] = ALERT_SOURCES): Promise<TickResult["alerts"] & { errors: string[] }> {
   const errors: string[] = [];
@@ -133,7 +142,10 @@ export async function runAlertCheck(now = nowIso(), sources: AlertSource[] = ALE
   for (const s of sources) {
     try {
       const list = s.feature && !isOn(s.feature) ? [] : await s.run(now);
-      fresh.push(...syncAlerts(s.name, list, now));
+      // 先に判断する（片づけてよい物は記録だけ・同じ種類はまとめて「AI の判断：…よろしいですか？」）
+      const { keep, auto } = (await import("./alerts/triage")).triageAlerts(s.name, list);
+      if (auto.length) logAuto(now, s.name, auto.map((a) => a.title));
+      fresh.push(...syncAlerts(s.name, keep, now));
     } catch (e) {
       errors.push(`${s.name}: ${e instanceof Error ? e.message : String(e)}`);
     }

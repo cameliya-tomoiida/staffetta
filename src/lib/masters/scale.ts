@@ -132,13 +132,15 @@ export function scaleMasters(base: Masters): Masters {
   for (const p of m.products) if (p.kind === "make" && p.overRate == null) p.overRate = overRateOf(p.name);
   // 原価をふつうの値に（担当者 11/7: 粗利率 15〜35% くらい）。材料費・包材費のほかを人件費として足す。
   // 食パン 8枚切・6枚切は 11%（小麦粉の値上げで、線 10% を切る見本）
-  const target = (id: string, i: number) => (id === "P03" || id === "P04" ? 11 : [18, 22, 25, 28, 32][i % 5]);
+  const target = (id: string, i: number) => (id === "P03" || id === "P04" ? 11 : [22, 25, 28, 30, 32][i % 5]);
   m.products.forEach((p, i) => {
     if (p.kind !== "make" || !(p.price > 0)) return;
     const c = withMasters(m, () => productCost(p.id));
     const labor = Math.round((p.price * (1 - target(p.id, i) / 100) - c.materialCost - c.packagingCost) * 10) / 10;
     if (labor > 0) p.laborCost = labor;
   });
+  // デモの日はきれいな状態に（担当者 11/7: 足りない材料は 0〜2件）。在庫は十分に持ち、黒糖と乾燥バジルだけ少し足りない見本
+  for (const x of m.materials) if (x.id !== "M04" && x.id !== "M16" && x.supplierId) x.stock = Math.max(x.stock, 3000);
   // 湯種は前の日に仕込む（工程の名前で分かるように）
   for (const s of m.steps) if (s.doughId === "DG12" && s.key === "weigh") s.name = "計量・湯種（前日に仕込んだ湯種を入れる）";
   return m;

@@ -51,6 +51,12 @@ describe("本物の規模の見本", () => {
     expect(r.warnings).toEqual([]);
   });
 
+  it("デモの日は足りない材料が 0〜2件（お知らせが少ない、きれいな状態）", async () => {
+    const { materialShortList } = await import("@/lib/material-shortlist");
+    const n = materialShortList(r, m).length;
+    expect(n).toBeLessThanOrEqual(2);
+  });
+
   it("見本のマスタは変えない（足すだけ）", () => {
     const base = sampleMasters();
     expect(m.doughs.length).toBe(base.doughs.length + 9);
