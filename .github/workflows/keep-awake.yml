@@ -1,0 +1,22 @@
+# 審査員向けの見本（Render の無料枠）を眠らせない（11/8 管理役2）。
+# 無料枠は 15分触らないと眠り、次に開いた人が 1分ほど待たされ、見本（/tmp の DB）も作り直される。
+# 審査（11/9〜11/10）の間、10分ごとにログイン画面を1回開く。GitHub の定期実行は数分遅れることがあるので 10分ごと。
+# 11/12（日本時間）からは何もしない（このファイルは、そのあと消してよい）。
+name: keep-awake
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    # 見本を出しているリポジトリだけで動かす
+    if: github.repository == 'cameliya-tomoiida/staffetta' || github.event.repository.name == 'staffetta-demo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: 見本を開く（11/12 からは何もしない）
+        run: |
+          today=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          if [[ "$today" > "2026-11-11" ]]; then echo "審査は終わりました（$today）。何もしません"; exit 0; fi
+          curl -fsS -o /dev/null --max-time 120 -w "見本 %{http_code}（%{time_total}秒）\n" https://staffetta-demo.onrender.com/login || echo "見本が答えませんでした（次の回にまた開きます）"
