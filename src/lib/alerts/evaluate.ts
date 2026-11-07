@@ -13,6 +13,8 @@ import { addDays } from "../purchase";
 import type { Alert, AlertAction, AlertKind, AlertLevel } from "./kinds";
 
 export interface AlertOptions {
+  /** 画面に出している注文（保存した注文＋見本の注文）。#7 要確認の数を画面とそろえる。無ければ db.orders */
+  screenOrders?: Order[];
   /** 種類ごとの「使う／使わない」。false の種類は出さない（①の機能の ON/OFF） */
   isOn?: (kind: AlertKind) => boolean;
   /** #1 締めの何分前から「発注忘れ」を出すか（既定 120） */
@@ -86,7 +88,7 @@ export function evaluateAlerts(db: Db, masters: Masters, now: string, opts: Aler
     run("cost_review_due", () => costReviewDue(masters, now, opts));
     run("review_docs_missing", () => reviewDocsMissing(now, opts));
     run("usual_order_missing", () => usualOrderMissing(db, masters, now, opts));
-    run("review_backlog", () => reviewBacklog(db, now));
+    run("review_backlog", () => reviewBacklog(db, now, opts.screenOrders));
     run("provisional_pending", () => provisionalPending(db, now));
     run("not_received", () => notReceived(db, now, opts));
     run("production_warning", () => productionWarning(db, masters, now));
@@ -309,9 +311,10 @@ function usualOrderMissing(db: Db, masters: Masters, now: string, opts: AlertOpt
 }
 
 // ───────── #7 要確認がたまっている ─────────
-function reviewBacklog(db: Db, now: string): Alert[] {
+function reviewBacklog(db: Db, now: string, screenOrders?: Order[]): Alert[] {
   const faxes = db.faxes.filter((f) => f.status === "review" || f.status === "template");
-  const orders = db.orders.filter((o) => o.status === "needs_review");
+  // 数は画面（受注一覧・ホーム）と同じ数え方で（見本の注文も入る。管理役2 11/7「お知らせの 9件と画面の 10件が合わない」）
+  const orders = (screenOrders ?? db.orders).filter((o) => o.status === "needs_review");
   const items = [...faxes.map((f) => ({ id: f.id, at: f.receivedAt })), ...orders.map((o) => ({ id: o.id, at: o.source?.receivedAt ?? o.createdAt }))];
   const old = items.filter((x) => x.at && minutesBetween(x.at, now) >= 30);
   if (!old.length) return [];

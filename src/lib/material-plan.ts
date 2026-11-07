@@ -111,9 +111,16 @@ export function planMaterialOrders(orders: Order[], fromDate: string, opts: Mate
   const offset = opts.productionOffsetDays ?? 0;
   const before = opts.arriveDaysBefore ?? 1;
   const dates = Array.from({ length: days }, (_, i) => addDays(fromDate, i));
+  // 先の日の画面でも、今日から順に在庫を減らして数える（管理役2 11/7: 11/7 の画面では「11/8 の製造に 11.5kg」、
+  // 11/8 の画面では「18.2kg」と食い違った。前の日の使う量・発注を数えずに、今の在庫から始めていたため）。
+  // 今日〜前の日は在庫を動かすだけで、表・発注書・警告には出さない（その日の画面で出す）。
+  const today = opts.now ? new Date(Date.parse(opts.now) + 9 * 3600_000).toISOString().slice(0, 10) : fromDate;
+  const lead: string[] = [];
+  for (let d = today; d < fromDate && lead.length < 7; d = addDays(d, 1)) lead.push(d);
+  const simDates = [...lead, ...dates];
 
   // 日ごとの所要量
-  const needByDay = dates.map((date) => {
+  const needByDay = simDates.map((date) => {
     const plan = planProduction(totalsForDate(orders, date), opts.production);
     return new Map(materialRequirements([plan]).filter((r) => !r.noPurchase).map((r) => [r.materialId, r.needUnits]));
   });
@@ -123,10 +130,11 @@ export function planMaterialOrders(orders: Order[], fromDate: string, opts: Mate
   const nowMs = opts.now ? Date.parse(opts.now) : NaN;
   const toOrder = new Map<string, MaterialShortageLike[]>(); // 届く日 → 発注
   for (const m of allMaterials()) {
-    if (m.noPurchase || !needByDay.some((n) => n.has(m.id))) continue;
+    if (m.noPurchase || !needByDay.slice(lead.length).some((n) => n.has(m.id))) continue;
     let stock = opts.stock?.[m.id] ?? m.stock;
     const safety = opts.ignoreSafetyStock ? 0 : m.safetyStock;
-    const dayRows: MaterialDayRow[] = dates.map((date, i) => {
+    const simRows: MaterialDayRow[] = simDates.map((date, i) => {
+      const shown = i >= lead.length;
       const need = needByDay[i].get(m.id) ?? 0;
       const productionDate = addDays(date, offset);
       const short = round(need + safety - stock);
@@ -141,14 +149,14 @@ export function planMaterialOrders(orders: Order[], fromDate: string, opts: Mate
           // もう発注書では間に合わない → 警告だけ（在庫は電話で頼めた前提で数え、次の日から計画を続ける）
           late = true;
           const supplierName = findSupplier(m.supplierId)?.name ?? m.supplierId;
-          lateItems.push({
+          if (shown) lateItems.push({
             materialId: m.id, name: m.name, unit: m.unit, supplierId: m.supplierId, supplierName,
             productionDate, shortUnits: round(short), orderPacks, orderUnitLabel: m.orderUnitLabel, cutoffAt,
             message: `${m.name}は締め（${mdhm(cutoffAt)}）を過ぎています。${md(productionDate)}の製造に ${round(short, 1)}${m.unit} たりません。${supplierName.replace(/（[^）]*）/g, "")}に電話で確認してください`,
           });
         }
       }
-      if (orderPacks > 0 && !late) {
+      if (orderPacks > 0 && !late && shown) {
         const list = toOrder.get(arriveDate!) ?? [];
         const same = list.find((x) => x.materialId === m.id);
         if (same) {
@@ -163,6 +171,7 @@ export function planMaterialOrders(orders: Order[], fromDate: string, opts: Mate
       stock = round(stockBefore - need);
       return { date, productionDate, need, stockBefore, orderUnits, orderPacks, arriveDate, ...(late ? { late } : {}), stockAfter: stock };
     });
+    const dayRows = simRows.slice(lead.length);
     rows.push({
       materialId: m.id, name: m.name, unit: m.unit, supplierId: m.supplierId, orderUnitLabel: m.orderUnitLabel, minLot: m.minLot,
       stock: opts.stock?.[m.id] ?? m.stock, safetyStock: safety,

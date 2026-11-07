@@ -57,8 +57,11 @@ async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
       poDrafts = []; // 計算できないときは、保存した発注書だけで見る
     }
   }
+  const { demoOrders } = await import("@/demo/orders");
+  const savedIds = new Set(db.orders.map((o) => o.id));
   const alerts = evaluateAlerts(db, masters, now, {
     poDrafts,
+    screenOrders: [...db.orders, ...demoOrders().filter((o) => !savedIds.has(o.id))],
     isOn: (k) => on(alertFeatureKey(k)),
     dayOffs: [
       ...listDayOffs().map(({ customerId, date }) => ({ customerId, date })),
