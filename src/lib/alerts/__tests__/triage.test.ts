@@ -15,7 +15,7 @@ describe("お知らせを先に判断する", () => {
     const r = triageAlerts("logic", [a("stock_shortage", 3), a("stock_shortage", 1, "danger"), a("stock_shortage", 2), a("review_backlog", 4)]);
     expect(r.keep).toHaveLength(2);
     const g = r.keep.find((x) => x.kind === "stock_shortage")!;
-    expect(g.title).toBe("足りなくなる材料 3品");
+    expect(g.title).toBe("発注が必要な材料 3品");
     expect(g.level).toBe("danger");
     expect(g.dueAt).toBe("2026-11-01T10:00:00+09:00");
     expect(g.dedupeKey).toBe("group:logic:stock_shortage");

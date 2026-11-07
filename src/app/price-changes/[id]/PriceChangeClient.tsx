@@ -111,7 +111,7 @@ export function PriceChangeClient({ change: c, impact, line }: { change: PriceCh
       <section className="card p-0">
         <h2 className="flex flex-wrap items-center gap-x-3 border-b border-rule px-4 py-2">
           <span className="text-xl font-bold">原価が上がる商品 <span className="num">{impact.length}</span></span>
-          {below > 0 && <span className="rounded-full bg-[#d64545] px-2.5 py-0.5 text-sm font-black text-white">見直しが必要 {below}</span>}
+          {below > 0 && <span className="rounded-full bg-[#d64545] px-2.5 text-sm font-black text-white inline-flex items-center leading-none align-middle h-7">見直しが必要 {below}</span>}
           <label className="ml-auto flex items-center gap-1 text-sm font-bold text-ink-soft">
             線
             <input

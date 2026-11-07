@@ -17,7 +17,7 @@ interface GroupRule {
 
 const RULES: Record<string, GroupRule> = {
   stock_shortage: {
-    title: (n) => `足りなくなる材料 ${n}品`,
+    title: (n) => `発注が必要な材料 ${n}品`,
     ok: { label: "発注の案を見る", href: "/plan?tab=material" },
     fix: { label: "直す", href: "/purchase" },
   },

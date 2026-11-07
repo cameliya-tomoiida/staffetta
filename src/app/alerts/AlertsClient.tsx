@@ -221,7 +221,7 @@ function AlertItem({ a, who, nowMs, pending, run }: { a: AlertRow; who: string; 
       <div className="space-y-2 py-3 pr-3 pl-5 sm:pr-4 sm:pl-6">
         <div className="flex flex-wrap items-center gap-2">
           <span className={`rounded-md border px-2 py-0.5 text-sm font-black ${lv.tag}`}>{lv.label}</span>
-          {a.state === "new" && <span className="rounded-md bg-crust-600 px-2 py-0.5 text-xs font-bold text-white">新しい</span>}
+          {a.state === "new" && <span className="rounded-md bg-crust-600 px-2 text-xs font-bold text-white inline-flex items-center leading-none align-middle h-6">新しい</span>}
           {a.state === "snoozed" && a.snoozeUntil && <span className="text-sm font-bold text-ink-soft">あとで：{fmtDateTime(a.snoozeUntil)} にまた出します</span>}
           {a.assignee && <span className="text-sm text-ink-soft">担当 <b className="text-ink">{a.assignee}</b></span>}
         </div>

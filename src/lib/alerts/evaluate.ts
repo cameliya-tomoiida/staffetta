@@ -7,7 +7,7 @@ import type { Db, FaxDoc } from "@/lib/types";
 import { countsInTotals } from "../aggregate";
 import { findCustomer, findMaterial, findProduct, findSupplier, withMasters } from "../catalog";
 import { productCost } from "../cost";
-import { planMaterialOrders } from "../material-plan";
+import { materialCutoff, planMaterialOrders } from "../material-plan";
 import { runPipeline } from "../pipeline";
 import { addDays } from "../purchase";
 import type { Alert, AlertAction, AlertKind, AlertLevel } from "./kinds";
@@ -23,6 +23,8 @@ export interface AlertOptions {
   unusualRate?: number;
   /** #3 何日先まで在庫を見るか（既定 7） */
   stockDays?: number;
+  /** AI の発注の案（お知らせの「AI の案」）に入っている材料（materialId|届く日）。同じ材料を二重に出さない */
+  proposalMaterials?: string[];
   /** 発注書の下書き（計算で作ったもの）。保存済みに無い下書きの締めが近いときも #1 を出す */
   poDrafts?: PurchaseOrder[];
   /** #4 商品の登録日（lastCostReviewAt が無いときに使う）。productId → YYYY-MM-DD */
@@ -201,11 +203,21 @@ function stockShortage(db: Db, masters: Masters, now: string, opts: AlertOptions
     if (!day) continue;
     if (day.productionDate > addDays(today, lead + 1)) continue;
     const late = !!day.late;
+    if (!late && day.arriveDate && opts.proposalMaterials?.includes(`${row.materialId}|${day.arriveDate}`)) continue;
+    // 発注アラーム（担当者 11/7「間に合わない、では手遅れ。手遅れになる前に知らせる」）:
+    // 締めの前は「発注が必要：強力粉 25kg袋×2（米田製粉・締め 15:00）」。締めまで 3時間を切ったら急ぎ（danger）。締めを過ぎたら「締め過ぎ・仕入先に電話」
+    const cutoffAt = day.arriveDate ? materialCutoff(row.materialId, day.arriveDate) : "";
+    const supName = (sup?.name ?? "").replace(/（[^）]*）/g, "");
+    const cut = cutoffAt ? new Date(Date.parse(cutoffAt) + 9 * 3600_000).toISOString() : "";
+    const cutLabel = cut ? (cut.slice(0, 10) === today ? cut.slice(11, 16) : `${Number(cut.slice(5, 7))}/${Number(cut.slice(8, 10))} ${cut.slice(11, 16)}`) : "";
+    const soon = !!cutoffAt && Date.parse(cutoffAt) - Date.parse(now) <= 3 * 3600_000;
     // stockBefore は「頼む分を足したあと」の在庫。文には、頼む前の在庫を出す
     const have = Math.round((day.stockBefore - day.orderUnits) * 10) / 10;
     const r1 = (x: number) => Math.round(x * 10) / 10;
-    res.push(mk("stock_shortage", `${row.materialId}|${day.productionDate}`, late ? "danger" : "warn",
-      `${row.name}が足りなくなりそうです`,
+    res.push(mk("stock_shortage", `${row.materialId}|${day.productionDate}`, late || soon ? "danger" : "warn",
+      late
+        ? `${row.name}：締め過ぎ・仕入先に電話`
+        : `発注が必要：${row.name} ${row.orderUnitLabel}×${day.orderPacks}（${supName ? `${supName}・` : ""}締め ${cutLabel}）`,
       `${md(day.productionDate)}の製造で ${row.name}を ${r1(day.need)}${row.unit} 使うと、在庫（${have}${row.unit}）が ${r1(have - day.need)}${row.unit} になり、安全在庫（${row.safetyStock}${row.unit}）を割ります。` +
         (late ? "発注の締めを過ぎています。電話で間に合うか確かめてください。" : `${row.orderUnitLabel} × ${day.orderPacks} の注文をしますか？`),
       [
@@ -213,7 +225,7 @@ function stockShortage(db: Db, masters: Masters, now: string, opts: AlertOptions
           payload: late ? { supplierId: row.supplierId } : { supplierId: row.supplierId, materialIds: [row.materialId], arriveDate: day.arriveDate } },
         { label: "材料を見る", kind: "open_material", payload: { materialId: row.materialId } },
       ],
-      [row.materialId, ...(row.supplierId ? [row.supplierId] : [])], day.arriveDate ? `${addDays(day.arriveDate, -lead)}T12:00:00+09:00` : undefined));
+      [row.materialId, ...(row.supplierId ? [row.supplierId] : [])], cutoffAt || (day.arriveDate ? `${addDays(day.arriveDate, -lead)}T12:00:00+09:00` : undefined)));
   }
   return res;
 }

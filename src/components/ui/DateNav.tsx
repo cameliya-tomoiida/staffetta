@@ -52,7 +52,7 @@ export function DateNav({ date, today, pattern, label = "納品日", marks = [] 
             <span className="ml-0.5 text-[15px]">({WD[wd]})</span>
           </span>
           {marks.includes(date) && <span aria-label="注文あり" className="h-2 w-2 shrink-0 rounded-full bg-crust-600" />}
-          {rel && <span className="shrink-0 rounded-full bg-crust-600 px-1.5 py-0.5 text-[12px] leading-none font-bold whitespace-nowrap text-white">{rel}</span>}
+          {rel && <span className="shrink-0 rounded-full bg-crust-600 px-1.5 text-[12px] leading-none font-bold whitespace-nowrap text-white inline-flex items-center align-middle h-6">{rel}</span>}
           <svg viewBox="0 0 24 24" className={`h-5 w-5 shrink-0 text-crust-700 ${rel && date !== today ? "max-[420px]:hidden" : ""}`} fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <rect x="3.5" y="5" width="17" height="15" rx="2" />
             <path d="M3.5 9.5h17M8 3v4M16 3v4" />

@@ -341,7 +341,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                                 <span className="text-[13px] text-ink-faint">
                                   {h.intent === "cancel" ? "取消のご連絡" : h.intent === "change" ? "変更のご連絡" : "ご注文"}
                                   {h.movedFrom && (
-                                    <b className="ml-2 rounded-md bg-[#fde3c8] px-1.5 py-0.5 text-[13px] text-[#9a4d0b] tabular-nums">
+                                    <b className="ml-2 rounded-md bg-[#fde3c8] px-1.5 text-[13px] text-[#9a4d0b] tabular-nums inline-flex items-center leading-none align-middle h-6">
                                       変更 {md(h.movedFrom)} → {md(h.deliveryDate)}
                                     </b>
                                   )}

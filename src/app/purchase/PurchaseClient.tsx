@@ -57,13 +57,15 @@ function minutesLeft(cutoffAt: string, now: number) {
 }
 
 export function PurchaseClient({
-  pos, date, factory, warnings, dateNav, costBox, unconfirmed = 0, serverNow, lateMaterials = [], needOrder = 0,
+  pos, date, factory, warnings, dateNav, costBox, unconfirmed = 0, serverNow, lateMaterials = [], lateRows = [], needOrder = 0,
 }: {
   pos: PoView[]; date: string; factory: string; warnings: string[]; dateNav?: React.ReactNode; costBox?: React.ReactNode; unconfirmed?: number;
   /** サーバーの「いま」（ミリ秒） */
   serverNow: number;
   /** 締めを過ぎて、もう発注書では頼めない材料（③の materialPlan.lateItems の文） */
   lateMaterials?: string[];
+  /** 締めを過ぎた材料（行の右に「締め過ぎ・仕入先に電話」） */
+  lateRows?: { name: string; amount: string; day: string; supplier: string }[];
   /** 発注が必要な材料の数（材料の発注書に入っている材料） */
   needOrder?: number;
 }) {
@@ -149,21 +151,38 @@ export function PurchaseClient({
       )}
       {/* ⑧ 11/7 パソコンも文字を減らす: 注意は短い1行（押すと中身）。くわしい文は出さない */}
       {/* ⑧ 11/7 担当者「『間に合わない材料』ではなく『発注が必要な材料』。絶対に間に合わないものは仕入先に確認（要確認）」 */}
-      {needOrder > 0 && (
-        <Notice tone="info" icon={<Icon.alert className="h-6 w-6" />} className="mb-2 py-2">
-          <Link href={`/plan?date=${date}&tab=material`}>発注が必要な材料 <span className="num text-xl">{needOrder}</span> ›</Link>
-        </Notice>
-      )}
-      {lateMaterials.length > 0 && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-2 py-2">
-          <details>
-            <summary className="cursor-pointer list-none !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 after:!hidden [&::-webkit-details-marker]:hidden"><span className="mr-1.5 rounded bg-review-line/40 px-1.5 text-[12px]">要確認</span>間に合わない材料 <span className="num text-xl">{lateMaterials.length}</span>（仕入先に確認） ›</summary>
-            <ul className="mt-1 list-disc pl-5 font-normal">
-              {lateMaterials.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
-          </details>
+      {/* 担当者 11/7「『間に合わない』はもう手遅れの言い方。手遅れになる前に知らせる」: 見出しは「発注が必要な材料」1つに。
+          締めを過ぎたものは行の右に小さく「締め過ぎ・仕入先に電話」の札だけ（締めの前は お知らせ の「発注が必要」で先に出る） */}
+      {needOrder + lateRows.length > 0 && (
+        <Notice tone={lateRows.length ? "review" : "info"} icon={<Icon.alert className="h-6 w-6" />} className="mb-2 py-2">
+          {lateRows.length === 0 ? (
+            <Link href={`/plan?date=${date}&tab=material`}>
+              発注が必要な材料 <span className="num text-xl">{needOrder}</span> ›
+            </Link>
+          ) : (
+            <details>
+              <summary className="cursor-pointer list-none !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 after:!hidden [&::-webkit-details-marker]:hidden">
+                発注が必要な材料 <span className="num text-xl">{needOrder + lateRows.length}</span> ›
+              </summary>
+              <ul className="mt-1 space-y-1 font-normal">
+                {lateRows.map((x, i) => (
+                  <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <b>{x.name}</b>
+                    <span className="num">{x.amount}</span>
+                    <span className="text-[13px] text-ink-soft">{x.day} 製造・{x.supplier}</span>
+                    <span className="ml-auto inline-flex h-6 items-center rounded-md bg-review-line/40 px-2 text-[12px] leading-none font-bold">締め過ぎ・仕入先に電話</span>
+                  </li>
+                ))}
+                {needOrder > 0 && (
+                  <li>
+                    <Link href={`/plan?date=${date}&tab=material`} className="underline">
+                      ほか {needOrder} 品（発注書の下書きにあります）›
+                    </Link>
+                  </li>
+                )}
+              </ul>
+            </details>
+          )}
         </Notice>
       )}
       {warn.incomplete.length > 0 && (

@@ -248,8 +248,8 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
   const big = "min-h-14 rounded-xl text-[20px] font-bold";
   const chip = (on: boolean) => `${big} border-2 px-3 ${on ? "border-[#8b1a1a] bg-[#8b1a1a] text-white" : "border-[#838b83] bg-white"}`;
   const mark = (s: DriverDayStop["items"][number]["status"]) =>
-    s === "needs_review" ? <span className="ml-2 rounded bg-[#fff3c4] px-1.5 py-0.5 text-[15px] font-black text-[#654700]">要確認</span>
-      : s === "provisional" ? <span className="ml-2 rounded bg-[#e8f0fb] px-1.5 py-0.5 text-[15px] font-black text-[#1d4b8f]">仮</span> : null;
+    s === "needs_review" ? <span className="ml-2 rounded bg-[#fff3c4] px-1.5 text-[15px] font-black text-[#654700] inline-flex items-center leading-none align-middle h-7">要確認</span>
+      : s === "provisional" ? <span className="ml-2 rounded bg-[#e8f0fb] px-1.5 text-[15px] font-black text-[#1d4b8f] inline-flex items-center leading-none align-middle h-7">仮</span> : null;
 
   return (
     <div ref={top} className="mx-auto flex min-h-dvh max-w-[560px] flex-col bg-paper text-ink" style={{ fontSize: 18 }}>
@@ -341,7 +341,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                               {/* 納品の決まり（⑧）: 時間・検品・サインを大きな印で */}
                               {(badgeRules(s.rules).length > 0 || s.added) && (
                                 <span className="mt-1 flex flex-wrap gap-1.5">
-                                  {s.added && <span className="rounded-lg bg-ok-bg px-2 py-0.5 text-[17px] font-black text-ok-ink">今日だけ追加</span>}
+                                  {s.added && <span className="rounded-lg bg-ok-bg px-2 text-[17px] font-black text-ok-ink inline-flex items-center leading-none align-middle h-7">今日だけ追加</span>}
                                   {badgeRules(s.rules).map((r) => (
                                     <span key={r.kind} className={`rounded-lg px-2 py-0.5 text-[17px] font-black ${r.kind === "time" ? "bg-[#fff3c4] text-[#654700]" : "bg-[#8b1a1a] text-white"}`}>{r.text}</span>
                                   ))}

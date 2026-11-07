@@ -38,7 +38,7 @@ export function CompanyClient({ initial }: { initial: Company }) {
         {FIELDS.map((f) => (
           <label key={f.key} className={`block text-[18px] font-bold ${f.wide ? "sm:col-span-2" : ""}`}>
             {f.label}
-            {f.key === "bank" && !c.bank.trim() && <span className="ml-2 rounded bg-[#fff3c4] px-2 py-0.5 text-[15px] font-black text-[#654700]">デモの状態です</span>}
+            {f.key === "bank" && !c.bank.trim() && <span className="ml-2 rounded bg-[#fff3c4] px-2 text-[15px] font-black text-[#654700] inline-flex items-center leading-none align-middle h-7">デモの状態です</span>}
             <input className={`${field} mt-1 font-normal`} value={c[f.key]} placeholder={f.placeholder} onChange={(e) => setC({ ...c, [f.key]: e.target.value })} />
           </label>
         ))}

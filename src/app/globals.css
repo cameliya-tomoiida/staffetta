@@ -282,7 +282,11 @@ a, button, input, select, textarea, label, summary, [role="button"] {
 /* スマホ: 押して開く所はボタンに見せる（枠つき＋›。開くと回る）・補足の字を薄くしすぎない（⑧） */
 @media screen and (max-width: 767px) {
   main details > summary {
-    display: block;
+    /* 文字を縦の真ん中に（担当者 11/7 iPhone で「印刷・ほかの表」の文字が上に寄っていた） */
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
     position: relative;
     min-height: 48px;
     padding: 10px 40px 10px 12px;

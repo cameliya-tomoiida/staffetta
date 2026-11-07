@@ -25,7 +25,7 @@ export function MailClient({ status, unlocked, testTo, log, flash }: { status: {
         <div className="flex flex-wrap items-center gap-3">
           <span className={`rounded-full px-3 py-1 text-base font-black ${status.connected ? "bg-ok-bg text-ok-ink" : "bg-off-bg text-off-ink"}`}>{status.connected ? "つながっています" : "つながっていません"}</span>
           {status.account && <span className="text-lg">{status.account}</span>}
-          {!unlocked && <span className="rounded bg-[#fff3c4] px-2 py-0.5 text-sm font-black text-[#654700]">試しの状態：自分のアドレスにだけ送る</span>}
+          {!unlocked && <span className="rounded bg-[#fff3c4] px-2 text-sm font-black text-[#654700] inline-flex items-center leading-none align-middle h-7">試しの状態：自分のアドレスにだけ送る</span>}
         </div>
         <div className="flex flex-wrap gap-2">
           {status.configured ? (

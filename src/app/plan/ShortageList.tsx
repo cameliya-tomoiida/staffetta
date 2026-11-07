@@ -45,7 +45,7 @@ export function ShortageList({ date, rows }: { date: string; rows: ShortRow[] })
   return (
     <section className="no-print mb-4 rounded-lg border-2 border-alert-line bg-sheet" lang="ja">
       <h2 className="flex items-center justify-between gap-2 border-b border-rule px-4 py-2">
-        <span className="text-lg font-black whitespace-nowrap">足りない材料 <span className="num">{rows.length}</span></span>
+        <span className="text-lg font-black whitespace-nowrap">発注が必要な材料 <span className="num">{rows.length}</span></span>
         <span className="flex items-center gap-1.5 text-xs font-bold whitespace-nowrap text-ink-soft">
           <span className="inline-block h-3 w-3 rounded-full bg-[#d64545]" />締め過ぎ
           <span className="ml-1 inline-block h-3 w-3 rounded-full bg-[#e9b949]" />発注書あり

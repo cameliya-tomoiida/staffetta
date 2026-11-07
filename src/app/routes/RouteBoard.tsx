@@ -133,7 +133,7 @@ export function RouteBoard({ courses, depot, weekday, date, today, initial, demo
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px]" data-testid="route-summary">
           <span><b className="text-lg">{course.depart}</b> 出発 → <b className="text-lg">{course.back}</b> 戻り</span>
           <span className="text-ink-soft">{hm(course.minutes)}・{course.km}km・{course.stops.length}か所</span>
-          {course.late > 0 && <span className="rounded-full bg-alert-bg px-2 py-0.5 text-sm font-bold text-alert-ink">遅れ {course.late}</span>}
+          {course.late > 0 && <span className="rounded-full bg-alert-bg px-2 text-sm font-bold text-alert-ink inline-flex items-center leading-none align-middle h-7">遅れ {course.late}</span>}
           <button type="button" onClick={() => propose(course.id)} disabled={busy} className="ml-auto inline-flex min-h-9 items-center rounded-lg border border-rule-strong bg-sheet px-3 text-[14px] font-bold disabled:opacity-50">
             {busy && !prop ? "考えています…" : "回る順を見直す"}
           </button>
@@ -141,7 +141,7 @@ export function RouteBoard({ courses, depot, weekday, date, today, initial, demo
       ) : null}
       {course && prop?.course === course.id && (
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-info-line bg-info-bg px-3 py-2 text-[15px] text-info-ink">
-          <span className="rounded bg-ink px-1.5 py-0.5 text-[11px] font-bold text-paper">AI の案</span>
+          <span className="rounded bg-ink px-1.5 text-[11px] font-bold text-paper inline-flex items-center leading-none align-middle h-6">AI の案</span>
           <span>距離 <b>{prop.before.km}</b> → <b className="text-[18px]">{prop.after.km}</b> km</span>
           <span>時間 {hm(prop.before.minutes)} → <b className="text-[18px]">{hm(prop.after.minutes)}</b></span>
           {(prop.before.late > 0 || prop.after.late > 0) && <span>遅れ {prop.before.late} → <b>{prop.after.late}</b></span>}

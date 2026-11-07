@@ -298,7 +298,7 @@ function OrderRow({
           </div>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
             {custName === UNKNOWN_SHOP
-              ? <span className="inline-flex items-center gap-2 text-xl font-black text-review-ink"><span className="rounded bg-review-bg px-2 py-0.5 text-[13px] font-bold">確認</span>お店を選んでください</span>
+              ? <span className="inline-flex items-center gap-2 text-xl font-black text-review-ink"><span className="rounded bg-review-bg px-2 text-[13px] font-bold inline-flex items-center leading-none align-middle h-6">確認</span>お店を選んでください</span>
               : <span className={`text-xl font-black ${off ? "line-through decoration-2" : ""}`}>{custName}</span>}
             <span className="font-bold">
               納品 <span className="num text-lg">{fmtDate(o.deliveryDate)}</span>

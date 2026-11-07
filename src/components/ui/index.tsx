@@ -45,7 +45,7 @@ export function LinkButton({ variant, size, className = "", ...rest }: React.Com
 
 /* ───── 状態の札 ───── */
 export function Tag({ tone = "plain", children, className = "" }: { tone?: Tone; children: React.ReactNode; className?: string }) {
-  return <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm font-bold whitespace-nowrap ${toneClass[tone]} ${className}`}>{children}</span>;
+  return <span className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 align-middle text-[13px] leading-none font-bold whitespace-nowrap ${toneClass[tone]} ${className}`}>{children}</span>;
 }
 
 export function OrderStatusTag({ status }: { status: OrderStatus }) {

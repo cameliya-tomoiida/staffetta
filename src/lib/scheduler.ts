@@ -62,6 +62,8 @@ async function evaluateLogic(now: string): Promise<AlertCandidate[]> {
   const alerts = evaluateAlerts(db, masters, now, {
     poDrafts,
     screenOrders: [...db.orders, ...demoOrders().filter((o) => !savedIds.has(o.id))],
+    // AI の発注の案に入っている材料は、発注アラームで二重に出さない
+    proposalMaterials: (await import("./proposals")).openProposals().flatMap((p) => (p.purchase ?? []).map((r) => `${r.materialId}|${r.arriveDate}`)),
     isOn: (k) => on(alertFeatureKey(k)),
     dayOffs: [
       ...listDayOffs().map(({ customerId, date }) => ({ customerId, date })),

@@ -69,10 +69,9 @@ export function ProposalFix({ proposalId, onClose }: { proposalId: string; onClo
   const done = v.status !== "open";
   return (
     <section className="space-y-3 rounded-xl border-2 border-crust-600 bg-sheet p-4">
-      <h2 className="text-lg leading-snug font-black">
-        <span className="mr-1 rounded bg-crust-600 px-1.5 py-0.5 text-sm text-white">AI の案</span>
-        {v.title}
-      </h2>
+      {/* 札は見出しの上に1行で（iPhone で札が見出しに重なっていた。担当者 11/7） */}
+      <span className="inline-flex h-7 items-center rounded-md bg-crust-600 px-2 text-[13px] leading-none font-bold text-white">AI の案</span>
+      <h2 className="-mt-1 text-lg leading-snug font-black">{v.title}</h2>
       {v.note && <p className="-mt-2 text-base text-ink-soft">{v.note}</p>}
       <ul className="space-y-1 rounded-lg bg-cream p-3 text-[17px]">
         {v.lines.length === 0 && <li className="text-ink-soft">（することはありません）</li>}
@@ -80,16 +79,17 @@ export function ProposalFix({ proposalId, onClose }: { proposalId: string; onClo
           <li key={i}>・{l}</li>
         ))}
       </ul>
+      {/* 3つを1行に（スマホで「直す」だけ下に落ちていた） */}
       {!done && (
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={who} onChange={(e) => setWho(e.target.value)} aria-label="確かめる人" className="min-h-12 rounded-lg border-2 border-rule-strong bg-sheet px-3 text-lg">
+        <div className="flex items-center gap-2">
+          <select value={who} onChange={(e) => setWho(e.target.value)} aria-label="確かめる人" className="min-h-12 min-w-0 flex-1 rounded-lg border-2 border-rule-strong bg-sheet px-2 text-[16px]">
             <option value="">確かめる人</option>
             {staff.map((s) => <option key={s}>{s}</option>)}
           </select>
-          <button type="button" className="btn-primary min-w-24 text-lg" disabled={pending || !who || v.lines.length === 0} onClick={ok}>
+          <button type="button" className="btn-primary shrink-0 px-4 text-[17px]" disabled={pending || !who || v.lines.length === 0} onClick={ok}>
             OK
           </button>
-          <button type="button" className="btn-ghost text-lg" disabled={pending} onClick={() => setTalk(!talk)}>
+          <button type="button" className="btn-ghost shrink-0 px-4 text-[17px] whitespace-nowrap" disabled={pending} onClick={() => setTalk(!talk)}>
             {v.rev > 0 ? "さらに直す" : "直す"}
           </button>
         </div>

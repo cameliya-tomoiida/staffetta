@@ -289,11 +289,11 @@ export default async function PlanPage(props: PageProps<"/plan">) {
                 <dt className="text-sm font-bold text-ink-soft">人</dt>
                 <dd>
                   {x.shortAt ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d64545] px-3 py-0.5 font-black text-white">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d64545] px-3 font-black text-white leading-none align-middle h-7">
                       <span className="num">{x.shortAt}〜</span> {x.shortMax}人 足りない
                     </span>
                   ) : x.hasShift ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-ok-bg px-3 py-0.5 font-black text-ok-ink">足りる</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-ok-bg px-3 font-black text-ok-ink leading-none align-middle h-7">足りる</span>
                   ) : (
                     <Link href="/masters/shifts" className="text-ink-soft underline">班が未登録</Link>
                   )}
@@ -320,14 +320,14 @@ export default async function PlanPage(props: PageProps<"/plan">) {
       )}
       {/* 足りない材料（文ではなくリスト。行ごとに「発注」→ 人が OK → 送り出し） */}
       <div className={vis("material")}>
-        {shortRows.length === 0 && <p className="no-print mb-4 rounded-lg bg-ok-bg px-4 py-3 text-lg font-bold text-ok-ink">足りない材料はありません</p>}
+        {shortRows.length === 0 && <p className="no-print mb-4 rounded-lg bg-ok-bg px-4 py-3 text-lg font-bold text-ok-ink">発注が必要な材料はありません</p>}
         <ShortageList date={date} rows={shortRows} />
         <Link href={`/purchase?date=${date}`} className="no-print link mb-4 inline-block text-base font-bold">この日の発注書を見る →</Link>
       </div>
       <div className={vis("today")}>
         {shortRows.length > 0 && (
           <Link href={href({ tab: "material" })} className="no-print mb-4 flex min-h-12 items-center gap-2 rounded-lg border-2 border-alert-line bg-sheet px-4 font-black text-alert-ink">
-            <span className="inline-block h-3 w-3 rounded-full bg-[#d64545]" />足りない材料 <span className="num">{shortRows.length}</span>
+            <span className="inline-block h-3 w-3 rounded-full bg-[#d64545]" />発注が必要な材料 <span className="num">{shortRows.length}</span>
             <span className="ml-auto">›</span>
           </Link>
         )}
