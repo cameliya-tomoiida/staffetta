@@ -62,7 +62,8 @@ export async function preparePlanIfDue(now: string): Promise<PreparedPlan | unde
     dedupeKey: `plan_prepared:${date}`,
     kind: "plan_prepared",
     level: r.warnings.length ? "warn" : "info",
-    title: `${md(date)} の製造計画・工程表ができました（注文 ${rec.orders} 件）`,
+    // 件数は入れない（あとから注文が増えると、画面の「注文 21件」と食い違うため。管理役2 11/7）。作った時刻だけ
+    title: `${md(date)} の製造計画・工程表ができました（${new Date(Date.parse(now) + 9 * 3600_000).toISOString().slice(11, 16)} 時点）`,
     detail: r.warnings.length ? `注意 ${r.warnings.length} 件: ${r.warnings.slice(0, 3).join("／")}` : "印刷して、明日の朝に配ってください。",
     action: "工程表を開いて印刷する",
     href: `/plan?date=${date}`,

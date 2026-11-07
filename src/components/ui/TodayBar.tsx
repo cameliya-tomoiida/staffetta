@@ -51,13 +51,14 @@ function WorkItem({ href, label, count, unit = "件", urgent = false, review = f
       {/* ⑧ 11/7 パソコンも場所を取らない: 名前と数を横に並べて1段に（前は2段で 88px） */}
       <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold leading-tight">
         <Icon name={icon} className="h-5 w-5 shrink-0" />
-        <span className="truncate">{label}</span>
+        <span className="truncate" title={label}>{label}</span>
       </span>
       <span className="row-span-2 leading-none whitespace-nowrap">
         <b className="text-[28px] font-extrabold tabular-nums">{count == null ? "—" : count > 999 ? "999+" : count}</b>
         <span className="ml-0.5 text-[14px]">{unit}</span>
       </span>
-      {sub && !zero && <span className="truncate text-[12px] leading-tight opacity-90">{sub}</span>}
+      {/* 省いた文は、重ねると全文（押すとその画面で全部見られる） */}
+      {sub && !zero && <span className="truncate text-[12px] leading-tight opacity-90" title={sub}>{sub}</span>}
       {review && !zero && count != null && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-[#c49b25]" />}
       {active && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-[#8b1a1a]" />}
     </Link>

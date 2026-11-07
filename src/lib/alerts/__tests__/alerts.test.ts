@@ -134,7 +134,7 @@ describe("アラートの判定", () => {
   it("#7 要確認がたまっている: 30分以上そのまま", () => {
     const o = order("R1", "C01", "2026-11-06", [["P01", 10]], { status: "needs_review", source: { channel: "fax", refs: [], receivedAt: "2026-11-05T13:30:00+09:00" } });
     const a = evaluateAlerts(db({ orders: [o] }), masters, NOW, { isOn: only("review_backlog") });
-    expect(a[0]).toMatchObject({ level: "warn", title: "要確認が 1件たまっています" });
+    expect(a[0]).toMatchObject({ level: "warn", title: "要確認の注文 1件がたまっています" });
     expect(evaluateAlerts(db({ orders: [o] }), masters, "2026-11-05T13:50:00+09:00", { isOn: only("review_backlog") })).toEqual([]);
   });
 

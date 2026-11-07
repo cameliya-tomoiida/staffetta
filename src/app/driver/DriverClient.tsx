@@ -251,8 +251,9 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
     s === "needs_review" ? <span className="ml-2 rounded bg-[#fff3c4] px-1.5 text-[15px] font-black text-[#654700] inline-flex items-center leading-none align-middle h-7">要確認</span>
       : s === "provisional" ? <span className="ml-2 rounded bg-[#e8f0fb] px-1.5 text-[15px] font-black text-[#1d4b8f] inline-flex items-center leading-none align-middle h-7">仮</span> : null;
 
+  // パソコンでは広く（管理役2 11/7: PC でも細い列だった）。届け先は2列
   return (
-    <div ref={top} className="mx-auto flex min-h-dvh max-w-[560px] flex-col bg-paper text-ink" style={{ fontSize: 18 }}>
+    <div ref={top} className="mx-auto flex min-h-dvh max-w-[560px] flex-col bg-paper text-ink md:max-w-[1100px]" style={{ fontSize: 18 }}>
       {/* 上: ロゴ・自分の名前・未送信 */}
       <header className="sticky top-0 z-[1000] flex items-center gap-2 border-b border-[#c5cac5] bg-white px-4 py-2">
         {/* eslint-disable-next-line @next/next/no-img-element -- 小さな SVG のロゴ */}
@@ -323,10 +324,10 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
                 </div>
                 {pins.length > 0 && (
                   <div className="mt-2 overflow-hidden rounded-xl border-2 border-[#c5cac5] bg-white">
-                    <RouteMap height="h-[260px]" depot={depot} pins={pins} selected={open?.id} onSelect={(id) => setOpen(plan.stops.find((s) => s.id === id) ?? null)} animate />
+                    <RouteMap height="h-[260px] md:h-[380px]" depot={depot} pins={pins} selected={open?.id} onSelect={(id) => setOpen(plan.stops.find((s) => s.id === id) ?? null)} animate />
                   </div>
                 )}
-                <ol className="mt-3 space-y-2">
+                <ol className="mt-3 space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
                   {plan.stops.map((s) => (
                     <li key={s.id}>
                       <button type="button" onClick={() => setOpen(s)}
@@ -579,7 +580,7 @@ export function DriverClient({ courses, myCourses, customers, today, staffName, 
       )}
 
       {/* 下のタブ */}
-      <nav aria-label="配送のメニュー" className="fixed inset-x-0 bottom-0 z-[1000] mx-auto grid max-w-[560px] grid-cols-3 border-t border-[#c5cac5] bg-white pb-[env(safe-area-inset-bottom)]">
+      <nav aria-label="配送のメニュー" className="fixed inset-x-0 bottom-0 z-[1000] mx-auto grid max-w-[560px] grid-cols-3 md:max-w-[1100px] border-t border-[#c5cac5] bg-white pb-[env(safe-area-inset-bottom)]">
         {([["route", "配送"], ["order", "注文を入れる"], ["news", "お知らせ"]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => go(k)} aria-current={tab === k ? "page" : undefined}
             className={`min-h-16 px-1 text-[18px] font-bold ${tab === k ? "border-t-4 border-[#8b1a1a] text-[#8b1a1a]" : "border-t-4 border-transparent text-[#565c57]"}`}>

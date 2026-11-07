@@ -259,7 +259,11 @@ export function PurchaseClient({
       </div>
 
       {shown.length === 0 ? (
-        <Empty>{pos.length === 0 ? "今は発注するものがありません。" : "この状態の発注書はありません。"}</Empty>
+        <Empty>
+          {pos.length === 0 ? "今は発注するものがありません。" : "この状態の発注書はありません。"}
+          {/* 材料の発注書（AI の案から作った分など）は送り出しの画面にある（管理役2 11/7） */}
+          <Link href="/outbound" className="mt-1 block text-[15px] font-bold underline">材料の発注書は「送り出し」にあります ›</Link>
+        </Empty>
       ) : (
         <>
         <div className={`m-limit grid gap-5 xl:grid-cols-2 ${mAll ? "m-all" : ""}`}>

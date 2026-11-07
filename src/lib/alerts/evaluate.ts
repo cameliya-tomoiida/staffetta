@@ -190,7 +190,8 @@ function unusualQuantity(db: Db, now: string, opts: AlertOptions): Alert[] {
 // ───────── #3 在庫が足りなくなりそう ─────────
 function stockShortage(db: Db, masters: Masters, now: string, opts: AlertOptions): Alert[] {
   const today = jstDate(now);
-  const plan = planMaterialOrders(db.orders, addDays(today, 1), { days: opts.stockDays ?? 7, now });
+  // 注文は画面・AI と同じ（保存した注文＋見本の注文）。違うと締めの日が食い違った（ライ麦粉 11/5 と 11/6。管理役2 11/7）
+  const plan = planMaterialOrders(opts.screenOrders ?? db.orders, addDays(today, 1), { days: opts.stockDays ?? 7, now });
   const covered = new Set(
     (db.purchaseOrders ?? []).flatMap((p) => p.lines.filter((l) => l.itemType === "material").map((l) => `${l.itemId}|${p.deliveryDate}`)),
   );
@@ -332,7 +333,8 @@ function reviewBacklog(db: Db, now: string, screenOrders?: Order[]): Alert[] {
   if (!old.length) return [];
   const oldest = old.reduce((a, b) => (a.at < b.at ? a : b));
   return [mk("review_backlog", `${jstDate(now)}|${oldest.id}`, items.length >= 10 || minutesBetween(oldest.at, now) >= 120 ? "danger" : "warn",
-    `要確認が ${items.length}件たまっています`,
+    // 数え方は上の帯と同じに分ける（帯の「要確認」は注文だけ・FAX は別。管理役2 11/7「要確認 17件と帯の 13件が合わない」）
+    [orders.length ? `要確認の注文 ${orders.length}件` : "", faxes.length ? `確認待ちの FAX ${faxes.length}枚` : ""].filter(Boolean).join("・") + "がたまっています",
     `いちばん古いものは ${agoText(minutesBetween(oldest.at, now))}に届きました。確かめないと、製造と発注の数に入りません。`,
     [{ label: "受信箱を開く", kind: "open_inbox", payload: {} }],
     old.map((x) => x.id))];
