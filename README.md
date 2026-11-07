@@ -139,19 +139,28 @@ npm install
 | `FAX_INBOUND_TOKEN` | Gmail（GAS）から FAX を受け取るときの合言葉 |
 | `LINE_CHANNEL_SECRET` / `LINE_CHANNEL_ACCESS_TOKEN` | LINE 公式アカウント（Messaging API） |
 | `LINE_LOGIN_CHANNEL_ID` / `NEXT_PUBLIC_LIFF_ID` | LINE の注文フォーム（LIFF） |
+| `MS_CLIENT_ID` / `MS_CLIENT_SECRET` / `MS_TENANT_ID` | メール送信（Microsoft Graph。「設定 → メール送信」の「Microsoft でつなぐ」で使う。パスワードは入れない） |
 
 ```bash
 npm run dev -- -p 3100   # 開発サーバー（http://localhost:3100）
 npm run build && npx next start -p 3100   # 本番モード（ふだんはこちら）
-npm test                 # テスト（vitest・643件）
+npm test                 # テスト（vitest・674件）
 npm run demo:reset       # デモを最初の状態に戻す
 npm run fax:simulate     # 「FAX が届いた」を再現する（変更 → 仮発注 → 本発注の FAX を1枚ずつ）
 LINE_TEST_URL=http://localhost:3100/api/line/webhook node scripts/line-webhook-test.mjs "明日 ロール 20個"
                          # LINE の注文を再現する（LINE 未設定でも可）
 ```
 
-はじめはログインなしで全部の画面が開けます。「設定 → スタッフの登録」で管理者にパスワードを決めると、役割（管理者・事務・工場・配送）ごとのログインになります。
+**パスワードのある管理者が1人もいない間は、ログインなしで全部の画面が動きます（社内の LAN の中だけで使う前提）。** インターネットから見える場所で動かすときは、最初に「設定 → スタッフの登録」で管理者のパスワードを作ってください。作ると、役割（管理者・事務・工場・配送）ごとのログインになります。管理者がいない間は、設定の画面に黄色の1行「ログインを使い始めるまで、社内専用です」が出ます。バックアップのファイルには、AI のキー・メールのつなぎ・パスワードの印は入りません。
 接続の手順は `docs/` にあります（`line-setup.md`・`gmail-setup.md`・`google-sheet-auth.md`・`fax-sending.md`・`tunnel.md`・`prod-3100.md`）。
+
+## これから
+
+目標は、**会社のすべての仕組みと管理を、これ1つで回すこと**です。
+
+1. **第1段：弥生販売の代わり** … 入金の消し込み・売掛・買掛・在庫・得意先元帳（伝票・請求書・売上管理表・弥生の CSV はもうある）
+2. **第2段：シフト** … 製造計画の「人が足りない時間」から、班と人を組む
+3. **第3段：給与・会計** … はじめは弥生会計・freee へのつなぎから
 
 ## 設計の決まり
 
@@ -174,7 +183,7 @@ LINE_TEST_URL=http://localhost:3100/api/line/webhook node scripts/line-webhook-t
 | 期間 | 2026-11-04 21:04 の最初のコミットから約 3 日 |
 | コミット | 539 件（うちマージ 170 件。11/4 140件・11/5 271件・11/6 128件。11/6 夜の時点） |
 | コード | TypeScript 496 ファイル・約 5.6 万行（`src/`） |
-| テスト | 643 件（97 ファイル）。計算・税・権限・アラーム・AI の道具の呼び方など |
+| テスト | 674 件（105 ファイル）。計算・税・権限・アラーム・AI の道具の呼び方など |
 | 速さ | 注文の明細 **100万行の集計を 0.95 秒**（測って見つけて直す前は 23〜40 秒。約 30 倍速く。[docs/benchmark.md](docs/benchmark.md)） |
 | FAX の読み取り | 架空の FAX 11枚・39 行を全部正しく読み、確かめる行（黄色）を 67% → 約 10% に（[docs/fax-accuracy.md](docs/fax-accuracy.md)） |
 

@@ -1,3 +1,4 @@
+import { NoAdminNotice } from "@/components/ui/NoAdminNotice";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/ui";
 import { mailStatus } from "@/lib/mail/graph";
@@ -14,6 +15,7 @@ export default async function MailSettingsPage(props: PageProps<"/settings/mail"
   const st = mailStatus();
   return (
     <div className="space-y-5">
+      <NoAdminNotice />
       <PageHeader title="メール送信" lead="" />
       <MailClient
         status={st}

@@ -67,7 +67,12 @@ export function periodRange(period: Period = "recent", from?: string, to?: strin
 const jstStartIso = (ymd: string) => new Date(`${ymd}T00:00:00+09:00`).toISOString();
 const jstEndIso = (ymd: string) => new Date(`${addDays(ymd, 1)}T00:00:00+09:00`).toISOString();
 
+// 表の名前と並べ方は、決まった物だけ（文字でつなぐので、念のため一覧で確かめる）
+const PAGE_TABLES = new Set(["orders", "faxes", "purchase_orders"]);
+const PAGE_ORDERS = new Set(["delivery_date DESC, created_at DESC", "received_at DESC"]);
+
 function page<T>(sqlWhere: string, args: (string | number)[], table: string, order: string, limit: number, offset: number) {
+  if (!PAGE_TABLES.has(table) || !PAGE_ORDERS.has(order)) throw new Error(`検索できない表・並べ方です: ${table} / ${order}`);
   const db = getDb();
   const total = (db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${sqlWhere}`).get(...args) as { n: number }).n;
   const rows = db.prepare(`SELECT json FROM ${table} WHERE ${sqlWhere} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, limit, offset) as { json: string }[];
