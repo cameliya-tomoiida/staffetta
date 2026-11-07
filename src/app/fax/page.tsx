@@ -49,7 +49,6 @@ export default async function Inbox(props: PageProps<"/fax">) {
       <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-crust-600 pb-3 max-md:border-b-0 max-md:pb-0">
         <div className="max-md:hidden">
           <h1 className="text-[1.65rem] leading-tight font-black tracking-wide">FAX受信箱</h1>
-          <p className="text-ink-soft">複合機に届いたFAXは、自動でここに入ります。Claudeが読み取り、迷わなかったものは自動で確定します。スタッフは迷った所だけを確認します。</p>
         </div>
         <div className="flex gap-2">
           <ReadAllButton count={db.faxes.filter((f) => f.status === "new" || f.status === "error").length} />

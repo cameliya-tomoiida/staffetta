@@ -6,7 +6,7 @@ import { useCustomers } from "@/components/CustomersContext";
 import { findProduct } from "@/lib/catalog";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
-  addDays, buttonClass, fmtNum, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, Notice, OrderStatusTag,
+  addDays, buttonClass, fmtNum, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, OrderStatusTag,
   orderIntent, orderStatusRank, PageHeader, Segmented, Tag, LinkButton,
 } from "@/components/ui";
 import { SourceButton } from "@/components/ui/SourceViewer";
@@ -80,7 +80,6 @@ export function OrdersClient({
       el.animate([{ outline: "4px solid var(--color-crust-500)" }, { outline: "4px solid transparent" }], { duration: 1800 });
     });
   };
-  const reviewAll = orders.filter((o) => o.status === "needs_review").length;
 
   const dayName = (d: string) => (d === today ? "今日" : d === addDays(today, 1) ? "明日" : d === addDays(today, 2) ? "あさって" : "");
 
@@ -149,14 +148,7 @@ export function OrdersClient({
         </div>
       </div>
 
-      {reviewAll > 0 && status !== "needs_review" && (
-        <Notice tone="review" icon={<Icon.alert className="h-6 w-6" />} className="mb-3 max-md:hidden">
-          <button type="button" onClick={() => setStatus("needs_review")} className="text-left underline-offset-4 hover:underline">
-            要確認の注文が <span className="num text-xl">{reviewAll}</span> 件あります。押すと、要確認だけを出します。
-          </button>
-        </Notice>
-      )}
-
+      {/* ⑧ 11/7 パソコンも文字を減らす: 「要確認の注文が ◯件あります」の帯は出さない（状態の「要確認 ◯」と同じ） */}
       {/* 絞り込み */}
       <div className="no-print mb-4 space-y-2.5 rounded-lg border border-rule bg-sheet p-3 max-md:hidden">
         <FilterRow label="状態">
@@ -229,7 +221,7 @@ export function OrdersClient({
         </details>
       </div>
       <div className="mb-2 text-sm text-ink-soft">
-        <b className="num text-base text-ink">{list.length}</b> 件を表示（要確認がいちばん上）
+        <b className="num text-base text-ink">{list.length}</b> 件
       </div>
 
       {list.length === 0 ? (

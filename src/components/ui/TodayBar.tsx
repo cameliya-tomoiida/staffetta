@@ -46,17 +46,18 @@ function WorkItem({ href, label, count, unit = "件", urgent = false, review = f
       href={href}
       aria-label={`${label} ${count == null ? "取得できません" : `${count}${unit}`}`}
       aria-current={active ? "page" : undefined}
-      className={`relative flex min-h-[88px] min-w-0 flex-col justify-center border-[#c5cac5] px-3 py-2 focus-visible:outline-3 focus-visible:-outline-offset-[3px] focus-visible:outline-blue-700 xl:px-4 ${tone}`}
+      className={`relative grid min-h-[56px] min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 border-[#c5cac5] px-3 py-1.5 focus-visible:outline-3 focus-visible:-outline-offset-[3px] focus-visible:outline-blue-700 xl:px-4 ${tone}`}
     >
-      <span className="flex items-center gap-1.5 text-[17px] font-bold leading-tight xl:text-[18px]">
-        <Icon name={icon} className="h-6 w-6 shrink-0" />
+      {/* ⑧ 11/7 パソコンも場所を取らない: 名前と数を横に並べて1段に（前は2段で 88px） */}
+      <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-bold leading-tight">
+        <Icon name={icon} className="h-5 w-5 shrink-0" />
         <span className="truncate">{label}</span>
       </span>
-      <span className="leading-none">
-        <b className="text-[34px] font-extrabold tabular-nums xl:text-[40px]">{count == null ? "—" : count > 999 ? "999+" : count}</b>
-        <span className="ml-1 text-[17px]">{unit}</span>
+      <span className="row-span-2 leading-none whitespace-nowrap">
+        <b className="text-[28px] font-extrabold tabular-nums">{count == null ? "—" : count > 999 ? "999+" : count}</b>
+        <span className="ml-0.5 text-[14px]">{unit}</span>
       </span>
-      {sub && !zero && <span className="truncate text-[13px] leading-tight opacity-90">{sub}</span>}
+      {sub && !zero && <span className="truncate text-[12px] leading-tight opacity-90">{sub}</span>}
       {review && !zero && count != null && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-[#c49b25]" />}
       {active && <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-[#8b1a1a]" />}
     </Link>
@@ -91,7 +92,8 @@ function WorkCard({ href, label, count, unit = "件", urgent = false, review = f
 
 export function TodayBar({ role, variant = "grid" }: { role?: Role; variant?: "grid" | "cards" } = {}) {
   const path = usePathname() ?? "/";
-  const hidden = path.startsWith("/liff") || path.startsWith("/driver") || path.startsWith("/login") || path.startsWith("/setup");
+  // ⑧ ホームは部署ごとのタイルがあるので、上の帯は出さない（同じ数が2か所に出ないように）
+  const hidden = path.startsWith("/liff") || path.startsWith("/driver") || path.startsWith("/login") || path.startsWith("/setup") || (variant === "grid" && path.startsWith("/home"));
   const [s, setS] = useState<TodaySummary | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -156,7 +158,7 @@ export function TodayBar({ role, variant = "grid" }: { role?: Role; variant?: "g
     { href: "/fax", label: "FAX", count: s ? s.faxToReview + s.faxUnread : null, unit: "枚", review: true, icon: "fax", active: path.startsWith("/fax") },
     { href: purchaseHref, label: "発注書", count: s ? s.purchaseDraft + s.purchaseApproved : null, unit: "枚", icon: "purchase", active: path.startsWith("/purchase") },
     { href: s?.lowStockHref || "/masters/materials", label: "材料不足", count: n(s?.lowStock), icon: "stock", active: false },
-    { href: s ? `/plan?date=${s.purchaseDate}` : "/plan", label: "計算の注意", count: n(s?.warnings), icon: "warn", active: path.startsWith("/plan"), sub: s?.warningTop },
+    { href: s ? `/plan?date=${s.purchaseDate}` : "/plan", label: "注意", count: n(s?.warnings), icon: "warn", active: path.startsWith("/plan"), sub: s?.warningTop },
   ];
 
   // 役割で開けない項目は出さない（工場の人に FAX・発注書の数を見せても押せないため）
