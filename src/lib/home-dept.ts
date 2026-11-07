@@ -26,6 +26,7 @@ import { listStaff } from "@/lib/staff";
 import { getDepot, getRouteSettings } from "@/lib/routes/store";
 import { buildTimeline, orderedStops, type Stop } from "@/lib/routes/plan";
 import { deliversOn } from "@/lib/routes/optimize";
+import { listPriceChanges, marginLine, priceImpact } from "@/lib/price-change";
 
 export type TileTone = "quiet" | "plain" | "red";
 export interface Tile { label: string; value: string; unit?: string; note?: string; href: string; tone: TileTone }
@@ -104,7 +105,10 @@ export async function deptHome(role: Role): Promise<DeptHome> {
   const next = rows.find((x) => x.start >= nowAbs);
   const money = withMasters(masters, () => dailyProfit(r.totals.products.map((p) => ({ productId: p.productId, pieces: p.pieces }))));
   // 確認が必要なもの（種類ごとにまとめる・その部署に要る種類だけ）
-  const confirm = groupAlerts(listAlerts().filter((a) => alertForRole(a.kind, role)), { levels: ["danger", "warn"] });
+  const confirm = [
+    ...(role === "事務" || role === "管理者" ? priceGroups(masters) : []),
+    ...groupAlerts(listAlerts().filter((a) => alertForRole(a.kind, role)), { levels: ["danger", "warn"] }),
+  ];
 
   const open = pos.filter((p) => p.status !== "sent");
   const nextPo = open.filter((p) => p.cutoffAt && Date.parse(p.cutoffAt) >= now).sort((a, b) => a.cutoffAt.localeCompare(b.cutoffAt))[0];
@@ -238,4 +242,19 @@ export async function deptHome(role: Role): Promise<DeptHome> {
       sales: { ordered, expected: Math.max(expected, ordered), changes: changes.length },
     },
   };
+}
+
+/** ①の材料の値上げ（/price-changes）: まだ終わっていない値上げで、粗利の線を下回る（見直しが必要な）商品があるものだけ。1件＝1行 */
+function priceGroups(m: Parameters<typeof priceImpact>[1]): AlertGroup[] {
+  try {
+    const line = marginLine();
+    return listPriceChanges().filter((c) => c.status === "draft" || !c.noticeId).slice(0, 2).flatMap((c) => {
+      const below = priceImpact(c.items, m, line, c.status === "applied").filter((p) => p.belowLine).length;
+      if (!below) return [];
+      const when = `${Number(c.effectiveDate.slice(5, 7))}月${Number(c.effectiveDate.slice(8, 10))}日から`;
+      return [{ kind: `price-${c.id}`, label: `材料の値上げ：${c.items.map((i) => i.name).join("・")}（${when}）`, count: below, level: "danger" as const, href: `/price-changes/${c.id}`, note: "見直しが必要", unit: "品" }];
+    });
+  } catch {
+    return [];
+  }
 }

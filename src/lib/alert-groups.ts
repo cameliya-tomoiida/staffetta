@@ -24,7 +24,7 @@ export const ALERT_KIND_LABEL: Record<string, string> = {
 };
 export const alertKindLabel = (kind: string) => ALERT_KIND_LABEL[kind] ?? "そのほか";
 
-export interface AlertGroup { kind: string; label: string; count: number; level: AlertRow["level"]; href: string }
+export interface AlertGroup { kind: string; label: string; count: number; level: AlertRow["level"]; href: string; /** 行に出す一言と単位（無ければ「確認が必要です」「件」） */ note?: string; unit?: string }
 
 const RANK = { danger: 0, warn: 1, info: 2 } as const;
 

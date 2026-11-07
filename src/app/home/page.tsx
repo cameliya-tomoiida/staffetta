@@ -127,7 +127,7 @@ function Confirm({ groups }: { groups: AlertGroup[] }) {
   return (
     <section aria-label="確認が必要" className="space-y-2">
       {top.map((g) => (
-        <Line key={g.kind} href={g.href} tone={g.level === "danger" ? "alert" : "review"} label={g.label} note="確認が必要です" value={g.count} unit="件" />
+        <Line key={g.kind} href={g.href} tone={g.level === "danger" ? "alert" : "review"} label={g.label} note={g.note ?? "確認が必要です"} value={g.count} unit={g.unit ?? "件"} />
       ))}
       {groups.length > 3 && <Link href="/alerts" className="block text-right text-[14px] font-bold text-crust-700">ほか {groups.length - 3}つ ›</Link>}
     </section>
