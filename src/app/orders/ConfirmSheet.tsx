@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Order } from "@/data/types";
 import { useCustomers } from "@/components/CustomersContext";
-import { findProduct } from "@/lib/catalog";
+import { useProductLookup } from "@/components/ProductNamesContext";
 import { NumPad } from "@/components/NumPad";
 import { Button, Icon, Notice, choiceClass } from "@/components/ui";
 import { notifyLineConfirmedAction } from "@/lib/channels/line/actions";
@@ -32,6 +32,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 /** 「確認して確定」ボタンと、その中身 */
 export function ConfirmButton({ order, who, custName }: { order: Order; who: string; custName: string }) {
   const router = useRouter();
+  const findProduct = useProductLookup();
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState<Record<string, number>>({});
   const [pad, setPad] = useState<string | null>(null);

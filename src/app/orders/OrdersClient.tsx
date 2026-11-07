@@ -3,7 +3,7 @@ import { AutoTag, isAutoConfirmed, UndoAutoButton } from "@/components/ui/AutoCo
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useCustomers } from "@/components/CustomersContext";
-import { findProduct } from "@/lib/catalog";
+import { useProductLookup } from "@/components/ProductNamesContext";
 import type { Order, OrderChannel, OrderStatus } from "@/data/types";
 import {
   addDays, buttonClass, fmtNum, ChannelBadge, channelLabel, Empty, fmtDate, fmtDateTime, Icon, OrderStatusTag,
@@ -256,6 +256,7 @@ function OrderRow({
 }: {
   o: Order; custName: string; dayName: string; all: Order[]; onJump: (id: string) => void; who: string; canConfirm: boolean; linePreview?: string; lead: LeadView[]; alt?: string[];
 }) {
+  const findProduct = useProductLookup();
   const leadOf = (lineId: string) => lead.find((x) => x.lineId === lineId);
   const x = o.source.extra ?? {};
   const intent = o.intent && o.intent !== "new" ? orderIntent[o.intent] : null;

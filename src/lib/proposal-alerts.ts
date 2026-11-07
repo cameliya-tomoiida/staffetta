@@ -3,21 +3,28 @@ import "server-only";
 import type { AlertCandidate } from "@/lib/db/alerts-store";
 import { buildProposals, openProposals, planLines } from "@/lib/proposals";
 
-/** 案を作る納品日: 今日より後で、注文があるいちばん近い日 */
-async function targetDate(now: string): Promise<string | undefined> {
-  const { allOrders } = await import("@/demo/all-orders");
-  const { deliveryDatesOf } = await import("@/lib/aggregate");
-  const { orders } = await allOrders();
-  const today = new Date(Date.parse(now) + 9 * 3600_000).toISOString().slice(0, 10);
-  return deliveryDatesOf(orders).filter((d) => d > today).sort()[0];
+/**
+ * 注文（保存してある分＋見本）。バックグラウンドのお知らせの見回りから呼ぶので、
+ * readRecentDb（allOrders）は使わない（next/server の connection() が画面の外では失敗する。管理役2 11/7）
+ */
+async function ordersFor(today: string) {
+  const [{ loadRecentDb }, { demoOrders }] = await Promise.all([import("@/lib/db/hub-store"), import("@/demo/orders")]);
+  const since = new Date(Date.parse(`${today}T00:00:00Z`) - 60 * 86400_000).toISOString().slice(0, 10);
+  const saved = (await loadRecentDb({ since })).orders;
+  const ids = new Set(saved.map((o) => o.id));
+  return [...saved, ...demoOrders().filter((o) => !ids.has(o.id))];
 }
 
 export async function proposalAlerts(now: string): Promise<AlertCandidate[]> {
-  const date = await targetDate(now);
+  const today = new Date(Date.parse(now) + 9 * 3600_000).toISOString().slice(0, 10);
+  const orders = await ordersFor(today);
+  const { deliveryDatesOf } = await import("@/lib/aggregate");
+  // 案を作る納品日: 今日より後で、注文があるいちばん近い日
+  const date = deliveryDatesOf(orders).filter((d) => d > today).sort()[0];
   if (date) {
-    const [{ runPipeline }, { allOrders }, { loadMasters }] = await Promise.all([import("@/lib/pipeline"), import("@/demo/all-orders"), import("@/lib/masters/seed-db")]);
+    const [{ runPipeline }, { loadMasters }] = await Promise.all([import("@/lib/pipeline"), import("@/lib/masters/seed-db")]);
     const m = await loadMasters();
-    buildProposals(date, runPipeline((await allOrders()).orders, date, { masters: m }), m);
+    buildProposals(date, runPipeline(orders, date, { masters: m }), m);
   }
   return openProposals().map((p) => ({
     dedupeKey: `proposal:${p.id}`,

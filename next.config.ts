@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com"],
   // ⑤外部サイト: PDF作成(pdfkit)はフォントなどのファイルを自分の場所から読むので、まとめずにそのまま使う
   serverExternalPackages: ["pdfkit", "exceljs", "mailparser"],
+  experimental: {
+    // 設定 → バックアップの「戻す」はファイル全体（FAX の PDF 入り）を Server Action で送る。既定の 1MB では 500 になる（管理役2 11/7）
+    serverActions: { bodySizeLimit: "100mb" },
+    // proxy.ts があると、送る中身は既定で 10MB まで。戻すファイルに合わせる
+    proxyClientMaxBodySize: "100mb",
+  },
   turbopack: {
     rules: {
       "*.css": {
