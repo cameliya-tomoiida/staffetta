@@ -96,7 +96,7 @@ function Calendar({ days, value, onPick, closed, today, marks }: { days: string[
             <button
               key={ymd}
               type="button"
-              disabled={!range || Boolean(why)}
+              disabled={(!range || Boolean(why)) && !marks?.has(ymd)}
               aria-pressed={on}
               aria-label={`${m}月${d}日${why === "休み" ? "（休み）" : ""}${marks?.has(ymd) ? "（納品あり）" : ""}`}
               onClick={() => onPick(ymd)}
@@ -139,6 +139,7 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
   const [pad, setPad] = useState<null | { id: string; value: string }>(null);
   const [sending, setSending] = useState(false);
   const [histDay, setHistDay] = useState("");
+  const [homeDay, setHomeDay] = useState("");
   const [slip, setSlip] = useState<{ busy: boolean; error?: string }>({ busy: false });
   // 納品書のプレビュー（その場で紙の形で見せる。LINE の中ではダウンロードが見えないことがあるため・担当者 11/7）
   const [preview, setPreview] = useState<null | { view: SlipView; fileName: string; base64: string }>(null);
@@ -294,6 +295,92 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
     window.scrollTo(0, 0);
   };
 
+  /** その日の注文（納品書と同じ数量・単価・金額）と「納品書を見る」。履歴とホームで使う */
+  const dayDetail = (day: string) => {
+    if (!ctx) return null;
+    const list = ctx.history.filter((h) => h.deliveryDate === day);
+    if (!list.length) return null;
+    return (
+      <>
+                      <h2 className="mt-4 mb-1.5 ml-0.5 text-[13px] font-bold text-ink-faint">{mdLong(day)} お届け</h2>
+                      {ctx.linked && list.some((h) => h.state === "confirmed" && h.intent === "new") && (
+                        <div className="mb-3">
+                          <button
+                            type="button"
+                            onClick={() => getSlip(day)}
+                            disabled={slip.busy}
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-crust-600 bg-sheet text-[15px] font-bold text-crust-600 transition active:scale-[.98] active:bg-crust-50"
+                          >
+                            {slip.busy ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-crust-600/30 border-t-crust-600" aria-hidden />
+                            ) : (
+                              <Svg d="M12 4v11M7 10l5 5 5-5M5 20h14" className="h-[18px] w-[18px]" />
+                            )}
+                            {slip.busy ? "納品書を作っています…" : "納品書を見る"}
+                          </button>
+                          {slip.error && <p className="mt-1.5 text-[13px] font-bold text-alert-ink">{slip.error}</p>}
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {list.map((h) => {
+                          const priced = h.items.some((i) => i.amount != null);
+                          const net = h.items.reduce((sum, i) => sum + (i.amount ?? 0), 0);
+                          return (
+                            <div key={h.id} className="overflow-hidden rounded-xl border border-rule bg-sheet">
+                              <div className="flex items-center justify-between gap-2 px-4 py-2">
+                                <span className="text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : h.intent === "change" ? "変更のご連絡" : "ご注文"}</span>
+                                <span
+                                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
+                                    h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
+                                  }`}
+                                >
+                                  {h.state === "confirmed" ? "確定" : h.state === "cancelled" ? "取消" : "確認中"}
+                                </span>
+                              </div>
+                              {h.items.length ? (
+                                // 納品書と同じ値段（数量・単位・単価・金額）
+                                <table className="m-keep w-full border-collapse text-[14px]">
+                                  <thead>
+                                    <tr className="border-y border-rule-strong">
+                                      <th className="!bg-cream py-[7px] pl-4 !text-left text-[12px] font-bold text-ink-faint">商品</th>
+                                      <th className="bg-cream px-1.5 text-right text-[12px] font-bold text-ink-faint">数量</th>
+                                      {priced && <th className="bg-cream px-1.5 text-right text-[12px] font-bold text-ink-faint">単価</th>}
+                                      {priced && <th className="bg-cream pr-4 pl-1.5 text-right text-[12px] font-bold text-ink-faint">金額</th>}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {h.items.map((i, k) => (
+                                      <tr key={k} className="border-b border-rule">
+                                        <td className="bg-sheet py-2.5 pr-1.5 pl-4 text-left">{i.name}</td>
+                                        <td className="px-1.5 text-right whitespace-nowrap tabular-nums">
+                                          <b>{num(i.quantity)}</b>
+                                          <small className="ml-0.5 text-[12px] text-ink-faint">{i.unit}</small>
+                                        </td>
+                                        {priced && <td className="px-1.5 text-right tabular-nums">{i.unitPrice != null ? num(i.unitPrice) : "—"}</td>}
+                                        {priced && <td className="pr-4 pl-1.5 text-right font-bold tabular-nums">{i.amount != null ? num(i.amount) : "—"}</td>}
+                                      </tr>
+                                    ))}
+                                    {priced && (
+                                      <tr>
+                                        <td className="bg-sheet py-2.5 pl-4 text-left font-bold" colSpan={3}>
+                                          合計<small className="ml-1 text-[12px] font-medium text-ink-faint">税抜</small>
+                                        </td>
+                                        <td className="pr-4 text-right font-bold tabular-nums">{yen(net)}</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <p className="px-4 pb-3 text-[14px]">（内容を確認中）</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+      </>
+    );
+  };
+
   /** 注文の表（注文タブと、受け付けたあとで同じ形）。金額＝入数×数×単価（1袋あたりの単価なら 数×単価） */
   const orderTable = (rows: [string, number][], editable: boolean) => {
     const am = rows.map(([id, q]) => lineAmount(info(id), q));
@@ -399,13 +486,19 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                 <h2 className="mb-1.5 ml-0.5 text-[13px] font-bold text-ink-faint">お届け日</h2>
                 <Calendar
                   days={ctx.days.map((d) => d.ymd)}
-                  value={date}
-                  onPick={setDate}
+                  value={homeDay && !ctx.days.some((d) => d.ymd === homeDay && !dayClosed(d.ymd)) ? homeDay : date}
+                  onPick={(d) => {
+                    // 注文できる日はお届け日にする。過ぎた日・休みの日でも、納品のある日（緑）は下に中身を出すだけ
+                    if (ctx.days.some((x) => x.ymd === d) && !dayClosed(d)) setDate(d);
+                    setHomeDay(d);
+                    setSlip({ busy: false });
+                  }}
                   closed={dayClosed}
                   today={today}
                   marks={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.intent === "new").map((h) => h.deliveryDate))}
                 />
               </section>
+              {ctx.history.some((h) => h.deliveryDate === (homeDay || date)) && <section className="px-4">{dayDetail(homeDay || date)}</section>}
               {ctx.lastOrder && (
                 <section className="px-4 pt-3">
                   <h2 className="mb-1.5 ml-0.5 text-[13px] font-bold text-ink-faint">前回のご注文</h2>
@@ -569,85 +662,10 @@ export function LiffOrder({ liffId, demoUserId, catalog }: { liffId: string; dem
                   // 担当者 11/7「過去の注文をカレンダーで。日付を押したら、その日の注文が下に出る」
                   const orderDays = [...new Set(ctx.history.map((h) => h.deliveryDate))].sort();
                   const pick = orderDays.includes(histDay) ? histDay : (orderDays.filter((d) => d <= today).at(-1) ?? orderDays[0]);
-                  const list = ctx.history.filter((h) => h.deliveryDate === pick);
                   return (
                     <>
                       <Calendar key={pick.slice(0, 7)} days={orderDays} value={pick} onPick={(d) => { setHistDay(d); setSlip({ busy: false }); }} closed={() => ""} today={today} marks={new Set(ctx.history.filter((h) => h.state !== "cancelled" && h.intent === "new").map((h) => h.deliveryDate))} />
-                      <h2 className="mt-4 mb-1.5 ml-0.5 text-[13px] font-bold text-ink-faint">{mdLong(pick)} お届け</h2>
-                      {ctx.linked && list.some((h) => h.state === "confirmed" && h.intent === "new") && (
-                        <div className="mb-3">
-                          <button
-                            type="button"
-                            onClick={() => getSlip(pick)}
-                            disabled={slip.busy}
-                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-crust-600 bg-sheet text-[15px] font-bold text-crust-600 transition active:scale-[.98] active:bg-crust-50"
-                          >
-                            {slip.busy ? (
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-crust-600/30 border-t-crust-600" aria-hidden />
-                            ) : (
-                              <Svg d="M12 4v11M7 10l5 5 5-5M5 20h14" className="h-[18px] w-[18px]" />
-                            )}
-                            {slip.busy ? "納品書を作っています…" : "納品書を見る"}
-                          </button>
-                          {slip.error && <p className="mt-1.5 text-[13px] font-bold text-alert-ink">{slip.error}</p>}
-                        </div>
-                      )}
-                      <div className="space-y-3">
-                        {list.map((h) => {
-                          const priced = h.items.some((i) => i.amount != null);
-                          const net = h.items.reduce((sum, i) => sum + (i.amount ?? 0), 0);
-                          return (
-                            <div key={h.id} className="overflow-hidden rounded-xl border border-rule bg-sheet">
-                              <div className="flex items-center justify-between gap-2 px-4 py-2">
-                                <span className="text-[13px] text-ink-faint">{h.intent === "cancel" ? "取消のご連絡" : h.intent === "change" ? "変更のご連絡" : "ご注文"}</span>
-                                <span
-                                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
-                                    h.state === "confirmed" ? "bg-ok-bg text-ok-ink" : h.state === "cancelled" ? "bg-off-bg text-off-ink" : "bg-review-bg text-review-ink"
-                                  }`}
-                                >
-                                  {h.state === "confirmed" ? "確定" : h.state === "cancelled" ? "取消" : "確認中"}
-                                </span>
-                              </div>
-                              {h.items.length ? (
-                                // 納品書と同じ値段（数量・単位・単価・金額）
-                                <table className="m-keep w-full border-collapse text-[14px]">
-                                  <thead>
-                                    <tr className="border-y border-rule-strong">
-                                      <th className="!bg-cream py-[7px] pl-4 !text-left text-[12px] font-bold text-ink-faint">商品</th>
-                                      <th className="bg-cream px-1.5 text-right text-[12px] font-bold text-ink-faint">数量</th>
-                                      {priced && <th className="bg-cream px-1.5 text-right text-[12px] font-bold text-ink-faint">単価</th>}
-                                      {priced && <th className="bg-cream pr-4 pl-1.5 text-right text-[12px] font-bold text-ink-faint">金額</th>}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {h.items.map((i, k) => (
-                                      <tr key={k} className="border-b border-rule">
-                                        <td className="bg-sheet py-2.5 pr-1.5 pl-4 text-left">{i.name}</td>
-                                        <td className="px-1.5 text-right whitespace-nowrap tabular-nums">
-                                          <b>{num(i.quantity)}</b>
-                                          <small className="ml-0.5 text-[12px] text-ink-faint">{i.unit}</small>
-                                        </td>
-                                        {priced && <td className="px-1.5 text-right tabular-nums">{i.unitPrice != null ? num(i.unitPrice) : "—"}</td>}
-                                        {priced && <td className="pr-4 pl-1.5 text-right font-bold tabular-nums">{i.amount != null ? num(i.amount) : "—"}</td>}
-                                      </tr>
-                                    ))}
-                                    {priced && (
-                                      <tr>
-                                        <td className="bg-sheet py-2.5 pl-4 text-left font-bold" colSpan={3}>
-                                          合計<small className="ml-1 text-[12px] font-medium text-ink-faint">税抜</small>
-                                        </td>
-                                        <td className="pr-4 text-right font-bold tabular-nums">{yen(net)}</td>
-                                      </tr>
-                                    )}
-                                  </tbody>
-                                </table>
-                              ) : (
-                                <p className="px-4 pb-3 text-[14px]">（内容を確認中）</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                      {dayDetail(pick)}
                     </>
                   );
                 })()
