@@ -59,7 +59,7 @@ describe("印刷の流れ（本物のプリンターは使わない）", () => {
   it("最初の設定は FAX と同じ複合機・PDF だけ・全部 OFF", async () => {
     const a = await import("../auto");
     const s = a.getPrintSettings();
-    expect(s).toMatchObject({ printer: "Printer 見本プリンター(J) KX", method: "pdf-only" });
+    expect(s).toMatchObject({ printer: "見本プリンター", method: "pdf-only" });
     expect(s.jobs.every((x) => !x.on)).toBe(true);
   });
 
@@ -74,7 +74,7 @@ describe("印刷の流れ（本物のプリンターは使わない）", () => {
     const f2 = fake();
     const r2 = await a.runPrintJob(job, j("2026-11-06T09:00"), "見本", { deps: f2.deps });
     expect(r2).toMatchObject({ ok: true, printed: true });
-    expect(f2.calls[1]).toBe("print Printer 見本プリンター(J) KX x2");
+    expect(f2.calls[1]).toBe("print 見本プリンター x2");
     // 画面から「PDF だけ」で動かすと、紙の設定でも紙に出さない
     const f3 = fake();
     await a.runPrintJob(job, j("2026-11-06T09:00"), "見本", { deps: f3.deps, mode: "pdf" });
@@ -156,7 +156,7 @@ describe("⑧ 印刷の PDF を作る元の住所", () => {
   it("社内の住所なら押した画面と同じサーバー、それ以外は設定の住所", async () => {
     const { sameServer } = await import("../pass");
     expect(sameServer("localhost:3107", "http://localhost:3100")).toBe("http://localhost:3107");
-    expect(sameServer("192.168.1.20:3100", "http://localhost:3100")).toBe("http://192.168.1.20:3100");
+    expect(sameServer("192.0.2.20:3100", "http://localhost:3100")).toBe("http://192.0.2.20:3100");
     expect(sameServer("hub.example.com", "http://localhost:3100")).toBe("http://localhost:3100");
     expect(sameServer(null, "http://localhost:3100")).toBe("http://localhost:3100");
   });

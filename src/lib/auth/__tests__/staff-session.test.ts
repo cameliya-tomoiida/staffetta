@@ -71,9 +71,9 @@ describe("ログインできる人・通知のリンク", () => {
 
   it("通知のリンク: 外の URL があれば LINE でログインを通る形、無ければ工場の中の URL", async () => {
     const sa = await import("@/lib/channels/line/staff-alerts");
-    process.env.HUB_APP_URL = "http://192.168.0.10:3100";
+    process.env.HUB_APP_URL = "http://192.0.2.10:3100";
     delete process.env.HUB_PUBLIC_URL;
-    expect(sa.staffLink("/purchase")).toBe("http://192.168.0.10:3100/purchase");
+    expect(sa.staffLink("/purchase")).toBe("http://192.0.2.10:3100/purchase");
     process.env.HUB_PUBLIC_URL = "https://hub.example.test/";
     expect(sa.staffLink("/purchase?d=2026-11-06")).toBe("https://hub.example.test/liff/staff?to=%2Fpurchase%3Fd%3D2026-11-06");
     delete process.env.HUB_PUBLIC_URL;

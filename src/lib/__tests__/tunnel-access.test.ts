@@ -51,7 +51,7 @@ describe("fromOutside", () => {
     expect(fromOutside(H({ host: "hub.example.jp" }), "https://hub.example.jp")).toBe(true);
   });
   it("社内の LAN・localhost は外ではない", () => {
-    expect(fromOutside(H({ host: "192.0.2.34:3100", "x-forwarded-for": "192.168.1.20" }), "https://demo-pc.tailnet-example.ts.net")).toBe(false);
+    expect(fromOutside(H({ host: "192.0.2.34:3100", "x-forwarded-for": "192.0.2.20" }), "https://demo-pc.tailnet-example.ts.net")).toBe(false);
     expect(fromOutside(H({ host: "localhost:3100" }), "https://demo-pc.tailnet-example.ts.net")).toBe(false);
   });
 });

@@ -37,8 +37,8 @@ export interface PrintSettings {
   since?: string;
 }
 
-/** 最初のプリンター（FAX と同じ複合機） */
-export const DEFAULT_PRINTER = "Printer 見本プリンター(J) KX";
+/** 最初のプリンター（FAX と同じ複合機）。工場の本当の名前は .env.local の HUB_PRINTER に書く（公開のコードに機種名を残さない。11/8） */
+export const DEFAULT_PRINTER = process.env.HUB_PRINTER || "見本プリンター";
 
 export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   printer: DEFAULT_PRINTER,

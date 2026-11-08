@@ -23,7 +23,7 @@ beforeAll(async () => {
   process.env.DEMO_NOW = NOON;
   process.env.LINE_CHANNEL_SECRET = "test-secret";
   process.env.LINE_CHANNEL_ACCESS_TOKEN = "test-token";
-  process.env.HUB_APP_URL = "http://192.168.0.10:3100";
+  process.env.HUB_APP_URL = "http://192.0.2.10:3100";
   vi.stubGlobal("fetch", fetchSpy);
   mem.db.orders = structuredClone(demoOrders);
   const st = await import("@/lib/channels/line/state");
@@ -62,7 +62,7 @@ describe("スタッフの LINE へのアラート", () => {
     expect(r.sent).toEqual([{ key: danger.key, to: MORITA, name: "もりた", mode: "demo" }]);
     const st = await import("@/lib/channels/line/state");
     const msg = (await st.readLineState()).outbox.filter((m) => m.to === MORITA).at(-1)!;
-    expect(msg.text).toBe("【STAFFETTA】材料が足りなくなります：強力粉（11/7）。発注書の下書きができています\nhttp://192.168.0.10:3100/purchase");
+    expect(msg.text).toBe("【STAFFETTA】材料が足りなくなります：強力粉（11/7）。発注書の下書きができています\nhttp://192.0.2.10:3100/purchase");
     const again = await s.sendAlertsToStaff([danger]);
     expect(again.sent).toHaveLength(0);
     expect(again.skipped[0].why).toBe("今日はもう送った");
