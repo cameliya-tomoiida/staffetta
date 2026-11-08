@@ -63,4 +63,21 @@ try {
 
 const next = spawn(process.execPath, [path.join(ROOT, "node_modules", "next", "dist", "bin", "next"), "start", "-p", PORT, "-H", "0.0.0.0"], { cwd: ROOT, env, stdio: "inherit" });
 next.on("exit", (code) => process.exit(code ?? 1));
+
+// 眠らせない（11/8）: Render の無料枠は、外から 15分来ないと眠る（次の人が 1分待たされ、見本も作り直される）。
+// GitHub の定期実行は混むと飛ばされるので、見本のサーバー自身が 10分ごとに自分の公開 URL（Render の入口を通る）を開く。
+// 公開の期限（DEMO_PUBLIC_UNTIL）を過ぎたら開かない（眠ってよい）。HUB_SELF_PING=off で止められる。
+const publicUrl = (process.env.HUB_PUBLIC_URL || "").replace(/\/$/, "");
+if (publicUrl.startsWith("https://") && process.env.HUB_SELF_PING !== "off") {
+  const until = Date.parse(process.env.DEMO_PUBLIC_UNTIL || "2026-11-11T23:59:59+09:00");
+  setInterval(async () => {
+    if (Number.isFinite(until) && Date.now() > until) return;
+    try {
+      const r = await fetch(`${publicUrl}/login`, { signal: AbortSignal.timeout(60_000) });
+      console.log(`[見本] 眠らせない: ${r.status}`);
+    } catch (e) {
+      console.log(`[見本] 眠らせない: 届かない（${e instanceof Error ? e.message : e}）`);
+    }
+  }, 10 * 60_000).unref();
+}
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => next.kill(sig));
