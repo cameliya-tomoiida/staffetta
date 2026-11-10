@@ -2,6 +2,10 @@
 
 <img src="public/brand/staffetta-logo.svg" alt="STAFFETTA" width="300">
 
+**▶ 3分のデモ動画（YouTube）:** https://youtu.be/ikNn_QalLcI
+
+[![STAFFETTA のデモ動画](https://img.youtube.com/vi/ikNn_QalLcI/maxresdefault.jpg)](https://youtu.be/ikNn_QalLcI)
+
 STAFFETTA（スタフェッタ）はイタリア語で「リレー」。ばらばらに届く注文を次の工程へ、ベテランしか知らない仕事を次の人へ、バトンのようにつなぐ、中小の食品工場の受発注アプリです。
 
 FAX・LINE・メール・スプレッドシート・受発注サイト・電話から届くパンとピザの注文を1か所に集め、
@@ -9,7 +13,7 @@ FAX・LINE・メール・スプレッドシート・受発注サイト・電話�
 
 > ハッカソン「Built with Claude: Japan 2026」の応募作品です。リポジトリ: https://github.com/cameliya-tomoiida/staffetta
 > データ（得意先・仕入先・商品・単価・レシピ）は、すべて架空のものです。写真もすべて架空のデモのデータで撮りました。
-> **お試し:** https://staffetta-demo.onrender.com （ID `judge`・パスワードは提出の説明文に記載。データは架空・公開は 11/11 まで・最初の表示に1分ほどかかることがあります）
+> 審査の期間（〜2026-11-11）は、動く見本を公開していました。今は上の動画で、実際の画面と動きをご覧いただけます。
 > **このリポジトリのコードは、すべてハッカソン期間中に新しく作りました（最初のコミットは 2026-11-04 21:04）。** 前からあったのは、工場の複合機が FAX を PDF にして Gmail へ転送する設定だけです。
 
 ## ひと目で
