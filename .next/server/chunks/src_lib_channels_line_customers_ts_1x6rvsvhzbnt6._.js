@@ -1,0 +1,3 @@
+module.exports=[16392,e=>{"use strict";var s=e.i(59686),i=e.i(15754);e.i(43377);var n=e.i(99555);async function l(e,s,l){let r=(await (0,i.h)(n.x)).flatMap(i=>{let n=i.lineUserIds?.includes(e)??!1,l=i.id===s;if(n===l)return[];let r=l?[...i.lineUserIds??[],e]:(i.lineUserIds??[]).filter(s=>s!==e);return[JSON.parse(JSON.stringify({...i,lineUserIds:r,lineUserId:r[0]}))]});r.length&&await (0,i.b)(n.x,r,l)}Object.keys(n.B).map(e=>({value:e,label:n.B[e]})),s.n.columns.find(e=>"deliveryWeekdays"===e.key),s.n.columns.find(e=>"closedWeekdays"===e.key),e.s(["syncLineUserIds",0,l])}];
+
+//# sourceMappingURL=src_lib_channels_line_customers_ts_1x6rvsvhzbnt6._.js.map

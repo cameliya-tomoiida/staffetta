@@ -1,0 +1,3 @@
+module.exports=[34291,a=>{"use strict";var b=a.i(72131);let c=["たなか","うえの","はやし"],d=c,e=null,f=new Set;function g(a){return f.add(a),e??=fetch("/api/staff",{cache:"no-store"}).then(a=>a.ok?a.json():null).then(a=>{a?.names?.length&&(d=a.names,f.forEach(a=>a()))}).catch(()=>{e=null}),()=>f.delete(a)}a.s(["f",0,function(){return(0,b.useSyncExternalStore)(g,()=>d,()=>c)}])}];
+
+//# sourceMappingURL=src_components_ui_staff_ts_18624yzfdkkot._.js.map

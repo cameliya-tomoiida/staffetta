@@ -1,0 +1,3 @@
+module.exports=[46974,a=>{"use strict";var b=a.i(87924),c=a.i(72559),d=a.i(40962);a.s(["PrintButton",0,function({label:a,primary:e}){return(0,b.jsxs)(c.K,{variant:e?"primary":"ghost",onClick:()=>window.print(),children:[(0,b.jsx)(d.W.print,{className:"h-5 w-5"}),a]})}])},66199,a=>{"use strict";let b=Date.now();function c(){let a=function(){let a=process.env.DEMO_NOW??"";if(!a)return;let b=Date.parse(a);return Number.isNaN(b)?void 0:b}();return void 0===a?Date.now():a+(Date.now()-b)}a.s(["G",0,c,"U",0,function(a=0){return new Date(c()+324e5+864e5*a).toISOString().slice(0,10)}])}];
+
+//# sourceMappingURL=src_1nnx7tksw7y2x._.js.map

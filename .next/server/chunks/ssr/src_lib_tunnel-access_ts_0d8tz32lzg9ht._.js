@@ -1,0 +1,3 @@
+module.exports=[97423,a=>{"use strict";a.s(["fromOutside",0,function(a,b=process.env.HUB_PUBLIC_URL??""){if(null!==a.get("cf-ray")||null!==a.get("cf-connecting-ip")||null!==a.get("tailscale-funnel-request"))return!0;let c="";try{c=b?new URL(b).hostname.toLowerCase():""}catch{}return[a.get("x-forwarded-host"),a.get("host")].some(a=>{let b=(a??"").split(",")[0].trim().toLowerCase().replace(/:\d+$/,"");return!!b&&(b.endsWith(".ts.net")||b.endsWith(".trycloudflare.com")||b.endsWith(".onrender.com")||b===c)})}])}];
+
+//# sourceMappingURL=src_lib_tunnel-access_ts_0d8tz32lzg9ht._.js.map

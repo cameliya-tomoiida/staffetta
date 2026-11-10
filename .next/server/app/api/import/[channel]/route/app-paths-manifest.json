@@ -1,0 +1,3 @@
+{
+  "/api/import/[channel]/route": "app/api/import/[channel]/route.js"
+}

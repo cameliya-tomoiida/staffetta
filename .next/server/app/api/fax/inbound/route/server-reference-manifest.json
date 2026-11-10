@@ -1,0 +1,105 @@
+{
+  "node": {
+    "0088d28b6a59e13afb5fd6e81de190bc4da8e46ecb": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "readAllNewAction",
+      "filename": "src/app/actions.ts"
+    },
+    "40032688871244b660844a2272628bcb849c120da1": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "addAliasAction",
+      "filename": "src/app/actions.ts"
+    },
+    "4013341ee6821eed8d6e9960a2bd9766ecd45be88d": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "sortFaxAction",
+      "filename": "src/app/actions.ts"
+    },
+    "4017d88c962f362cd37566955a27387c87ed46b092": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "confirmChangeAction",
+      "filename": "src/app/actions.ts"
+    },
+    "405d5302539da0bb63d914e0bef290955c5e109cab": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "confirmFaxAction",
+      "filename": "src/app/actions.ts"
+    },
+    "40684c307549501db9058b136ca4c81c365514bf26": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "approveTemplateAction",
+      "filename": "src/app/actions.ts"
+    },
+    "4068caebf5663b250a111dba113f936f11785fd1e9": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "readFaxAction",
+      "filename": "src/app/actions.ts"
+    },
+    "4090d63b51082cc15f4c375e0ada09699460d4c135": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "resetDemoAction",
+      "filename": "src/app/actions.ts"
+    },
+    "409d7648c6452589a2cacffedeedf72fb2ae06ac2a": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "undoAutoConfirmAction",
+      "filename": "src/app/actions.ts"
+    },
+    "40c876f3f426b93c925510da2897129b9bf21e3fa9": {
+      "workers": {
+        "app/api/fax/inbound/route": {
+          "moduleId": 161,
+          "async": false
+        }
+      },
+      "exportedName": "addManualOrderAction",
+      "filename": "src/app/actions.ts"
+    }
+  },
+  "edge": {}
+}

@@ -1,0 +1,3 @@
+module.exports=[72768,a=>{"use strict";let b=a=>a&&/^\d{2}:\d{2}$/.test(a)?a.replace(/^0/,""):void 0;a.s(["f",0,function(a){if(!a)return[];let c=[];a.deliverTo&&c.push({kind:"dest",text:"届け先",detail:a.deliverTo});let d=b(a.deliveryWindowFrom),e=b(a.deliveryWindowTo);return d&&e?c.push({kind:"time",text:`${d}〜${e} に`}):e?c.push({kind:"time",text:`${e} まで`}):d&&c.push({kind:"time",text:`${d} 以降`}),a.inspectRequired&&c.push({kind:"inspect",text:"必ず検品"}),(a.signRequired||a.signBy)&&c.push({kind:"sign",text:a.signBy?`サイン（${a.signBy}）`:"サインをもらう"}),a.deliveryHowTo&&c.push({kind:"place",text:"置き場所",detail:a.deliveryHowTo}),a.deliveryCaution&&c.push({kind:"caution",text:"注意",detail:a.deliveryCaution}),c}])}];
+
+//# sourceMappingURL=src_lib_driver_rules_ts_1jc70cts5gigl._.js.map

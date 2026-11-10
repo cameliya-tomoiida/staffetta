@@ -1,0 +1,65 @@
+// 「要確認の理由」を、画面に出す直前にやさしい日本語へ言いかえる（docs/wording.md の表）。
+// 元の文（AI や取り込みが書いた attention）は書きかえない。保存されている値はそのまま。
+// TODO: 入口ごとの取り込みが新しい言い方で書くようになったら、ここの言いかえは減らせる。
+
+const rules: [RegExp, string][] = [
+  [/訂正あり\s*(\d+)\s*(?:→|->)\s*(\d+)/g, "書きなおしが あります（$1 → $2）"],
+  [/訂正あり/g, "書きなおしが あります"],
+  [/納品日の記載なし/g, "とどける日が 書いて ありません"],
+  [/記載なし/g, "書いて ありません"],
+  [/(?:商品|品名)の対応(?:付け)?が推測/g, "商品が 合っているか 見てください"],
+  [/対応が推測/g, "合っているか 見てください"],
+  [/入数が不明/g, "1袋に 何個 入っているか 見てください"],
+  [/単位があいまい/g, "数え方（個・本・袋）を 見てください"],
+  [/本文と添付で数が(?:違う|ちがう|食い違う)/g, "メールと 添付で 数が ちがいます"],
+  [/本文と添付に同じ内容/g, "メールと 添付に 同じ 注文が あります"],
+  [/変更前\s*(\d+)/g, "前は $1"],
+  [/元の注文が見つかりません/g, "変える前の 注文が 見つかりません"],
+  [/列見出しが様式にありません（商品と入数を確認）/g, "いつもの 注文書に ない 列が あります（商品と 入数を 見てください）"],
+  [/商品コード\s*(\S+?)\s*が当社の商品にありません/g, "商品の 番号 $1 が、うちの 商品に ありません"],
+  [/発注元\s*(\S+?)\s*が得意先にありません/g, "注文した お店 $1 が、お店の 一覧に ありません"],
+  [/コード変換表にない商品コード\s*([^\s・]+)/g, "商品の 番号 $1 が、つなぎ表に ありません"],
+  [/当社の商品にひも付いていません/g, "うちの 商品に つながって いません"],
+  [/今回の CSV にありません（前回\s*(\S+?)）/g, "前は $1 ありましたが、今回は ありません（取消かも）"],
+  [/前回\s*([^\s・]+?)\s*→\s*今回\s*([^\s・]+)/g, "前は $1、今は $2"],
+  [/概数の注文/g, "だいたいの 数の 注文です"],
+  [/概数/g, "だいたいの 数"],
+  [/追加分/g, "追加の 分です"],
+];
+
+/** 理由の文をやさしい日本語にして、1つずつの行に分ける（「・」でつながない） */
+export function easyReasons(attention: string | undefined): string[] {
+  if (!attention) return [];
+  let s = attention;
+  for (const [re, to] of rules) s = s.replace(re, to);
+  return s
+    .split(/・|。(?=.)/)
+    .map((x) => x.trim().replace(/。$/, ""))
+    .filter(Boolean);
+}
+
+/** 読み取りの自信が低いのに理由が書いていないとき */
+export const LOW_CONFIDENCE = "字が 読みにくい ところが あります";
+
+/**
+ * 集計の注意（③の warnings）を、画面向けに分ける。
+ * 「注文 L639… 行 …: 商品が空…」のような生の ID の文は、注文ごとに1つにまとめて「データが足りない注文」にする。
+ * それ以外（ピザの上限など）はそのまま。
+ */
+export function splitWarnings(warnings: string[]): { incomplete: { orderId: string; noCustomer: boolean; emptyLines: number }[]; others: string[] } {
+  const byOrder = new Map<string, { orderId: string; noCustomer: boolean; emptyLines: number }>();
+  const others: string[] = [];
+  for (const w of warnings) {
+    const m = /^注文\s+(\S+?)(?:\s+行\s+\S+)?:\s*(.+)$/.exec(w);
+    if (!m) {
+      others.push(w);
+      continue;
+    }
+    const o = byOrder.get(m[1]) ?? { orderId: m[1], noCustomer: false, emptyLines: 0 };
+    if (/得意先が空/.test(m[2])) o.noCustomer = true;
+    else if (/商品が空/.test(m[2])) o.emptyLines++;
+    else others.push(w);
+    byOrder.set(m[1], o);
+  }
+  return { incomplete: [...byOrder.values()].filter((o) => o.noCustomer || o.emptyLines), others };
+}

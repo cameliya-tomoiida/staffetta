@@ -1,0 +1,3 @@
+module.exports=[70711,a=>{"use strict";var b=a.i(87924),c=a.i(72131);a.s(["HelpTip",0,function({children:a,alert:d=!1,label:e="くわしく"}){let[f,g]=(0,c.useState)(!1);return(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)("button",{type:"button",onClick:()=>g(!f),"aria-expanded":f,"aria-label":e,className:`no-print inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 align-middle text-base font-black ${d?"border-[#d64545] bg-[#d64545] text-white":"border-rule-strong text-ink-soft"}`,children:d?"！":"？"}),f&&(0,b.jsx)("div",{className:"no-print basis-full space-y-2 text-base font-normal text-ink-soft",children:a})]})}])}];
+
+//# sourceMappingURL=src_components_ui_HelpTip_tsx_18cbnvbhqu8eq._.js.map

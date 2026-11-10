@@ -1,0 +1,13 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/mail/oauth/callback/route.js")
+R.c("server/chunks/[root-of-the-server]__0qubvmgt6fvo-._.js")
+R.c("server/chunks/src_lib_1aj3spqc1sxg9._.js")
+R.c("server/chunks/node_modules_next_dist_0asya_d53xspt._.js")
+R.c("server/chunks/node_modules_next_dist_compiled_@edge-runtime_cookies_index_03l45n-uz3kdi.js")
+R.c("server/chunks/_1b45-wxlzryeu._.js")
+R.c("server/chunks/[root-of-the-server]__12uj0887q1ayr._.js")
+R.c("server/chunks/node_modules_next_dist_1zpao19gb4gey._.js")
+R.c("server/chunks/node_modules_0ib781031qgg1._.js")
+R.c("server/chunks/node_modules_next_1lo724y0ayaf6._.js")
+R.c("server/chunks/_next-internal_server_app_api_mail_oauth_callback_route_actions_1sxtmo02ws3_-.js")
+R.m(26146)
+module.exports=R.m(26146).exports

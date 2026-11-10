@@ -1,0 +1,3 @@
+module.exports=[33391,a=>{"use strict";let b=/^(P|Ｐ|p|袋|箱|ケース|c\/s|セット|パック|束)$/,c={bread:"食パン",roll:"ロール",pizza:"ピザ",deli:"菓子・惣菜",other:"その他"};a.s(["basisOf",0,function(a,c){return c||(b.test((a??"").trim())?"pack":"piece")},"categoryOf",0,function(a,b){return b?c[b]??b:/食パン|山型|角食|ブレッド|斤/.test(a)?"食パン":/ピザ|クラスト|マルゲリータ|生地玉/.test(a)?"ピザ":/サンド|バンズ|カレー|メロン|ドーナツ|ケーキ|クッキー|あん|デニッシュ|惣菜|コロッケ/.test(a)?"菓子・惣菜":/ロール|ロールパン|クロワッサン|バター|黒糖/.test(a)?"ロール":"その他"},"packSizeOf",0,function(a,b){if(b&&b>1)return b;let c=a.normalize("NFKC"),d=c.match(/(\d+)\s*(?:枚|個|本|袋|斤|ケ)?入/)??c.match(/[×xX＊*]\s*(\d+)(?!\s*(?:cm|mm|g|kg|ml))/),e=d?Number(d[1]):1;return e>1&&e<1e3?e:1}])}];
+
+//# sourceMappingURL=src_lib_channels_line_liff-price_ts_1ptwahpvlicul._.js.map

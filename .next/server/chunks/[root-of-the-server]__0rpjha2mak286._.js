@@ -1,0 +1,3 @@
+module.exports=[18622,(e,t,r)=>{t.exports=e.x("next/dist/compiled/next-server/app-page-turbo.runtime.prod.js",()=>require("next/dist/compiled/next-server/app-page-turbo.runtime.prod.js"))},11975,e=>{"use strict";let t=Date.now();function r(){let e=function(){let e=process.env.DEMO_NOW??"";if(!e)return;let t=Date.parse(e);return Number.isNaN(t)?void 0:t}();return void 0===e?Date.now():e+(Date.now()-t)}function n(){return new Date(r())}e.s(["l",0,n,"w",0,function(){return n().toISOString()},"G",0,r,"U",0,function(e=0){return new Date(r()+324e5+864e5*e).toISOString().slice(0,10)}])}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__0rpjha2mak286._.js.map

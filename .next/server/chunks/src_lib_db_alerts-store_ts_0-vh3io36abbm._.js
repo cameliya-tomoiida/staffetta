@@ -1,0 +1,18 @@
+module.exports=[64112,e=>{"use strict";var t=e.i(60814);let a=`
+CREATE TABLE IF NOT EXISTS alerts (
+  dedupe_key TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  level TEXT NOT NULL,
+  state TEXT NOT NULL,
+  assignee TEXT,
+  due_at TEXT,
+  updated_at TEXT NOT NULL,
+  json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS alerts_state ON alerts (state, level);
+`,s=()=>(0,t.E)("alerts",a),d="システム",l=e=>new Date(Date.parse(e)+324e5).toISOString().replace("Z","+09:00"),o=(e,t)=>Date.parse(e)<=Date.parse(t),n=["info","warn","danger"],r=e=>n[Math.min(n.length-1,n.indexOf(e)+1)];function u(e){(0,t.$)().prepare(`INSERT INTO alerts (dedupe_key, source, kind, level, state, assignee, due_at, updated_at, json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(dedupe_key) DO UPDATE SET source = excluded.source, kind = excluded.kind, level = excluded.level, state = excluded.state,
+              assignee = excluded.assignee, due_at = excluded.due_at, updated_at = excluded.updated_at, json = excluded.json`).run(e.dedupeKey,e.source,e.kind,e.level,e.state,e.assignee??null,e.dueAt??null,e.updatedAt,JSON.stringify(e))}e.s(["Q",0,function(e={}){s();let a=e.states??["new","seen","snoozed"],d=(0,t.$)().prepare(`SELECT json FROM alerts WHERE state IN (${a.map(()=>"?").join(",")}) ${e.source?"AND source = ?":""} ORDER BY updated_at DESC`).all(...a,...e.source?[e.source]:[]).map(e=>JSON.parse(e.json)),l={danger:0,warn:1,info:2};return d.filter(t=>!e.assignee||t.assignee===e.assignee||t.escalatedTo===e.assignee).sort((e,t)=>l[e.level]-l[t.level]||("new"!==e.state)-("new"!==t.state)||t.updatedAt.localeCompare(e.updatedAt)).slice(0,e.limit??200)},"B",0,function(e,a,o){s();let n=l(o),i=[];return(0,t.O)(()=>{let s=new Set;for(let o of a){if(s.has(o.dedupeKey))continue;s.add(o.dedupeKey);let a=function(e){let a=(0,t.$)().prepare("SELECT json FROM alerts WHERE dedupe_key = ?").get(e);return a?JSON.parse(a.json):void 0}(o.dedupeKey);if(!a){let t={...o,dueAt:o.dueAt?l(o.dueAt):void 0,source:e,state:"new",baseLevel:o.level,createdAt:n,updatedAt:n,history:[{at:n,who:d,what:"出しました"}]};u(t),i.push(t);continue}let p="done"===a.state,T={...a,kind:o.kind,title:o.title,detail:o.detail,action:o.action,href:o.href,actions:o.actions,plan:o.plan,dueAt:a.dueAt??(o.dueAt?l(o.dueAt):void 0),assignee:a.assignee??o.assignee,source:e,baseLevel:o.level,level:a.escalatedTo&&!p?r(o.level):o.level,state:p?"new":a.state,resolvedAt:p?void 0:a.resolvedAt,escalatedTo:p?void 0:a.escalatedTo,updatedAt:n,history:p?[...a.history,{at:n,who:d,what:"また出ました"}]:a.history};u(T),p&&i.push(T)}for(let{json:a}of(0,t.$)().prepare("SELECT json FROM alerts WHERE source = ? AND state != 'done'").all(e)){let e=JSON.parse(a);s.has(e.dedupeKey)||u({...e,state:"done",resolvedAt:n,updatedAt:n,history:[...e.history,{at:n,who:d,what:"解消したので自動で済みにしました"}]})}}),i},"u",0,function(e){s();let a=l(e),n=[],i={escalateTo:"はやし",...(0,t.Y)("alert_settings")??{}}.escalateTo;return(0,t.O)(()=>{for(let{json:e}of(0,t.$)().prepare("SELECT json FROM alerts WHERE state != 'done'").all()){let t=JSON.parse(e),s=!1;"snoozed"===t.state&&t.snoozeUntil&&o(t.snoozeUntil,a)&&(t={...t,state:"seen",snoozeUntil:void 0,history:[...t.history,{at:a,who:d,what:"「あとで」の時刻になったので戻しました"}]},s=!0),t.dueAt&&o(t.dueAt,a)&&!t.escalatedTo&&"snoozed"!==t.state&&(t={...t,level:r(t.baseLevel),escalatedTo:i,history:[...t.history,{at:a,who:d,what:`期限を過ぎたので、${i}さんにも知らせます`}]},n.push(t),s=!0),s&&u({...t,updatedAt:a})}}),n}])}];
+
+//# sourceMappingURL=src_lib_db_alerts-store_ts_0-vh3io36abbm._.js.map

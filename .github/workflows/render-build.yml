@@ -1,0 +1,42 @@
+# 審査員向けの見本（Render の無料枠）のための、ビルド済みの枝 render-build を作る（11/8）。
+# Render の無料枠はメモリ 512MB で、next build（Turbopack）が 1.7GB ほど使うため、Render の上ではビルドしない。
+# ここ（GitHub の Linux・メモリ 7GB）でビルドし、.next を入れた写しを render-build の枝に置く。Render はその枝を起動するだけ（docs/render.md）。
+# .next に入るのは見本のビルドだけ。GitHub には .env.local が無いので、秘密も LIFF の ID も焼き込まれない（NEXT_PUBLIC_… は下で空にしている）。
+name: render-build
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: render-build
+  cancel-in-progress: true
+jobs:
+  build:
+    # 見本を出すリポジトリだけで動かす: 公開の staffetta（名前を置きかえた写し）か、非公開の staffetta-demo（11/8 管理役2）
+    if: github.repository == 'cameliya-tomoiida/staffetta' || github.event.repository.name == 'staffetta-demo'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: "ビルド（見本: LIFF などの公開の値は空）"
+        run: npx next build
+        env:
+          NEXT_PUBLIC_LIFF_ID: ""
+          NEXT_PUBLIC_LIFF_STAFF_ID: ""
+          NEXT_PUBLIC_DEMO_NOW: ""
+      - name: render-build の枝に置く（.next 入り・キャッシュは除く）
+        run: |
+          rm -rf .next/cache
+          git config user.name "render-build"
+          git config user.email "render-build@users.noreply.github.com"
+          git checkout --orphan render-build-tmp
+          git add -A
+          git add -f .next
+          git commit -q -m "ビルド済み（${GITHUB_SHA::7}）"
+          git push -f origin HEAD:render-build

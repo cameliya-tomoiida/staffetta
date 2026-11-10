@@ -1,0 +1,10 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/stats/route.js")
+R.c("server/chunks/[root-of-the-server]__14bq-pwh5wd6s._.js")
+R.c("server/chunks/node_modules_next_dist_compiled_@edge-runtime_cookies_index_03l45n-uz3kdi.js")
+R.c("server/chunks/src_lib_1aj3spqc1sxg9._.js")
+R.c("server/chunks/_1vs13eoezymcn._.js")
+R.c("server/chunks/[root-of-the-server]__12uj0887q1ayr._.js")
+R.c("server/chunks/node_modules_0ib781031qgg1._.js")
+R.c("server/chunks/_next-internal_server_app_api_stats_route_actions_0o9u2yifvs5i8.js")
+R.m(18816)
+module.exports=R.m(18816).exports

@@ -1,0 +1,3 @@
+module.exports=[35491,a=>{"use strict";var b=a.i(7997);a.s(["default",0,function({children:a}){return(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)("style",{children:"body > header { display: none !important; } body > main { max-width: none !important; padding: 0 !important; }"}),a]})},"metadata",0,{title:"ご注文"},"viewport",0,{width:"device-width",initialScale:1,maximumScale:1}])},64834,function(a){a.n(a.i(35491))}];
+
+//# sourceMappingURL=src_app_liff_layout_tsx_1-8l9hmpfipub._.js.map

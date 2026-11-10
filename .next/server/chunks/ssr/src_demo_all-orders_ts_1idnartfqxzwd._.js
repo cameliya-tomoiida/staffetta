@@ -1,0 +1,3 @@
+module.exports=[82485,a=>{"use strict";var b=a.i(70582),c=a.i(82751),d=a.i(13475);async function e(){let a=await (0,b.U)(),e=(0,c.U)(),f=a.orders,g=new Set(f.map(a=>a.id));return{orders:[...f,...(0,d.demoOrders)().filter(a=>!g.has(a.id))],today:e}}let f=/^\d{4}-\d{2}-\d{2}$/.test(process.env.DEMO_SHOW_DATE??"")?process.env.DEMO_SHOW_DATE:"";a.s(["allOrders",0,e,"pickDate",0,function(a,b,d){if("string"==typeof a&&/^\d{4}-\d{2}-\d{2}$/.test(a))return a;if(f&&b.includes(f))return f;let e=(0,c.b)(d,1);return b.includes(e)?e:b.find(a=>a>=d)??e},"visibleDates",0,(a,b)=>{let d="1"===process.env.HUB_DEMO?(0,c.b)(b,-7):b;return[...new Set(a.filter(a=>a>=d||!!f&&a===f))].sort()}])}];
+
+//# sourceMappingURL=src_demo_all-orders_ts_1idnartfqxzwd._.js.map

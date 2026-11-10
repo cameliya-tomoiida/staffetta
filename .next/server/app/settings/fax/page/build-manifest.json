@@ -1,0 +1,23 @@
+{
+  "devFiles": [],
+  "ampDevFiles": [],
+  "polyfillFiles": [
+    "static/chunks/0cz1d0mv5g_q7.js"
+  ],
+  "lowPriorityFiles": [],
+  "rootMainFiles": [
+    "static/chunks/06wtadkzr9bko.js",
+    "static/chunks/104bbqt8w8tpm.js",
+    "static/chunks/1snob2_qs602w.js",
+    "static/chunks/181tzu1_46azj.js",
+    "static/chunks/1wgx95l5k0j-w.js",
+    "static/chunks/turbopack-077hmtqrhcoji.js"
+  ],
+  "pages": {},
+  "ampFirstPages": [],
+  "rootMainFilesTree": {},
+  "pagesChunkGroupBootstrapParams": {
+    "/settings/fax/page": {"otherChunks":["static/chunks/06wtadkzr9bko.js","static/chunks/104bbqt8w8tpm.js","static/chunks/1snob2_qs602w.js","static/chunks/181tzu1_46azj.js","static/chunks/1wgx95l5k0j-w.js"],"runtimeModuleIds":[94553]}
+  },
+  "chunkLoadingGlobal": "TURBOPACK"
+}

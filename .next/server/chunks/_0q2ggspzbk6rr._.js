@@ -1,0 +1,3 @@
+module.exports=[30759,(e,t,r)=>{"use strict";Object.defineProperty(r,"__esModule",{value:!0}),Object.defineProperty(r,"ReflectAdapter",{enumerable:!0,get:function(){return c}});class c{static get(e,t,r){let c=Reflect.get(e,t,r);return"function"==typeof c?c.bind(e):c}static set(e,t,r,c){return Reflect.set(e,t,r,c)}static has(e,t){return Reflect.has(e,t)}static deleteProperty(e,t){return Reflect.deleteProperty(e,t)}}},25326,e=>{"use strict";var t=e.i(93458);async function r(e){let r=(await (0,t.headers)()).get("x-hub-user");if(r)try{return decodeURIComponent(r)}catch{}return String(e??"").trim()}e.s(["actingUser",0,r])}];
+
+//# sourceMappingURL=_0q2ggspzbk6rr._.js.map

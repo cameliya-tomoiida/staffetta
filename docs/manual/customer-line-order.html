@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>LINEでのご注文のしかた</title>
+<!--
+  お客さんにわたす A4 1枚の案内（印刷して配る）。
+  PDF にする: chrome --headless --print-to-pdf=docs/manual/customer-line-order.pdf --no-pdf-header-footer docs/manual/customer-line-order.html
+  QR の枠・締め切りの時刻・工場の名前は、印刷したあとに手で書くか、貼ってください（実在の社名・QR はこのファイルに入れない）。
+-->
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { width: 210mm; height: 296mm; overflow: hidden; padding: 10mm 13mm 8mm; color: #2b2420; font-family: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo", sans-serif; font-size: 10.5pt; line-height: 1.5; }
+  .serif { font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Noto Serif JP", serif; }
+  .red { color: #8f1d1d; }
+  header { display: grid; grid-template-columns: 1fr 40mm; gap: 6mm; align-items: center; border-bottom: 1.2mm solid #8f1d1d; padding-bottom: 4mm; }
+  header .tag { font-size: 10pt; letter-spacing: .3em; color: #b08a3c; font-weight: 700; }
+  header h1 { font-size: 22pt; line-height: 1.2; }
+  header p { margin-top: 1.5mm; font-size: 12pt; }
+  .qr { width: 40mm; height: 40mm; border: .6mm dashed #8f1d1d; border-radius: 3mm; display: grid; place-items: center; text-align: center; font-size: 9.5pt; color: #8f1d1d; padding: 3mm; }
+  .qr b { display: block; font-size: 11pt; margin-bottom: 1mm; }
+  h2 { font-size: 13pt; margin: 3.5mm 0 2mm; display: flex; align-items: center; gap: 2.5mm; }
+  h2 .n { display: inline-grid; place-items: center; width: 8mm; height: 8mm; border-radius: 50%; background: #8f1d1d; color: #fff; font-size: 12pt; font-family: "BIZ UDPGothic", sans-serif; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
+  .step { background: #f7f3ec; border-radius: 3mm; padding: 2.2mm 3mm; font-size: 10pt; }
+  .step b { display: block; font-size: 11pt; margin-bottom: .5mm; }
+  /* リッチメニュー（LINE のトークの下に出る画面）の見本 */
+  .menu { display: grid; grid-template-columns: 62mm 1fr; gap: 5mm; align-items: start; }
+  .rm { border-radius: 2.5mm; overflow: hidden; border: .4mm solid #d9cdb8; }
+  .rm .top { background: #8f1d1d; color: #fff; padding: 3.5mm 4mm 3.5mm 8mm; position: relative; }
+  .rm .top small { font-size: 6.5pt; letter-spacing: .3em; color: #e3c27a; font-weight: 700; }
+  .rm .top div { font-size: 13pt; font-weight: 700; }
+  .rm .top .k { position: absolute; right: 3mm; top: 50%; transform: translateY(-50%); width: 7mm; height: 7mm; border-radius: 50%; background: #fff; color: #8f1d1d; display: grid; place-items: center; font-size: 10pt; font-weight: 700; }
+  .rm .bottom { display: grid; grid-template-columns: repeat(3, 1fr); background: #f7f3ec; }
+  .rm .bottom div { text-align: center; padding: 3mm 1mm; font-size: 8.5pt; font-weight: 700; border-left: .3mm solid #e6dccb; }
+  .rm .bottom div:first-child { border-left: none; }
+  .rm .mark { display: inline-grid; place-items: center; width: 5mm; height: 5mm; border-radius: 50%; background: #c81e1e; color: #fff; font-size: 7.5pt; font-weight: 700; margin-bottom: .8mm; }
+  .rm .top .mark { position: absolute; left: 1.5mm; top: 1.5mm; }
+  table.btn { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  table.btn td { padding: 1.1mm 1.5mm; border-bottom: .3mm solid #e6dccb; vertical-align: top; }
+  table.btn td:first-child { width: 7mm; }
+  table.btn b { font-size: 11pt; }
+  .dot { display: inline-grid; place-items: center; width: 5.5mm; height: 5.5mm; border-radius: 50%; background: #c81e1e; color: #fff; font-size: 8.5pt; font-weight: 700; }
+  /* 注文画面の見本 */
+  .see { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .box { border: .4mm solid #e6dccb; border-radius: 3mm; padding: 2.5mm 3mm; }
+  .box h3 { font-size: 12pt; margin-bottom: 2mm; }
+  .days { display: flex; gap: 1.5mm; margin: 1.5mm 0 2mm; }
+  .day { width: 12.5mm; border-radius: 2.5mm; text-align: center; padding: 1mm 0; background: #fff; border: .3mm solid #d9cdb8; font-size: 7pt; line-height: 1.25; }
+  .day b { display: block; font-size: 13pt; line-height: 1.1; }
+  .day.on { background: #8f1d1d; color: #fff; border-color: #8f1d1d; }
+  .day.off { background: #ebe6de; color: #8a8178; border-color: #ebe6de; }
+  .item { display: flex; align-items: center; gap: 2mm; border-radius: 2mm; padding: 1.8mm 2.5mm; border: .3mm solid #e6dccb; margin-top: 1.5mm; font-size: 10.5pt; }
+  .item b { font-size: 11pt; white-space: nowrap; }
+  .item .plus { margin-left: auto; width: 6.5mm; height: 6.5mm; border-radius: 50%; border: .5mm solid #8f1d1d; color: #8f1d1d; display: grid; place-items: center; font-weight: 700; }
+  .item.off { background: #ebe6de; color: #8a8178; border-color: #ebe6de; }
+  .note { font-size: 9.5pt; color: #5b524a; margin-top: 1.5mm; }
+  .cut { margin-top: 3mm; display: grid; grid-template-columns: 1.3fr 1fr; gap: 4mm; font-size: 10.5pt; }
+  .cut div { border: .5mm solid #8f1d1d; border-radius: 3mm; padding: 2.5mm 4mm; }
+  .blank { display: inline-block; min-width: 20mm; border-bottom: .3mm solid #2b2420; text-align: center; }
+  footer { margin-top: 3.5mm; font-size: 9.5pt; color: #5b524a; border-top: .3mm solid #e6dccb; padding-top: 2mm; }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="tag">ORDER</div>
+      <h1 class="serif">LINE で パンの ご注文が できます</h1>
+      <p>数を えらぶだけ。文字を 打たなくても 注文できます。</p>
+    </div>
+    <div class="qr"><div><b>ここに QR を貼る</b>LINE の 友だち追加の QR コード</div></div>
+  </header>
+
+  <h2><span class="n">1</span>はじめに 友だちに 追加します</h2>
+  <div class="steps">
+    <div class="step"><b>① QR を読む</b>LINE の「ホーム」→ 右上の「友だち追加」→「QRコード」で、右上の QR を読みます。</div>
+    <div class="step"><b>② 「追加」を押す</b>工場の アカウントが 出ます。「追加」を押します。</div>
+    <div class="step"><b>③ お店の名前を送る</b>はじめての ときだけ、トークに お店の 名前を 書いて 送ってください。工場で お店と つなぎます。</div>
+  </div>
+
+  <h2><span class="n">2</span>トークの 下の ボタン</h2>
+  <div class="menu">
+    <div class="rm">
+      <div class="top"><span class="mark">1</span><small>ORDER</small><div class="serif">パンを注文する</div><span class="k">→</span></div>
+      <div class="bottom">
+        <div><span class="mark">2</span><br />前回と同じ</div>
+        <div><span class="mark">3</span><br />注文の履歴</div>
+        <div><span class="mark">4</span><br />使いかた</div>
+      </div>
+    </div>
+    <table class="btn">
+      <tr><td><span class="dot">1</span></td><td><b>パンを注文する</b>　お届け日と 商品を えらんで、数を 入れます。</td></tr>
+      <tr><td><span class="dot">2</span></td><td><b>前回と同じ</b>　前回と 同じ 中身が 入った 画面が 開きます。お届け日を 見て「この内容で注文する」を 押すだけ です。</td></tr>
+      <tr><td><span class="dot">3</span></td><td><b>注文の履歴</b>　これまでの 注文と、「確認中」「確定」が 見られます。</td></tr>
+      <tr><td><span class="dot">4</span></td><td><b>使いかた</b>　注文の しかたの 説明が トークに 届きます。</td></tr>
+    </table>
+  </div>
+  <p class="note">トークに「明日 バターロール 30」のように 書いて 送っても 注文できます。工場の 人が 読んで 確かめます。</p>
+
+  <h2><span class="n">3</span>締め切りと 休みの 日の 見えかた</h2>
+  <div class="see">
+    <div class="box">
+      <h3>お届け日</h3>
+      <div class="days">
+        <div class="day off">あした<b>6</b>締切</div>
+        <div class="day on">あさって<b>7</b>土</div>
+        <div class="day off">11月<b>8</b>休み</div>
+        <div class="day">11月<b>9</b>月</div>
+        <div class="day">11月<b>10</b>火</div>
+      </div>
+      <p>灰色の 日は えらべません。<br /><b>締切</b>＝締め切りを すぎた 日、<b>休み</b>＝お届けの ない 曜日です。</p>
+    </div>
+    <div class="box">
+      <h3>商品</h3>
+      <div class="item"><b>バターロール</b>　個で注文<span class="plus">＋</span></div>
+      <div class="item off"><b>ロール 6個入</b>　この日のお届けは締め切りました</div>
+      <p class="note">商品に よって 締め切りが ちがいます。灰色の 商品は、その日には えらべません。別の 日を えらんでください。「前回と同じ」で 外れた 商品は、確認の 画面で お知らせします。</p>
+    </div>
+  </div>
+
+  <div class="cut">
+    <div>ご注文の 締め切り：お届けの 前の日の <span class="blank">　　：　　</span> まで</div>
+    <div>お届けの ない 曜日：<span class="blank" style="min-width:30mm">　</span><br />お電話：<span class="blank" style="min-width:38mm">　</span></div>
+  </div>
+
+  <h2><span class="n">4</span>注文の あと</h2>
+  <div class="steps">
+    <div class="step"><b>受け付けました</b>注文の 画面に 出ます（トークで 送ったときは、トークに 返事が 届きます）。まだ「確認中」です。</div>
+    <div class="step"><b>確定しました</b>工場の 人が 中身を 確かめて、確定の 連絡を 送ります。</div>
+    <div class="step"><b>変える・取り消す</b>トークに「7日の バターロール 20に 変更」のように 送ってください。急ぐ ときは お電話を。</div>
+  </div>
+
+</body>
+</html>

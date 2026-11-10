@@ -1,0 +1,52 @@
+{
+  "name": "juhacchu-hub",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "fax:simulate": "node scripts/fax-simulate.mjs",
+    "test": "vitest run",
+    "demo:reset": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/demo-reset.ts",
+    "demo:scale": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/demo-scale.ts",
+    "i18n:pretranslate": "tsx --conditions=react-server --env-file=.env.local --tsconfig tsconfig.json scripts/pretranslate.ts",
+    "check": "next typegen && tsc --noEmit && eslint && vitest run",
+    "simulate:year": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/simulate-year.ts",
+    "measure:db": "tsx --conditions=react-server --tsconfig tsconfig.json scripts/measure-db.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
+    "@expo-google-fonts/noto-sans-jp": "^0.4.4",
+    "exceljs": "^4.4.0",
+    "iconv-lite": "^0.7.3",
+    "mailparser": "^3.14.1",
+    "next": "16.4.5",
+    "pdfjs-dist": "^6.5.438",
+    "pdfkit": "^0.20.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/mailparser": "^3.9.0",
+    "@types/node": "^24.19.2",
+    "@types/pdfkit": "^0.17.7",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  }
+}

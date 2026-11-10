@@ -1,0 +1,3 @@
+module.exports=[40108,a=>{"use strict";let b={channelSecret:process.env.LINE_CHANNEL_SECRET??"",accessToken:process.env.LINE_CHANNEL_ACCESS_TOKEN??"",loginChannelId:process.env.LINE_LOGIN_CHANNEL_ID??"",liffId:""};a.s(["isDemoLineUser",0,a=>/^U[-_]demo[-_]/i.test(a),"isLineLive",0,()=>!!(b.channelSecret&&b.accessToken),"lineConfig",0,b])}];
+
+//# sourceMappingURL=src_lib_channels_line_config_ts_16eli0cg2l4m-._.js.map

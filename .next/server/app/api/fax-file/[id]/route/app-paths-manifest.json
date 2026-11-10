@@ -1,0 +1,3 @@
+{
+  "/api/fax-file/[id]/route": "app/api/fax-file/[id]/route.js"
+}
